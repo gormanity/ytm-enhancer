@@ -1,37 +1,83 @@
 import { resolve } from "path";
 import { copyFileSync } from "fs";
-import { Plugin, UserConfig } from "vite";
+import { build, Plugin, InlineConfig } from "vite";
 
-function copyManifest(browser: string): Plugin {
+function copyAssets(browser: string): Plugin {
   return {
-    name: "copy-manifest",
-    writeBundle(options) {
-      const src = resolve(__dirname, `src/manifests/${browser}.json`);
-      const dest = resolve(options.dir!, "manifest.json");
-      copyFileSync(src, dest);
+    name: "copy-assets",
+    closeBundle() {
+      const outDir = resolve(__dirname, `dist/${browser}`);
+
+      copyFileSync(
+        resolve(__dirname, `src/manifests/${browser}.json`),
+        resolve(outDir, "manifest.json"),
+      );
+
+      copyFileSync(
+        resolve(__dirname, "src/popup/index.html"),
+        resolve(outDir, "popup.html"),
+      );
     },
   };
 }
 
-export function createConfig(browser: string): UserConfig {
+function entryConfig(
+  browser: string,
+  entry: string,
+  format: "es" | "iife",
+): InlineConfig {
+  return {
+    resolve: {
+      alias: { "@": resolve(__dirname, "src") },
+    },
+    build: {
+      lib: {
+        entry: resolve(__dirname, `src/${entry}/index.ts`),
+        formats: [format],
+        fileName: () => `${entry}.js`,
+        name: entry.replace(/[^a-zA-Z]/g, "_"),
+      },
+      outDir: `dist/${browser}`,
+      target: "ES2022",
+      minify: false,
+      sourcemap: true,
+      emptyOutDir: false,
+    },
+    define: {
+      __BROWSER__: JSON.stringify(browser),
+    },
+    configFile: false,
+    logLevel: "warn",
+  };
+}
+
+/** Build content and popup after the main background build. */
+function buildExtras(browser: string): Plugin {
+  return {
+    name: "build-extras",
+    async closeBundle() {
+      // Content script as IIFE (no ES module imports allowed)
+      await build(entryConfig(browser, "content", "iife"));
+      // Popup as ES module (loaded via <script type="module">)
+      await build(entryConfig(browser, "popup", "es"));
+    },
+  };
+}
+
+export function createConfig(browser: string) {
   return {
     resolve: {
       alias: {
         "@": resolve(__dirname, "src"),
       },
     },
-    plugins: [copyManifest(browser)],
+    plugins: [buildExtras(browser), copyAssets(browser)],
     build: {
-      rollupOptions: {
-        input: {
-          background: resolve(__dirname, "src/background/index.ts"),
-          content: resolve(__dirname, "src/content/index.ts"),
-          popup: resolve(__dirname, "src/popup/index.ts"),
-        },
-        output: {
-          entryFileNames: "[name].js",
-          chunkFileNames: "chunks/[name].js",
-        },
+      lib: {
+        entry: resolve(__dirname, "src/background/index.ts"),
+        formats: ["es" as const],
+        fileName: () => "background.js",
+        name: "background",
       },
       outDir: `dist/${browser}`,
       target: "ES2022",

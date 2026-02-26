@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YTM Enhancer</title>
+    <style>
+      body {
+        width: 320px;
+        min-height: 200px;
+        margin: 0;
+        padding: 16px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: 14px;
+        color: #e8eaed;
+        background: #202124;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 12px;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 12px 0 8px;
+      }
+      .shortcuts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .shortcut-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+      }
+      .shortcut-label {
+        color: #bdc1c6;
+      }
+      .shortcut-key {
+        background: #303134;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        border: 1px solid #5f6368;
+      }
+      .shortcuts-hint {
+        margin-top: 12px;
+        font-size: 12px;
+        color: #9aa0a6;
+      }
+      #view-container {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>YTM Enhancer</h1>
+    <div id="view-container"></div>
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>
