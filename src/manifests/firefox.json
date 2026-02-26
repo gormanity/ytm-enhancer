@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "YTM Enhancer",
+  "version": "0.1.0",
+  "description": "A modular extension that enhances the YouTube Music web experience",
+  "permissions": ["activeTab", "notifications", "storage"],
+  "host_permissions": ["https://music.youtube.com/*"],
+  "background": {
+    "scripts": ["background.js"],
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://music.youtube.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ytm-enhancer@example.com"
+    }
+  },
+  "icons": {}
+}

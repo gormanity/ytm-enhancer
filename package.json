@@ -1,0 +1,39 @@
+{
+  "name": "ytm-enhancer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A modular, cross-browser extension that enhances the YouTube Music web experience",
+  "author": "John Gorman",
+  "license": "MIT",
+  "scripts": {
+    "dev:chrome": "vite build --watch --config vite.config.chrome.ts",
+    "dev:firefox": "vite build --watch --config vite.config.firefox.ts",
+    "build:chrome": "vite build --config vite.config.chrome.ts",
+    "build:firefox": "vite build --config vite.config.firefox.ts",
+    "build": "pnpm run build:chrome && pnpm run build:firefox",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ tests/",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/chrome": "^0.1.37",
+    "eslint": "^10.0.2",
+    "jsdom": "^28.1.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

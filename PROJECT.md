@@ -2,19 +2,19 @@
 
 ## Overview
 
-YTM Enhancer is a modular, cross-browser extension that enhances the
-official YouTube Music web experience.
+YTM Enhancer is a modular, cross-browser extension that enhances the official
+YouTube Music web experience.
 
-It is a structured enhancement platform designed to support additional
-features over time without architectural rewrites.
+It is a structured enhancement platform designed to support additional features
+over time without architectural rewrites.
 
 The project begins with two committed features:
 
 1. Configurable hotkeys
 2. Playback notifications
 
-The architecture is intentionally modular to allow safe expansion in
-future versions.
+The architecture is intentionally modular to allow safe expansion in future
+versions.
 
 ---
 
@@ -33,11 +33,11 @@ Instead, it enhances the official web client.
 We prefer:
 
 > Native YouTube Music web app
-> +
-> A capable, modular browser extension
+>
+> - A capable, modular browser extension
 
-We may draw inspiration from Electron-based projects (such as plugin
-systems in desktop wrappers), but our approach remains:
+We may draw inspiration from Electron-based projects (such as plugin systems in
+desktop wrappers), but our approach remains:
 
 - Lightweight
 - Browser-native
@@ -56,8 +56,8 @@ YTM Enhancer is designed to work across:
 
 We do not narrowly target a single OS or browser.
 
-Feature availability may vary based on browser APIs.
-The extension must degrade gracefully where capabilities differ.
+Feature availability may vary based on browser APIs. The extension must degrade
+gracefully where capabilities differ.
 
 ---
 
@@ -70,8 +70,8 @@ The extension must degrade gracefully where capabilities differ.
 - No remote services (unless explicitly required by a future module)
 - Progressive enhancement
 
-We prefer WebExtension standards and isolate browser differences
-behind capability checks.
+We prefer WebExtension standards and isolate browser differences behind
+capability checks.
 
 ---
 
@@ -93,8 +93,7 @@ They must be:
 - Compatible across browsers
 - Robust against UI changes
 
-Where true global shortcuts are unavailable, behavior must degrade
-gracefully.
+Where true global shortcuts are unavailable, behavior must degrade gracefully.
 
 ---
 
@@ -193,10 +192,10 @@ Popup scalability is a first-class design requirement.
 
 ## Potential Future Modules (Exploratory)
 
-The following modules are not currently committed, but are viable
-candidates for future exploration. These ideas are inspired in part
-by plugin systems in Electron-based YouTube Music wrappers, while
-remaining compatible with a browser-extension-first approach.
+The following modules are not currently committed, but are viable candidates for
+future exploration. These ideas are inspired in part by plugin systems in
+Electron-based YouTube Music wrappers, while remaining compatible with a
+browser-extension-first approach.
 
 ### 1. SponsorBlock Integration
 
@@ -282,8 +281,7 @@ These would require careful review due to:
 - Backend services
 - Full UI reimplementation
 
-The extension remains an enhancement layer — not a replacement
-client.
+The extension remains an enhancement layer — not a replacement client.
 
 ---
 

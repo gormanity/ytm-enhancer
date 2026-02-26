@@ -1,7 +1,6 @@
 # Agent Guidelines
 
-Read `PROJECT.md` for project context, architecture, tech stack,
-and philosophy.
+Read `PROJECT.md` for project context, architecture, tech stack, and philosophy.
 
 This file covers **how to work**, not what the project is.
 
@@ -9,8 +8,8 @@ This file covers **how to work**, not what the project is.
 
 ## Language
 
-- Use exclusively American English in all code, comments,
-  documentation, and commit messages.
+- Use exclusively American English in all code, comments, documentation, and
+  commit messages.
 
 ---
 
@@ -34,16 +33,16 @@ This file covers **how to work**, not what the project is.
 
 ## Commands
 
-| Task             | Command                  |
-| ---------------- | ------------------------ |
-| Install deps     | `pnpm install`           |
-| Format check     | `pnpm run format:check`  |
-| Format fix       | `pnpm run format`        |
-| Lint             | `pnpm run lint`          |
-| Type check       | `pnpm run typecheck`     |
-| Test             | `pnpm run test`          |
-| Build (Chrome)   | `pnpm run build:chrome`  |
-| Build (Firefox)  | `pnpm run build:firefox` |
+| Task            | Command                  |
+| --------------- | ------------------------ |
+| Install deps    | `pnpm install`           |
+| Format check    | `pnpm run format:check`  |
+| Format fix      | `pnpm run format`        |
+| Lint            | `pnpm run lint`          |
+| Type check      | `pnpm run typecheck`     |
+| Test            | `pnpm run test`          |
+| Build (Chrome)  | `pnpm run build:chrome`  |
+| Build (Firefox) | `pnpm run build:firefox` |
 
 All checks must pass before pushing.
 
