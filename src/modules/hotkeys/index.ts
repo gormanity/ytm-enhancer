@@ -2,6 +2,7 @@ import type { FeatureModule, PlaybackAction, PopupView } from "@/core/types";
 import type { MessageSender } from "@/core/actions";
 import { ActionExecutor } from "@/core/actions";
 import { findYTMTab } from "@/core/tab-finder";
+import { createHotkeysPopupView } from "./popup";
 
 const COMMAND_MAP: Record<string, PlaybackAction> = {
   "play-pause": "togglePlay",
@@ -45,7 +46,7 @@ export class HotkeysModule implements FeatureModule {
   }
 
   getPopupViews(): PopupView[] {
-    return [];
+    return [createHotkeysPopupView()];
   }
 
   private async handleCommand(command: string): Promise<void> {
