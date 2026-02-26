@@ -4,6 +4,7 @@ export { VersionedStorage } from "./storage";
 export type { StorageArea, VersionedStorageOptions } from "./storage";
 export { detectCapabilities } from "./capabilities";
 export { createMessageSender, createMessageHandler } from "./messaging";
+export { ActionExecutor } from "./actions";
 export type { Message, MessageResponse, SendOptions } from "./messaging";
 export type { Capabilities, BrowserRuntime } from "./capabilities";
 export type {
