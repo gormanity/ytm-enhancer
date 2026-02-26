@@ -15,6 +15,26 @@
       "js": ["content.js"]
     }
   ],
+  "commands": {
+    "play-pause": {
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
+      "description": "Play or pause the current track"
+    },
+    "next-track": {
+      "suggested_key": {
+        "default": "Alt+Shift+N"
+      },
+      "description": "Skip to the next track"
+    },
+    "previous-track": {
+      "suggested_key": {
+        "default": "Alt+Shift+B"
+      },
+      "description": "Go to the previous track"
+    }
+  },
   "action": {
     "default_popup": "popup.html"
   },
