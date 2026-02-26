@@ -23,11 +23,20 @@ export class HotkeysModule implements FeatureModule {
     this.executor = new ActionExecutor(send);
   }
 
-  async init(): Promise<void> {
+  /**
+   * Register the command listener. In Chrome MV3 service workers,
+   * event listeners must be added synchronously at the top level
+   * of the script. Call this before any async work.
+   */
+  registerListeners(): void {
     this.commandListener = (command: string) => {
       void this.handleCommand(command);
     };
     chrome.commands.onCommand.addListener(this.commandListener);
+  }
+
+  async init(): Promise<void> {
+    // Listener already registered via registerListeners()
   }
 
   destroy(): void {

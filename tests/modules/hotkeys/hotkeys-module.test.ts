@@ -49,8 +49,8 @@ describe("HotkeysModule", () => {
     expect(module.isEnabled()).toBe(true);
   });
 
-  it("should register a command listener on init", async () => {
-    await module.init();
+  it("should register a command listener on registerListeners", () => {
+    module.registerListeners();
 
     expect(chrome.commands.onCommand.addListener).toHaveBeenCalled();
   });
@@ -61,7 +61,7 @@ describe("HotkeysModule", () => {
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([{ id: 42 } as chrome.tabs.Tab]);
 
-    await module.init();
+    module.registerListeners();
     commandListeners[0]("play-pause");
 
     await vi.waitFor(() => {
@@ -78,7 +78,7 @@ describe("HotkeysModule", () => {
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([{ id: 42 } as chrome.tabs.Tab]);
 
-    await module.init();
+    module.registerListeners();
     commandListeners[0]("next-track");
 
     await vi.waitFor(() => {
@@ -95,7 +95,7 @@ describe("HotkeysModule", () => {
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([{ id: 42 } as chrome.tabs.Tab]);
 
-    await module.init();
+    module.registerListeners();
     commandListeners[0]("previous-track");
 
     await vi.waitFor(() => {
@@ -111,7 +111,7 @@ describe("HotkeysModule", () => {
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([]);
 
-    await module.init();
+    module.registerListeners();
     await commandListeners[0]("play-pause");
 
     expect(sendMock).not.toHaveBeenCalled();
@@ -122,14 +122,14 @@ describe("HotkeysModule", () => {
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([{ id: 42 } as chrome.tabs.Tab]);
 
-    await module.init();
+    module.registerListeners();
     await commandListeners[0]("unknown-command");
 
     expect(sendMock).not.toHaveBeenCalled();
   });
 
-  it("should remove the command listener on destroy", async () => {
-    await module.init();
+  it("should remove the command listener on destroy", () => {
+    module.registerListeners();
     module.destroy();
 
     expect(chrome.commands.onCommand.removeListener).toHaveBeenCalled();
