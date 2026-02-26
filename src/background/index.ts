@@ -1,13 +1,15 @@
 import {
   createExtensionContext,
+  createMessageSender,
   initializeModules,
   type FeatureModule,
 } from "@/core";
+import { HotkeysModule } from "@/modules/hotkeys";
 
 const context = createExtensionContext();
+const send = createMessageSender();
 
-// Modules will be imported and registered here as they are built.
-const modules: FeatureModule[] = [];
+const modules: FeatureModule[] = [new HotkeysModule(send)];
 
 initializeModules(context, modules).catch((err) => {
   console.error("[YTM Enhancer] Failed to initialize modules:", err);
