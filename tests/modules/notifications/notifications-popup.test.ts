@@ -68,6 +68,72 @@ describe("notifications popup view", () => {
     );
   });
 
+  it("should render unpause toggle", () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) {
+          callback({ ok: true, data: false });
+        }
+      },
+    );
+
+    const view = createNotificationsPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const labels = container.querySelectorAll("label.toggle-row");
+    expect(labels).toHaveLength(2);
+    expect(labels[1].querySelector("span")?.textContent).toBe(
+      "Show notification when resuming playback",
+    );
+  });
+
+  it("should query unpause state on render", () => {
+    const view = createNotificationsPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      { type: "get-notify-on-unpause" },
+      expect.any(Function),
+    );
+  });
+
+  it("should send set-notify-on-unpause on toggle", async () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) {
+          callback({ ok: true, data: false });
+        }
+      },
+    );
+
+    const view = createNotificationsPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const toggles = container.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"]',
+      );
+      expect(toggles[1]?.disabled).toBe(false);
+    });
+
+    const unpauseToggle = container.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )[1]!;
+    unpauseToggle.checked = true;
+    unpauseToggle.dispatchEvent(new Event("change"));
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-notify-on-unpause",
+      enabled: true,
+    });
+  });
+
   it("should send set-notifications-enabled message on toggle", async () => {
     sendMessageMock.mockImplementation(
       (message: unknown, callback?: (response: unknown) => void) => {

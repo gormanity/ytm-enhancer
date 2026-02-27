@@ -90,9 +90,20 @@ describe("NotificationsModule", () => {
     expect(createMock).not.toHaveBeenCalled();
   });
 
-  it("should show notification again for the same track", () => {
+  it("should not show notification for the same track by default", () => {
     const state = makeState();
 
+    module.handleTrackChange(state);
+    createMock.mockClear();
+    module.handleTrackChange(state);
+
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("should show notification on unpause when notifyOnUnpause is enabled", () => {
+    const state = makeState();
+
+    module.setNotifyOnUnpause(true);
     module.handleTrackChange(state);
     createMock.mockClear();
     module.handleTrackChange(state);
@@ -100,10 +111,28 @@ describe("NotificationsModule", () => {
     expect(createMock).toHaveBeenCalledTimes(1);
   });
 
+  it("should not show notification on unpause when notifyOnUnpause is disabled", () => {
+    const state = makeState();
+
+    module.setNotifyOnUnpause(false);
+    module.handleTrackChange(state);
+    createMock.mockClear();
+    module.handleTrackChange(state);
+
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("should have notifyOnUnpause disabled by default", () => {
+    expect(module.isNotifyOnUnpauseEnabled()).toBe(false);
+  });
+
   it("should clear previous notification before showing new one", () => {
-    module.handleTrackChange(makeState());
+    const state1 = makeState({ title: "Song A" });
+    const state2 = makeState({ title: "Song B" });
+
+    module.handleTrackChange(state1);
     clearMock.mockClear();
-    module.handleTrackChange(makeState());
+    module.handleTrackChange(state2);
 
     expect(clearMock).toHaveBeenCalledWith(
       "ytm-enhancer-now-playing",
