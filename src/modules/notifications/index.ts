@@ -18,7 +18,7 @@ export class NotificationsModule implements FeatureModule {
   readonly description = "Native browser notifications on track change";
 
   private enabled = true;
-  private lastTrackKey: string | null = null;
+  private hasShownNotification = false;
 
   init(): void {
     // No background-side setup needed; track changes are pushed
@@ -26,7 +26,7 @@ export class NotificationsModule implements FeatureModule {
   }
 
   destroy(): void {
-    this.lastTrackKey = null;
+    this.hasShownNotification = false;
   }
 
   isEnabled(): boolean {
@@ -45,14 +45,11 @@ export class NotificationsModule implements FeatureModule {
     if (!this.enabled) return;
     if (!state.title || !state.artist) return;
 
-    const trackKey = `${state.title}\0${state.artist}`;
-    if (trackKey === this.lastTrackKey) return;
-
-    if (this.lastTrackKey !== null) {
+    if (this.hasShownNotification) {
       chrome.notifications.clear(NOTIFICATION_ID, () => {});
     }
 
-    this.lastTrackKey = trackKey;
+    this.hasShownNotification = true;
 
     const iconUrl = state.artworkUrl
       ? getNotificationArtworkUrl(state.artworkUrl)

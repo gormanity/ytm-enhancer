@@ -25,7 +25,10 @@ export class TrackObserver {
   private poll(): void {
     const state = this.getPlaybackState();
 
-    if (!state.isPlaying) return;
+    if (!state.isPlaying) {
+      this.lastTrackKey = null;
+      return;
+    }
     if (!state.title || !state.artist) return;
 
     const trackKey = `${state.title}\0${state.artist}`;
