@@ -18,13 +18,13 @@ This file covers **how to work**, not what the project is.
 - Use `jj` exclusively. Never use raw `git` commands.
 - Make changes atomic and tightly scoped.
 - Write descriptive change descriptions.
-- Use `jj split` to break apart changes that touch
-  unrelated concerns (e.g., a selector fix vs. a new module).
-- `jj split` accepts filesets as positional arguments for
-  non-interactive splitting:
-  `jj split -m "description" 'glob:src/adapter/**'`
-- Use `jj new -m "description"` to start a new change before
-  working on the next logical unit.
+- Use `jj split` to break apart changes that touch unrelated concerns (e.g., a
+  selector fix vs. a new module).
+- `jj split` accepts filesets as positional arguments for non-interactive
+  splitting: `jj split -m "description" 'glob:src/adapter/**'`
+- **Before starting any new work**, run `jj status`. If the current change
+  already has content, run `jj new` before making changes. Never lump unrelated
+  work together.
 - Push workflow: `jj bookmark set main -r @-` then
   `jj git push --bookmark main`.
 
