@@ -64,7 +64,9 @@ describe("YTMAdapter", () => {
 
     it("should extract artwork URL", () => {
       document.body.innerHTML = `
-        <img id="song-image" class="image style-scope ytmusic-player-bar" src="https://lh3.googleusercontent.com/test">
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="https://lh3.googleusercontent.com/test">
+        </div>
       `;
 
       const state = adapter.getPlaybackState();

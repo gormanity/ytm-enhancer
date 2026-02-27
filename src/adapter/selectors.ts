@@ -11,7 +11,8 @@ export const SELECTORS = {
   trackTitle: "yt-formatted-string.title.style-scope.ytmusic-player-bar",
   artistName:
     "span.subtitle.style-scope.ytmusic-player-bar yt-formatted-string a",
-  albumArt: "img#song-image.image.style-scope.ytmusic-player-bar",
+  albumArt:
+    ".thumbnail-image-wrapper.style-scope.ytmusic-player-bar > img.image",
   progressBar: "#progress-bar",
   timeInfo: "#time-info",
 } as const;
