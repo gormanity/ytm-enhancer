@@ -7,6 +7,7 @@ function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
     title: "Song Title",
     artist: "Artist Name",
     album: "Album",
+    year: 2024,
     artworkUrl: "https://example.com/art.jpg",
     isPlaying: true,
     progress: 0,
@@ -210,28 +211,70 @@ describe("PipWindowRenderer", () => {
     expect(fill?.style.width).toBe("0%");
   });
 
-  it("should set document title to track info on build", () => {
+  it("should set document title element to track info on build", () => {
     renderer.build(
       doc,
       makeState({ title: "My Song", artist: "My Artist" }),
       onAction,
     );
 
-    expect(doc.title).toBe("My Song — My Artist");
+    const titleEl = doc.querySelector("title");
+    expect(titleEl).not.toBeNull();
+    expect(titleEl?.textContent).toBe("My Song — My Artist");
   });
 
-  it("should update document title on state change", () => {
+  it("should update document title element on state change", () => {
     renderer.build(doc, makeState(), onAction);
 
     renderer.update(makeState({ title: "New Song", artist: "New Artist" }));
 
-    expect(doc.title).toBe("New Song — New Artist");
+    const titleEl = doc.querySelector("title");
+    expect(titleEl?.textContent).toBe("New Song — New Artist");
   });
 
   it("should use only title when artist is null", () => {
     renderer.build(doc, makeState({ title: "Solo", artist: null }), onAction);
 
-    expect(doc.title).toBe("Solo");
+    const titleEl = doc.querySelector("title");
+    expect(titleEl?.textContent).toBe("Solo");
+  });
+
+  it("should render album and year below artist", () => {
+    renderer.build(doc, makeState({ album: "My Album", year: 2024 }), onAction);
+
+    const albumEl = doc.querySelector(".album");
+    expect(albumEl).not.toBeNull();
+    expect(albumEl?.textContent).toBe("My Album \u00B7 2024");
+  });
+
+  it("should render only album when year is null", () => {
+    renderer.build(doc, makeState({ album: "My Album", year: null }), onAction);
+
+    const albumEl = doc.querySelector(".album");
+    expect(albumEl?.textContent).toBe("My Album");
+  });
+
+  it("should render only year when album is null", () => {
+    renderer.build(doc, makeState({ album: null, year: 2024 }), onAction);
+
+    const albumEl = doc.querySelector(".album");
+    expect(albumEl?.textContent).toBe("2024");
+  });
+
+  it("should render empty album line when both are null", () => {
+    renderer.build(doc, makeState({ album: null, year: null }), onAction);
+
+    const albumEl = doc.querySelector(".album");
+    expect(albumEl?.textContent).toBe("");
+  });
+
+  it("should update album and year on state change", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    renderer.update(makeState({ album: "New Album", year: 2025 }));
+
+    const albumEl = doc.querySelector(".album");
+    expect(albumEl?.textContent).toBe("New Album \u00B7 2025");
   });
 
   it("should handle null artwork gracefully", () => {

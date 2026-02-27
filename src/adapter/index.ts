@@ -16,13 +16,16 @@ export class YTMAdapter {
     const isPlaying =
       playPauseEl?.getAttribute("title")?.toLowerCase() === "pause";
 
-    const { progress, duration } = this.parseTimeInfo();
+    const { progress, duration } = this.readVideoTime();
+
+    const { album, year } = this.parseSubtitle();
 
     return {
       title: titleEl?.textContent?.trim() ?? null,
       artist: artistEl?.textContent?.trim() ?? null,
-      album: null,
-      artworkUrl: artworkEl?.src ?? null,
+      album,
+      year,
+      artworkUrl: this.upscaleArtworkUrl(artworkEl?.src ?? null),
       isPlaying,
       progress,
       duration,
@@ -57,28 +60,35 @@ export class YTMAdapter {
     }
   }
 
-  private parseTimeInfo(): { progress: number; duration: number } {
-    const el = document.querySelector(SELECTORS.timeInfo);
-    const text = el?.textContent?.trim() ?? "";
-    const match = text.match(/^(.+?)\s*\/\s*(.+)$/);
-    if (!match) return { progress: 0, duration: 0 };
+  private parseSubtitle(): { album: string | null; year: number | null } {
+    const subtitleEl = document.querySelector(SELECTORS.subtitle);
+    if (!subtitleEl) return { album: null, year: null };
 
-    const progress = this.parseTimestamp(match[1].trim());
-    const duration = this.parseTimestamp(match[2].trim());
-    return { progress, duration };
+    const links = subtitleEl.querySelectorAll("a");
+    const album =
+      links.length >= 2 ? (links[1].textContent?.trim() ?? null) : null;
+
+    const text = subtitleEl.textContent ?? "";
+    const yearMatch = text.match(/\b((?:19|20)\d{2})\b/);
+    const year = yearMatch ? Number(yearMatch[1]) : null;
+
+    return { album, year };
   }
 
-  private parseTimestamp(timestamp: string): number {
-    const parts = timestamp.split(":").map(Number);
-    if (parts.some(isNaN)) return 0;
+  private upscaleArtworkUrl(url: string | null): string | null {
+    if (!url) return null;
+    return url.replace(/=w\d+-h\d+[^&]*/, "=w544-h544-l90-rj");
+  }
 
-    if (parts.length === 3) {
-      return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    }
-    if (parts.length === 2) {
-      return parts[0] * 60 + parts[1];
-    }
-    return 0;
+  private readVideoTime(): { progress: number; duration: number } {
+    const video = document.querySelector(
+      SELECTORS.videoElement,
+    ) as HTMLVideoElement | null;
+    if (!video) return { progress: 0, duration: 0 };
+
+    const progress = video.currentTime || 0;
+    const duration = Number.isFinite(video.duration) ? video.duration : 0;
+    return { progress, duration };
   }
 
   private isPlaying(): boolean {

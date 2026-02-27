@@ -16,6 +16,7 @@ describe("YTMAdapter", () => {
       expect(state.title).toBeNull();
       expect(state.artist).toBeNull();
       expect(state.album).toBeNull();
+      expect(state.year).toBeNull();
       expect(state.artworkUrl).toBeNull();
       expect(state.isPlaying).toBe(false);
       expect(state.progress).toBe(0);
@@ -62,27 +63,18 @@ describe("YTMAdapter", () => {
       expect(state.isPlaying).toBe(false);
     });
 
-    it("should parse progress and duration from time-info element", () => {
-      document.body.innerHTML = `
-        <span id="time-info" class="time-info">1:23 / 3:45</span>
-      `;
+    it("should read progress and duration from video element", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "currentTime", { value: 83.4 });
+      Object.defineProperty(video, "duration", { value: 225.7 });
 
       const state = adapter.getPlaybackState();
-      expect(state.progress).toBe(83);
-      expect(state.duration).toBe(225);
+      expect(state.progress).toBe(83.4);
+      expect(state.duration).toBe(225.7);
     });
 
-    it("should parse time-info with hour-length tracks", () => {
-      document.body.innerHTML = `
-        <span id="time-info" class="time-info">1:02:30 / 1:15:00</span>
-      `;
-
-      const state = adapter.getPlaybackState();
-      expect(state.progress).toBe(3750);
-      expect(state.duration).toBe(4500);
-    });
-
-    it("should return 0 for progress and duration when time-info is missing", () => {
+    it("should return 0 for progress and duration when video element is missing", () => {
       document.body.innerHTML = "";
 
       const state = adapter.getPlaybackState();
@@ -90,14 +82,77 @@ describe("YTMAdapter", () => {
       expect(state.duration).toBe(0);
     });
 
-    it("should return 0 for progress and duration when time-info is malformed", () => {
-      document.body.innerHTML = `
-        <span id="time-info" class="time-info">loading...</span>
-      `;
+    it("should return 0 duration when video duration is NaN", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "currentTime", { value: 0 });
+      Object.defineProperty(video, "duration", { value: NaN });
 
       const state = adapter.getPlaybackState();
       expect(state.progress).toBe(0);
       expect(state.duration).toBe(0);
+    });
+
+    it("should extract album name from subtitle second link", () => {
+      document.body.innerHTML = `
+        <span class="subtitle style-scope ytmusic-player-bar">
+          <yt-formatted-string>
+            <a class="yt-simple-endpoint">Artist</a>
+            &nbsp;•&nbsp;
+            <a class="yt-simple-endpoint">My Album</a>
+            &nbsp;•&nbsp;
+            2024
+          </yt-formatted-string>
+        </span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.album).toBe("My Album");
+    });
+
+    it("should extract year from subtitle text", () => {
+      document.body.innerHTML = `
+        <span class="subtitle style-scope ytmusic-player-bar">
+          <yt-formatted-string>
+            <a class="yt-simple-endpoint">Artist</a>
+            &nbsp;•&nbsp;
+            <a class="yt-simple-endpoint">My Album</a>
+            &nbsp;•&nbsp;
+            2024
+          </yt-formatted-string>
+        </span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.year).toBe(2024);
+    });
+
+    it("should return null album when subtitle has only one link", () => {
+      document.body.innerHTML = `
+        <span class="subtitle style-scope ytmusic-player-bar">
+          <yt-formatted-string>
+            <a class="yt-simple-endpoint">Artist</a>
+          </yt-formatted-string>
+        </span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.album).toBeNull();
+    });
+
+    it("should return null year when subtitle has no year", () => {
+      document.body.innerHTML = `
+        <span class="subtitle style-scope ytmusic-player-bar">
+          <yt-formatted-string>
+            <a class="yt-simple-endpoint">Artist</a>
+            &nbsp;•&nbsp;
+            <a class="yt-simple-endpoint">My Album</a>
+          </yt-formatted-string>
+        </span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.year).toBeNull();
     });
 
     it("should extract artwork URL", () => {
@@ -109,6 +164,43 @@ describe("YTMAdapter", () => {
 
       const state = adapter.getPlaybackState();
       expect(state.artworkUrl).toBe("https://lh3.googleusercontent.com/test");
+    });
+
+    it("should upscale artwork URL with size params", () => {
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="https://lh3.googleusercontent.com/abc=w60-h60-l90-rj">
+        </div>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/abc=w544-h544-l90-rj",
+      );
+    });
+
+    it("should upscale artwork URL with different size format", () => {
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="https://lh3.googleusercontent.com/abc=w226-h226-l90-rj">
+        </div>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/abc=w544-h544-l90-rj",
+      );
+    });
+
+    it("should not modify artwork URL without size params", () => {
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="https://example.com/art.jpg">
+        </div>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe("https://example.com/art.jpg");
     });
   });
 

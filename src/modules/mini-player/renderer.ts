@@ -39,6 +39,16 @@ const STYLES = `
     font-size: 0.8125em;
     color: #aaa;
     text-align: center;
+    margin: 2px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%;
+  }
+  .album {
+    font-size: 0.75em;
+    color: #777;
+    text-align: center;
     margin: 2px 8px 8px;
     white-space: nowrap;
     overflow: hidden;
@@ -91,9 +101,11 @@ const STYLES = `
 
 export class PipWindowRenderer {
   private doc: Document | null = null;
+  private docTitleEl: HTMLTitleElement | null = null;
   private artworkEl: HTMLImageElement | null = null;
   private titleEl: HTMLElement | null = null;
   private artistEl: HTMLElement | null = null;
+  private albumEl: HTMLElement | null = null;
   private playPauseBtn: HTMLButtonElement | null = null;
   private progressFill: HTMLElement | null = null;
   private timeDisplayEl: HTMLElement | null = null;
@@ -105,6 +117,12 @@ export class PipWindowRenderer {
   ): void {
     this.doc = doc;
     doc.body.innerHTML = "";
+
+    this.docTitleEl =
+      doc.head.querySelector("title") ?? doc.createElement("title");
+    if (!this.docTitleEl.parentNode) {
+      doc.head.appendChild(this.docTitleEl);
+    }
 
     const style = doc.createElement("style");
     style.textContent = STYLES;
@@ -128,6 +146,12 @@ export class PipWindowRenderer {
     artist.textContent = state.artist ?? "";
     this.artistEl = artist;
     doc.body.appendChild(artist);
+
+    const albumLine = doc.createElement("div");
+    albumLine.className = "album";
+    albumLine.textContent = this.formatAlbumLine(state);
+    this.albumEl = albumLine;
+    doc.body.appendChild(albumLine);
 
     const progressContainer = doc.createElement("div");
     progressContainer.className = "progress-container";
@@ -192,6 +216,9 @@ export class PipWindowRenderer {
     if (this.artistEl) {
       this.artistEl.textContent = state.artist ?? "";
     }
+    if (this.albumEl) {
+      this.albumEl.textContent = this.formatAlbumLine(state);
+    }
     if (this.progressFill) {
       this.progressFill.style.width = this.progressPercent(state) + "%";
     }
@@ -209,10 +236,17 @@ export class PipWindowRenderer {
   }
 
   private updateDocTitle(state: PlaybackState): void {
-    if (!this.doc) return;
+    if (!this.docTitleEl) return;
     const title = state.title ?? "";
     const artist = state.artist ?? "";
-    this.doc.title = artist ? `${title} — ${artist}` : title;
+    this.docTitleEl.textContent = artist ? `${title} — ${artist}` : title;
+  }
+
+  private formatAlbumLine(state: PlaybackState): string {
+    const parts: string[] = [];
+    if (state.album) parts.push(state.album);
+    if (state.year) parts.push(String(state.year));
+    return parts.join(" \u00B7 ");
   }
 
   private progressPercent(state: PlaybackState): number {
@@ -224,10 +258,11 @@ export class PipWindowRenderer {
     return `${this.formatTimestamp(state.progress)} / ${this.formatTimestamp(state.duration)}`;
   }
 
-  private formatTimestamp(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
+  private formatTimestamp(totalSeconds: number): string {
+    const rounded = Math.floor(totalSeconds);
+    const h = Math.floor(rounded / 3600);
+    const m = Math.floor((rounded % 3600) / 60);
+    const s = rounded % 60;
 
     if (h > 0) {
       return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;

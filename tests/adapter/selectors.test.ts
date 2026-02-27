@@ -31,8 +31,9 @@ describe("SELECTORS", () => {
     expect(SELECTORS.progressBar).toBeDefined();
   });
 
-  it("should define a selector for the time info", () => {
-    expect(SELECTORS.timeInfo).toBeDefined();
+  it("should define a selector for the subtitle", () => {
+    expect(SELECTORS.subtitle).toBeDefined();
+    expect(typeof SELECTORS.subtitle).toBe("string");
   });
 
   it("should define a selector for the native mini player button", () => {

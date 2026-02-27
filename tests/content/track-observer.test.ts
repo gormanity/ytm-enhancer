@@ -7,6 +7,7 @@ function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
     title: "Song Title",
     artist: "Artist Name",
     album: "Album",
+    year: 2024,
     artworkUrl: "https://example.com/art.jpg",
     isPlaying: true,
     progress: 0,

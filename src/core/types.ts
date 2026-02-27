@@ -3,6 +3,7 @@ export interface PlaybackState {
   title: string | null;
   artist: string | null;
   album: string | null;
+  year: number | null;
   artworkUrl: string | null;
   isPlaying: boolean;
   progress: number;

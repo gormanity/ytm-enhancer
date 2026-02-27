@@ -13,8 +13,8 @@ export const SELECTORS = {
     "span.subtitle.style-scope.ytmusic-player-bar yt-formatted-string a",
   albumArt:
     ".thumbnail-image-wrapper.style-scope.ytmusic-player-bar > img.image",
+  subtitle: "span.subtitle.style-scope.ytmusic-player-bar yt-formatted-string",
   progressBar: "#progress-bar",
-  timeInfo: "#time-info",
   nativeMiniPlayerButton:
     'yt-icon-button.player-minimize-button[title="Open mini player"]',
   videoElement: "video.html5-main-video",
