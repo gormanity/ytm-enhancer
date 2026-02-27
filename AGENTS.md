@@ -68,7 +68,7 @@ All checks must pass before pushing.
 
 1. Create `src/modules/<module-name>/`.
 2. Implement the `FeatureModule` interface.
-3. Register the module in `src/modules/index.ts`.
-4. Optionally register a popup view.
+3. Register the module in `src/background/index.ts`.
+4. Optionally register a popup view in `src/modules/popup-views.ts`.
 5. Write tests in `tests/modules/<module-name>/`.
 6. No changes to existing modules should be required.
