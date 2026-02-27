@@ -55,6 +55,9 @@ This file covers **how to work**, not what the project is.
 
 All checks must pass before pushing.
 
+After each feature change cycle, run both `build:chrome` and
+`build:firefox` so the extension can be optested.
+
 ---
 
 ## Formatting
