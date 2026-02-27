@@ -18,6 +18,8 @@ export class NotificationsModule implements FeatureModule {
   readonly description = "Native browser notifications on track change";
 
   private enabled = true;
+  private notifyOnUnpause = false;
+  private lastTrackKey: string | null = null;
   private hasShownNotification = false;
 
   init(): void {
@@ -27,6 +29,7 @@ export class NotificationsModule implements FeatureModule {
 
   destroy(): void {
     this.hasShownNotification = false;
+    this.lastTrackKey = null;
   }
 
   isEnabled(): boolean {
@@ -37,6 +40,14 @@ export class NotificationsModule implements FeatureModule {
     this.enabled = enabled;
   }
 
+  isNotifyOnUnpauseEnabled(): boolean {
+    return this.notifyOnUnpause;
+  }
+
+  setNotifyOnUnpause(enabled: boolean): void {
+    this.notifyOnUnpause = enabled;
+  }
+
   getPopupViews(): PopupView[] {
     return [createNotificationsPopupView()];
   }
@@ -44,6 +55,14 @@ export class NotificationsModule implements FeatureModule {
   handleTrackChange(state: PlaybackState): void {
     if (!this.enabled) return;
     if (!state.title || !state.artist) return;
+
+    const trackKey = `${state.title}\0${state.artist}`;
+
+    if (trackKey === this.lastTrackKey && !this.notifyOnUnpause) {
+      return;
+    }
+
+    this.lastTrackKey = trackKey;
 
     if (this.hasShownNotification) {
       chrome.notifications.clear(NOTIFICATION_ID, () => {});

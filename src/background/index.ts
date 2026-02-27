@@ -37,6 +37,15 @@ handler.on("set-notifications-enabled", async (message) => {
   return { ok: true };
 });
 
+handler.on("get-notify-on-unpause", async () => {
+  return { ok: true, data: notifications.isNotifyOnUnpauseEnabled() };
+});
+
+handler.on("set-notify-on-unpause", async (message) => {
+  notifications.setNotifyOnUnpause(message.enabled as boolean);
+  return { ok: true };
+});
+
 handler.start();
 
 const modules: FeatureModule[] = [hotkeys, notifications];

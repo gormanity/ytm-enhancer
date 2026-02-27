@@ -43,6 +43,37 @@ export function createNotificationsPopupView(): PopupView {
           enabled: toggle.checked,
         });
       });
+
+      const unpauseLabel = document.createElement("label");
+      unpauseLabel.className = "toggle-row";
+
+      const unpauseText = document.createElement("span");
+      unpauseText.textContent = "Show notification when resuming playback";
+      unpauseLabel.appendChild(unpauseText);
+
+      const unpauseToggle = document.createElement("input");
+      unpauseToggle.type = "checkbox";
+      unpauseToggle.disabled = true;
+      unpauseLabel.appendChild(unpauseToggle);
+
+      container.appendChild(unpauseLabel);
+
+      chrome.runtime.sendMessage(
+        { type: "get-notify-on-unpause" },
+        (response: { ok: boolean; data?: boolean }) => {
+          if (response?.ok) {
+            unpauseToggle.checked = response.data === true;
+            unpauseToggle.disabled = false;
+          }
+        },
+      );
+
+      unpauseToggle.addEventListener("change", () => {
+        chrome.runtime.sendMessage({
+          type: "set-notify-on-unpause",
+          enabled: unpauseToggle.checked,
+        });
+      });
     },
   };
 }
