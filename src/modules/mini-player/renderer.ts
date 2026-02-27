@@ -19,31 +19,31 @@ const STYLES = `
     overflow: hidden;
   }
   .artwork {
-    width: 200px;
-    height: 200px;
+    width: 60%;
+    aspect-ratio: 1;
     object-fit: cover;
     border-radius: 4px;
     margin-bottom: 12px;
   }
   .title {
-    font-size: 16px;
+    font-size: 1em;
     font-weight: 500;
     text-align: center;
     margin: 4px 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 280px;
+    max-width: 90%;
   }
   .artist {
-    font-size: 13px;
+    font-size: 0.8125em;
     color: #aaa;
     text-align: center;
     margin: 2px 8px 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 280px;
+    max-width: 90%;
   }
   .progress-container {
     width: 80%;
@@ -71,14 +71,14 @@ const STYLES = `
   .controls {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 1em;
   }
   .controls button {
     background: none;
     border: none;
     color: #fff;
     cursor: pointer;
-    padding: 8px;
+    padding: 0.5em;
     border-radius: 50%;
     display: flex;
     align-items: center;
