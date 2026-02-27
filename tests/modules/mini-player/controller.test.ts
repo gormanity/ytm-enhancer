@@ -188,6 +188,67 @@ describe("MiniPlayerController", () => {
     });
   });
 
+  it("should seek video when PiP seek bar is used", async () => {
+    createNativeMiniPlayerButton();
+
+    // Add a video element for seeking
+    const video = document.createElement("video");
+    video.className = "html5-main-video";
+    document.body.appendChild(video);
+
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
+    const pipWindow = {
+      document: pipDoc,
+      addEventListener: vi.fn(),
+    };
+    const requestWindow = vi.fn().mockResolvedValue(pipWindow);
+    vi.stubGlobal("documentPictureInPicture", {
+      requestWindow,
+    });
+
+    controller = new MiniPlayerController();
+    await controller.init();
+
+    const nativeButton = document.querySelector(
+      SELECTORS.nativeMiniPlayerButton,
+    ) as HTMLElement;
+    nativeButton.click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    // The PiP window should have a progress bar with seek support
+    const bar = pipDoc.querySelector<HTMLElement>(".progress-bar");
+    expect(bar).not.toBeNull();
+
+    // Mock getBoundingClientRect
+    bar!.getBoundingClientRect = () => ({
+      left: 0,
+      right: 200,
+      width: 200,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    // Simulate a click at 50% of the bar — duration is 0 by default so
+    // this won't actually seek, but it should not throw
+    bar!.dispatchEvent(new MouseEvent("mousedown", { clientX: 100 }));
+
+    // Now set a duration on the video and try again
+    Object.defineProperty(video, "duration", { value: 200, writable: true });
+    Object.defineProperty(video, "currentTime", { value: 0, writable: true });
+
+    // Trigger a poll to update duration in renderer
+    vi.advanceTimersByTime(1000);
+
+    bar!.dispatchEvent(new MouseEvent("mousedown", { clientX: 100 }));
+
+    // 100/200 = 0.5 * 200s = 100s
+    expect(video.currentTime).toBe(100);
+  });
+
   it("should poll adapter and update renderer in Document PiP mode", async () => {
     createNativeMiniPlayerButton();
 

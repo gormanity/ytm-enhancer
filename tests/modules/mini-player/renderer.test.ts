@@ -20,11 +20,13 @@ describe("PipWindowRenderer", () => {
   let renderer: PipWindowRenderer;
   let doc: Document;
   let onAction: ReturnType<typeof vi.fn<(action: PlaybackAction) => void>>;
+  let onSeek: ReturnType<typeof vi.fn<(time: number) => void>>;
 
   beforeEach(() => {
     renderer = new PipWindowRenderer();
     doc = document.implementation.createHTMLDocument("PiP");
     onAction = vi.fn<(action: PlaybackAction) => void>();
+    onSeek = vi.fn<(time: number) => void>();
   });
 
   it("should build album art into the document", () => {
@@ -211,23 +213,25 @@ describe("PipWindowRenderer", () => {
     expect(fill?.style.width).toBe("0%");
   });
 
-  it("should set document title element to track info on build", () => {
+  it("should set document title via both doc.title and title element on build", () => {
     renderer.build(
       doc,
       makeState({ title: "My Song", artist: "My Artist" }),
       onAction,
     );
 
+    expect(doc.title).toBe("My Song — My Artist");
     const titleEl = doc.querySelector("title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("My Song — My Artist");
   });
 
-  it("should update document title element on state change", () => {
+  it("should update document title on state change", () => {
     renderer.build(doc, makeState(), onAction);
 
     renderer.update(makeState({ title: "New Song", artist: "New Artist" }));
 
+    expect(doc.title).toBe("New Song — New Artist");
     const titleEl = doc.querySelector("title");
     expect(titleEl?.textContent).toBe("New Song — New Artist");
   });
@@ -235,6 +239,7 @@ describe("PipWindowRenderer", () => {
   it("should use only title when artist is null", () => {
     renderer.build(doc, makeState({ title: "Solo", artist: null }), onAction);
 
+    expect(doc.title).toBe("Solo");
     const titleEl = doc.querySelector("title");
     expect(titleEl?.textContent).toBe("Solo");
   });
@@ -277,10 +282,126 @@ describe("PipWindowRenderer", () => {
     expect(albumEl?.textContent).toBe("New Album \u00B7 2025");
   });
 
+  it("should give artwork flex-shrink so it compresses first", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const artwork = doc.querySelector<HTMLElement>(".artwork");
+    expect(artwork).not.toBeNull();
+    const style = doc.querySelector("style")!.textContent!;
+    expect(style).toContain("flex-shrink: 1");
+    expect(style).toContain("min-height: 0");
+  });
+
+  it("should give text, controls, and progress flex-shrink: 0", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const style = doc.querySelector("style")!.textContent!;
+    // Controls, title, artist, album, progress, and time should not shrink
+    expect(style).toMatch(/\.controls\s*\{[^}]*flex-shrink:\s*0/);
+    expect(style).toMatch(/\.title\s*\{[^}]*flex-shrink:\s*0/);
+  });
+
   it("should handle null artwork gracefully", () => {
     renderer.build(doc, makeState({ artworkUrl: null }), onAction);
 
     const img = doc.querySelector("img");
     expect(img?.src).toBe("");
+  });
+
+  it("should render a seek thumb on the progress bar", () => {
+    renderer.build(
+      doc,
+      makeState({ progress: 100, duration: 200 }),
+      onAction,
+      onSeek,
+    );
+
+    const thumb = doc.querySelector<HTMLElement>(".progress-thumb");
+    expect(thumb).not.toBeNull();
+    expect(thumb?.style.left).toBe("50%");
+  });
+
+  it("should update seek thumb position on state change", () => {
+    renderer.build(
+      doc,
+      makeState({ progress: 0, duration: 200 }),
+      onAction,
+      onSeek,
+    );
+
+    renderer.update(makeState({ progress: 150, duration: 200 }));
+
+    const thumb = doc.querySelector<HTMLElement>(".progress-thumb");
+    expect(thumb?.style.left).toBe("75%");
+  });
+
+  it("should fire onSeek when progress bar is clicked", () => {
+    renderer.build(
+      doc,
+      makeState({ progress: 0, duration: 200 }),
+      onAction,
+      onSeek,
+    );
+
+    const bar = doc.querySelector<HTMLElement>(".progress-bar")!;
+    // Mock getBoundingClientRect for the bar
+    bar.getBoundingClientRect = () => ({
+      left: 0,
+      right: 200,
+      width: 200,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 100 }));
+
+    // 100/200 = 0.5, 0.5 * 200s = 100s
+    expect(onSeek).toHaveBeenCalledWith(100);
+  });
+
+  it("should not fire onSeek when onSeek callback is not provided", () => {
+    renderer.build(doc, makeState({ progress: 0, duration: 200 }), onAction);
+
+    const bar = doc.querySelector<HTMLElement>(".progress-bar")!;
+    // Should not throw even without onSeek
+    expect(() => {
+      bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 50 }));
+    }).not.toThrow();
+  });
+
+  it("should clamp seek position to valid range", () => {
+    renderer.build(
+      doc,
+      makeState({ progress: 0, duration: 200 }),
+      onAction,
+      onSeek,
+    );
+
+    const bar = doc.querySelector<HTMLElement>(".progress-bar")!;
+    bar.getBoundingClientRect = () => ({
+      left: 100,
+      right: 300,
+      width: 200,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 100,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    // Click before the bar (clientX < left)
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 50 }));
+    expect(onSeek).toHaveBeenCalledWith(0);
+
+    onSeek.mockClear();
+
+    // Click after the bar (clientX > right)
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 350 }));
+    expect(onSeek).toHaveBeenCalledWith(200);
   });
 });

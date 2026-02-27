@@ -32,6 +32,15 @@ export class YTMAdapter {
     };
   }
 
+  seekTo(time: number): void {
+    const video = document.querySelector(
+      SELECTORS.videoElement,
+    ) as HTMLVideoElement | null;
+    if (video) {
+      video.currentTime = time;
+    }
+  }
+
   executeAction(action: PlaybackAction): void {
     switch (action) {
       case "togglePlay":

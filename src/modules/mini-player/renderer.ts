@@ -24,6 +24,8 @@ const STYLES = `
     object-fit: cover;
     border-radius: 4px;
     margin-bottom: 12px;
+    flex-shrink: 1;
+    min-height: 0;
   }
   .title {
     font-size: 1em;
@@ -34,6 +36,7 @@ const STYLES = `
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 90%;
+    flex-shrink: 0;
   }
   .artist {
     font-size: 0.8125em;
@@ -44,6 +47,7 @@ const STYLES = `
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 90%;
+    flex-shrink: 0;
   }
   .album {
     font-size: 0.75em;
@@ -54,34 +58,56 @@ const STYLES = `
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 90%;
+    flex-shrink: 0;
   }
   .progress-container {
     width: 80%;
     margin: 0 auto 4px;
+    flex-shrink: 0;
   }
   .progress-bar {
     width: 100%;
     height: 3px;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 1.5px;
-    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    padding: 6px 0;
+    background-clip: content-box;
   }
   .progress-fill {
-    height: 100%;
+    height: 3px;
     background: #fff;
     border-radius: 1.5px;
     transition: width 0.3s linear;
+    pointer-events: none;
+    position: absolute;
+    top: 6px;
+    left: 0;
+  }
+  .progress-thumb {
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: left 0.3s linear;
   }
   .time-display {
     font-size: 11px;
     color: #aaa;
     text-align: center;
     margin: 2px 0 8px;
+    flex-shrink: 0;
   }
   .controls {
     display: flex;
     align-items: center;
     gap: 1em;
+    flex-shrink: 0;
   }
   .controls button {
     background: none;
@@ -108,14 +134,21 @@ export class PipWindowRenderer {
   private albumEl: HTMLElement | null = null;
   private playPauseBtn: HTMLButtonElement | null = null;
   private progressFill: HTMLElement | null = null;
+  private progressThumb: HTMLElement | null = null;
+  private progressBarEl: HTMLElement | null = null;
   private timeDisplayEl: HTMLElement | null = null;
+  private onSeekCallback: ((time: number) => void) | null = null;
+  private lastDuration = 0;
 
   build(
     doc: Document,
     state: PlaybackState,
     onAction: (action: PlaybackAction) => void,
+    onSeek?: (time: number) => void,
   ): void {
     this.doc = doc;
+    this.onSeekCallback = onSeek ?? null;
+    this.lastDuration = state.duration;
     doc.body.innerHTML = "";
 
     this.docTitleEl =
@@ -157,13 +190,25 @@ export class PipWindowRenderer {
     progressContainer.className = "progress-container";
     const progressBar = doc.createElement("div");
     progressBar.className = "progress-bar";
+    this.progressBarEl = progressBar;
+
     const progressFill = doc.createElement("div");
     progressFill.className = "progress-fill";
-    progressFill.style.width = this.progressPercent(state) + "%";
+    const pct = this.progressPercent(state);
+    progressFill.style.width = pct + "%";
     this.progressFill = progressFill;
+
+    const progressThumb = doc.createElement("div");
+    progressThumb.className = "progress-thumb";
+    progressThumb.style.left = pct + "%";
+    this.progressThumb = progressThumb;
+
     progressBar.appendChild(progressFill);
+    progressBar.appendChild(progressThumb);
     progressContainer.appendChild(progressBar);
     doc.body.appendChild(progressContainer);
+
+    this.attachSeekListeners(doc, progressBar);
 
     const timeDisplay = doc.createElement("div");
     timeDisplay.className = "time-display";
@@ -219,8 +264,13 @@ export class PipWindowRenderer {
     if (this.albumEl) {
       this.albumEl.textContent = this.formatAlbumLine(state);
     }
+    this.lastDuration = state.duration;
     if (this.progressFill) {
-      this.progressFill.style.width = this.progressPercent(state) + "%";
+      const pct = this.progressPercent(state) + "%";
+      this.progressFill.style.width = pct;
+      if (this.progressThumb) {
+        this.progressThumb.style.left = pct;
+      }
     }
     if (this.timeDisplayEl) {
       this.timeDisplayEl.textContent = this.formatTimeDisplay(state);
@@ -236,10 +286,14 @@ export class PipWindowRenderer {
   }
 
   private updateDocTitle(state: PlaybackState): void {
-    if (!this.docTitleEl) return;
+    if (!this.doc) return;
     const title = state.title ?? "";
     const artist = state.artist ?? "";
-    this.docTitleEl.textContent = artist ? `${title} — ${artist}` : title;
+    const docTitle = artist ? `${title} — ${artist}` : title;
+    this.doc.title = docTitle;
+    if (this.docTitleEl) {
+      this.docTitleEl.textContent = docTitle;
+    }
   }
 
   private formatAlbumLine(state: PlaybackState): string {
@@ -247,6 +301,30 @@ export class PipWindowRenderer {
     if (state.album) parts.push(state.album);
     if (state.year) parts.push(String(state.year));
     return parts.join(" \u00B7 ");
+  }
+
+  private attachSeekListeners(doc: Document, bar: HTMLElement): void {
+    const seek = (e: MouseEvent) => {
+      if (!this.onSeekCallback || this.lastDuration <= 0) return;
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.max(
+        0,
+        Math.min(1, (e.clientX - rect.left) / rect.width),
+      );
+      this.onSeekCallback(ratio * this.lastDuration);
+    };
+
+    bar.addEventListener("mousedown", (e: MouseEvent) => {
+      seek(e);
+
+      const onMove = (moveEvent: MouseEvent) => seek(moveEvent);
+      const onUp = () => {
+        doc.removeEventListener("mousemove", onMove);
+        doc.removeEventListener("mouseup", onUp);
+      };
+      doc.addEventListener("mousemove", onMove);
+      doc.addEventListener("mouseup", onUp);
+    });
   }
 
   private progressPercent(state: PlaybackState): number {

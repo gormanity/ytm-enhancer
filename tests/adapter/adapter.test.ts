@@ -262,4 +262,21 @@ describe("YTMAdapter", () => {
       expect(button.click).toHaveBeenCalled();
     });
   });
+
+  describe("seekTo", () => {
+    it("should set video currentTime", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+      const video = document.querySelector("video") as HTMLVideoElement;
+
+      adapter.seekTo(83.5);
+
+      expect(video.currentTime).toBe(83.5);
+    });
+
+    it("should do nothing when video element is missing", () => {
+      document.body.innerHTML = "";
+
+      expect(() => adapter.seekTo(50)).not.toThrow();
+    });
+  });
 });

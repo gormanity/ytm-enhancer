@@ -109,9 +109,16 @@ export class MiniPlayerController {
     const state = this.adapter.getPlaybackState();
     const pipDoc = pipWindow.document;
 
-    this.renderer.build(pipDoc, state, (action: PlaybackAction) => {
-      this.adapter.executeAction(action);
-    });
+    this.renderer.build(
+      pipDoc,
+      state,
+      (action: PlaybackAction) => {
+        this.adapter.executeAction(action);
+      },
+      (time: number) => {
+        this.adapter.seekTo(time);
+      },
+    );
 
     this.startPolling();
 
