@@ -137,6 +137,28 @@ describe("PipWindowRenderer", () => {
     expect(playPauseBtn?.getAttribute("aria-label")).toBe("Play");
   });
 
+  it("should use correct skip-next SVG path for next button", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const nextBtn = doc.querySelector<HTMLButtonElement>(
+      '[data-action="next"]',
+    );
+    const path = nextBtn?.querySelector("path");
+    expect(path?.getAttribute("d")).toBe(
+      "M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z",
+    );
+  });
+
+  it("should use correct skip-previous SVG path for previous button", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const prevBtn = doc.querySelector<HTMLButtonElement>(
+      '[data-action="previous"]',
+    );
+    const path = prevBtn?.querySelector("path");
+    expect(path?.getAttribute("d")).toBe("M6 6h2v12H6zm3.5 6l8.5 6V6z");
+  });
+
   it("should handle null artwork gracefully", () => {
     renderer.build(doc, makeState({ artworkUrl: null }), onAction);
 
