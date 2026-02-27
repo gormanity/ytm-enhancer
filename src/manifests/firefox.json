@@ -3,7 +3,7 @@
   "name": "YTM Enhancer",
   "version": "0.1.0",
   "description": "A modular extension that enhances the YouTube Music web experience",
-  "permissions": ["activeTab", "notifications", "storage"],
+  "permissions": ["activeTab", "notifications", "scripting", "storage"],
   "host_permissions": [
     "https://music.youtube.com/*",
     "https://lh3.googleusercontent.com/*"
