@@ -62,6 +62,44 @@ describe("YTMAdapter", () => {
       expect(state.isPlaying).toBe(false);
     });
 
+    it("should parse progress and duration from time-info element", () => {
+      document.body.innerHTML = `
+        <span id="time-info" class="time-info">1:23 / 3:45</span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(83);
+      expect(state.duration).toBe(225);
+    });
+
+    it("should parse time-info with hour-length tracks", () => {
+      document.body.innerHTML = `
+        <span id="time-info" class="time-info">1:02:30 / 1:15:00</span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(3750);
+      expect(state.duration).toBe(4500);
+    });
+
+    it("should return 0 for progress and duration when time-info is missing", () => {
+      document.body.innerHTML = "";
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(0);
+      expect(state.duration).toBe(0);
+    });
+
+    it("should return 0 for progress and duration when time-info is malformed", () => {
+      document.body.innerHTML = `
+        <span id="time-info" class="time-info">loading...</span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(0);
+      expect(state.duration).toBe(0);
+    });
+
     it("should extract artwork URL", () => {
       document.body.innerHTML = `
         <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
