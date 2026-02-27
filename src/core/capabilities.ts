@@ -6,9 +6,11 @@ export interface Capabilities {
   commands: boolean;
   storageLocal: boolean;
   storageSync: boolean;
+  documentPip: boolean;
 }
 
 declare const browser: unknown;
+declare const documentPictureInPicture: unknown;
 
 function hasBrowserGlobal(): boolean {
   try {
@@ -58,5 +60,6 @@ export function detectCapabilities(): Capabilities {
       hasChromeGlobal() &&
       typeof chrome.storage === "object" &&
       typeof chrome.storage.sync === "object",
+    documentPip: typeof documentPictureInPicture !== "undefined",
   };
 }

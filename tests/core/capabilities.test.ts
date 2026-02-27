@@ -5,6 +5,7 @@ describe("detectCapabilities", () => {
   beforeEach(() => {
     vi.stubGlobal("chrome", undefined);
     vi.stubGlobal("browser", undefined);
+    vi.stubGlobal("documentPictureInPicture", undefined);
   });
 
   it("should detect Chrome notifications support", () => {
@@ -68,5 +69,17 @@ describe("detectCapabilities", () => {
     const caps = detectCapabilities();
     expect(caps.storageLocal).toBe(true);
     expect(caps.storageSync).toBe(true);
+  });
+
+  it("should detect Document Picture-in-Picture support", () => {
+    vi.stubGlobal("documentPictureInPicture", { requestWindow: vi.fn() });
+
+    const caps = detectCapabilities();
+    expect(caps.documentPip).toBe(true);
+  });
+
+  it("should report no Document PiP when API is absent", () => {
+    const caps = detectCapabilities();
+    expect(caps.documentPip).toBe(false);
   });
 });
