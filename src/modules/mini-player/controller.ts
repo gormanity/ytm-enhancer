@@ -15,8 +15,27 @@ export class MiniPlayerController {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private observer: MutationObserver | null = null;
   private enabled = false;
+  private messageListener: (message: { type: string; data?: unknown }) => void;
+
+  constructor() {
+    this.messageListener = (message) => {
+      if (message.type !== "set-mini-player-enabled") return;
+      const newEnabled = message.data === true;
+      if (newEnabled === this.enabled) return;
+
+      this.enabled = newEnabled;
+      if (newEnabled) {
+        this.tryInjectButton();
+      } else {
+        this.pipButton.remove();
+        this.observer?.disconnect();
+        this.observer = null;
+      }
+    };
+  }
 
   async init(): Promise<void> {
+    chrome.runtime.onMessage.addListener(this.messageListener);
     this.enabled = await this.queryEnabled();
     if (!this.enabled) return;
 
@@ -24,6 +43,7 @@ export class MiniPlayerController {
   }
 
   destroy(): void {
+    chrome.runtime.onMessage.removeListener(this.messageListener);
     this.pipButton.remove();
     this.stopPolling();
     this.observer?.disconnect();

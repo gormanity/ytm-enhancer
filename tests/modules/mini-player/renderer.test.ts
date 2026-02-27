@@ -229,11 +229,7 @@ describe("PipWindowRenderer", () => {
   });
 
   it("should use only title when artist is null", () => {
-    renderer.build(
-      doc,
-      makeState({ title: "Solo", artist: null }),
-      onAction,
-    );
+    renderer.build(doc, makeState({ title: "Solo", artist: null }), onAction);
 
     expect(doc.title).toBe("Solo");
   });

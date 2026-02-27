@@ -2,7 +2,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MiniPlayerController } from "@/modules/mini-player/controller";
 import { SELECTORS } from "@/adapter/selectors";
 
-function stubChrome(overrides: Record<string, unknown> = {}) {
+type MessageListener = (
+  message: unknown,
+  sender: unknown,
+  sendResponse: (response?: unknown) => void,
+) => void;
+
+const messageListeners: MessageListener[] = [];
+
+function stubChrome(runtimeOverrides: Record<string, unknown> = {}) {
+  messageListeners.length = 0;
   vi.stubGlobal("chrome", {
     runtime: {
       sendMessage: vi.fn(
@@ -10,9 +19,24 @@ function stubChrome(overrides: Record<string, unknown> = {}) {
           if (callback) callback({ ok: true, data: true });
         },
       ),
+      onMessage: {
+        addListener: vi.fn((listener: MessageListener) => {
+          messageListeners.push(listener);
+        }),
+        removeListener: vi.fn((listener: MessageListener) => {
+          const idx = messageListeners.indexOf(listener);
+          if (idx >= 0) messageListeners.splice(idx, 1);
+        }),
+      },
+      ...runtimeOverrides,
     },
-    ...overrides,
   });
+}
+
+function sendRuntimeMessage(message: unknown): void {
+  for (const listener of messageListeners) {
+    listener(message, {}, () => {});
+  }
 }
 
 function createNativeMiniPlayerButton(): HTMLElement {
@@ -35,6 +59,7 @@ describe("MiniPlayerController", () => {
   afterEach(() => {
     controller?.destroy();
     document.body.innerHTML = "";
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -44,9 +69,7 @@ describe("MiniPlayerController", () => {
         if (callback) callback({ ok: true, data: true });
       },
     );
-    stubChrome({
-      runtime: { sendMessage },
-    });
+    stubChrome({ sendMessage });
 
     createNativeMiniPlayerButton();
     controller = new MiniPlayerController();
@@ -74,7 +97,7 @@ describe("MiniPlayerController", () => {
         if (callback) callback({ ok: true, data: false });
       },
     );
-    stubChrome({ runtime: { sendMessage } });
+    stubChrome({ sendMessage });
 
     const nativeButton = createNativeMiniPlayerButton();
     const spy = vi.spyOn(nativeButton, "addEventListener");
@@ -108,11 +131,7 @@ describe("MiniPlayerController", () => {
     const removeSpy = vi.spyOn(nativeButton, "removeEventListener");
     controller.destroy();
 
-    expect(removeSpy).toHaveBeenCalledWith(
-      "click",
-      expect.any(Function),
-      true,
-    );
+    expect(removeSpy).toHaveBeenCalledWith("click", expect.any(Function), true);
   });
 
   it("should open video PiP fallback when Document PiP is unavailable", async () => {
@@ -239,5 +258,73 @@ describe("MiniPlayerController", () => {
 
     // Verify that further timer advances don't cause errors
     expect(() => vi.advanceTimersByTime(5000)).not.toThrow();
+  });
+
+  it("should remove button when disabled via toggle message", async () => {
+    const nativeButton = createNativeMiniPlayerButton();
+    const addSpy = vi.spyOn(nativeButton, "addEventListener");
+
+    controller = new MiniPlayerController();
+    await controller.init();
+
+    expect(addSpy).toHaveBeenCalledWith("click", expect.any(Function), true);
+
+    const removeSpy = vi.spyOn(nativeButton, "removeEventListener");
+
+    sendRuntimeMessage({ type: "set-mini-player-enabled", data: false });
+
+    expect(removeSpy).toHaveBeenCalledWith("click", expect.any(Function), true);
+  });
+
+  it("should re-attach button when re-enabled via toggle message", async () => {
+    const sendMessage = vi.fn(
+      (_msg: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: false });
+      },
+    );
+    stubChrome({ sendMessage });
+
+    const nativeButton = createNativeMiniPlayerButton();
+
+    controller = new MiniPlayerController();
+    await controller.init();
+
+    // Initially disabled — button not attached
+    const spy = vi.spyOn(nativeButton, "addEventListener");
+    expect(spy).not.toHaveBeenCalled();
+
+    // Send enable message
+    sendRuntimeMessage({ type: "set-mini-player-enabled", data: true });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(spy).toHaveBeenCalledWith("click", expect.any(Function), true);
+  });
+
+  it("should not double-attach when already enabled", async () => {
+    const nativeButton = createNativeMiniPlayerButton();
+
+    controller = new MiniPlayerController();
+    await controller.init();
+
+    const spy = vi.spyOn(nativeButton, "addEventListener");
+
+    // Send enable again — should be a no-op since already enabled
+    sendRuntimeMessage({ type: "set-mini-player-enabled", data: true });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("should remove message listener on destroy", async () => {
+    createNativeMiniPlayerButton();
+
+    controller = new MiniPlayerController();
+    await controller.init();
+
+    controller.destroy();
+
+    expect(chrome.runtime.onMessage.removeListener).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
   });
 });

@@ -35,11 +35,7 @@ export class PipButton {
 
   remove(): void {
     if (this.nativeButton && this.captureHandler) {
-      this.nativeButton.removeEventListener(
-        "click",
-        this.captureHandler,
-        true,
-      );
+      this.nativeButton.removeEventListener("click", this.captureHandler, true);
       this.nativeButton = null;
       this.captureHandler = null;
     }

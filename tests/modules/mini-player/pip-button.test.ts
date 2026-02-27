@@ -34,7 +34,10 @@ describe("PipButton", () => {
 
       pipButton.attach(nativeButton);
 
-      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      });
       const stopPropagation = vi.spyOn(event, "stopPropagation");
       const preventDefault = vi.spyOn(event, "preventDefault");
       nativeButton.dispatchEvent(event);
