@@ -29,6 +29,9 @@ describe("NotificationsModule", () => {
         create: createMock,
         clear: clearMock,
       },
+      runtime: {
+        getURL: vi.fn((path: string) => `chrome-extension://fake-id/${path}`),
+      },
       storage: {
         local: {
           get: vi.fn().mockResolvedValue({}),
@@ -103,6 +106,34 @@ describe("NotificationsModule", () => {
 
     expect(clearMock).toHaveBeenCalledWith(
       "ytm-enhancer-now-playing",
+      expect.any(Function),
+    );
+  });
+
+  it("should use fallback icon when artworkUrl is null", () => {
+    module.handleTrackChange(makeState({ artworkUrl: null }));
+
+    expect(createMock).toHaveBeenCalledWith(
+      "ytm-enhancer-now-playing",
+      expect.objectContaining({
+        iconUrl: "chrome-extension://fake-id/icon48.png",
+      }),
+      expect.any(Function),
+    );
+  });
+
+  it("should upgrade artwork URL to larger size", () => {
+    module.handleTrackChange(
+      makeState({
+        artworkUrl: "https://lh3.googleusercontent.com/abc=w60-h60-l90-rj",
+      }),
+    );
+
+    expect(createMock).toHaveBeenCalledWith(
+      "ytm-enhancer-now-playing",
+      expect.objectContaining({
+        iconUrl: "https://lh3.googleusercontent.com/abc=w256-h256-l90-rj",
+      }),
       expect.any(Function),
     );
   });

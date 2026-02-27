@@ -1,6 +1,7 @@
 import { createMessageHandler } from "@/core";
 import type { PlaybackAction } from "@/core/types";
 import { YTMAdapter } from "@/adapter";
+import { TrackObserver } from "./track-observer";
 
 const adapter = new YTMAdapter();
 const handler = createMessageHandler();
@@ -17,3 +18,6 @@ handler.on("get-playback-state", async () => {
 });
 
 handler.start();
+
+const trackObserver = new TrackObserver(() => adapter.getPlaybackState());
+trackObserver.start();
