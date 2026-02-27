@@ -17,33 +17,18 @@ export class HotkeysModule implements FeatureModule {
 
   private enabled = true;
   private executor: ActionExecutor;
-  private commandListener: ((command: string) => void) | null = null;
 
   constructor(send: MessageSender) {
     this.executor = new ActionExecutor(send);
   }
 
-  /**
-   * Register the command listener. In Chrome MV3 service workers,
-   * event listeners must be added synchronously at the top level
-   * of the script. Call this before any async work.
-   */
-  registerListeners(): void {
-    this.commandListener = (command: string) => {
-      void this.handleCommand(command);
-    };
-    chrome.commands.onCommand.addListener(this.commandListener);
-  }
-
   async init(): Promise<void> {
-    // Listener already registered via registerListeners()
+    // Command listener is registered at the top level of the background
+    // script to satisfy Chrome MV3 service worker requirements.
   }
 
   destroy(): void {
-    if (this.commandListener) {
-      chrome.commands.onCommand.removeListener(this.commandListener);
-      this.commandListener = null;
-    }
+    // Listener lifecycle is managed by the background script.
   }
 
   isEnabled(): boolean {
@@ -58,7 +43,7 @@ export class HotkeysModule implements FeatureModule {
     return [createHotkeysPopupView()];
   }
 
-  private async handleCommand(command: string): Promise<void> {
+  async handleCommand(command: string): Promise<void> {
     const action = COMMAND_MAP[command];
     if (!action) return;
 

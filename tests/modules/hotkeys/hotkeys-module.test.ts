@@ -6,18 +6,14 @@ import type { MessageResponse } from "@/core/messaging";
 describe("HotkeysModule", () => {
   let sendMock: ReturnType<typeof vi.fn<MessageSender>>;
   let module: HotkeysModule;
-  let commandListeners: Array<(command: string) => void>;
 
   beforeEach(() => {
-    commandListeners = [];
     sendMock = vi.fn<MessageSender>();
 
     vi.stubGlobal("chrome", {
       commands: {
         onCommand: {
-          addListener: vi.fn((cb: (command: string) => void) => {
-            commandListeners.push(cb);
-          }),
+          addListener: vi.fn(),
           removeListener: vi.fn(),
         },
       },
@@ -49,61 +45,46 @@ describe("HotkeysModule", () => {
     expect(module.isEnabled()).toBe(true);
   });
 
-  it("should register a command listener on registerListeners", () => {
-    module.registerListeners();
-
-    expect(chrome.commands.onCommand.addListener).toHaveBeenCalled();
-  });
-
-  it("should dispatch togglePlay when play-pause command fires", async () => {
+  it("should dispatch togglePlay for play-pause command", async () => {
     sendMock.mockResolvedValue({ ok: true } as MessageResponse);
     vi.mocked(
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([{ id: 42 } as chrome.tabs.Tab]);
 
-    module.registerListeners();
-    commandListeners[0]("play-pause");
+    await module.handleCommand("play-pause");
 
-    await vi.waitFor(() => {
-      expect(sendMock).toHaveBeenCalledWith(
-        { type: "playback-action", action: "togglePlay" },
-        { tabId: 42 },
-      );
-    });
+    expect(sendMock).toHaveBeenCalledWith(
+      { type: "playback-action", action: "togglePlay" },
+      { tabId: 42 },
+    );
   });
 
-  it("should dispatch next when next-track command fires", async () => {
+  it("should dispatch next for next-track command", async () => {
     sendMock.mockResolvedValue({ ok: true } as MessageResponse);
     vi.mocked(
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([{ id: 42 } as chrome.tabs.Tab]);
 
-    module.registerListeners();
-    commandListeners[0]("next-track");
+    await module.handleCommand("next-track");
 
-    await vi.waitFor(() => {
-      expect(sendMock).toHaveBeenCalledWith(
-        { type: "playback-action", action: "next" },
-        { tabId: 42 },
-      );
-    });
+    expect(sendMock).toHaveBeenCalledWith(
+      { type: "playback-action", action: "next" },
+      { tabId: 42 },
+    );
   });
 
-  it("should dispatch previous when previous-track command fires", async () => {
+  it("should dispatch previous for previous-track command", async () => {
     sendMock.mockResolvedValue({ ok: true } as MessageResponse);
     vi.mocked(
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([{ id: 42 } as chrome.tabs.Tab]);
 
-    module.registerListeners();
-    commandListeners[0]("previous-track");
+    await module.handleCommand("previous-track");
 
-    await vi.waitFor(() => {
-      expect(sendMock).toHaveBeenCalledWith(
-        { type: "playback-action", action: "previous" },
-        { tabId: 42 },
-      );
-    });
+    expect(sendMock).toHaveBeenCalledWith(
+      { type: "playback-action", action: "previous" },
+      { tabId: 42 },
+    );
   });
 
   it("should not dispatch if no YTM tab is found", async () => {
@@ -111,8 +92,7 @@ describe("HotkeysModule", () => {
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([]);
 
-    module.registerListeners();
-    await commandListeners[0]("play-pause");
+    await module.handleCommand("play-pause");
 
     expect(sendMock).not.toHaveBeenCalled();
   });
@@ -122,16 +102,15 @@ describe("HotkeysModule", () => {
       chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
     ).mockResolvedValue([{ id: 42 } as chrome.tabs.Tab]);
 
-    module.registerListeners();
-    await commandListeners[0]("unknown-command");
+    await module.handleCommand("unknown-command");
 
     expect(sendMock).not.toHaveBeenCalled();
   });
 
-  it("should remove the command listener on destroy", () => {
-    module.registerListeners();
-    module.destroy();
+  it("should provide popup views", () => {
+    const views = module.getPopupViews();
 
-    expect(chrome.commands.onCommand.removeListener).toHaveBeenCalled();
+    expect(views).toHaveLength(1);
+    expect(views[0].id).toBe("hotkeys-settings");
   });
 });

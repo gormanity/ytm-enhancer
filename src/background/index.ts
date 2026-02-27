@@ -8,12 +8,14 @@ import { HotkeysModule } from "@/modules/hotkeys";
 
 const context = createExtensionContext();
 const send = createMessageSender();
-
 const hotkeys = new HotkeysModule(send);
 
 // Chrome MV3 service workers require event listeners to be registered
-// synchronously at the top level. Register before any async work.
-hotkeys.registerListeners();
+// synchronously at the top level of the script, during the first turn
+// of the event loop. Registering inside an async init() is too late.
+chrome.commands.onCommand.addListener((command: string) => {
+  void hotkeys.handleCommand(command);
+});
 
 const modules: FeatureModule[] = [hotkeys];
 
