@@ -27,6 +27,9 @@ This file covers **how to work**, not what the project is.
   work together.
 - Push workflow: `jj bookmark set main -r @-` then
   `jj git push --bookmark main`.
+- **Do not push until all feature work is complete.** Keeping intermediate
+  changes local preserves the option to revise earlier commits with `jj squash`
+  or `jj edit`. Push once the feature is done and all checks pass.
 
 ---
 
