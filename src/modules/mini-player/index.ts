@@ -4,7 +4,8 @@ import { createMiniPlayerPopupView } from "./popup";
 export class MiniPlayerModule implements FeatureModule {
   readonly id = "mini-player";
   readonly name = "Mini Player";
-  readonly description = "Picture-in-Picture mini player with playback controls";
+  readonly description =
+    "Picture-in-Picture mini player with playback controls";
 
   private enabled = true;
 

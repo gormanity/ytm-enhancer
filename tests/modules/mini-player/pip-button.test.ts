@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PipButton } from "@/modules/mini-player/pip-button";
 
 describe("PipButton", () => {
-  let onClick: ReturnType<typeof vi.fn>;
+  let onClick: ReturnType<typeof vi.fn<() => void>>;
   let pipButton: PipButton;
 
   beforeEach(() => {
-    onClick = vi.fn();
+    onClick = vi.fn<() => void>();
     pipButton = new PipButton(onClick);
   });
 

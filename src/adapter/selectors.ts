@@ -15,6 +15,7 @@ export const SELECTORS = {
     ".thumbnail-image-wrapper.style-scope.ytmusic-player-bar > img.image",
   progressBar: "#progress-bar",
   timeInfo: "#time-info",
-  playerBarRightControls: ".right-controls-buttons.style-scope.ytmusic-player-bar",
+  playerBarRightControls:
+    ".right-controls-buttons.style-scope.ytmusic-player-bar",
   videoElement: "video.html5-main-video",
 } as const;

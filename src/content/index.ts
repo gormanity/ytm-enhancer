@@ -1,6 +1,7 @@
 import { createMessageHandler } from "@/core";
 import type { PlaybackAction } from "@/core/types";
 import { YTMAdapter } from "@/adapter";
+import { MiniPlayerController } from "@/modules/mini-player/controller";
 import { TrackObserver } from "./track-observer";
 
 const adapter = new YTMAdapter();
@@ -21,3 +22,6 @@ handler.start();
 
 const trackObserver = new TrackObserver(() => adapter.getPlaybackState());
 trackObserver.start();
+
+const miniPlayerController = new MiniPlayerController();
+void miniPlayerController.init();

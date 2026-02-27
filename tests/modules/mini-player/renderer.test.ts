@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PipWindowRenderer } from "@/modules/mini-player/renderer";
-import type { PlaybackState } from "@/core/types";
+import type { PlaybackAction, PlaybackState } from "@/core/types";
 
 function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
   return {
@@ -18,12 +18,12 @@ function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
 describe("PipWindowRenderer", () => {
   let renderer: PipWindowRenderer;
   let doc: Document;
-  let onAction: ReturnType<typeof vi.fn>;
+  let onAction: ReturnType<typeof vi.fn<(action: PlaybackAction) => void>>;
 
   beforeEach(() => {
     renderer = new PipWindowRenderer();
     doc = document.implementation.createHTMLDocument("PiP");
-    onAction = vi.fn();
+    onAction = vi.fn<(action: PlaybackAction) => void>();
   });
 
   it("should build album art into the document", () => {

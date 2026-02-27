@@ -6,10 +6,7 @@ function stubChrome(overrides: Record<string, unknown> = {}) {
   vi.stubGlobal("chrome", {
     runtime: {
       sendMessage: vi.fn(
-        (
-          _msg: unknown,
-          callback?: (response: unknown) => void,
-        ) => {
+        (_msg: unknown, callback?: (response: unknown) => void) => {
           if (callback) callback({ ok: true, data: true });
         },
       ),
@@ -20,8 +17,7 @@ function stubChrome(overrides: Record<string, unknown> = {}) {
 
 function createPlayerBar(): HTMLElement {
   const bar = document.createElement("div");
-  bar.className =
-    "right-controls-buttons style-scope ytmusic-player-bar";
+  bar.className = "right-controls-buttons style-scope ytmusic-player-bar";
   document.body.appendChild(bar);
   return bar;
 }
@@ -43,10 +39,7 @@ describe("MiniPlayerController", () => {
 
   it("should query enabled state on init", async () => {
     const sendMessage = vi.fn(
-      (
-        _msg: unknown,
-        callback?: (response: unknown) => void,
-      ) => {
+      (_msg: unknown, callback?: (response: unknown) => void) => {
         if (callback) callback({ ok: true, data: true });
       },
     );
@@ -69,18 +62,13 @@ describe("MiniPlayerController", () => {
     controller = new MiniPlayerController();
     await controller.init();
 
-    const button = document.querySelector(
-      ".ytm-enhancer-pip-button",
-    );
+    const button = document.querySelector(".ytm-enhancer-pip-button");
     expect(button).not.toBeNull();
   });
 
   it("should not inject PiP button when disabled", async () => {
     const sendMessage = vi.fn(
-      (
-        _msg: unknown,
-        callback?: (response: unknown) => void,
-      ) => {
+      (_msg: unknown, callback?: (response: unknown) => void) => {
         if (callback) callback({ ok: true, data: false });
       },
     );
@@ -90,9 +78,7 @@ describe("MiniPlayerController", () => {
     controller = new MiniPlayerController();
     await controller.init();
 
-    const button = document.querySelector(
-      ".ytm-enhancer-pip-button",
-    );
+    const button = document.querySelector(".ytm-enhancer-pip-button");
     expect(button).toBeNull();
   });
 
@@ -101,9 +87,7 @@ describe("MiniPlayerController", () => {
     await controller.init();
 
     // No player bar yet — no button
-    expect(
-      document.querySelector(".ytm-enhancer-pip-button"),
-    ).toBeNull();
+    expect(document.querySelector(".ytm-enhancer-pip-button")).toBeNull();
 
     // Now add the player bar
     createPlayerBar();
@@ -111,9 +95,7 @@ describe("MiniPlayerController", () => {
     // Trigger a microtask flush for MutationObserver
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(
-      document.querySelector(".ytm-enhancer-pip-button"),
-    ).not.toBeNull();
+    expect(document.querySelector(".ytm-enhancer-pip-button")).not.toBeNull();
   });
 
   it("should remove button on destroy", async () => {
@@ -121,15 +103,11 @@ describe("MiniPlayerController", () => {
     controller = new MiniPlayerController();
     await controller.init();
 
-    expect(
-      document.querySelector(".ytm-enhancer-pip-button"),
-    ).not.toBeNull();
+    expect(document.querySelector(".ytm-enhancer-pip-button")).not.toBeNull();
 
     controller.destroy();
 
-    expect(
-      document.querySelector(".ytm-enhancer-pip-button"),
-    ).toBeNull();
+    expect(document.querySelector(".ytm-enhancer-pip-button")).toBeNull();
   });
 
   it("should open video PiP fallback when Document PiP is unavailable", async () => {
@@ -142,12 +120,10 @@ describe("MiniPlayerController", () => {
     document.body.appendChild(video);
 
     const original = document.querySelector.bind(document);
-    vi.spyOn(document, "querySelector").mockImplementation(
-      (sel: string) => {
-        if (sel === SELECTORS.videoElement) return video;
-        return original(sel);
-      },
-    );
+    vi.spyOn(document, "querySelector").mockImplementation((sel: string) => {
+      if (sel === SELECTORS.videoElement) return video;
+      return original(sel);
+    });
 
     controller = new MiniPlayerController();
     await controller.init();
@@ -165,8 +141,7 @@ describe("MiniPlayerController", () => {
   it("should open Document PiP when API is available", async () => {
     createPlayerBar();
 
-    const pipDoc =
-      document.implementation.createHTMLDocument("PiP");
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
     const pipWindow = {
       document: pipDoc,
       addEventListener: vi.fn(),
@@ -196,16 +171,12 @@ describe("MiniPlayerController", () => {
     createPlayerBar();
 
     // Set up player bar elements for adapter
-    const titleEl = document.createElement(
-      "yt-formatted-string",
-    );
-    titleEl.className =
-      "title style-scope ytmusic-player-bar";
+    const titleEl = document.createElement("yt-formatted-string");
+    titleEl.className = "title style-scope ytmusic-player-bar";
     titleEl.textContent = "Test Song";
     document.body.appendChild(titleEl);
 
-    const pipDoc =
-      document.implementation.createHTMLDocument("PiP");
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
     const pipWindow = {
       document: pipDoc,
       addEventListener: vi.fn(),
@@ -237,16 +208,13 @@ describe("MiniPlayerController", () => {
   it("should stop polling on PiP window pagehide", async () => {
     createPlayerBar();
 
-    const pipDoc =
-      document.implementation.createHTMLDocument("PiP");
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
     let pagehideHandler: (() => void) | null = null;
     const pipWindow = {
       document: pipDoc,
-      addEventListener: vi.fn(
-        (event: string, handler: () => void) => {
-          if (event === "pagehide") pagehideHandler = handler;
-        },
-      ),
+      addEventListener: vi.fn((event: string, handler: () => void) => {
+        if (event === "pagehide") pagehideHandler = handler;
+      }),
     };
     const requestWindow = vi.fn().mockResolvedValue(pipWindow);
     vi.stubGlobal("documentPictureInPicture", {
@@ -268,8 +236,6 @@ describe("MiniPlayerController", () => {
     pagehideHandler!();
 
     // Verify that further timer advances don't cause errors
-    expect(() =>
-      vi.advanceTimersByTime(5000),
-    ).not.toThrow();
+    expect(() => vi.advanceTimersByTime(5000)).not.toThrow();
   });
 });

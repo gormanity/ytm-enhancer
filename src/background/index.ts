@@ -7,11 +7,13 @@ import {
 } from "@/core";
 import type { PlaybackState } from "@/core/types";
 import { HotkeysModule } from "@/modules/hotkeys";
+import { MiniPlayerModule } from "@/modules/mini-player";
 import { NotificationsModule } from "@/modules/notifications";
 
 const context = createExtensionContext();
 const send = createMessageSender();
 const hotkeys = new HotkeysModule(send);
+const miniPlayer = new MiniPlayerModule();
 const notifications = new NotificationsModule();
 
 // Chrome MV3 service workers require event listeners to be registered
@@ -46,9 +48,18 @@ handler.on("set-notify-on-unpause", async (message) => {
   return { ok: true };
 });
 
+handler.on("get-mini-player-enabled", async () => {
+  return { ok: true, data: miniPlayer.isEnabled() };
+});
+
+handler.on("set-mini-player-enabled", async (message) => {
+  miniPlayer.setEnabled(message.enabled as boolean);
+  return { ok: true };
+});
+
 handler.start();
 
-const modules: FeatureModule[] = [hotkeys, notifications];
+const modules: FeatureModule[] = [hotkeys, miniPlayer, notifications];
 
 initializeModules(context, modules).catch((err) => {
   console.error("[YTM Enhancer] Failed to initialize modules:", err);

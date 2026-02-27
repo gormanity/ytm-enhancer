@@ -1,5 +1,6 @@
 import type { PopupView } from "@/core/types";
 import { createHotkeysPopupView } from "./hotkeys/popup";
+import { createMiniPlayerPopupView } from "./mini-player/popup";
 import { createNotificationsPopupView } from "./notifications/popup";
 
 /**
@@ -9,5 +10,9 @@ import { createNotificationsPopupView } from "./notifications/popup";
  * factory here so it appears in the extension popup.
  */
 export function getAllPopupViews(): PopupView[] {
-  return [createHotkeysPopupView(), createNotificationsPopupView()];
+  return [
+    createHotkeysPopupView(),
+    createMiniPlayerPopupView(),
+    createNotificationsPopupView(),
+  ];
 }

@@ -4,9 +4,7 @@ interface DocumentPictureInPictureOptions {
 }
 
 interface DocumentPictureInPicture extends EventTarget {
-  requestWindow(
-    options?: DocumentPictureInPictureOptions,
-  ): Promise<Window>;
+  requestWindow(options?: DocumentPictureInPictureOptions): Promise<Window>;
   readonly window: Window | null;
 }
 
