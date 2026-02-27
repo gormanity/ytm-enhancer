@@ -18,4 +18,6 @@ export const SELECTORS = {
   nativeMiniPlayerButton:
     'yt-icon-button.player-minimize-button[title="Open mini player"]',
   videoElement: "video.html5-main-video",
+  songArtPanel: "#song-image.ytmusic-player",
+  playerBarThumbnail: ".thumbnail-image-wrapper.style-scope.ytmusic-player-bar",
 } as const;

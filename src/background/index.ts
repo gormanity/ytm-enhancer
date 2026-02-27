@@ -6,12 +6,14 @@ import {
   type FeatureModule,
 } from "@/core";
 import type { PlaybackState } from "@/core/types";
+import { AudioVisualizerModule } from "@/modules/audio-visualizer";
 import { HotkeysModule } from "@/modules/hotkeys";
 import { MiniPlayerModule } from "@/modules/mini-player";
 import { NotificationsModule } from "@/modules/notifications";
 
 const context = createExtensionContext();
 const send = createMessageSender();
+const audioVisualizer = new AudioVisualizerModule();
 const hotkeys = new HotkeysModule(send);
 const miniPlayer = new MiniPlayerModule();
 const notifications = new NotificationsModule();
@@ -57,9 +59,32 @@ handler.on("set-mini-player-enabled", async (message) => {
   return { ok: true };
 });
 
+handler.on("get-audio-visualizer-enabled", async () => {
+  return { ok: true, data: audioVisualizer.isEnabled() };
+});
+
+handler.on("set-audio-visualizer-enabled", async (message) => {
+  audioVisualizer.setEnabled(message.enabled as boolean);
+  return { ok: true };
+});
+
+handler.on("get-audio-visualizer-style", async () => {
+  return { ok: true, data: audioVisualizer.getStyle() };
+});
+
+handler.on("set-audio-visualizer-style", async (message) => {
+  audioVisualizer.setStyle(message.style as "bars" | "waveform" | "circular");
+  return { ok: true };
+});
+
 handler.start();
 
-const modules: FeatureModule[] = [hotkeys, miniPlayer, notifications];
+const modules: FeatureModule[] = [
+  audioVisualizer,
+  hotkeys,
+  miniPlayer,
+  notifications,
+];
 
 initializeModules(context, modules).catch((err) => {
   console.error("[YTM Enhancer] Failed to initialize modules:", err);

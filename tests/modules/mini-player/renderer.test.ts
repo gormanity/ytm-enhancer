@@ -282,14 +282,23 @@ describe("PipWindowRenderer", () => {
     expect(albumEl?.textContent).toBe("New Album \u00B7 2025");
   });
 
-  it("should give artwork flex-shrink so it compresses first", () => {
+  it("should give artwork container flex-shrink so it compresses first", () => {
     renderer.build(doc, makeState(), onAction);
 
-    const artwork = doc.querySelector<HTMLElement>(".artwork");
-    expect(artwork).not.toBeNull();
+    const container = doc.querySelector<HTMLElement>(".artwork-container");
+    expect(container).not.toBeNull();
     const style = doc.querySelector("style")!.textContent!;
     expect(style).toContain("flex-shrink: 1");
     expect(style).toContain("min-height: 0");
+  });
+
+  it("should expose artwork container via getArtworkContainer()", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const container = renderer.getArtworkContainer();
+    expect(container).not.toBeNull();
+    expect(container?.className).toBe("artwork-container");
+    expect(container?.querySelector("img.artwork")).not.toBeNull();
   });
 
   it("should give text, controls, and progress flex-shrink: 0", () => {

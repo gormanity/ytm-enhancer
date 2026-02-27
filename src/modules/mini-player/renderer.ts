@@ -18,14 +18,26 @@ const STYLES = `
     height: 100vh;
     overflow: hidden;
   }
-  .artwork {
+  .artwork-container {
     width: 60%;
     aspect-ratio: 1;
-    object-fit: cover;
-    border-radius: 4px;
     margin-bottom: 12px;
     flex-shrink: 1;
     min-height: 0;
+    position: relative;
+  }
+  .artwork {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+  }
+  .visualizer-canvas {
+    position: absolute;
+    inset: 0;
+    border-radius: 4px;
+    pointer-events: none;
   }
   .title {
     font-size: 1em;
@@ -128,6 +140,7 @@ const STYLES = `
 export class PipWindowRenderer {
   private doc: Document | null = null;
   private docTitleEl: HTMLTitleElement | null = null;
+  private artworkContainerEl: HTMLElement | null = null;
   private artworkEl: HTMLImageElement | null = null;
   private titleEl: HTMLElement | null = null;
   private artistEl: HTMLElement | null = null;
@@ -161,12 +174,18 @@ export class PipWindowRenderer {
     style.textContent = STYLES;
     doc.head.appendChild(style);
 
+    const artworkContainer = doc.createElement("div");
+    artworkContainer.className = "artwork-container";
+    this.artworkContainerEl = artworkContainer;
+
     const artwork = doc.createElement("img");
     artwork.className = "artwork";
     artwork.src = state.artworkUrl ?? "";
     artwork.alt = "Album art";
     this.artworkEl = artwork;
-    doc.body.appendChild(artwork);
+
+    artworkContainer.appendChild(artwork);
+    doc.body.appendChild(artworkContainer);
 
     const title = doc.createElement("div");
     title.className = "title";
@@ -283,6 +302,10 @@ export class PipWindowRenderer {
       );
     }
     this.updateDocTitle(state);
+  }
+
+  getArtworkContainer(): HTMLElement | null {
+    return this.artworkContainerEl;
   }
 
   private updateDocTitle(state: PlaybackState): void {

@@ -40,5 +40,11 @@
   },
   "action": {
     "default_popup": "popup.html"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["audio-bridge.js"],
+      "matches": ["https://music.youtube.com/*"]
+    }
+  ]
 }

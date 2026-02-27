@@ -8,6 +8,23 @@ export default tseslint.config(
     ignores: ["dist/", "node_modules/"],
   },
   {
+    files: ["src/content/audio-bridge.js"],
+    languageOptions: {
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        console: "readonly",
+        AudioContext: "readonly",
+        Uint8Array: "readonly",
+        requestAnimationFrame: "readonly",
+        cancelAnimationFrame: "readonly",
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+  {
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "error",

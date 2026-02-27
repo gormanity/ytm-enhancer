@@ -1,6 +1,7 @@
 import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
 import type { PlaybackAction } from "@/core/types";
+import type { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
 import { PipButton } from "./pip-button";
 import { PipWindowRenderer } from "./renderer";
 import { VideoPipFallback } from "./video-fallback";
@@ -12,12 +13,14 @@ export class MiniPlayerController {
   private pipButton = new PipButton(() => this.handlePipClick());
   private renderer = new PipWindowRenderer();
   private videoFallback = new VideoPipFallback();
+  private overlayManager: VisualizerOverlayManager | null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private observer: MutationObserver | null = null;
   private enabled = false;
   private messageListener: (message: { type: string; data?: unknown }) => void;
 
-  constructor() {
+  constructor(overlayManager?: VisualizerOverlayManager) {
+    this.overlayManager = overlayManager ?? null;
     this.messageListener = (message) => {
       if (message.type !== "set-mini-player-enabled") return;
       const newEnabled = message.data === true;
@@ -120,10 +123,16 @@ export class MiniPlayerController {
       },
     );
 
+    const artworkContainer = this.renderer.getArtworkContainer();
+    if (artworkContainer && this.overlayManager) {
+      this.overlayManager.attachToPip(artworkContainer);
+    }
+
     this.startPolling();
 
     pipWindow.addEventListener("pagehide", () => {
       this.stopPolling();
+      this.overlayManager?.detachPip();
     });
   }
 

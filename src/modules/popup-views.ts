@@ -1,4 +1,5 @@
 import type { PopupView } from "@/core/types";
+import { createAudioVisualizerPopupView } from "./audio-visualizer/popup";
 import { createHotkeysPopupView } from "./hotkeys/popup";
 import { createMiniPlayerPopupView } from "./mini-player/popup";
 import { createNotificationsPopupView } from "./notifications/popup";
@@ -11,6 +12,7 @@ import { createNotificationsPopupView } from "./notifications/popup";
  */
 export function getAllPopupViews(): PopupView[] {
   return [
+    createAudioVisualizerPopupView(),
     createHotkeysPopupView(),
     createMiniPlayerPopupView(),
     createNotificationsPopupView(),
