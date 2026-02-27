@@ -159,6 +159,57 @@ describe("PipWindowRenderer", () => {
     expect(path?.getAttribute("d")).toBe("M6 6h2v12H6zm3.5 6l8.5 6V6z");
   });
 
+  it("should render a progress bar showing current progress ratio", () => {
+    renderer.build(doc, makeState({ progress: 60, duration: 200 }), onAction);
+
+    const fill = doc.querySelector<HTMLElement>(".progress-fill");
+    expect(fill).not.toBeNull();
+    expect(fill?.style.width).toBe("30%");
+  });
+
+  it("should render time display text", () => {
+    renderer.build(doc, makeState({ progress: 83, duration: 225 }), onAction);
+
+    const timeDisplay = doc.querySelector(".time-display");
+    expect(timeDisplay?.textContent).toBe("1:23 / 3:45");
+  });
+
+  it("should format time display with hours for long tracks", () => {
+    renderer.build(
+      doc,
+      makeState({ progress: 3750, duration: 4500 }),
+      onAction,
+    );
+
+    const timeDisplay = doc.querySelector(".time-display");
+    expect(timeDisplay?.textContent).toBe("1:02:30 / 1:15:00");
+  });
+
+  it("should update progress bar on state change", () => {
+    renderer.build(doc, makeState({ progress: 0, duration: 200 }), onAction);
+
+    renderer.update(makeState({ progress: 100, duration: 200 }));
+
+    const fill = doc.querySelector<HTMLElement>(".progress-fill");
+    expect(fill?.style.width).toBe("50%");
+  });
+
+  it("should update time display on state change", () => {
+    renderer.build(doc, makeState({ progress: 0, duration: 200 }), onAction);
+
+    renderer.update(makeState({ progress: 83, duration: 225 }));
+
+    const timeDisplay = doc.querySelector(".time-display");
+    expect(timeDisplay?.textContent).toBe("1:23 / 3:45");
+  });
+
+  it("should show 0% progress when duration is 0", () => {
+    renderer.build(doc, makeState({ progress: 0, duration: 0 }), onAction);
+
+    const fill = doc.querySelector<HTMLElement>(".progress-fill");
+    expect(fill?.style.width).toBe("0%");
+  });
+
   it("should handle null artwork gracefully", () => {
     renderer.build(doc, makeState({ artworkUrl: null }), onAction);
 

@@ -39,11 +39,34 @@ const STYLES = `
     font-size: 13px;
     color: #aaa;
     text-align: center;
-    margin: 2px 8px 12px;
+    margin: 2px 8px 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 280px;
+  }
+  .progress-container {
+    width: 80%;
+    margin: 0 auto 4px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 1.5px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #fff;
+    border-radius: 1.5px;
+    transition: width 0.3s linear;
+  }
+  .time-display {
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+    margin: 2px 0 8px;
   }
   .controls {
     display: flex;
@@ -71,6 +94,8 @@ export class PipWindowRenderer {
   private titleEl: HTMLElement | null = null;
   private artistEl: HTMLElement | null = null;
   private playPauseBtn: HTMLButtonElement | null = null;
+  private progressFill: HTMLElement | null = null;
+  private timeDisplayEl: HTMLElement | null = null;
 
   build(
     doc: Document,
@@ -101,6 +126,24 @@ export class PipWindowRenderer {
     artist.textContent = state.artist ?? "";
     this.artistEl = artist;
     doc.body.appendChild(artist);
+
+    const progressContainer = doc.createElement("div");
+    progressContainer.className = "progress-container";
+    const progressBar = doc.createElement("div");
+    progressBar.className = "progress-bar";
+    const progressFill = doc.createElement("div");
+    progressFill.className = "progress-fill";
+    progressFill.style.width = this.progressPercent(state) + "%";
+    this.progressFill = progressFill;
+    progressBar.appendChild(progressFill);
+    progressContainer.appendChild(progressBar);
+    doc.body.appendChild(progressContainer);
+
+    const timeDisplay = doc.createElement("div");
+    timeDisplay.className = "time-display";
+    timeDisplay.textContent = this.formatTimeDisplay(state);
+    this.timeDisplayEl = timeDisplay;
+    doc.body.appendChild(timeDisplay);
 
     const controls = doc.createElement("div");
     controls.className = "controls";
@@ -145,6 +188,12 @@ export class PipWindowRenderer {
     if (this.artistEl) {
       this.artistEl.textContent = state.artist ?? "";
     }
+    if (this.progressFill) {
+      this.progressFill.style.width = this.progressPercent(state) + "%";
+    }
+    if (this.timeDisplayEl) {
+      this.timeDisplayEl.textContent = this.formatTimeDisplay(state);
+    }
     if (this.playPauseBtn) {
       this.playPauseBtn.innerHTML = state.isPlaying ? PAUSE_SVG : PLAY_SVG;
       this.playPauseBtn.setAttribute(
@@ -152,6 +201,26 @@ export class PipWindowRenderer {
         state.isPlaying ? "Pause" : "Play",
       );
     }
+  }
+
+  private progressPercent(state: PlaybackState): number {
+    if (state.duration <= 0) return 0;
+    return Math.round((state.progress / state.duration) * 100);
+  }
+
+  private formatTimeDisplay(state: PlaybackState): string {
+    return `${this.formatTimestamp(state.progress)} / ${this.formatTimestamp(state.duration)}`;
+  }
+
+  private formatTimestamp(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+
+    if (h > 0) {
+      return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+    return `${m}:${String(s).padStart(2, "0")}`;
   }
 
   private createControlButton(
