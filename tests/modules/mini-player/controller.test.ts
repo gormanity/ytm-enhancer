@@ -15,11 +15,12 @@ function stubChrome(overrides: Record<string, unknown> = {}) {
   });
 }
 
-function createPlayerBar(): HTMLElement {
-  const bar = document.createElement("div");
-  bar.className = "right-controls-buttons style-scope ytmusic-player-bar";
-  document.body.appendChild(bar);
-  return bar;
+function createNativeMiniPlayerButton(): HTMLElement {
+  const button = document.createElement("yt-icon-button");
+  button.className = "player-minimize-button";
+  button.setAttribute("title", "Open mini player");
+  document.body.appendChild(button);
+  return button;
 }
 
 describe("MiniPlayerController", () => {
@@ -47,7 +48,7 @@ describe("MiniPlayerController", () => {
       runtime: { sendMessage },
     });
 
-    createPlayerBar();
+    createNativeMiniPlayerButton();
     controller = new MiniPlayerController();
     await controller.init();
 
@@ -57,16 +58,17 @@ describe("MiniPlayerController", () => {
     );
   });
 
-  it("should inject PiP button when enabled and player bar exists", async () => {
-    createPlayerBar();
+  it("should hijack native button when enabled and button exists", async () => {
+    const nativeButton = createNativeMiniPlayerButton();
+    const spy = vi.spyOn(nativeButton, "addEventListener");
+
     controller = new MiniPlayerController();
     await controller.init();
 
-    const button = document.querySelector(".ytm-enhancer-pip-button");
-    expect(button).not.toBeNull();
+    expect(spy).toHaveBeenCalledWith("click", expect.any(Function), true);
   });
 
-  it("should not inject PiP button when disabled", async () => {
+  it("should not hijack button when disabled", async () => {
     const sendMessage = vi.fn(
       (_msg: unknown, callback?: (response: unknown) => void) => {
         if (callback) callback({ ok: true, data: false });
@@ -74,44 +76,47 @@ describe("MiniPlayerController", () => {
     );
     stubChrome({ runtime: { sendMessage } });
 
-    createPlayerBar();
+    const nativeButton = createNativeMiniPlayerButton();
+    const spy = vi.spyOn(nativeButton, "addEventListener");
+
     controller = new MiniPlayerController();
     await controller.init();
 
-    const button = document.querySelector(".ytm-enhancer-pip-button");
-    expect(button).toBeNull();
+    expect(spy).not.toHaveBeenCalled();
   });
 
-  it("should wait for player bar with MutationObserver", async () => {
+  it("should wait for native button with MutationObserver", async () => {
     controller = new MiniPlayerController();
     await controller.init();
 
-    // No player bar yet — no button
-    expect(document.querySelector(".ytm-enhancer-pip-button")).toBeNull();
-
-    // Now add the player bar
-    createPlayerBar();
+    // No native button yet — observer should be waiting
+    const nativeButton = createNativeMiniPlayerButton();
+    const spy = vi.spyOn(nativeButton, "addEventListener");
 
     // Trigger a microtask flush for MutationObserver
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(document.querySelector(".ytm-enhancer-pip-button")).not.toBeNull();
+    expect(spy).toHaveBeenCalledWith("click", expect.any(Function), true);
   });
 
-  it("should remove button on destroy", async () => {
-    createPlayerBar();
+  it("should clean up on destroy", async () => {
+    const nativeButton = createNativeMiniPlayerButton();
+
     controller = new MiniPlayerController();
     await controller.init();
 
-    expect(document.querySelector(".ytm-enhancer-pip-button")).not.toBeNull();
-
+    const removeSpy = vi.spyOn(nativeButton, "removeEventListener");
     controller.destroy();
 
-    expect(document.querySelector(".ytm-enhancer-pip-button")).toBeNull();
+    expect(removeSpy).toHaveBeenCalledWith(
+      "click",
+      expect.any(Function),
+      true,
+    );
   });
 
   it("should open video PiP fallback when Document PiP is unavailable", async () => {
-    createPlayerBar();
+    const nativeButton = createNativeMiniPlayerButton();
 
     const requestPiP = vi.fn().mockResolvedValue({});
     const video = document.createElement("video");
@@ -122,24 +127,21 @@ describe("MiniPlayerController", () => {
     const original = document.querySelector.bind(document);
     vi.spyOn(document, "querySelector").mockImplementation((sel: string) => {
       if (sel === SELECTORS.videoElement) return video;
+      if (sel === SELECTORS.nativeMiniPlayerButton) return nativeButton;
       return original(sel);
     });
 
     controller = new MiniPlayerController();
     await controller.init();
 
-    const button = document.querySelector<HTMLButtonElement>(
-      ".ytm-enhancer-pip-button",
-    )!;
-    button.click();
-
+    nativeButton.click();
     await vi.advanceTimersByTimeAsync(0);
 
     expect(requestPiP).toHaveBeenCalled();
   });
 
   it("should open Document PiP when API is available", async () => {
-    createPlayerBar();
+    createNativeMiniPlayerButton();
 
     const pipDoc = document.implementation.createHTMLDocument("PiP");
     const pipWindow = {
@@ -154,10 +156,10 @@ describe("MiniPlayerController", () => {
     controller = new MiniPlayerController();
     await controller.init();
 
-    const button = document.querySelector<HTMLButtonElement>(
-      ".ytm-enhancer-pip-button",
-    )!;
-    button.click();
+    const nativeButton = document.querySelector(
+      SELECTORS.nativeMiniPlayerButton,
+    ) as HTMLElement;
+    nativeButton.click();
 
     await vi.advanceTimersByTimeAsync(0);
 
@@ -168,7 +170,7 @@ describe("MiniPlayerController", () => {
   });
 
   it("should poll adapter and update renderer in Document PiP mode", async () => {
-    createPlayerBar();
+    createNativeMiniPlayerButton();
 
     // Set up player bar elements for adapter
     const titleEl = document.createElement("yt-formatted-string");
@@ -189,10 +191,10 @@ describe("MiniPlayerController", () => {
     controller = new MiniPlayerController();
     await controller.init();
 
-    const button = document.querySelector<HTMLButtonElement>(
-      ".ytm-enhancer-pip-button",
-    )!;
-    button.click();
+    const nativeButton = document.querySelector(
+      SELECTORS.nativeMiniPlayerButton,
+    ) as HTMLElement;
+    nativeButton.click();
     await vi.advanceTimersByTimeAsync(0);
 
     // Renderer should have built the PiP window
@@ -206,7 +208,7 @@ describe("MiniPlayerController", () => {
   });
 
   it("should stop polling on PiP window pagehide", async () => {
-    createPlayerBar();
+    createNativeMiniPlayerButton();
 
     const pipDoc = document.implementation.createHTMLDocument("PiP");
     let pagehideHandler: (() => void) | null = null;
@@ -224,10 +226,10 @@ describe("MiniPlayerController", () => {
     controller = new MiniPlayerController();
     await controller.init();
 
-    const button = document.querySelector<HTMLButtonElement>(
-      ".ytm-enhancer-pip-button",
-    )!;
-    button.click();
+    const nativeButton = document.querySelector(
+      SELECTORS.nativeMiniPlayerButton,
+    ) as HTMLElement;
+    nativeButton.click();
     await vi.advanceTimersByTimeAsync(0);
 
     expect(pagehideHandler).not.toBeNull();

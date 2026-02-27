@@ -4,9 +4,21 @@ const PIP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height=
 </svg>`;
 
 export class PipButton {
-  private button: HTMLButtonElement | null = null;
+  private customButton: HTMLButtonElement | null = null;
+  private nativeButton: HTMLElement | null = null;
+  private captureHandler: ((e: Event) => void) | null = null;
 
   constructor(private readonly onClick: () => void) {}
+
+  attach(nativeButton: HTMLElement): void {
+    this.captureHandler = (e: Event) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.onClick();
+    };
+    this.nativeButton = nativeButton;
+    nativeButton.addEventListener("click", this.captureHandler, true);
+  }
 
   inject(container: HTMLElement | null): void {
     if (!container) return;
@@ -18,14 +30,23 @@ export class PipButton {
     button.addEventListener("click", this.onClick);
 
     container.appendChild(button);
-    this.button = button;
+    this.customButton = button;
   }
 
   remove(): void {
-    if (this.button) {
-      this.button.removeEventListener("click", this.onClick);
-      this.button.remove();
-      this.button = null;
+    if (this.nativeButton && this.captureHandler) {
+      this.nativeButton.removeEventListener(
+        "click",
+        this.captureHandler,
+        true,
+      );
+      this.nativeButton = null;
+      this.captureHandler = null;
+    }
+    if (this.customButton) {
+      this.customButton.removeEventListener("click", this.onClick);
+      this.customButton.remove();
+      this.customButton = null;
     }
   }
 }

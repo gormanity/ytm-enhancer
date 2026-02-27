@@ -42,27 +42,27 @@ export class MiniPlayerController {
   }
 
   private tryInjectButton(): void {
-    const container = document.querySelector(
-      SELECTORS.playerBarRightControls,
+    const nativeButton = document.querySelector(
+      SELECTORS.nativeMiniPlayerButton,
     ) as HTMLElement | null;
 
-    if (container) {
-      this.pipButton.inject(container);
+    if (nativeButton) {
+      this.pipButton.attach(nativeButton);
     } else {
-      this.waitForPlayerBar();
+      this.waitForNativeButton();
     }
   }
 
-  private waitForPlayerBar(): void {
+  private waitForNativeButton(): void {
     this.observer = new MutationObserver(() => {
-      const container = document.querySelector(
-        SELECTORS.playerBarRightControls,
+      const nativeButton = document.querySelector(
+        SELECTORS.nativeMiniPlayerButton,
       ) as HTMLElement | null;
 
-      if (container) {
+      if (nativeButton) {
         this.observer?.disconnect();
         this.observer = null;
-        this.pipButton.inject(container);
+        this.pipButton.attach(nativeButton);
       }
     });
 
