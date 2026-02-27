@@ -1,10 +1,7 @@
 import type { PopupView } from "@/core/types";
-import type { NotificationsModule } from "./index";
 
 /** Create the notifications settings popup view. */
-export function createNotificationsPopupView(
-  module: NotificationsModule,
-): PopupView {
+export function createNotificationsPopupView(): PopupView {
   return {
     id: "notifications-settings",
     label: "Notifications",
@@ -24,13 +21,28 @@ export function createNotificationsPopupView(
 
       const toggle = document.createElement("input");
       toggle.type = "checkbox";
-      toggle.checked = module.isEnabled();
-      toggle.addEventListener("change", () => {
-        module.setEnabled(toggle.checked);
-      });
+      toggle.disabled = true;
       label.appendChild(toggle);
 
       container.appendChild(label);
+
+      // Query current state from the background script.
+      chrome.runtime.sendMessage(
+        { type: "get-notifications-enabled" },
+        (response: { ok: boolean; data?: boolean }) => {
+          if (response?.ok) {
+            toggle.checked = response.data === true;
+            toggle.disabled = false;
+          }
+        },
+      );
+
+      toggle.addEventListener("change", () => {
+        chrome.runtime.sendMessage({
+          type: "set-notifications-enabled",
+          enabled: toggle.checked,
+        });
+      });
     },
   };
 }

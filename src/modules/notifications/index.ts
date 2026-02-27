@@ -38,7 +38,7 @@ export class NotificationsModule implements FeatureModule {
   }
 
   getPopupViews(): PopupView[] {
-    return [createNotificationsPopupView(this)];
+    return [createNotificationsPopupView()];
   }
 
   handleTrackChange(state: PlaybackState): void {

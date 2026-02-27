@@ -20,11 +20,16 @@ chrome.commands.onCommand.addListener((command: string) => {
   void hotkeys.handleCommand(command);
 });
 
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "track-changed") {
-    console.log("[YTM Enhancer] Received track-changed:", message.state);
     notifications.handleTrackChange(message.state as PlaybackState);
+  } else if (message.type === "get-notifications-enabled") {
+    sendResponse({ ok: true, data: notifications.isEnabled() });
+  } else if (message.type === "set-notifications-enabled") {
+    notifications.setEnabled(message.enabled as boolean);
+    sendResponse({ ok: true });
   }
+  return true;
 });
 
 const modules: FeatureModule[] = [hotkeys, notifications];

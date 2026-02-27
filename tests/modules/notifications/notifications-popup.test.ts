@@ -1,65 +1,103 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NotificationsModule } from "@/modules/notifications";
+import { createNotificationsPopupView } from "@/modules/notifications/popup";
 
 describe("notifications popup view", () => {
-  let module: NotificationsModule;
+  let sendMessageMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    sendMessageMock = vi.fn();
+
     vi.stubGlobal("chrome", {
-      notifications: {
-        create: vi.fn(),
-        clear: vi.fn(),
-      },
-      storage: {
-        local: {
-          get: vi.fn().mockResolvedValue({}),
-          set: vi.fn().mockResolvedValue(undefined),
-          remove: vi.fn().mockResolvedValue(undefined),
-        },
+      runtime: {
+        sendMessage: sendMessageMock,
       },
     });
-
-    module = new NotificationsModule();
   });
 
-  it("should render a toggle switch", () => {
-    const views = module.getPopupViews();
-    const container = document.createElement("div");
+  it("should return a popup view with correct metadata", () => {
+    const view = createNotificationsPopupView();
 
-    views[0].render(container);
-
-    const toggle = container.querySelector<HTMLInputElement>(
-      'input[type="checkbox"]',
-    );
-    expect(toggle).not.toBeNull();
-    expect(toggle?.checked).toBe(true);
+    expect(view.id).toBe("notifications-settings");
+    expect(view.label).toBe("Notifications");
   });
 
   it("should render a heading", () => {
-    const views = module.getPopupViews();
+    const view = createNotificationsPopupView();
     const container = document.createElement("div");
 
-    views[0].render(container);
+    view.render(container);
 
     const heading = container.querySelector("h2");
     expect(heading).not.toBeNull();
     expect(heading?.textContent).toBe("Track Notifications");
   });
 
-  it("should toggle enabled state when checkbox is clicked", () => {
-    const views = module.getPopupViews();
+  it("should render a toggle switch checked when enabled", async () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) {
+          callback({ ok: true, data: true });
+        }
+      },
+    );
+
+    const view = createNotificationsPopupView();
     const container = document.createElement("div");
 
-    views[0].render(container);
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const toggle = container.querySelector<HTMLInputElement>(
+        'input[type="checkbox"]',
+      );
+      expect(toggle).not.toBeNull();
+      expect(toggle?.checked).toBe(true);
+      expect(toggle?.disabled).toBe(false);
+    });
+  });
+
+  it("should query current enabled state on render", () => {
+    const view = createNotificationsPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      { type: "get-notifications-enabled" },
+      expect.any(Function),
+    );
+  });
+
+  it("should send set-notifications-enabled message on toggle", async () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) {
+          callback({ ok: true, data: true });
+        }
+      },
+    );
+
+    const view = createNotificationsPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const toggle = container.querySelector<HTMLInputElement>(
+        'input[type="checkbox"]',
+      );
+      expect(toggle?.disabled).toBe(false);
+    });
 
     const toggle = container.querySelector<HTMLInputElement>(
       'input[type="checkbox"]',
-    );
-    expect(module.isEnabled()).toBe(true);
+    )!;
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change"));
 
-    toggle!.checked = false;
-    toggle!.dispatchEvent(new Event("change"));
-
-    expect(module.isEnabled()).toBe(false);
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-notifications-enabled",
+      enabled: false,
+    });
   });
 });
