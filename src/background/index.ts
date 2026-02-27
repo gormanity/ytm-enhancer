@@ -1,5 +1,6 @@
 import {
   createExtensionContext,
+  createMessageHandler,
   createMessageSender,
   initializeModules,
   type FeatureModule,
@@ -20,17 +21,23 @@ chrome.commands.onCommand.addListener((command: string) => {
   void hotkeys.handleCommand(command);
 });
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === "track-changed") {
-    notifications.handleTrackChange(message.state as PlaybackState);
-  } else if (message.type === "get-notifications-enabled") {
-    sendResponse({ ok: true, data: notifications.isEnabled() });
-  } else if (message.type === "set-notifications-enabled") {
-    notifications.setEnabled(message.enabled as boolean);
-    sendResponse({ ok: true });
-  }
-  return true;
+const handler = createMessageHandler();
+
+handler.on("track-changed", async (message) => {
+  notifications.handleTrackChange(message.state as PlaybackState);
+  return { ok: true };
 });
+
+handler.on("get-notifications-enabled", async () => {
+  return { ok: true, data: notifications.isEnabled() };
+});
+
+handler.on("set-notifications-enabled", async (message) => {
+  notifications.setEnabled(message.enabled as boolean);
+  return { ok: true };
+});
+
+handler.start();
 
 const modules: FeatureModule[] = [hotkeys, notifications];
 
