@@ -34,4 +34,14 @@ describe("SELECTORS", () => {
   it("should define a selector for the time info", () => {
     expect(SELECTORS.timeInfo).toBeDefined();
   });
+
+  it("should define a selector for the player bar right controls", () => {
+    expect(SELECTORS.playerBarRightControls).toBeDefined();
+    expect(typeof SELECTORS.playerBarRightControls).toBe("string");
+  });
+
+  it("should define a selector for the video element", () => {
+    expect(SELECTORS.videoElement).toBeDefined();
+    expect(typeof SELECTORS.videoElement).toBe("string");
+  });
 });
