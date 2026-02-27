@@ -101,6 +101,28 @@ describe("TrackObserver", () => {
     );
   });
 
+  it("should send message when playback resumes after pause", () => {
+    const state = makeState();
+    getStateMock.mockReturnValue(state);
+
+    observer.start();
+    vi.advanceTimersByTime(2000);
+    sendMessageMock.mockClear();
+
+    // Pause playback
+    getStateMock.mockReturnValue(makeState({ isPlaying: false }));
+    vi.advanceTimersByTime(2000);
+
+    // Resume playback with the same track
+    getStateMock.mockReturnValue(state);
+    vi.advanceTimersByTime(2000);
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "track-changed",
+      state,
+    });
+  });
+
   it("should stop polling when stop is called", () => {
     getStateMock.mockReturnValue(makeState());
     observer.start();

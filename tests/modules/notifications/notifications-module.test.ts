@@ -90,19 +90,20 @@ describe("NotificationsModule", () => {
     expect(createMock).not.toHaveBeenCalled();
   });
 
-  it("should not show a notification when track has not changed", () => {
+  it("should show notification again for the same track", () => {
     const state = makeState();
 
     module.handleTrackChange(state);
     createMock.mockClear();
     module.handleTrackChange(state);
 
-    expect(createMock).not.toHaveBeenCalled();
+    expect(createMock).toHaveBeenCalledTimes(1);
   });
 
   it("should clear previous notification before showing new one", () => {
-    module.handleTrackChange(makeState({ title: "First" }));
-    module.handleTrackChange(makeState({ title: "Second" }));
+    module.handleTrackChange(makeState());
+    clearMock.mockClear();
+    module.handleTrackChange(makeState());
 
     expect(clearMock).toHaveBeenCalledWith(
       "ytm-enhancer-now-playing",
