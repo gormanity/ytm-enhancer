@@ -90,6 +90,7 @@ const STYLES = `
 `;
 
 export class PipWindowRenderer {
+  private doc: Document | null = null;
   private artworkEl: HTMLImageElement | null = null;
   private titleEl: HTMLElement | null = null;
   private artistEl: HTMLElement | null = null;
@@ -102,6 +103,7 @@ export class PipWindowRenderer {
     state: PlaybackState,
     onAction: (action: PlaybackAction) => void,
   ): void {
+    this.doc = doc;
     doc.body.innerHTML = "";
 
     const style = doc.createElement("style");
@@ -176,6 +178,8 @@ export class PipWindowRenderer {
     controls.appendChild(nextBtn);
 
     doc.body.appendChild(controls);
+
+    this.updateDocTitle(state);
   }
 
   update(state: PlaybackState): void {
@@ -201,6 +205,14 @@ export class PipWindowRenderer {
         state.isPlaying ? "Pause" : "Play",
       );
     }
+    this.updateDocTitle(state);
+  }
+
+  private updateDocTitle(state: PlaybackState): void {
+    if (!this.doc) return;
+    const title = state.title ?? "";
+    const artist = state.artist ?? "";
+    this.doc.title = artist ? `${title} — ${artist}` : title;
   }
 
   private progressPercent(state: PlaybackState): number {

@@ -210,6 +210,34 @@ describe("PipWindowRenderer", () => {
     expect(fill?.style.width).toBe("0%");
   });
 
+  it("should set document title to track info on build", () => {
+    renderer.build(
+      doc,
+      makeState({ title: "My Song", artist: "My Artist" }),
+      onAction,
+    );
+
+    expect(doc.title).toBe("My Song — My Artist");
+  });
+
+  it("should update document title on state change", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    renderer.update(makeState({ title: "New Song", artist: "New Artist" }));
+
+    expect(doc.title).toBe("New Song — New Artist");
+  });
+
+  it("should use only title when artist is null", () => {
+    renderer.build(
+      doc,
+      makeState({ title: "Solo", artist: null }),
+      onAction,
+    );
+
+    expect(doc.title).toBe("Solo");
+  });
+
   it("should handle null artwork gracefully", () => {
     renderer.build(doc, makeState({ artworkUrl: null }), onAction);
 
