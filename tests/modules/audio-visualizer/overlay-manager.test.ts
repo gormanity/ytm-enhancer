@@ -134,6 +134,57 @@ describe("VisualizerOverlayManager", () => {
     expect(VisualizerCanvas.prototype.destroy).toHaveBeenCalledTimes(3);
   });
 
+  it("should auto-start PiP canvas when attached after startAll", () => {
+    const c1 = document.createElement("div");
+    document.body.appendChild(c1);
+    manager.attachToPlayerBar(c1);
+    manager.startAll();
+
+    vi.mocked(VisualizerCanvas.prototype.start).mockClear();
+
+    const pipContainer = document.createElement("div");
+    manager.attachToPip(pipContainer);
+
+    expect(VisualizerCanvas.prototype.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not auto-start PiP canvas when not running", () => {
+    const pipContainer = document.createElement("div");
+    manager.attachToPip(pipContainer);
+
+    expect(VisualizerCanvas.prototype.start).not.toHaveBeenCalled();
+  });
+
+  it("should not auto-start after stopAll", () => {
+    const c1 = document.createElement("div");
+    document.body.appendChild(c1);
+    manager.attachToPlayerBar(c1);
+    manager.startAll();
+    manager.stopAll();
+
+    vi.mocked(VisualizerCanvas.prototype.start).mockClear();
+
+    const pipContainer = document.createElement("div");
+    manager.attachToPip(pipContainer);
+
+    expect(VisualizerCanvas.prototype.start).not.toHaveBeenCalled();
+  });
+
+  it("should not auto-start after destroyAll", () => {
+    const c1 = document.createElement("div");
+    document.body.appendChild(c1);
+    manager.attachToPlayerBar(c1);
+    manager.startAll();
+    manager.destroyAll();
+
+    vi.mocked(VisualizerCanvas.prototype.start).mockClear();
+
+    const pipContainer = document.createElement("div");
+    manager.attachToPip(pipContainer);
+
+    expect(VisualizerCanvas.prototype.start).not.toHaveBeenCalled();
+  });
+
   it("should apply current style to newly attached canvases", () => {
     manager.setStyle("circular");
 

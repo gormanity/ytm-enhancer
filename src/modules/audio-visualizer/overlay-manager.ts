@@ -6,6 +6,7 @@ export class VisualizerOverlayManager {
   private songArtCanvas: VisualizerCanvas | null = null;
   private pipCanvas: VisualizerCanvas | null = null;
   private currentStyle: VisualizerStyle = "bars";
+  private running = false;
 
   attachToPlayerBar(container: HTMLElement): void {
     this.playerBarCanvas = this.createAndAttach(container);
@@ -38,18 +39,21 @@ export class VisualizerOverlayManager {
   }
 
   startAll(): void {
+    this.running = true;
     for (const canvas of this.allCanvases()) {
       canvas.start();
     }
   }
 
   stopAll(): void {
+    this.running = false;
     for (const canvas of this.allCanvases()) {
       canvas.stop();
     }
   }
 
   destroyAll(): void {
+    this.running = false;
     for (const canvas of this.allCanvases()) {
       canvas.destroy();
     }
@@ -62,6 +66,9 @@ export class VisualizerOverlayManager {
     const canvas = new VisualizerCanvas();
     canvas.attach(container);
     canvas.setStyle(this.currentStyle);
+    if (this.running) {
+      canvas.start();
+    }
     return canvas;
   }
 
