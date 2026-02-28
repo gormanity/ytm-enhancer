@@ -3,11 +3,13 @@ import { AudioBridgeInjector } from "@/content/audio-bridge-injector";
 
 describe("AudioBridgeInjector", () => {
   let injector: AudioBridgeInjector;
+  let sendMessageMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    sendMessageMock = vi.fn();
     vi.stubGlobal("chrome", {
       runtime: {
-        getURL: vi.fn((path: string) => `chrome-extension://test-id/${path}`),
+        sendMessage: sendMessageMock,
       },
     });
     injector = new AudioBridgeInjector();
@@ -15,24 +17,15 @@ describe("AudioBridgeInjector", () => {
 
   afterEach(() => {
     injector.destroy();
-    document.body.innerHTML = "";
     vi.restoreAllMocks();
   });
 
-  it("should inject a script element with src pointing to the extension file", () => {
+  it("should send inject-audio-bridge message to background", () => {
     injector.inject(vi.fn());
 
-    const script = document.querySelector<HTMLScriptElement>(
-      "script[data-ytm-enhancer-audio-bridge]",
-    );
-    expect(script).not.toBeNull();
-    expect(script?.src).toContain("audio-bridge.js");
-  });
-
-  it("should use chrome.runtime.getURL to resolve the script path", () => {
-    injector.inject(vi.fn());
-
-    expect(chrome.runtime.getURL).toHaveBeenCalledWith("audio-bridge.js");
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "inject-audio-bridge",
+    });
   });
 
   it("should register a message event listener", () => {
@@ -117,31 +110,19 @@ describe("AudioBridgeInjector", () => {
     );
   });
 
-  it("should remove event listener and script on destroy", () => {
+  it("should remove event listener on destroy", () => {
     const removeSpy = vi.spyOn(window, "removeEventListener");
     injector.inject(vi.fn());
-
-    const scriptsBefore = document.querySelectorAll(
-      "script[data-ytm-enhancer-audio-bridge]",
-    );
-    expect(scriptsBefore.length).toBe(1);
 
     injector.destroy();
 
     expect(removeSpy).toHaveBeenCalledWith("message", expect.any(Function));
-    const scriptsAfter = document.querySelectorAll(
-      "script[data-ytm-enhancer-audio-bridge]",
-    );
-    expect(scriptsAfter.length).toBe(0);
   });
 
   it("should not inject twice", () => {
     injector.inject(vi.fn());
     injector.inject(vi.fn());
 
-    const scripts = document.querySelectorAll(
-      "script[data-ytm-enhancer-audio-bridge]",
-    );
-    expect(scripts.length).toBe(1);
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
   });
 });

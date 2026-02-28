@@ -59,6 +59,17 @@ handler.on("set-mini-player-enabled", async (message) => {
   return { ok: true };
 });
 
+handler.on("inject-audio-bridge", async (_message, sender) => {
+  const tabId = sender?.tab?.id;
+  if (tabId === undefined) return { ok: false, error: "No tab ID" };
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["audio-bridge.js"],
+    world: "MAIN",
+  });
+  return { ok: true };
+});
+
 handler.on("get-audio-visualizer-enabled", async () => {
   return { ok: true, data: audioVisualizer.isEnabled() };
 });
