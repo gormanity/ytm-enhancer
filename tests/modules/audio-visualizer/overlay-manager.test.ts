@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from "vitest";
 import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
 
 interface MockCanvas {
@@ -29,16 +37,59 @@ vi.mock("@/modules/audio-visualizer/visualizer-canvas", () => {
 
 describe("VisualizerOverlayManager", () => {
   let manager: VisualizerOverlayManager;
+  let ioCallback: IntersectionObserverCallback;
+  let observeMock: Mock;
+  let unobserveMock: Mock;
+  let disconnectMock: Mock;
+
+  function fireIntersection(
+    entries: Array<{ target: HTMLElement; isIntersecting: boolean }>,
+  ): void {
+    ioCallback(
+      entries.map(
+        (e) =>
+          ({
+            target: e.target,
+            isIntersecting: e.isIntersecting,
+          }) as unknown as IntersectionObserverEntry,
+      ),
+      {} as IntersectionObserver,
+    );
+  }
+
+  function makeAllVisible(...containers: HTMLElement[]): void {
+    fireIntersection(
+      containers.map((target) => ({ target, isIntersecting: true })),
+    );
+  }
 
   beforeEach(() => {
     mockCanvases = [];
     vi.clearAllMocks();
+
+    observeMock = vi.fn();
+    unobserveMock = vi.fn();
+    disconnectMock = vi.fn();
+
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(cb: IntersectionObserverCallback) {
+          ioCallback = cb;
+        }
+        observe = observeMock;
+        unobserve = unobserveMock;
+        disconnect = disconnectMock;
+      },
+    );
+
     manager = new VisualizerOverlayManager();
   });
 
   afterEach(() => {
     manager.destroyAll();
     document.body.innerHTML = "";
+    vi.unstubAllGlobals();
   });
 
   it("should attach a canvas to the player bar container", () => {
@@ -117,6 +168,7 @@ describe("VisualizerOverlayManager", () => {
 
     manager.attachToPlayerBar(c1);
     manager.startAll();
+    makeAllVisible(c1);
 
     expect(mockCanvases[0].start).toHaveBeenCalledTimes(1);
   });
@@ -153,9 +205,11 @@ describe("VisualizerOverlayManager", () => {
     document.body.appendChild(c1);
     manager.attachToPlayerBar(c1);
     manager.startAll();
+    makeAllVisible(c1);
 
     const pipContainer = document.createElement("div");
     manager.attachToPip(pipContainer);
+    makeAllVisible(pipContainer);
 
     expect(mockCanvases[1].start).toHaveBeenCalledTimes(1);
   });
@@ -204,10 +258,14 @@ describe("VisualizerOverlayManager", () => {
   });
 
   describe("surface targeting", () => {
+    let pb: HTMLElement;
+    let sa: HTMLElement;
+    let pip: HTMLElement;
+
     function attachAll(): void {
-      const pb = document.createElement("div");
-      const sa = document.createElement("div");
-      const pip = document.createElement("div");
+      pb = document.createElement("div");
+      sa = document.createElement("div");
+      pip = document.createElement("div");
       document.body.appendChild(pb);
       document.body.appendChild(sa);
       manager.attachToPlayerBar(pb);
@@ -218,8 +276,9 @@ describe("VisualizerOverlayManager", () => {
     it("should default to auto target", () => {
       attachAll();
       manager.startAll();
+      makeAllVisible(pb, sa, pip);
 
-      // auto: pip is highest priority when attached
+      // auto: pip is highest priority when visible
       // canvas order: 0=playerBar, 1=songArt, 2=pip
       expect(mockCanvases[2].start).toHaveBeenCalled();
       expect(mockCanvases[0].stop).toHaveBeenCalled();
@@ -227,13 +286,14 @@ describe("VisualizerOverlayManager", () => {
     });
 
     it("auto target should fall back to song art when no PiP", () => {
-      const pb = document.createElement("div");
-      const sa = document.createElement("div");
-      document.body.appendChild(pb);
-      document.body.appendChild(sa);
-      manager.attachToPlayerBar(pb);
-      manager.attachToSongArt(sa);
+      const pbEl = document.createElement("div");
+      const saEl = document.createElement("div");
+      document.body.appendChild(pbEl);
+      document.body.appendChild(saEl);
+      manager.attachToPlayerBar(pbEl);
+      manager.attachToSongArt(saEl);
       manager.startAll();
+      makeAllVisible(pbEl, saEl);
 
       // canvas order: 0=playerBar, 1=songArt
       expect(mockCanvases[1].start).toHaveBeenCalled();
@@ -241,10 +301,11 @@ describe("VisualizerOverlayManager", () => {
     });
 
     it("auto target should fall back to player bar when only that is attached", () => {
-      const pb = document.createElement("div");
-      document.body.appendChild(pb);
-      manager.attachToPlayerBar(pb);
+      const pbEl = document.createElement("div");
+      document.body.appendChild(pbEl);
+      manager.attachToPlayerBar(pbEl);
       manager.startAll();
+      makeAllVisible(pbEl);
 
       expect(mockCanvases[0].start).toHaveBeenCalled();
     });
@@ -252,6 +313,7 @@ describe("VisualizerOverlayManager", () => {
     it("auto target should re-evaluate when PiP detaches", () => {
       attachAll();
       manager.startAll();
+      makeAllVisible(pb, sa, pip);
 
       // Clear to track re-evaluation
       for (const c of mockCanvases) {
@@ -324,13 +386,14 @@ describe("VisualizerOverlayManager", () => {
     });
 
     it("auto target should re-evaluate when PiP attaches", () => {
-      const pb = document.createElement("div");
-      const sa = document.createElement("div");
-      document.body.appendChild(pb);
-      document.body.appendChild(sa);
-      manager.attachToPlayerBar(pb);
-      manager.attachToSongArt(sa);
+      const pbEl = document.createElement("div");
+      const saEl = document.createElement("div");
+      document.body.appendChild(pbEl);
+      document.body.appendChild(saEl);
+      manager.attachToPlayerBar(pbEl);
+      manager.attachToSongArt(saEl);
       manager.startAll();
+      makeAllVisible(pbEl, saEl);
 
       // songArt should be active (highest without pip)
       expect(mockCanvases[1].start).toHaveBeenCalled();
@@ -340,13 +403,127 @@ describe("VisualizerOverlayManager", () => {
         c.stop.mockClear();
       }
 
-      const pip = document.createElement("div");
-      manager.attachToPip(pip);
+      const pipEl = document.createElement("div");
+      manager.attachToPip(pipEl);
+      makeAllVisible(pipEl);
 
       // Now pip (index 2) should be active, others stopped
       expect(mockCanvases[2].start).toHaveBeenCalled();
       expect(mockCanvases[1].stop).toHaveBeenCalled();
       expect(mockCanvases[0].stop).toHaveBeenCalled();
+    });
+  });
+
+  describe("auto mode visibility tracking", () => {
+    it("auto mode should activate song art only when it is visible", () => {
+      const pb = document.createElement("div");
+      const sa = document.createElement("div");
+      document.body.appendChild(pb);
+      document.body.appendChild(sa);
+      manager.attachToPlayerBar(pb);
+      manager.attachToSongArt(sa);
+      manager.startAll();
+
+      // Make only player bar visible
+      fireIntersection([
+        { target: pb, isIntersecting: true },
+        { target: sa, isIntersecting: false },
+      ]);
+
+      for (const c of mockCanvases) {
+        c.start.mockClear();
+        c.stop.mockClear();
+      }
+
+      // Now make song art visible — it should take priority
+      fireIntersection([{ target: sa, isIntersecting: true }]);
+
+      expect(mockCanvases[1].start).toHaveBeenCalled();
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+    });
+
+    it("auto mode should fall back to player bar when song art becomes hidden", () => {
+      const pb = document.createElement("div");
+      const sa = document.createElement("div");
+      document.body.appendChild(pb);
+      document.body.appendChild(sa);
+      manager.attachToPlayerBar(pb);
+      manager.attachToSongArt(sa);
+      manager.startAll();
+
+      // Both visible
+      fireIntersection([
+        { target: pb, isIntersecting: true },
+        { target: sa, isIntersecting: true },
+      ]);
+
+      for (const c of mockCanvases) {
+        c.start.mockClear();
+        c.stop.mockClear();
+      }
+
+      // Song art goes away
+      fireIntersection([{ target: sa, isIntersecting: false }]);
+
+      expect(mockCanvases[0].start).toHaveBeenCalled();
+      expect(mockCanvases[1].stop).toHaveBeenCalled();
+    });
+
+    it("auto mode should stop all when nothing is visible", () => {
+      const pb = document.createElement("div");
+      const sa = document.createElement("div");
+      document.body.appendChild(pb);
+      document.body.appendChild(sa);
+      manager.attachToPlayerBar(pb);
+      manager.attachToSongArt(sa);
+      manager.startAll();
+
+      fireIntersection([
+        { target: pb, isIntersecting: false },
+        { target: sa, isIntersecting: false },
+      ]);
+
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+      expect(mockCanvases[1].stop).toHaveBeenCalled();
+    });
+
+    it("should observe containers when attached after startAll", () => {
+      manager.startAll();
+
+      const pb = document.createElement("div");
+      document.body.appendChild(pb);
+      manager.attachToPlayerBar(pb);
+
+      expect(observeMock).toHaveBeenCalledWith(pb);
+    });
+
+    it("should disconnect observer on destroyAll", () => {
+      const pb = document.createElement("div");
+      document.body.appendChild(pb);
+      manager.attachToPlayerBar(pb);
+      manager.startAll();
+      manager.destroyAll();
+
+      expect(disconnectMock).toHaveBeenCalled();
+    });
+
+    it("should disconnect observer on stopAll", () => {
+      const pb = document.createElement("div");
+      document.body.appendChild(pb);
+      manager.attachToPlayerBar(pb);
+      manager.startAll();
+      manager.stopAll();
+
+      expect(disconnectMock).toHaveBeenCalled();
+    });
+
+    it("should unobserve PiP container on detachPip", () => {
+      const pip = document.createElement("div");
+      manager.startAll();
+      manager.attachToPip(pip);
+      manager.detachPip();
+
+      expect(unobserveMock).toHaveBeenCalledWith(pip);
     });
   });
 });

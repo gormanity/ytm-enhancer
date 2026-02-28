@@ -9,24 +9,39 @@ export class VisualizerOverlayManager {
   private running = false;
   private target: VisualizerTarget = "auto";
 
+  private playerBarVisible = false;
+  private songArtVisible = false;
+  private pipVisible = false;
+
+  private observer: IntersectionObserver | null = null;
+  private observedContainers = new Map<
+    HTMLElement,
+    "playerBar" | "songArt" | "pip"
+  >();
+
   attachToPlayerBar(container: HTMLElement): void {
     this.playerBarCanvas = this.createAndAttach(container);
+    this.observeContainer(container, "playerBar");
     this.evaluateActive();
   }
 
   attachToSongArt(container: HTMLElement): void {
     this.songArtCanvas = this.createAndAttach(container);
+    this.observeContainer(container, "songArt");
     this.evaluateActive();
   }
 
   attachToPip(container: HTMLElement): void {
     this.pipCanvas = this.createAndAttach(container);
+    this.observeContainer(container, "pip");
     this.evaluateActive();
   }
 
   detachPip(): void {
     this.pipCanvas?.destroy();
     this.pipCanvas = null;
+    this.pipVisible = false;
+    this.unobserveSurface("pip");
     this.evaluateActive();
   }
 
@@ -50,11 +65,16 @@ export class VisualizerOverlayManager {
 
   startAll(): void {
     this.running = true;
+    this.ensureObserver();
+    for (const [container] of this.observedContainers) {
+      this.observer!.observe(container);
+    }
     this.evaluateActive();
   }
 
   stopAll(): void {
     this.running = false;
+    this.destroyObserver();
     for (const canvas of this.allCanvases()) {
       canvas.stop();
     }
@@ -62,6 +82,11 @@ export class VisualizerOverlayManager {
 
   destroyAll(): void {
     this.running = false;
+    this.destroyObserver();
+    this.observedContainers.clear();
+    this.playerBarVisible = false;
+    this.songArtVisible = false;
+    this.pipVisible = false;
     for (const canvas of this.allCanvases()) {
       canvas.destroy();
     }
@@ -75,6 +100,58 @@ export class VisualizerOverlayManager {
     canvas.attach(container);
     canvas.setStyle(this.currentStyle);
     return canvas;
+  }
+
+  private ensureObserver(): void {
+    if (this.observer) return;
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const surface = this.observedContainers.get(
+            entry.target as HTMLElement,
+          );
+          if (!surface) continue;
+          switch (surface) {
+            case "playerBar":
+              this.playerBarVisible = entry.isIntersecting;
+              break;
+            case "songArt":
+              this.songArtVisible = entry.isIntersecting;
+              break;
+            case "pip":
+              this.pipVisible = entry.isIntersecting;
+              break;
+          }
+        }
+        this.evaluateActive();
+      },
+      { threshold: 0 },
+    );
+  }
+
+  private destroyObserver(): void {
+    this.observer?.disconnect();
+    this.observer = null;
+  }
+
+  private observeContainer(
+    container: HTMLElement,
+    surface: "playerBar" | "songArt" | "pip",
+  ): void {
+    this.observedContainers.set(container, surface);
+    if (this.observer) {
+      this.observer.observe(container);
+    }
+  }
+
+  private unobserveSurface(surface: "playerBar" | "songArt" | "pip"): void {
+    for (const [container, s] of this.observedContainers) {
+      if (s === surface) {
+        this.observer?.unobserve(container);
+        this.observedContainers.delete(container);
+        break;
+      }
+    }
   }
 
   private evaluateActive(): void {
@@ -113,11 +190,13 @@ export class VisualizerOverlayManager {
       case "player-bar-only":
         return { playerBar: true, songArt: false, pip: false };
       case "auto": {
-        if (this.pipCanvas)
+        if (this.pipCanvas && this.pipVisible)
           return { playerBar: false, songArt: false, pip: true };
-        if (this.songArtCanvas)
+        if (this.songArtCanvas && this.songArtVisible)
           return { playerBar: false, songArt: true, pip: false };
-        return { playerBar: true, songArt: false, pip: false };
+        if (this.playerBarCanvas && this.playerBarVisible)
+          return { playerBar: true, songArt: false, pip: false };
+        return { playerBar: false, songArt: false, pip: false };
       }
     }
   }
