@@ -44,6 +44,11 @@ export class HotkeysModule implements FeatureModule {
   }
 
   async handleCommand(command: string): Promise<void> {
+    if (command === "focus-ytm-tab") {
+      await this.focusYTMTab();
+      return;
+    }
+
     const action = COMMAND_MAP[command];
     if (!action) return;
 
@@ -54,6 +59,16 @@ export class HotkeysModule implements FeatureModule {
       await this.executor.execute(action, tab.id);
     } catch (err) {
       console.error("[YTM Enhancer] Hotkey action failed:", err);
+    }
+  }
+
+  private async focusYTMTab(): Promise<void> {
+    const tab = await findYTMTab();
+    if (!tab?.id) return;
+
+    await chrome.tabs.update(tab.id, { active: true });
+    if (tab.windowId != null) {
+      await chrome.windows.update(tab.windowId, { focused: true });
     }
   }
 }

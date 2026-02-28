@@ -36,6 +36,12 @@
         "default": "Alt+Shift+B"
       },
       "description": "Go to the previous track"
+    },
+    "focus-ytm-tab": {
+      "suggested_key": {
+        "default": "Alt+Shift+Y"
+      },
+      "description": "Focus the YouTube Music tab"
     }
   },
   "action": {

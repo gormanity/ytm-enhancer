@@ -107,6 +107,29 @@ describe("HotkeysModule", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
+  it("should focus YTM tab for focus-ytm-tab command", async () => {
+    vi.mocked(
+      chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
+    ).mockResolvedValue([{ id: 42, windowId: 7 } as chrome.tabs.Tab]);
+
+    await module.handleCommand("focus-ytm-tab");
+
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(chrome.tabs.update).toHaveBeenCalledWith(42, { active: true });
+    expect(chrome.windows.update).toHaveBeenCalledWith(7, { focused: true });
+  });
+
+  it("should not focus if no YTM tab is found for focus-ytm-tab", async () => {
+    vi.mocked(
+      chrome.tabs.query as () => Promise<chrome.tabs.Tab[]>,
+    ).mockResolvedValue([]);
+
+    await module.handleCommand("focus-ytm-tab");
+
+    expect(chrome.tabs.update).not.toHaveBeenCalled();
+    expect(chrome.windows.update).not.toHaveBeenCalled();
+  });
+
   it("should provide popup views", () => {
     const views = module.getPopupViews();
 
