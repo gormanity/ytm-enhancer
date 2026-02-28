@@ -3,6 +3,7 @@ import { createAudioVisualizerPopupView } from "./audio-visualizer/popup";
 import { createHotkeysPopupView } from "./hotkeys/popup";
 import { createMiniPlayerPopupView } from "./mini-player/popup";
 import { createNotificationsPopupView } from "./notifications/popup";
+import { createStreamQualityPopupView } from "./stream-quality/popup";
 
 /**
  * All popup views provided by feature modules.
@@ -16,5 +17,6 @@ export function getAllPopupViews(): PopupView[] {
     createHotkeysPopupView(),
     createMiniPlayerPopupView(),
     createNotificationsPopupView(),
+    createStreamQualityPopupView(),
   ];
 }

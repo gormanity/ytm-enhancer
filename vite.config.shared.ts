@@ -27,6 +27,11 @@ function copyAssets(browser: string): Plugin {
         resolve(__dirname, "src/content/audio-bridge.js"),
         resolve(outDir, "audio-bridge.js"),
       );
+
+      copyFileSync(
+        resolve(__dirname, "src/content/quality-bridge.js"),
+        resolve(outDir, "quality-bridge.js"),
+      );
     },
   };
 }

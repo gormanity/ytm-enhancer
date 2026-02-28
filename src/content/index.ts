@@ -9,6 +9,7 @@ import type {
 } from "@/modules/audio-visualizer/styles";
 import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
 import { AudioBridgeInjector } from "./audio-bridge-injector";
+import { QualityBridgeInjector } from "./quality-bridge-injector";
 import { TrackObserver } from "./track-observer";
 
 const adapter = new YTMAdapter();
@@ -77,6 +78,29 @@ handler.on("set-audio-visualizer-style", async (message) => {
 
 handler.on("set-audio-visualizer-target", async (message) => {
   overlayManager.setTarget(message.target as VisualizerTarget);
+  return { ok: true };
+});
+
+// --- Stream Quality ---
+
+const qualityBridge = new QualityBridgeInjector();
+let qualityBridgeReady = false;
+
+async function ensureQualityBridge(): Promise<void> {
+  if (qualityBridgeReady) return;
+  await qualityBridge.inject();
+  qualityBridgeReady = true;
+}
+
+handler.on("get-stream-quality", async () => {
+  await ensureQualityBridge();
+  const data = await qualityBridge.getQuality();
+  return { ok: true, data };
+});
+
+handler.on("set-stream-quality", async (message) => {
+  await ensureQualityBridge();
+  qualityBridge.setQuality(message.value as string);
   return { ok: true };
 });
 

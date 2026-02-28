@@ -4,6 +4,7 @@ import {
   createMessageSender,
   initializeModules,
   relayToYTMTab,
+  findYTMTab,
   type FeatureModule,
 } from "@/core";
 import type { PlaybackState } from "@/core/types";
@@ -15,6 +16,7 @@ import type {
 import { HotkeysModule } from "@/modules/hotkeys";
 import { MiniPlayerModule } from "@/modules/mini-player";
 import { NotificationsModule } from "@/modules/notifications";
+import { StreamQualityModule } from "@/modules/stream-quality";
 
 const context = createExtensionContext();
 const send = createMessageSender();
@@ -22,6 +24,7 @@ const audioVisualizer = new AudioVisualizerModule();
 const hotkeys = new HotkeysModule(send);
 const miniPlayer = new MiniPlayerModule();
 const notifications = new NotificationsModule();
+const streamQuality = new StreamQualityModule();
 
 // Chrome MV3 service workers require event listeners to be registered
 // synchronously at the top level of the script, during the first turn
@@ -75,6 +78,37 @@ handler.on("inject-audio-bridge", async (_message, sender) => {
   return { ok: true };
 });
 
+handler.on("inject-quality-bridge", async (_message, sender) => {
+  const tabId = sender?.tab?.id;
+  if (tabId === undefined) return { ok: false, error: "No tab ID" };
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["quality-bridge.js"],
+    world: "MAIN",
+  });
+  return { ok: true };
+});
+
+handler.on("get-stream-quality", async () => {
+  const tab = await findYTMTab();
+  if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
+  const response = await (
+    chrome.tabs.sendMessage as (
+      tabId: number,
+      message: unknown,
+    ) => Promise<{ ok: true; data?: unknown }>
+  )(tab.id, { type: "get-stream-quality" });
+  return response;
+});
+
+handler.on("set-stream-quality", async (message) => {
+  void relayToYTMTab({
+    type: "set-stream-quality",
+    value: message.value,
+  });
+  return { ok: true };
+});
+
 handler.on("get-audio-visualizer-enabled", async () => {
   return { ok: true, data: audioVisualizer.isEnabled() };
 });
@@ -121,6 +155,7 @@ const modules: FeatureModule[] = [
   hotkeys,
   miniPlayer,
   notifications,
+  streamQuality,
 ];
 
 initializeModules(context, modules).catch((err) => {
