@@ -3,6 +3,7 @@ import {
   createMessageHandler,
   createMessageSender,
   initializeModules,
+  relayToYTMTab,
   type FeatureModule,
 } from "@/core";
 import type { PlaybackState } from "@/core/types";
@@ -76,6 +77,7 @@ handler.on("get-audio-visualizer-enabled", async () => {
 
 handler.on("set-audio-visualizer-enabled", async (message) => {
   audioVisualizer.setEnabled(message.enabled as boolean);
+  void relayToYTMTab({ type: "set-audio-visualizer-enabled", enabled: message.enabled });
   return { ok: true };
 });
 
@@ -85,6 +87,7 @@ handler.on("get-audio-visualizer-style", async () => {
 
 handler.on("set-audio-visualizer-style", async (message) => {
   audioVisualizer.setStyle(message.style as "bars" | "waveform" | "circular");
+  void relayToYTMTab({ type: "set-audio-visualizer-style", style: message.style });
   return { ok: true };
 });
 

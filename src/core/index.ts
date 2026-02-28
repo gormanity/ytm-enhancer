@@ -8,6 +8,7 @@ export { ActionExecutor } from "./actions";
 export { PopupRegistry } from "./popup-registry";
 export { createExtensionContext, initializeModules } from "./extension";
 export { findYTMTab } from "./tab-finder";
+export { relayToYTMTab } from "./relay";
 export type { ExtensionContext } from "./extension";
 export type { Message, MessageResponse, SendOptions } from "./messaging";
 export type { Capabilities, BrowserRuntime } from "./capabilities";
