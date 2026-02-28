@@ -28,8 +28,8 @@ const audioBridge = new AudioBridgeInjector();
 const overlayManager = new VisualizerOverlayManager();
 let visualizerEnabled = false;
 
-function startVisualizer(): void {
-  audioBridge.inject((data) => {
+async function startVisualizer(): Promise<void> {
+  await audioBridge.inject((data) => {
     overlayManager.updateFrequencyData(data);
   });
   audioBridge.start();
@@ -60,7 +60,7 @@ handler.on("set-audio-visualizer-enabled", async (message) => {
   if (enabled === visualizerEnabled) return { ok: true };
   visualizerEnabled = enabled;
   if (enabled) {
-    startVisualizer();
+    void startVisualizer();
   } else {
     stopVisualizer();
   }
@@ -80,7 +80,7 @@ chrome.runtime.sendMessage(
   (response: { ok: boolean; data?: boolean }) => {
     if (response?.ok && response.data === true) {
       visualizerEnabled = true;
-      startVisualizer();
+      void startVisualizer();
     }
   },
 );

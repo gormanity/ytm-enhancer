@@ -11,11 +11,11 @@ export class AudioBridgeInjector {
   private listener: ((event: MessageEvent) => void) | null = null;
   private injected = false;
 
-  inject(callback: (data: Uint8Array<ArrayBuffer>) => void): void {
+  async inject(
+    callback: (data: Uint8Array<ArrayBuffer>) => void,
+  ): Promise<void> {
     if (this.injected) return;
     this.injected = true;
-
-    chrome.runtime.sendMessage({ type: "inject-audio-bridge" });
 
     this.listener = (event: MessageEvent) => {
       const msg = event.data;
@@ -30,6 +30,25 @@ export class AudioBridgeInjector {
     };
 
     window.addEventListener("message", this.listener);
+
+    await new Promise<void>((resolve, reject) => {
+      (
+        chrome.runtime.sendMessage as (
+          message: unknown,
+          callback: (response: { ok: boolean; error?: string }) => void,
+        ) => void
+      )({ type: "inject-audio-bridge" }, (response) => {
+        if (response?.ok) {
+          resolve();
+        } else {
+          reject(
+            new Error(
+              response?.error ?? "Failed to inject audio bridge script",
+            ),
+          );
+        }
+      });
+    });
   }
 
   start(): void {
