@@ -46,6 +46,12 @@ export class VisualizerCanvas {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    this.clear();
+  }
+
+  private clear(): void {
+    if (!this.canvas || !this.ctx) return;
+    this.ctx.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
   }
 
   destroy(): void {

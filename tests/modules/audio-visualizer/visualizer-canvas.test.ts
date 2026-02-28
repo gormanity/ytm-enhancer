@@ -154,6 +154,20 @@ describe("VisualizerCanvas", () => {
     expect(() => visualizer.setStyle("circular")).not.toThrow();
   });
 
+  it("should clear canvas when stopped", () => {
+    const { ctx } = mockCanvas();
+    vi.spyOn(window, "requestAnimationFrame").mockReturnValue(42);
+
+    visualizer = new VisualizerCanvas();
+    visualizer.attach(container);
+    visualizer.start();
+
+    vi.mocked(ctx.clearRect).mockClear();
+    visualizer.stop();
+
+    expect(vi.mocked(ctx.clearRect)).toHaveBeenCalled();
+  });
+
   it("should stop animation on destroy", () => {
     mockCanvas();
     const cancelSpy = vi.spyOn(window, "cancelAnimationFrame");
