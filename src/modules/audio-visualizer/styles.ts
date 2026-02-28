@@ -1,5 +1,12 @@
 export type VisualizerStyle = "bars" | "waveform" | "circular";
 
+export type VisualizerTarget =
+  | "auto"
+  | "all"
+  | "pip-only"
+  | "song-art-only"
+  | "player-bar-only";
+
 export interface VisualizerDrawContext {
   ctx: CanvasRenderingContext2D;
   width: number;

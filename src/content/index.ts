@@ -3,7 +3,10 @@ import type { PlaybackAction } from "@/core/types";
 import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
 import { MiniPlayerController } from "@/modules/mini-player/controller";
-import type { VisualizerStyle } from "@/modules/audio-visualizer/styles";
+import type {
+  VisualizerStyle,
+  VisualizerTarget,
+} from "@/modules/audio-visualizer/styles";
 import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
 import { AudioBridgeInjector } from "./audio-bridge-injector";
 import { TrackObserver } from "./track-observer";
@@ -72,6 +75,11 @@ handler.on("set-audio-visualizer-style", async (message) => {
   return { ok: true };
 });
 
+handler.on("set-audio-visualizer-target", async (message) => {
+  overlayManager.setTarget(message.target as VisualizerTarget);
+  return { ok: true };
+});
+
 handler.start();
 
 // Query initial visualizer state from background
@@ -90,6 +98,15 @@ chrome.runtime.sendMessage(
   (response: { ok: boolean; data?: string }) => {
     if (response?.ok && response.data) {
       overlayManager.setStyle(response.data as VisualizerStyle);
+    }
+  },
+);
+
+chrome.runtime.sendMessage(
+  { type: "get-audio-visualizer-target" },
+  (response: { ok: boolean; data?: string }) => {
+    if (response?.ok && response.data) {
+      overlayManager.setTarget(response.data as VisualizerTarget);
     }
   },
 );

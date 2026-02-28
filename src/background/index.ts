@@ -8,6 +8,10 @@ import {
 } from "@/core";
 import type { PlaybackState } from "@/core/types";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
+import type {
+  VisualizerStyle,
+  VisualizerTarget,
+} from "@/modules/audio-visualizer/styles";
 import { HotkeysModule } from "@/modules/hotkeys";
 import { MiniPlayerModule } from "@/modules/mini-player";
 import { NotificationsModule } from "@/modules/notifications";
@@ -77,7 +81,10 @@ handler.on("get-audio-visualizer-enabled", async () => {
 
 handler.on("set-audio-visualizer-enabled", async (message) => {
   audioVisualizer.setEnabled(message.enabled as boolean);
-  void relayToYTMTab({ type: "set-audio-visualizer-enabled", enabled: message.enabled });
+  void relayToYTMTab({
+    type: "set-audio-visualizer-enabled",
+    enabled: message.enabled,
+  });
   return { ok: true };
 });
 
@@ -86,8 +93,24 @@ handler.on("get-audio-visualizer-style", async () => {
 });
 
 handler.on("set-audio-visualizer-style", async (message) => {
-  audioVisualizer.setStyle(message.style as "bars" | "waveform" | "circular");
-  void relayToYTMTab({ type: "set-audio-visualizer-style", style: message.style });
+  audioVisualizer.setStyle(message.style as VisualizerStyle);
+  void relayToYTMTab({
+    type: "set-audio-visualizer-style",
+    style: message.style,
+  });
+  return { ok: true };
+});
+
+handler.on("get-audio-visualizer-target", async () => {
+  return { ok: true, data: audioVisualizer.getTarget() };
+});
+
+handler.on("set-audio-visualizer-target", async (message) => {
+  audioVisualizer.setTarget(message.target as VisualizerTarget);
+  void relayToYTMTab({
+    type: "set-audio-visualizer-target",
+    target: message.target,
+  });
   return { ok: true };
 });
 

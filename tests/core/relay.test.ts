@@ -5,10 +5,7 @@ type TabQuery = (
   queryInfo: chrome.tabs.QueryInfo,
 ) => Promise<chrome.tabs.Tab[]>;
 
-type TabSendMessage = (
-  tabId: number,
-  message: unknown,
-) => Promise<unknown>;
+type TabSendMessage = (tabId: number, message: unknown) => Promise<unknown>;
 
 describe("relayToYTMTab", () => {
   beforeEach(() => {

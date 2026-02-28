@@ -52,6 +52,34 @@ export function createAudioVisualizerPopupView(): PopupView {
       styleLabel.appendChild(select);
       container.appendChild(styleLabel);
 
+      const targetLabel = document.createElement("label");
+      targetLabel.className = "toggle-row";
+
+      const targetText = document.createElement("span");
+      targetText.textContent = "Display surface";
+      targetLabel.appendChild(targetText);
+
+      const targetSelect = document.createElement("select");
+      targetSelect.disabled = true;
+
+      const targetOptions = [
+        { value: "auto", text: "Auto" },
+        { value: "all", text: "All Surfaces" },
+        { value: "pip-only", text: "PiP Only" },
+        { value: "song-art-only", text: "Song Art Only" },
+        { value: "player-bar-only", text: "Player Bar Only" },
+      ];
+
+      for (const opt of targetOptions) {
+        const option = document.createElement("option");
+        option.value = opt.value;
+        option.textContent = opt.text;
+        targetSelect.appendChild(option);
+      }
+
+      targetLabel.appendChild(targetSelect);
+      container.appendChild(targetLabel);
+
       chrome.runtime.sendMessage(
         { type: "get-audio-visualizer-enabled" },
         (response: { ok: boolean; data?: boolean }) => {
@@ -72,6 +100,16 @@ export function createAudioVisualizerPopupView(): PopupView {
         },
       );
 
+      chrome.runtime.sendMessage(
+        { type: "get-audio-visualizer-target" },
+        (response: { ok: boolean; data?: string }) => {
+          if (response?.ok && response.data) {
+            targetSelect.value = response.data;
+            targetSelect.disabled = false;
+          }
+        },
+      );
+
       toggle.addEventListener("change", () => {
         chrome.runtime.sendMessage({
           type: "set-audio-visualizer-enabled",
@@ -83,6 +121,13 @@ export function createAudioVisualizerPopupView(): PopupView {
         chrome.runtime.sendMessage({
           type: "set-audio-visualizer-style",
           style: select.value,
+        });
+      });
+
+      targetSelect.addEventListener("change", () => {
+        chrome.runtime.sendMessage({
+          type: "set-audio-visualizer-target",
+          target: targetSelect.value,
         });
       });
     },

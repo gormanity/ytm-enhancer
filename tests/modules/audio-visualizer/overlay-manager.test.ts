@@ -1,22 +1,37 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
-import { VisualizerCanvas } from "@/modules/audio-visualizer/visualizer-canvas";
+
+interface MockCanvas {
+  attach: ReturnType<typeof vi.fn>;
+  start: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn>;
+  setStyle: ReturnType<typeof vi.fn>;
+  updateFrequencyData: ReturnType<typeof vi.fn>;
+}
+
+let mockCanvases: MockCanvas[];
 
 vi.mock("@/modules/audio-visualizer/visualizer-canvas", () => {
-  const VisualizerCanvas = vi.fn();
-  VisualizerCanvas.prototype.attach = vi.fn();
-  VisualizerCanvas.prototype.start = vi.fn();
-  VisualizerCanvas.prototype.stop = vi.fn();
-  VisualizerCanvas.prototype.destroy = vi.fn();
-  VisualizerCanvas.prototype.setStyle = vi.fn();
-  VisualizerCanvas.prototype.updateFrequencyData = vi.fn();
-  return { VisualizerCanvas };
+  class MockVisualizerCanvas {
+    attach = vi.fn();
+    start = vi.fn();
+    stop = vi.fn();
+    destroy = vi.fn();
+    setStyle = vi.fn();
+    updateFrequencyData = vi.fn();
+    constructor() {
+      mockCanvases.push(this as unknown as MockCanvas);
+    }
+  }
+  return { VisualizerCanvas: MockVisualizerCanvas };
 });
 
 describe("VisualizerOverlayManager", () => {
   let manager: VisualizerOverlayManager;
 
   beforeEach(() => {
+    mockCanvases = [];
     vi.clearAllMocks();
     manager = new VisualizerOverlayManager();
   });
@@ -32,8 +47,8 @@ describe("VisualizerOverlayManager", () => {
 
     manager.attachToPlayerBar(container);
 
-    expect(VisualizerCanvas).toHaveBeenCalledTimes(1);
-    expect(VisualizerCanvas.prototype.attach).toHaveBeenCalledWith(container);
+    expect(mockCanvases).toHaveLength(1);
+    expect(mockCanvases[0].attach).toHaveBeenCalledWith(container);
   });
 
   it("should attach a canvas to the song art container", () => {
@@ -42,8 +57,8 @@ describe("VisualizerOverlayManager", () => {
 
     manager.attachToSongArt(container);
 
-    expect(VisualizerCanvas).toHaveBeenCalledTimes(1);
-    expect(VisualizerCanvas.prototype.attach).toHaveBeenCalledWith(container);
+    expect(mockCanvases).toHaveLength(1);
+    expect(mockCanvases[0].attach).toHaveBeenCalledWith(container);
   });
 
   it("should attach a canvas to PiP container", () => {
@@ -51,8 +66,8 @@ describe("VisualizerOverlayManager", () => {
 
     manager.attachToPip(container);
 
-    expect(VisualizerCanvas).toHaveBeenCalledTimes(1);
-    expect(VisualizerCanvas.prototype.attach).toHaveBeenCalledWith(container);
+    expect(mockCanvases).toHaveLength(1);
+    expect(mockCanvases[0].attach).toHaveBeenCalledWith(container);
   });
 
   it("should detach PiP canvas on detachPip", () => {
@@ -60,7 +75,7 @@ describe("VisualizerOverlayManager", () => {
     manager.attachToPip(container);
     manager.detachPip();
 
-    expect(VisualizerCanvas.prototype.destroy).toHaveBeenCalledTimes(1);
+    expect(mockCanvases[0].destroy).toHaveBeenCalledTimes(1);
   });
 
   it("should fan out frequency data to all canvases", () => {
@@ -75,9 +90,8 @@ describe("VisualizerOverlayManager", () => {
     const data = new Uint8Array([128, 64]);
     manager.updateFrequencyData(data);
 
-    expect(
-      VisualizerCanvas.prototype.updateFrequencyData,
-    ).toHaveBeenCalledTimes(2);
+    expect(mockCanvases[0].updateFrequencyData).toHaveBeenCalledWith(data);
+    expect(mockCanvases[1].updateFrequencyData).toHaveBeenCalledWith(data);
   });
 
   it("should set style on all canvases", () => {
@@ -89,14 +103,12 @@ describe("VisualizerOverlayManager", () => {
     manager.attachToPlayerBar(c1);
     manager.attachToSongArt(c2);
 
-    vi.mocked(VisualizerCanvas.prototype.setStyle).mockClear();
+    mockCanvases[0].setStyle.mockClear();
+    mockCanvases[1].setStyle.mockClear();
     manager.setStyle("waveform");
 
-    expect(VisualizerCanvas.prototype.setStyle).toHaveBeenCalledWith(
-      "waveform",
-    );
-    // Called twice — once per canvas (excluding initial attach calls)
-    expect(VisualizerCanvas.prototype.setStyle).toHaveBeenCalledTimes(2);
+    expect(mockCanvases[0].setStyle).toHaveBeenCalledWith("waveform");
+    expect(mockCanvases[1].setStyle).toHaveBeenCalledWith("waveform");
   });
 
   it("should start all canvases", () => {
@@ -106,7 +118,7 @@ describe("VisualizerOverlayManager", () => {
     manager.attachToPlayerBar(c1);
     manager.startAll();
 
-    expect(VisualizerCanvas.prototype.start).toHaveBeenCalledTimes(1);
+    expect(mockCanvases[0].start).toHaveBeenCalledTimes(1);
   });
 
   it("should stop all canvases", () => {
@@ -116,7 +128,7 @@ describe("VisualizerOverlayManager", () => {
     manager.attachToPlayerBar(c1);
     manager.stopAll();
 
-    expect(VisualizerCanvas.prototype.stop).toHaveBeenCalledTimes(1);
+    expect(mockCanvases[0].stop).toHaveBeenCalledTimes(1);
   });
 
   it("should destroy all canvases", () => {
@@ -131,28 +143,28 @@ describe("VisualizerOverlayManager", () => {
     manager.attachToPip(c3);
     manager.destroyAll();
 
-    expect(VisualizerCanvas.prototype.destroy).toHaveBeenCalledTimes(3);
+    expect(mockCanvases[0].destroy).toHaveBeenCalledTimes(1);
+    expect(mockCanvases[1].destroy).toHaveBeenCalledTimes(1);
+    expect(mockCanvases[2].destroy).toHaveBeenCalledTimes(1);
   });
 
-  it("should auto-start PiP canvas when attached after startAll", () => {
+  it("should auto-start canvas when attached after startAll", () => {
     const c1 = document.createElement("div");
     document.body.appendChild(c1);
     manager.attachToPlayerBar(c1);
     manager.startAll();
 
-    vi.mocked(VisualizerCanvas.prototype.start).mockClear();
-
     const pipContainer = document.createElement("div");
     manager.attachToPip(pipContainer);
 
-    expect(VisualizerCanvas.prototype.start).toHaveBeenCalledTimes(1);
+    expect(mockCanvases[1].start).toHaveBeenCalledTimes(1);
   });
 
-  it("should not auto-start PiP canvas when not running", () => {
+  it("should not auto-start canvas when not running", () => {
     const pipContainer = document.createElement("div");
     manager.attachToPip(pipContainer);
 
-    expect(VisualizerCanvas.prototype.start).not.toHaveBeenCalled();
+    expect(mockCanvases[0].start).not.toHaveBeenCalled();
   });
 
   it("should not auto-start after stopAll", () => {
@@ -162,12 +174,10 @@ describe("VisualizerOverlayManager", () => {
     manager.startAll();
     manager.stopAll();
 
-    vi.mocked(VisualizerCanvas.prototype.start).mockClear();
-
     const pipContainer = document.createElement("div");
     manager.attachToPip(pipContainer);
 
-    expect(VisualizerCanvas.prototype.start).not.toHaveBeenCalled();
+    expect(mockCanvases[1].start).not.toHaveBeenCalled();
   });
 
   it("should not auto-start after destroyAll", () => {
@@ -177,12 +187,10 @@ describe("VisualizerOverlayManager", () => {
     manager.startAll();
     manager.destroyAll();
 
-    vi.mocked(VisualizerCanvas.prototype.start).mockClear();
-
     const pipContainer = document.createElement("div");
     manager.attachToPip(pipContainer);
 
-    expect(VisualizerCanvas.prototype.start).not.toHaveBeenCalled();
+    expect(mockCanvases[1].start).not.toHaveBeenCalled();
   });
 
   it("should apply current style to newly attached canvases", () => {
@@ -192,8 +200,153 @@ describe("VisualizerOverlayManager", () => {
     document.body.appendChild(c);
     manager.attachToPlayerBar(c);
 
-    expect(VisualizerCanvas.prototype.setStyle).toHaveBeenCalledWith(
-      "circular",
-    );
+    expect(mockCanvases[0].setStyle).toHaveBeenCalledWith("circular");
+  });
+
+  describe("surface targeting", () => {
+    function attachAll(): void {
+      const pb = document.createElement("div");
+      const sa = document.createElement("div");
+      const pip = document.createElement("div");
+      document.body.appendChild(pb);
+      document.body.appendChild(sa);
+      manager.attachToPlayerBar(pb);
+      manager.attachToSongArt(sa);
+      manager.attachToPip(pip);
+    }
+
+    it("should default to auto target", () => {
+      attachAll();
+      manager.startAll();
+
+      // auto: pip is highest priority when attached
+      // canvas order: 0=playerBar, 1=songArt, 2=pip
+      expect(mockCanvases[2].start).toHaveBeenCalled();
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+      expect(mockCanvases[1].stop).toHaveBeenCalled();
+    });
+
+    it("auto target should fall back to song art when no PiP", () => {
+      const pb = document.createElement("div");
+      const sa = document.createElement("div");
+      document.body.appendChild(pb);
+      document.body.appendChild(sa);
+      manager.attachToPlayerBar(pb);
+      manager.attachToSongArt(sa);
+      manager.startAll();
+
+      // canvas order: 0=playerBar, 1=songArt
+      expect(mockCanvases[1].start).toHaveBeenCalled();
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+    });
+
+    it("auto target should fall back to player bar when only that is attached", () => {
+      const pb = document.createElement("div");
+      document.body.appendChild(pb);
+      manager.attachToPlayerBar(pb);
+      manager.startAll();
+
+      expect(mockCanvases[0].start).toHaveBeenCalled();
+    });
+
+    it("auto target should re-evaluate when PiP detaches", () => {
+      attachAll();
+      manager.startAll();
+
+      // Clear to track re-evaluation
+      for (const c of mockCanvases) {
+        c.start.mockClear();
+        c.stop.mockClear();
+      }
+
+      manager.detachPip();
+
+      // Should fall back to songArt (index 1)
+      expect(mockCanvases[1].start).toHaveBeenCalled();
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+    });
+
+    it("all target should start all canvases", () => {
+      manager.setTarget("all");
+      attachAll();
+      manager.startAll();
+
+      expect(mockCanvases[0].start).toHaveBeenCalled();
+      expect(mockCanvases[1].start).toHaveBeenCalled();
+      expect(mockCanvases[2].start).toHaveBeenCalled();
+    });
+
+    it("pip-only target should start only PiP canvas", () => {
+      manager.setTarget("pip-only");
+      attachAll();
+      manager.startAll();
+
+      expect(mockCanvases[2].start).toHaveBeenCalled();
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+      expect(mockCanvases[1].stop).toHaveBeenCalled();
+    });
+
+    it("song-art-only target should start only song art canvas", () => {
+      manager.setTarget("song-art-only");
+      attachAll();
+      manager.startAll();
+
+      expect(mockCanvases[1].start).toHaveBeenCalled();
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+      expect(mockCanvases[2].stop).toHaveBeenCalled();
+    });
+
+    it("player-bar-only target should start only player bar canvas", () => {
+      manager.setTarget("player-bar-only");
+      attachAll();
+      manager.startAll();
+
+      expect(mockCanvases[0].start).toHaveBeenCalled();
+      expect(mockCanvases[1].stop).toHaveBeenCalled();
+      expect(mockCanvases[2].stop).toHaveBeenCalled();
+    });
+
+    it("setTarget should re-evaluate active surfaces", () => {
+      manager.setTarget("all");
+      attachAll();
+      manager.startAll();
+
+      for (const c of mockCanvases) {
+        c.start.mockClear();
+        c.stop.mockClear();
+      }
+
+      manager.setTarget("pip-only");
+
+      expect(mockCanvases[2].start).toHaveBeenCalled();
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+      expect(mockCanvases[1].stop).toHaveBeenCalled();
+    });
+
+    it("auto target should re-evaluate when PiP attaches", () => {
+      const pb = document.createElement("div");
+      const sa = document.createElement("div");
+      document.body.appendChild(pb);
+      document.body.appendChild(sa);
+      manager.attachToPlayerBar(pb);
+      manager.attachToSongArt(sa);
+      manager.startAll();
+
+      // songArt should be active (highest without pip)
+      expect(mockCanvases[1].start).toHaveBeenCalled();
+
+      for (const c of mockCanvases) {
+        c.start.mockClear();
+        c.stop.mockClear();
+      }
+
+      const pip = document.createElement("div");
+      manager.attachToPip(pip);
+
+      // Now pip (index 2) should be active, others stopped
+      expect(mockCanvases[2].start).toHaveBeenCalled();
+      expect(mockCanvases[1].stop).toHaveBeenCalled();
+      expect(mockCanvases[0].stop).toHaveBeenCalled();
+    });
   });
 });

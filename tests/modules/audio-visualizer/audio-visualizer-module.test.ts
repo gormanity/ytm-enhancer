@@ -36,6 +36,19 @@ describe("AudioVisualizerModule", () => {
     expect(mod.getStyle()).toBe("circular");
   });
 
+  it("should default to auto target", () => {
+    const mod = new AudioVisualizerModule();
+    expect(mod.getTarget()).toBe("auto");
+  });
+
+  it("should change target", () => {
+    const mod = new AudioVisualizerModule();
+    mod.setTarget("pip-only");
+    expect(mod.getTarget()).toBe("pip-only");
+    mod.setTarget("all");
+    expect(mod.getTarget()).toBe("all");
+  });
+
   it("should return popup views", () => {
     const mod = new AudioVisualizerModule();
     const views = mod.getPopupViews!();

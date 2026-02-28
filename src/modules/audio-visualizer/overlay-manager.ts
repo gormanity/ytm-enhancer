@@ -1,4 +1,4 @@
-import type { VisualizerStyle } from "./styles";
+import type { VisualizerStyle, VisualizerTarget } from "./styles";
 import { VisualizerCanvas } from "./visualizer-canvas";
 
 export class VisualizerOverlayManager {
@@ -7,22 +7,32 @@ export class VisualizerOverlayManager {
   private pipCanvas: VisualizerCanvas | null = null;
   private currentStyle: VisualizerStyle = "bars";
   private running = false;
+  private target: VisualizerTarget = "auto";
 
   attachToPlayerBar(container: HTMLElement): void {
     this.playerBarCanvas = this.createAndAttach(container);
+    this.evaluateActive();
   }
 
   attachToSongArt(container: HTMLElement): void {
     this.songArtCanvas = this.createAndAttach(container);
+    this.evaluateActive();
   }
 
   attachToPip(container: HTMLElement): void {
     this.pipCanvas = this.createAndAttach(container);
+    this.evaluateActive();
   }
 
   detachPip(): void {
     this.pipCanvas?.destroy();
     this.pipCanvas = null;
+    this.evaluateActive();
+  }
+
+  setTarget(target: VisualizerTarget): void {
+    this.target = target;
+    this.evaluateActive();
   }
 
   updateFrequencyData(data: Uint8Array<ArrayBuffer>): void {
@@ -40,9 +50,7 @@ export class VisualizerOverlayManager {
 
   startAll(): void {
     this.running = true;
-    for (const canvas of this.allCanvases()) {
-      canvas.start();
-    }
+    this.evaluateActive();
   }
 
   stopAll(): void {
@@ -66,10 +74,52 @@ export class VisualizerOverlayManager {
     const canvas = new VisualizerCanvas();
     canvas.attach(container);
     canvas.setStyle(this.currentStyle);
-    if (this.running) {
-      canvas.start();
-    }
     return canvas;
+  }
+
+  private evaluateActive(): void {
+    if (!this.running) return;
+
+    const active = this.shouldBeActive();
+
+    const entries: [VisualizerCanvas | null, boolean][] = [
+      [this.playerBarCanvas, active.playerBar],
+      [this.songArtCanvas, active.songArt],
+      [this.pipCanvas, active.pip],
+    ];
+
+    for (const [canvas, shouldRun] of entries) {
+      if (!canvas) continue;
+      if (shouldRun) {
+        canvas.start();
+      } else {
+        canvas.stop();
+      }
+    }
+  }
+
+  private shouldBeActive(): {
+    playerBar: boolean;
+    songArt: boolean;
+    pip: boolean;
+  } {
+    switch (this.target) {
+      case "all":
+        return { playerBar: true, songArt: true, pip: true };
+      case "pip-only":
+        return { playerBar: false, songArt: false, pip: true };
+      case "song-art-only":
+        return { playerBar: false, songArt: true, pip: false };
+      case "player-bar-only":
+        return { playerBar: true, songArt: false, pip: false };
+      case "auto": {
+        if (this.pipCanvas)
+          return { playerBar: false, songArt: false, pip: true };
+        if (this.songArtCanvas)
+          return { playerBar: false, songArt: true, pip: false };
+        return { playerBar: true, songArt: false, pip: false };
+      }
+    }
   }
 
   private allCanvases(): VisualizerCanvas[] {

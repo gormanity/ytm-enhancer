@@ -1,5 +1,5 @@
 import type { FeatureModule, PopupView } from "@/core/types";
-import type { VisualizerStyle } from "./styles";
+import type { VisualizerStyle, VisualizerTarget } from "./styles";
 import { createAudioVisualizerPopupView } from "./popup";
 
 export class AudioVisualizerModule implements FeatureModule {
@@ -10,6 +10,7 @@ export class AudioVisualizerModule implements FeatureModule {
 
   private enabled = true;
   private style: VisualizerStyle = "bars";
+  private target: VisualizerTarget = "auto";
 
   init(): void {
     // No background-side setup needed; visualization runs in the content script.
@@ -33,6 +34,14 @@ export class AudioVisualizerModule implements FeatureModule {
 
   setStyle(style: VisualizerStyle): void {
     this.style = style;
+  }
+
+  getTarget(): VisualizerTarget {
+    return this.target;
+  }
+
+  setTarget(target: VisualizerTarget): void {
+    this.target = target;
   }
 
   getPopupViews(): PopupView[] {

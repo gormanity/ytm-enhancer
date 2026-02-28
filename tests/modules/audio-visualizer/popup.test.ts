@@ -40,6 +40,8 @@ describe("audio visualizer popup view", () => {
             callback({ ok: true, data: true });
           } else if (message.type === "get-audio-visualizer-style") {
             callback({ ok: true, data: "bars" });
+          } else if (message.type === "get-audio-visualizer-target") {
+            callback({ ok: true, data: "auto" });
           }
         }
       },
@@ -84,6 +86,8 @@ describe("audio visualizer popup view", () => {
             callback({ ok: true, data: true });
           } else if (message.type === "get-audio-visualizer-style") {
             callback({ ok: true, data: "bars" });
+          } else if (message.type === "get-audio-visualizer-target") {
+            callback({ ok: true, data: "auto" });
           }
         }
       },
@@ -119,7 +123,8 @@ describe("audio visualizer popup view", () => {
 
     view.render(container);
 
-    const select = container.querySelector("select");
+    const selects = container.querySelectorAll("select");
+    const select = selects[0];
     expect(select).not.toBeNull();
     expect(select?.options).toHaveLength(3);
     expect(select?.options[0].value).toBe("bars");
@@ -135,6 +140,8 @@ describe("audio visualizer popup view", () => {
             callback({ ok: true, data: true });
           } else if (message.type === "get-audio-visualizer-style") {
             callback({ ok: true, data: "waveform" });
+          } else if (message.type === "get-audio-visualizer-target") {
+            callback({ ok: true, data: "auto" });
           }
         }
       },
@@ -146,9 +153,9 @@ describe("audio visualizer popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const select = container.querySelector<HTMLSelectElement>("select");
-      expect(select?.value).toBe("waveform");
-      expect(select?.disabled).toBe(false);
+      const selects = container.querySelectorAll<HTMLSelectElement>("select");
+      expect(selects[0]?.value).toBe("waveform");
+      expect(selects[0]?.disabled).toBe(false);
     });
   });
 
@@ -160,6 +167,8 @@ describe("audio visualizer popup view", () => {
             callback({ ok: true, data: true });
           } else if (message.type === "get-audio-visualizer-style") {
             callback({ ok: true, data: "bars" });
+          } else if (message.type === "get-audio-visualizer-target") {
+            callback({ ok: true, data: "auto" });
           }
         }
       },
@@ -171,17 +180,108 @@ describe("audio visualizer popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const select = container.querySelector<HTMLSelectElement>("select");
-      expect(select?.disabled).toBe(false);
+      const selects = container.querySelectorAll<HTMLSelectElement>("select");
+      expect(selects[0]?.disabled).toBe(false);
     });
 
-    const select = container.querySelector<HTMLSelectElement>("select")!;
-    select.value = "circular";
-    select.dispatchEvent(new Event("change"));
+    const selects = container.querySelectorAll<HTMLSelectElement>("select");
+    selects[0].value = "circular";
+    selects[0].dispatchEvent(new Event("change"));
 
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-audio-visualizer-style",
       style: "circular",
+    });
+  });
+
+  it("should query target state on render", () => {
+    const view = createAudioVisualizerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      { type: "get-audio-visualizer-target" },
+      expect.any(Function),
+    );
+  });
+
+  it("should render a target select with five options", () => {
+    const view = createAudioVisualizerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const selects = container.querySelectorAll("select");
+    const targetSelect = selects[1];
+    expect(targetSelect).not.toBeNull();
+    expect(targetSelect?.options).toHaveLength(5);
+    expect(targetSelect?.options[0].value).toBe("auto");
+    expect(targetSelect?.options[1].value).toBe("all");
+    expect(targetSelect?.options[2].value).toBe("pip-only");
+    expect(targetSelect?.options[3].value).toBe("song-art-only");
+    expect(targetSelect?.options[4].value).toBe("player-bar-only");
+  });
+
+  it("should set target select value from background", async () => {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (callback) {
+          if (message.type === "get-audio-visualizer-enabled") {
+            callback({ ok: true, data: true });
+          } else if (message.type === "get-audio-visualizer-style") {
+            callback({ ok: true, data: "bars" });
+          } else if (message.type === "get-audio-visualizer-target") {
+            callback({ ok: true, data: "pip-only" });
+          }
+        }
+      },
+    );
+
+    const view = createAudioVisualizerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const selects = container.querySelectorAll<HTMLSelectElement>("select");
+      expect(selects[1]?.value).toBe("pip-only");
+      expect(selects[1]?.disabled).toBe(false);
+    });
+  });
+
+  it("should send set-audio-visualizer-target on target select change", async () => {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (callback) {
+          if (message.type === "get-audio-visualizer-enabled") {
+            callback({ ok: true, data: true });
+          } else if (message.type === "get-audio-visualizer-style") {
+            callback({ ok: true, data: "bars" });
+          } else if (message.type === "get-audio-visualizer-target") {
+            callback({ ok: true, data: "auto" });
+          }
+        }
+      },
+    );
+
+    const view = createAudioVisualizerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const selects = container.querySelectorAll<HTMLSelectElement>("select");
+      expect(selects[1]?.disabled).toBe(false);
+    });
+
+    const selects = container.querySelectorAll<HTMLSelectElement>("select");
+    selects[1].value = "all";
+    selects[1].dispatchEvent(new Event("change"));
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-audio-visualizer-target",
+      target: "all",
     });
   });
 });
