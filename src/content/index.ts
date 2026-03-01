@@ -116,6 +116,15 @@ handler.on("set-playback-speed", async (message) => {
   return { ok: true };
 });
 
+// --- Auto-Skip Disliked ---
+
+let autoSkipDislikedEnabled = false;
+
+handler.on("set-auto-skip-disliked-enabled", async (message) => {
+  autoSkipDislikedEnabled = message.enabled === true;
+  return { ok: true };
+});
+
 handler.start();
 
 // Query initial visualizer state from background
@@ -125,6 +134,15 @@ chrome.runtime.sendMessage(
     if (response?.ok && response.data === true) {
       visualizerEnabled = true;
       void startVisualizer();
+    }
+  },
+);
+
+chrome.runtime.sendMessage(
+  { type: "get-auto-skip-disliked-enabled" },
+  (response: { ok: boolean; data?: boolean }) => {
+    if (response?.ok && response.data === true) {
+      autoSkipDislikedEnabled = true;
     }
   },
 );
@@ -149,6 +167,17 @@ chrome.runtime.sendMessage(
 
 const trackObserver = new TrackObserver(() => adapter.getPlaybackState());
 trackObserver.start();
+
+// Poll for disliked songs independently of track changes.
+// The dislike button's aria-pressed state updates asynchronously
+// after a track change, so checking only on track change is
+// unreliable. Periodic polling also catches songs the user
+// dislikes while they are already playing.
+setInterval(() => {
+  if (autoSkipDislikedEnabled && adapter.isCurrentTrackDisliked()) {
+    adapter.executeAction("next");
+  }
+}, 2000);
 
 const miniPlayerController = new MiniPlayerController(overlayManager);
 void miniPlayerController.init();

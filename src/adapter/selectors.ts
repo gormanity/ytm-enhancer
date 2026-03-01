@@ -20,4 +20,5 @@ export const SELECTORS = {
   videoElement: "video.html5-main-video",
   songArtPanel: "#song-image.ytmusic-player",
   playerBarThumbnail: ".thumbnail-image-wrapper.style-scope.ytmusic-player-bar",
+  dislikeButton: 'button[aria-label="Dislike"]',
 } as const;

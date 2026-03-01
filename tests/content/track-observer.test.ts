@@ -124,6 +124,53 @@ describe("TrackObserver", () => {
     });
   });
 
+  it("should call onTrackChange callback when track changes", () => {
+    const onTrackChange = vi.fn();
+    const callbackObserver = new TrackObserver(getStateMock, onTrackChange);
+
+    const state = makeState();
+    getStateMock.mockReturnValue(state);
+
+    callbackObserver.start();
+    vi.advanceTimersByTime(2000);
+
+    expect(onTrackChange).toHaveBeenCalledWith(state);
+
+    callbackObserver.stop();
+  });
+
+  it("should not call onTrackChange when track has not changed", () => {
+    const onTrackChange = vi.fn();
+    const callbackObserver = new TrackObserver(getStateMock, onTrackChange);
+
+    const state = makeState();
+    getStateMock.mockReturnValue(state);
+
+    callbackObserver.start();
+    vi.advanceTimersByTime(2000);
+    onTrackChange.mockClear();
+
+    vi.advanceTimersByTime(2000);
+
+    expect(onTrackChange).not.toHaveBeenCalled();
+
+    callbackObserver.stop();
+  });
+
+  it("should not call onTrackChange when not playing", () => {
+    const onTrackChange = vi.fn();
+    const callbackObserver = new TrackObserver(getStateMock, onTrackChange);
+
+    getStateMock.mockReturnValue(makeState({ isPlaying: false }));
+
+    callbackObserver.start();
+    vi.advanceTimersByTime(2000);
+
+    expect(onTrackChange).not.toHaveBeenCalled();
+
+    callbackObserver.stop();
+  });
+
   it("should stop polling when stop is called", () => {
     getStateMock.mockReturnValue(makeState());
     observer.start();

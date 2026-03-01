@@ -8,6 +8,7 @@ import {
   type FeatureModule,
 } from "@/core";
 import type { PlaybackState } from "@/core/types";
+import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
 import type {
   VisualizerStyle,
@@ -21,6 +22,7 @@ import { StreamQualityModule } from "@/modules/stream-quality";
 
 const context = createExtensionContext();
 const send = createMessageSender();
+const autoSkipDisliked = new AutoSkipDislikedModule();
 const audioVisualizer = new AudioVisualizerModule();
 const hotkeys = new HotkeysModule(send);
 const miniPlayer = new MiniPlayerModule();
@@ -57,6 +59,19 @@ handler.on("get-notify-on-unpause", async () => {
 
 handler.on("set-notify-on-unpause", async (message) => {
   notifications.setNotifyOnUnpause(message.enabled as boolean);
+  return { ok: true };
+});
+
+handler.on("get-auto-skip-disliked-enabled", async () => {
+  return { ok: true, data: autoSkipDisliked.isEnabled() };
+});
+
+handler.on("set-auto-skip-disliked-enabled", async (message) => {
+  autoSkipDisliked.setEnabled(message.enabled as boolean);
+  void relayToYTMTab({
+    type: "set-auto-skip-disliked-enabled",
+    enabled: message.enabled,
+  });
   return { ok: true };
 });
 
@@ -173,6 +188,7 @@ handler.on("set-audio-visualizer-target", async (message) => {
 handler.start();
 
 const modules: FeatureModule[] = [
+  autoSkipDisliked,
   audioVisualizer,
   hotkeys,
   miniPlayer,

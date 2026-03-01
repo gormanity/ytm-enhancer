@@ -299,6 +299,30 @@ describe("YTMAdapter", () => {
     });
   });
 
+  describe("isCurrentTrackDisliked", () => {
+    it("should return true when dislike button is pressed", () => {
+      document.body.innerHTML = `
+        <button aria-label="Dislike" aria-pressed="true"></button>
+      `;
+
+      expect(adapter.isCurrentTrackDisliked()).toBe(true);
+    });
+
+    it("should return false when dislike button is not pressed", () => {
+      document.body.innerHTML = `
+        <button aria-label="Dislike" aria-pressed="false"></button>
+      `;
+
+      expect(adapter.isCurrentTrackDisliked()).toBe(false);
+    });
+
+    it("should return false when dislike button is missing", () => {
+      document.body.innerHTML = "";
+
+      expect(adapter.isCurrentTrackDisliked()).toBe(false);
+    });
+  });
+
   describe("seekTo", () => {
     it("should set video currentTime", () => {
       document.body.innerHTML = `<video class="html5-main-video"></video>`;

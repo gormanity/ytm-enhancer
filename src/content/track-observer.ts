@@ -7,8 +7,14 @@ export class TrackObserver {
   private lastTrackKey: string | null = null;
   private getPlaybackState: () => PlaybackState;
 
-  constructor(getPlaybackState: () => PlaybackState) {
+  private onTrackChange?: (state: PlaybackState) => void;
+
+  constructor(
+    getPlaybackState: () => PlaybackState,
+    onTrackChange?: (state: PlaybackState) => void,
+  ) {
     this.getPlaybackState = getPlaybackState;
+    this.onTrackChange = onTrackChange;
   }
 
   start(): void {
@@ -36,5 +42,6 @@ export class TrackObserver {
 
     this.lastTrackKey = trackKey;
     chrome.runtime.sendMessage({ type: "track-changed", state });
+    this.onTrackChange?.(state);
   }
 }

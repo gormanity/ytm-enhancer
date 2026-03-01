@@ -46,6 +46,11 @@ export class YTMAdapter {
     if (video) video.playbackRate = rate;
   }
 
+  isCurrentTrackDisliked(): boolean {
+    const btn = document.querySelector(SELECTORS.dislikeButton);
+    return btn?.getAttribute("aria-pressed") === "true";
+  }
+
   seekTo(time: number): void {
     const video = document.querySelector(
       SELECTORS.videoElement,

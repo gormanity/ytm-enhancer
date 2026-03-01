@@ -1,4 +1,5 @@
 import type { PopupView } from "@/core/types";
+import { createAutoSkipDislikedPopupView } from "./auto-skip-disliked/popup";
 import { createAudioVisualizerPopupView } from "./audio-visualizer/popup";
 import { createHotkeysPopupView } from "./hotkeys/popup";
 import { createMiniPlayerPopupView } from "./mini-player/popup";
@@ -14,6 +15,7 @@ import { createStreamQualityPopupView } from "./stream-quality/popup";
  */
 export function getAllPopupViews(): PopupView[] {
   return [
+    createAutoSkipDislikedPopupView(),
     createAudioVisualizerPopupView(),
     createHotkeysPopupView(),
     createMiniPlayerPopupView(),
