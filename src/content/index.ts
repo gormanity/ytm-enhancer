@@ -10,6 +10,7 @@ import type {
 import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
 import { AudioBridgeInjector } from "./audio-bridge-injector";
 import { QualityBridgeInjector } from "./quality-bridge-injector";
+import { DislikeObserver } from "./dislike-observer";
 import { TrackObserver } from "./track-observer";
 
 const adapter = new YTMAdapter();
@@ -165,19 +166,18 @@ chrome.runtime.sendMessage(
   },
 );
 
-const trackObserver = new TrackObserver(() => adapter.getPlaybackState());
-trackObserver.start();
-
-// Poll for disliked songs independently of track changes.
-// The dislike button's aria-pressed state updates asynchronously
-// after a track change, so checking only on track change is
-// unreliable. Periodic polling also catches songs the user
-// dislikes while they are already playing.
-setInterval(() => {
-  if (autoSkipDislikedEnabled && adapter.isCurrentTrackDisliked()) {
+const dislikeObserver = new DislikeObserver((isDisliked) => {
+  if (autoSkipDislikedEnabled && isDisliked) {
     adapter.executeAction("next");
   }
-}, 2000);
+});
+dislikeObserver.start();
+
+const trackObserver = new TrackObserver(
+  () => adapter.getPlaybackState(),
+  () => dislikeObserver.reobserve(),
+);
+trackObserver.start();
 
 const miniPlayerController = new MiniPlayerController(overlayManager);
 void miniPlayerController.init();

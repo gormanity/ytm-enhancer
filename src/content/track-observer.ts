@@ -1,12 +1,12 @@
+import { SELECTORS } from "@/adapter/selectors";
 import type { PlaybackState } from "@/core/types";
 
-const POLL_INTERVAL_MS = 2000;
-
 export class TrackObserver {
-  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private titleObserver: MutationObserver | null = null;
+  private buttonObserver: MutationObserver | null = null;
+  private discoveryObserver: MutationObserver | null = null;
   private lastTrackKey: string | null = null;
   private getPlaybackState: () => PlaybackState;
-
   private onTrackChange?: (state: PlaybackState) => void;
 
   constructor(
@@ -18,17 +18,61 @@ export class TrackObserver {
   }
 
   start(): void {
-    this.intervalId = setInterval(() => this.poll(), POLL_INTERVAL_MS);
-  }
+    const titleEl = document.querySelector(SELECTORS.trackTitle);
+    const buttonEl = document.querySelector(SELECTORS.playPauseButton);
 
-  stop(): void {
-    if (this.intervalId !== null) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (titleEl && buttonEl) {
+      this.observeElements(titleEl, buttonEl);
+    } else {
+      this.waitForElements();
     }
   }
 
-  private poll(): void {
+  stop(): void {
+    this.titleObserver?.disconnect();
+    this.titleObserver = null;
+    this.buttonObserver?.disconnect();
+    this.buttonObserver = null;
+    this.discoveryObserver?.disconnect();
+    this.discoveryObserver = null;
+  }
+
+  private observeElements(titleEl: Element, buttonEl: Element): void {
+    const handler = () => this.checkTrack();
+
+    this.titleObserver = new MutationObserver(handler);
+    this.titleObserver.observe(titleEl, {
+      characterData: true,
+      subtree: true,
+      childList: true,
+    });
+
+    this.buttonObserver = new MutationObserver(handler);
+    this.buttonObserver.observe(buttonEl, {
+      attributes: true,
+      attributeFilter: ["title"],
+    });
+  }
+
+  private waitForElements(): void {
+    this.discoveryObserver = new MutationObserver(() => {
+      const titleEl = document.querySelector(SELECTORS.trackTitle);
+      const buttonEl = document.querySelector(SELECTORS.playPauseButton);
+
+      if (titleEl && buttonEl) {
+        this.discoveryObserver?.disconnect();
+        this.discoveryObserver = null;
+        this.observeElements(titleEl, buttonEl);
+      }
+    });
+
+    this.discoveryObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private checkTrack(): void {
     const state = this.getPlaybackState();
 
     if (!state.isPlaying) {
