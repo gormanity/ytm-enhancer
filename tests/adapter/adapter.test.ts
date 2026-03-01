@@ -263,6 +263,42 @@ describe("YTMAdapter", () => {
     });
   });
 
+  describe("getPlaybackSpeed", () => {
+    it("should return playback rate from video element", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "playbackRate", {
+        value: 1.5,
+        writable: true,
+      });
+
+      expect(adapter.getPlaybackSpeed()).toBe(1.5);
+    });
+
+    it("should return 1 when video element is missing", () => {
+      document.body.innerHTML = "";
+
+      expect(adapter.getPlaybackSpeed()).toBe(1);
+    });
+  });
+
+  describe("setPlaybackSpeed", () => {
+    it("should set playback rate on video element", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+      const video = document.querySelector("video") as HTMLVideoElement;
+
+      adapter.setPlaybackSpeed(2);
+
+      expect(video.playbackRate).toBe(2);
+    });
+
+    it("should do nothing when video element is missing", () => {
+      document.body.innerHTML = "";
+
+      expect(() => adapter.setPlaybackSpeed(1.5)).not.toThrow();
+    });
+  });
+
   describe("seekTo", () => {
     it("should set video currentTime", () => {
       document.body.innerHTML = `<video class="html5-main-video"></video>`;

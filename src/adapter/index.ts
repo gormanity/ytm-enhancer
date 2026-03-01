@@ -32,6 +32,20 @@ export class YTMAdapter {
     };
   }
 
+  getPlaybackSpeed(): number {
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+    return video?.playbackRate ?? 1;
+  }
+
+  setPlaybackSpeed(rate: number): void {
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+    if (video) video.playbackRate = rate;
+  }
+
   seekTo(time: number): void {
     const video = document.querySelector(
       SELECTORS.videoElement,

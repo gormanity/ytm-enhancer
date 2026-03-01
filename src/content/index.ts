@@ -104,6 +104,18 @@ handler.on("set-stream-quality", async (message) => {
   return { ok: true };
 });
 
+// --- Playback Speed ---
+
+handler.on("get-playback-speed", async () => {
+  const speed = adapter.getPlaybackSpeed();
+  return { ok: true, data: speed };
+});
+
+handler.on("set-playback-speed", async (message) => {
+  adapter.setPlaybackSpeed(message.rate as number);
+  return { ok: true };
+});
+
 handler.start();
 
 // Query initial visualizer state from background
