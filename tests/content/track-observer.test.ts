@@ -16,9 +16,15 @@ function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
   };
 }
 
-/** Flush pending MutationObserver callbacks. */
+/**
+ * Flush MutationObserver microtasks, then advance the debounce timer.
+ * TrackObserver debounces checkTrack by 150ms after a mutation.
+ */
 async function flush(): Promise<void> {
+  // Let MutationObserver callbacks fire
   await vi.waitFor(() => {}, { timeout: 50 });
+  // Advance past the debounce delay
+  vi.advanceTimersByTime(200);
 }
 
 function createTitleElement(text: string): HTMLElement {
@@ -27,6 +33,18 @@ function createTitleElement(text: string): HTMLElement {
   el.textContent = text;
   document.body.appendChild(el);
   return el;
+}
+
+function createArtistElement(text: string): HTMLElement {
+  const span = document.createElement("span");
+  span.className = "subtitle style-scope ytmusic-player-bar";
+  const formatted = document.createElement("yt-formatted-string");
+  const a = document.createElement("a");
+  a.textContent = text;
+  formatted.appendChild(a);
+  span.appendChild(formatted);
+  document.body.appendChild(span);
+  return a;
 }
 
 function createPlayPauseButton(title: string): HTMLElement {
@@ -43,6 +61,8 @@ describe("TrackObserver", () => {
   let observer: TrackObserver;
 
   beforeEach(() => {
+    vi.useFakeTimers();
+
     sendMessageMock = vi.fn();
     getStateMock = vi.fn<() => PlaybackState>();
 
@@ -58,18 +78,18 @@ describe("TrackObserver", () => {
   afterEach(() => {
     observer.stop();
     document.body.innerHTML = "";
+    vi.useRealTimers();
   });
 
   it("should send track-changed when title element text changes", async () => {
     const titleEl = createTitleElement("Song Title");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
 
     const state = makeState();
     getStateMock.mockReturnValue(state);
 
     observer.start();
-
-    // Trigger a mutation on the title element
     titleEl.textContent = "New Song";
     await flush();
 
@@ -81,6 +101,7 @@ describe("TrackObserver", () => {
 
   it("should not send message when track key is the same", async () => {
     const titleEl = createTitleElement("Song Title");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
 
     const state = makeState();
@@ -100,6 +121,7 @@ describe("TrackObserver", () => {
 
   it("should not send message when not playing", async () => {
     const titleEl = createTitleElement("Song Title");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Play");
 
     getStateMock.mockReturnValue(makeState({ isPlaying: false }));
@@ -113,6 +135,7 @@ describe("TrackObserver", () => {
 
   it("should not send message when title is null", async () => {
     const titleEl = createTitleElement("Song Title");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
 
     getStateMock.mockReturnValue(makeState({ title: null }));
@@ -126,6 +149,7 @@ describe("TrackObserver", () => {
 
   it("should send message when track changes to a new track", async () => {
     const titleEl = createTitleElement("First");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
 
     getStateMock.mockReturnValue(makeState({ title: "First" }));
@@ -149,6 +173,7 @@ describe("TrackObserver", () => {
 
   it("should send message when playback resumes after pause", async () => {
     const titleEl = createTitleElement("Song");
+    createArtistElement("Artist Name");
     const playPauseBtn = createPlayPauseButton("Pause");
 
     const state = makeState();
@@ -180,6 +205,7 @@ describe("TrackObserver", () => {
     const callbackObserver = new TrackObserver(getStateMock, onTrackChange);
 
     const titleEl = createTitleElement("Song");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
 
     const state = makeState();
@@ -199,6 +225,7 @@ describe("TrackObserver", () => {
     const callbackObserver = new TrackObserver(getStateMock, onTrackChange);
 
     const titleEl = createTitleElement("Song");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
 
     const state = makeState();
@@ -222,6 +249,7 @@ describe("TrackObserver", () => {
     const callbackObserver = new TrackObserver(getStateMock, onTrackChange);
 
     const titleEl = createTitleElement("Song");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Play");
 
     getStateMock.mockReturnValue(makeState({ isPlaying: false }));
@@ -237,6 +265,7 @@ describe("TrackObserver", () => {
 
   it("should stop observing when stop is called", async () => {
     const titleEl = createTitleElement("Song");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
 
     getStateMock.mockReturnValue(makeState());
@@ -262,6 +291,7 @@ describe("TrackObserver", () => {
 
     // Elements don't exist yet — add them now
     const titleEl = createTitleElement("Song Title");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
     await flush();
 
@@ -281,12 +311,75 @@ describe("TrackObserver", () => {
 
     // Adding elements after stop should not trigger anything
     const titleEl = createTitleElement("Song");
+    createArtistElement("Artist Name");
     createPlayPauseButton("Pause");
     getStateMock.mockReturnValue(makeState());
     await flush();
 
     titleEl.textContent = "Changed";
     await flush();
+
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("should send track-changed when artist element changes", async () => {
+    createTitleElement("Song");
+    const artistEl = createArtistElement("Artist A");
+    createPlayPauseButton("Pause");
+
+    getStateMock.mockReturnValue(makeState({ artist: "Artist A" }));
+    observer.start();
+    artistEl.textContent = "Trigger";
+    await flush();
+    sendMessageMock.mockClear();
+
+    getStateMock.mockReturnValue(makeState({ artist: "Artist B" }));
+    artistEl.textContent = "Artist B";
+    await flush();
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "track-changed",
+        state: expect.objectContaining({ artist: "Artist B" }),
+      }),
+    );
+  });
+
+  it("should debounce rapid mutations into a single check", async () => {
+    const titleEl = createTitleElement("Song");
+    createArtistElement("Artist Name");
+    createPlayPauseButton("Pause");
+
+    const state = makeState();
+    getStateMock.mockReturnValue(state);
+
+    observer.start();
+
+    // Rapidly mutate title multiple times
+    titleEl.textContent = "A";
+    titleEl.textContent = "B";
+    titleEl.textContent = "C";
+    await flush();
+
+    // Should only call getPlaybackState once (debounced)
+    expect(getStateMock).toHaveBeenCalledTimes(1);
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("should cancel debounce timer on stop()", async () => {
+    const titleEl = createTitleElement("Song");
+    createArtistElement("Artist Name");
+    createPlayPauseButton("Pause");
+
+    getStateMock.mockReturnValue(makeState());
+    observer.start();
+
+    titleEl.textContent = "Changed";
+    // Let MutationObserver fire but don't advance past debounce
+    await vi.waitFor(() => {}, { timeout: 50 });
+
+    observer.stop();
+    vi.advanceTimersByTime(200);
 
     expect(sendMessageMock).not.toHaveBeenCalled();
   });

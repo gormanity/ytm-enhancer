@@ -113,17 +113,20 @@ describe("DislikeObserver", () => {
     expect(onDislikeChange).toHaveBeenCalledWith(true);
   });
 
-  it("should fire callback with current state on reobserve()", async () => {
+  it("should not fire callback immediately on reobserve()", async () => {
     createDislikeButton("false");
     observer.start();
 
-    // Replace with a disliked button
+    // Replace with a button that is already disliked
     document.body.innerHTML = "";
     createDislikeButton("true");
 
     observer.reobserve();
     await flush();
 
-    expect(onDislikeChange).toHaveBeenCalledWith(true);
+    // Should NOT fire for the current state — only for future changes.
+    // Firing immediately causes a runaway skip loop when the previous
+    // track's dislike state hasn't cleared yet.
+    expect(onDislikeChange).not.toHaveBeenCalled();
   });
 });

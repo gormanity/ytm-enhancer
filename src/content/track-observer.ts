@@ -1,10 +1,14 @@
 import { SELECTORS } from "@/adapter/selectors";
 import type { PlaybackState } from "@/core/types";
 
+const DEBOUNCE_MS = 150;
+
 export class TrackObserver {
   private titleObserver: MutationObserver | null = null;
+  private artistObserver: MutationObserver | null = null;
   private buttonObserver: MutationObserver | null = null;
   private discoveryObserver: MutationObserver | null = null;
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private lastTrackKey: string | null = null;
   private getPlaybackState: () => PlaybackState;
   private onTrackChange?: (state: PlaybackState) => void;
@@ -19,10 +23,11 @@ export class TrackObserver {
 
   start(): void {
     const titleEl = document.querySelector(SELECTORS.trackTitle);
+    const artistEl = document.querySelector(SELECTORS.artistName);
     const buttonEl = document.querySelector(SELECTORS.playPauseButton);
 
-    if (titleEl && buttonEl) {
-      this.observeElements(titleEl, buttonEl);
+    if (titleEl && artistEl && buttonEl) {
+      this.observeElements(titleEl, artistEl, buttonEl);
     } else {
       this.waitForElements();
     }
@@ -31,17 +36,34 @@ export class TrackObserver {
   stop(): void {
     this.titleObserver?.disconnect();
     this.titleObserver = null;
+    this.artistObserver?.disconnect();
+    this.artistObserver = null;
     this.buttonObserver?.disconnect();
     this.buttonObserver = null;
     this.discoveryObserver?.disconnect();
     this.discoveryObserver = null;
+    if (this.debounceTimer !== null) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
   }
 
-  private observeElements(titleEl: Element, buttonEl: Element): void {
-    const handler = () => this.checkTrack();
+  private observeElements(
+    titleEl: Element,
+    artistEl: Element,
+    buttonEl: Element,
+  ): void {
+    const handler = () => this.scheduleCheck();
 
     this.titleObserver = new MutationObserver(handler);
     this.titleObserver.observe(titleEl, {
+      characterData: true,
+      subtree: true,
+      childList: true,
+    });
+
+    this.artistObserver = new MutationObserver(handler);
+    this.artistObserver.observe(artistEl, {
       characterData: true,
       subtree: true,
       childList: true,
@@ -57,12 +79,13 @@ export class TrackObserver {
   private waitForElements(): void {
     this.discoveryObserver = new MutationObserver(() => {
       const titleEl = document.querySelector(SELECTORS.trackTitle);
+      const artistEl = document.querySelector(SELECTORS.artistName);
       const buttonEl = document.querySelector(SELECTORS.playPauseButton);
 
-      if (titleEl && buttonEl) {
+      if (titleEl && artistEl && buttonEl) {
         this.discoveryObserver?.disconnect();
         this.discoveryObserver = null;
-        this.observeElements(titleEl, buttonEl);
+        this.observeElements(titleEl, artistEl, buttonEl);
       }
     });
 
@@ -70,6 +93,16 @@ export class TrackObserver {
       childList: true,
       subtree: true,
     });
+  }
+
+  private scheduleCheck(): void {
+    if (this.debounceTimer !== null) {
+      clearTimeout(this.debounceTimer);
+    }
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = null;
+      this.checkTrack();
+    }, DEBOUNCE_MS);
   }
 
   private checkTrack(): void {

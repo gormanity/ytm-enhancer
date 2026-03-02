@@ -31,7 +31,6 @@ export class DislikeObserver {
 
     const btn = document.querySelector(SELECTORS.dislikeButton);
     if (btn) {
-      this.fireCurrentState(btn);
       this.observeButton(btn);
     }
   }
@@ -62,10 +61,5 @@ export class DislikeObserver {
       childList: true,
       subtree: true,
     });
-  }
-
-  private fireCurrentState(btn: Element): void {
-    const pressed = btn.getAttribute("aria-pressed") === "true";
-    this.onDislikeChange(pressed);
   }
 }
