@@ -61,6 +61,13 @@ All checks must pass before pushing.
 After each feature change cycle, run both `build:chrome` and `build:firefox` so
 the extension can be optested.
 
+## Change Cycle Checklist
+
+- After every change cycle (even if small), rebuild both targets:
+  `pnpm run build:chrome` and `pnpm run build:firefox`.
+- Do not consider a feature cycle complete until both builds finish
+  successfully.
+
 ---
 
 ## Formatting
