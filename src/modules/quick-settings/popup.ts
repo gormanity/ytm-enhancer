@@ -3,6 +3,14 @@ import { createPrecisionVolumePopupView } from "../precision-volume/popup";
 import { createPlaybackSpeedPopupView } from "../playback-speed/popup";
 import { createStreamQualityPopupView } from "../stream-quality/popup";
 
+interface YtmTabSummary {
+  id: number | null;
+  title: string;
+  artworkUrl: string | null;
+  favIconUrl: string | null;
+  isActive: boolean;
+}
+
 /** Create the combined Quick Settings popup view. */
 export function createQuickSettingsPopupView(): PopupView {
   return {
@@ -15,13 +23,20 @@ export function createQuickSettingsPopupView(): PopupView {
       heading.textContent = "Quick Settings";
       container.appendChild(heading);
 
-      // 1. Now Playing Card
+      // 1. Open Tabs Card
+      const tabsCard = document.createElement("div");
+      tabsCard.className = "settings-card";
+      tabsCard.style.display = "none";
+      container.appendChild(tabsCard);
+      renderOpenTabs(tabsCard);
+
+      // 2. Now Playing Card
       const nowPlayingCard = document.createElement("div");
       nowPlayingCard.className = "settings-card";
       container.appendChild(nowPlayingCard);
       renderCompactNowPlaying(nowPlayingCard);
 
-      // 2. Audio & Playback Group
+      // 3. Audio & Playback Group
       const audioGroup = document.createElement("div");
       audioGroup.className = "settings-card";
       container.appendChild(audioGroup);
@@ -53,7 +68,7 @@ export function createQuickSettingsPopupView(): PopupView {
       // Style the label to be smaller
       const speedLabel = speedContent.querySelector(".toggle-row span");
       if (speedLabel) (speedLabel as HTMLElement).style.fontSize = "12px";
-      
+
       speedContainer.appendChild(speedContent);
       row.appendChild(speedContainer);
 
@@ -71,6 +86,54 @@ export function createQuickSettingsPopupView(): PopupView {
       row.appendChild(qualityContainer);
     },
   };
+}
+
+function renderOpenTabs(container: HTMLElement) {
+  const heading = document.createElement("h3");
+  heading.textContent = "Music Source";
+  container.appendChild(heading);
+
+  const list = document.createElement("div");
+  list.className = "tab-list-horizontal";
+  container.appendChild(list);
+
+  const renderTabs = (tabs: YtmTabSummary[]) => {
+    list.innerHTML = "";
+
+    for (const tab of tabs) {
+      const item = document.createElement("div");
+      item.className = "tab-item";
+      if (tab.isActive) item.classList.add("selected");
+
+      const icon = document.createElement("img");
+      icon.src = tab.artworkUrl ?? tab.favIconUrl ?? "icon48.png";
+      icon.alt = "";
+      icon.onerror = () => {
+        icon.src = "icon48.png";
+      };
+
+      item.title = tab.title.replace(" - YouTube Music", "");
+
+      item.appendChild(icon);
+      list.appendChild(item);
+    }
+  };
+
+  const updateTabs = () => {
+    chrome.runtime.sendMessage({ type: "get-ytm-tabs" }, (response) => {
+      const tabs = (response?.ok ? response.data : []) as YtmTabSummary[];
+      if (!Array.isArray(tabs) || tabs.length <= 1) {
+        container.style.display = "none";
+        return;
+      }
+
+      container.style.display = "block";
+      renderTabs(tabs);
+    });
+  };
+
+  updateTabs();
+  setInterval(updateTabs, 3000);
 }
 
 /** Helper to update the red foreground fill on range inputs */
@@ -220,13 +283,24 @@ function renderCompactNowPlaying(container: HTMLElement) {
     btn.innerHTML = svg;
     btn.className = "icon-btn";
     if (!isSmall) btn.style.padding = "6px";
-    btn.onclick = () => chrome.runtime.sendMessage({ type: "playback-action", action });
+    btn.onclick = () =>
+      chrome.runtime.sendMessage({ type: "playback-action", action });
     return btn;
   };
 
-  const prevBtn = createBtn(`<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>`, "previous");
-  const playBtn = createBtn(`<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`, "togglePlay", false);
-  const nextBtn = createBtn(`<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`, "next");
+  const prevBtn = createBtn(
+    `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>`,
+    "previous",
+  );
+  const playBtn = createBtn(
+    `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`,
+    "togglePlay",
+    false,
+  );
+  const nextBtn = createBtn(
+    `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`,
+    "next",
+  );
 
   controls.appendChild(prevBtn);
   controls.appendChild(playBtn);
@@ -235,7 +309,9 @@ function renderCompactNowPlaying(container: HTMLElement) {
   const update = () => {
     chrome.runtime.sendMessage(
       { type: "get-playback-state" },
-      (response: { ok: boolean; data?: PlaybackState; error?: string } | null) => {
+      (
+        response: { ok: boolean; data?: PlaybackState; error?: string } | null,
+      ) => {
         if (response?.ok && response.data) {
           const state = response.data;
           if (state.artworkUrl) {

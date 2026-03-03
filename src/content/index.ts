@@ -34,6 +34,23 @@ const audioBridge = new AudioBridgeInjector();
 const overlayManager = new VisualizerOverlayManager();
 let visualizerEnabled = false;
 
+function safeSendMessage<TResponse>(
+  message: unknown,
+  callback: (response: TResponse | null) => void,
+): void {
+  try {
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        callback(null);
+        return;
+      }
+      callback(response as TResponse);
+    });
+  } catch {
+    callback(null);
+  }
+}
+
 async function startVisualizer(): Promise<void> {
   await audioBridge.inject((data) => {
     overlayManager.updateFrequencyData(data);
@@ -66,7 +83,9 @@ handler.on("set-audio-visualizer-enabled", async (message) => {
   if (enabled === visualizerEnabled) return { ok: true };
   visualizerEnabled = enabled;
   if (enabled) {
-    void startVisualizer();
+    void startVisualizer().catch(() => {
+      visualizerEnabled = false;
+    });
   } else {
     stopVisualizer();
   }
@@ -142,37 +161,39 @@ handler.on("set-auto-skip-disliked-enabled", async (message) => {
 handler.start();
 
 // Query initial visualizer state from background
-chrome.runtime.sendMessage(
+safeSendMessage<{ ok: boolean; data?: boolean }>(
   { type: "get-audio-visualizer-enabled" },
-  (response: { ok: boolean; data?: boolean }) => {
+  (response) => {
     if (response?.ok && response.data === true) {
       visualizerEnabled = true;
-      void startVisualizer();
+      void startVisualizer().catch(() => {
+        visualizerEnabled = false;
+      });
     }
   },
 );
 
-chrome.runtime.sendMessage(
+safeSendMessage<{ ok: boolean; data?: boolean }>(
   { type: "get-auto-skip-disliked-enabled" },
-  (response: { ok: boolean; data?: boolean }) => {
+  (response) => {
     if (response?.ok && response.data === true) {
       autoSkipDislikedEnabled = true;
     }
   },
 );
 
-chrome.runtime.sendMessage(
+safeSendMessage<{ ok: boolean; data?: string }>(
   { type: "get-audio-visualizer-style" },
-  (response: { ok: boolean; data?: string }) => {
+  (response) => {
     if (response?.ok && response.data) {
       overlayManager.setStyle(response.data as VisualizerStyle);
     }
   },
 );
 
-chrome.runtime.sendMessage(
+safeSendMessage<{ ok: boolean; data?: string }>(
   { type: "get-audio-visualizer-target" },
-  (response: { ok: boolean; data?: string }) => {
+  (response) => {
     if (response?.ok && response.data) {
       overlayManager.setTarget(response.data as VisualizerTarget);
     }

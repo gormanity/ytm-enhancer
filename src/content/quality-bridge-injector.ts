@@ -42,22 +42,33 @@ export class QualityBridgeInjector {
     window.addEventListener("message", this.listener);
 
     await new Promise<void>((resolve, reject) => {
-      (
-        chrome.runtime.sendMessage as (
-          message: unknown,
-          callback: (response: { ok: boolean; error?: string }) => void,
-        ) => void
-      )({ type: "inject-quality-bridge" }, (response) => {
-        if (response?.ok) {
-          resolve();
-        } else {
-          reject(
-            new Error(
-              response?.error ?? "Failed to inject quality bridge script",
-            ),
-          );
-        }
-      });
+      try {
+        (
+          chrome.runtime.sendMessage as (
+            message: unknown,
+            callback: (response: { ok: boolean; error?: string }) => void,
+          ) => void
+        )({ type: "inject-quality-bridge" }, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+
+          if (response?.ok) {
+            resolve();
+          } else {
+            reject(
+              new Error(
+                response?.error ?? "Failed to inject quality bridge script",
+              ),
+            );
+          }
+        });
+      } catch (error) {
+        reject(
+          error instanceof Error ? error : new Error("Runtime unavailable"),
+        );
+      }
     });
   }
 

@@ -55,12 +55,20 @@ export class MiniPlayerController {
 
   private async queryEnabled(): Promise<boolean> {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { type: "get-mini-player-enabled" },
-        (response: { ok: boolean; data?: boolean }) => {
-          resolve(response?.ok === true && response.data === true);
-        },
-      );
+      try {
+        chrome.runtime.sendMessage(
+          { type: "get-mini-player-enabled" },
+          (response: { ok: boolean; data?: boolean }) => {
+            if (chrome.runtime.lastError) {
+              resolve(false);
+              return;
+            }
+            resolve(response?.ok === true && response.data === true);
+          },
+        );
+      } catch {
+        resolve(false);
+      }
     });
   }
 

@@ -7,6 +7,7 @@ import {
   findYTMTab,
   type FeatureModule,
 } from "@/core";
+import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import type { PlaybackState } from "@/core/types";
 import { AutoPlayModule } from "@/modules/auto-play";
@@ -48,6 +49,38 @@ const handler = createMessageHandler();
 handler.on("track-changed", async (message) => {
   notifications.handleTrackChange(message.state as PlaybackState);
   return { ok: true };
+});
+
+handler.on("get-ytm-tabs", async () => {
+  const tabs = await findAllYTMTabs();
+  const tabData = await Promise.all(
+    tabs.map(async (tab) => {
+      let artworkUrl: string | null = null;
+
+      if (tab.id !== undefined) {
+        try {
+          const response = (await chrome.tabs.sendMessage(tab.id, {
+            type: "get-playback-state",
+          })) as { ok: boolean; data?: PlaybackState };
+          if (response?.ok) {
+            artworkUrl = response.data?.artworkUrl ?? null;
+          }
+        } catch {
+          // Tab may not have a live content script yet.
+        }
+      }
+
+      return {
+        id: tab.id ?? null,
+        title: tab.title ?? "YouTube Music",
+        artworkUrl,
+        favIconUrl: tab.favIconUrl ?? null,
+        isActive: tab.active === true,
+      };
+    }),
+  );
+
+  return { ok: true, data: tabData };
 });
 
 handler.on("get-notifications-enabled", async () => {

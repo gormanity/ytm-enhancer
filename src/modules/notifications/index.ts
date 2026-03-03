@@ -100,8 +100,6 @@ export class NotificationsModule implements FeatureModule {
       year: 2026,
       artworkUrl: null, // Use local fallback for preview reliability
       isPlaying: true,
-      isLiked: false,
-      isDisliked: false,
       progress: 0.5,
       duration: 180,
     });
@@ -116,11 +114,12 @@ export class NotificationsModule implements FeatureModule {
     if (this.fields.album && state.album) messageParts.push(state.album);
     if (this.fields.year && state.year != null)
       messageParts.push(String(state.year));
-    
+
     // Ensure message isn't empty, some platforms require this
-    const notificationMessage = messageParts.length > 0 
-      ? messageParts.join(" \u2014 ")
-      : "Previewing notification settings";
+    const notificationMessage =
+      messageParts.length > 0
+        ? messageParts.join(" \u2014 ")
+        : "Previewing notification settings";
 
     const iconUrl =
       this.fields.artwork && state.artworkUrl

@@ -149,7 +149,11 @@ export class TrackObserver {
     if (trackKey === this.lastTrackKey) return;
 
     this.lastTrackKey = trackKey;
-    chrome.runtime.sendMessage({ type: "track-changed", state });
+    try {
+      chrome.runtime.sendMessage({ type: "track-changed", state });
+    } catch {
+      // Extension may have been reloaded and invalidated this content context.
+    }
     this.onTrackChange?.(state);
   }
 }

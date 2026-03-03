@@ -32,22 +32,33 @@ export class AudioBridgeInjector {
     window.addEventListener("message", this.listener);
 
     await new Promise<void>((resolve, reject) => {
-      (
-        chrome.runtime.sendMessage as (
-          message: unknown,
-          callback: (response: { ok: boolean; error?: string }) => void,
-        ) => void
-      )({ type: "inject-audio-bridge" }, (response) => {
-        if (response?.ok) {
-          resolve();
-        } else {
-          reject(
-            new Error(
-              response?.error ?? "Failed to inject audio bridge script",
-            ),
-          );
-        }
-      });
+      try {
+        (
+          chrome.runtime.sendMessage as (
+            message: unknown,
+            callback: (response: { ok: boolean; error?: string }) => void,
+          ) => void
+        )({ type: "inject-audio-bridge" }, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+
+          if (response?.ok) {
+            resolve();
+          } else {
+            reject(
+              new Error(
+                response?.error ?? "Failed to inject audio bridge script",
+              ),
+            );
+          }
+        });
+      } catch (error) {
+        reject(
+          error instanceof Error ? error : new Error("Runtime unavailable"),
+        );
+      }
     });
   }
 

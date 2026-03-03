@@ -27,15 +27,20 @@ export class AutoPlayController {
   init(): void {
     chrome.runtime.onMessage.addListener(this.messageListener);
 
-    chrome.runtime.sendMessage(
-      { type: "get-auto-play-enabled" },
-      (response: { ok: boolean; data?: boolean }) => {
-        if (response?.ok && response.data === true) {
-          this.enabled = true;
-          this.tryAutoPlay();
-        }
-      },
-    );
+    try {
+      chrome.runtime.sendMessage(
+        { type: "get-auto-play-enabled" },
+        (response: { ok: boolean; data?: boolean }) => {
+          if (chrome.runtime.lastError) return;
+          if (response?.ok && response.data === true) {
+            this.enabled = true;
+            this.tryAutoPlay();
+          }
+        },
+      );
+    } catch {
+      // Extension may have been reloaded and invalidated this content context.
+    }
   }
 
   destroy(): void {
