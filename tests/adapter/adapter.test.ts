@@ -299,6 +299,42 @@ describe("YTMAdapter", () => {
     });
   });
 
+  describe("getVolume", () => {
+    it("should return volume from video element", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "volume", {
+        value: 0.75,
+        writable: true,
+      });
+
+      expect(adapter.getVolume()).toBe(0.75);
+    });
+
+    it("should return 1 when video element is missing", () => {
+      document.body.innerHTML = "";
+
+      expect(adapter.getVolume()).toBe(1);
+    });
+  });
+
+  describe("setVolume", () => {
+    it("should set volume on video element", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+      const video = document.querySelector("video") as HTMLVideoElement;
+
+      adapter.setVolume(0.5);
+
+      expect(video.volume).toBe(0.5);
+    });
+
+    it("should do nothing when video element is missing", () => {
+      document.body.innerHTML = "";
+
+      expect(() => adapter.setVolume(0.5)).not.toThrow();
+    });
+  });
+
   describe("isCurrentTrackDisliked", () => {
     it("should return true when dislike button is pressed", () => {
       document.body.innerHTML = `
