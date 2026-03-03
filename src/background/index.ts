@@ -7,6 +7,7 @@ import {
   findYTMTab,
   type FeatureModule,
 } from "@/core";
+import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import type { PlaybackState } from "@/core/types";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
@@ -50,6 +51,7 @@ handler.on("get-notifications-enabled", async () => {
 
 handler.on("set-notifications-enabled", async (message) => {
   notifications.setEnabled(message.enabled as boolean);
+  void saveModuleStateValue("notifications.enabled", message.enabled);
   return { ok: true };
 });
 
@@ -59,6 +61,7 @@ handler.on("get-notify-on-unpause", async () => {
 
 handler.on("set-notify-on-unpause", async (message) => {
   notifications.setNotifyOnUnpause(message.enabled as boolean);
+  void saveModuleStateValue("notifications.notifyOnUnpause", message.enabled);
   return { ok: true };
 });
 
@@ -68,6 +71,7 @@ handler.on("get-auto-skip-disliked-enabled", async () => {
 
 handler.on("set-auto-skip-disliked-enabled", async (message) => {
   autoSkipDisliked.setEnabled(message.enabled as boolean);
+  void saveModuleStateValue("auto-skip-disliked.enabled", message.enabled);
   void relayToYTMTab({
     type: "set-auto-skip-disliked-enabled",
     enabled: message.enabled,
@@ -81,6 +85,7 @@ handler.on("get-mini-player-enabled", async () => {
 
 handler.on("set-mini-player-enabled", async (message) => {
   miniPlayer.setEnabled(message.enabled as boolean);
+  void saveModuleStateValue("mini-player.enabled", message.enabled);
   return { ok: true };
 });
 
@@ -152,6 +157,7 @@ handler.on("get-audio-visualizer-enabled", async () => {
 
 handler.on("set-audio-visualizer-enabled", async (message) => {
   audioVisualizer.setEnabled(message.enabled as boolean);
+  void saveModuleStateValue("audio-visualizer.enabled", message.enabled);
   void relayToYTMTab({
     type: "set-audio-visualizer-enabled",
     enabled: message.enabled,
@@ -165,6 +171,7 @@ handler.on("get-audio-visualizer-style", async () => {
 
 handler.on("set-audio-visualizer-style", async (message) => {
   audioVisualizer.setStyle(message.style as VisualizerStyle);
+  void saveModuleStateValue("audio-visualizer.style", message.style);
   void relayToYTMTab({
     type: "set-audio-visualizer-style",
     style: message.style,
@@ -178,6 +185,7 @@ handler.on("get-audio-visualizer-target", async () => {
 
 handler.on("set-audio-visualizer-target", async (message) => {
   audioVisualizer.setTarget(message.target as VisualizerTarget);
+  void saveModuleStateValue("audio-visualizer.target", message.target);
   void relayToYTMTab({
     type: "set-audio-visualizer-target",
     target: message.target,
@@ -186,6 +194,30 @@ handler.on("set-audio-visualizer-target", async (message) => {
 });
 
 handler.start();
+
+async function restoreModuleState(): Promise<void> {
+  const state = await loadModuleState();
+
+  const bool = (key: string, fallback: boolean) =>
+    typeof state[key] === "boolean" ? (state[key] as boolean) : fallback;
+
+  const str = (key: string, fallback: string) =>
+    typeof state[key] === "string" ? (state[key] as string) : fallback;
+
+  notifications.setEnabled(bool("notifications.enabled", true));
+  notifications.setNotifyOnUnpause(
+    bool("notifications.notifyOnUnpause", false),
+  );
+  autoSkipDisliked.setEnabled(bool("auto-skip-disliked.enabled", false));
+  audioVisualizer.setEnabled(bool("audio-visualizer.enabled", true));
+  audioVisualizer.setStyle(
+    str("audio-visualizer.style", "bars") as VisualizerStyle,
+  );
+  audioVisualizer.setTarget(
+    str("audio-visualizer.target", "auto") as VisualizerTarget,
+  );
+  miniPlayer.setEnabled(bool("mini-player.enabled", true));
+}
 
 const modules: FeatureModule[] = [
   autoSkipDisliked,
@@ -197,6 +229,8 @@ const modules: FeatureModule[] = [
   streamQuality,
 ];
 
-initializeModules(context, modules).catch((err) => {
-  console.error("[YTM Enhancer] Failed to initialize modules:", err);
-});
+Promise.all([restoreModuleState(), initializeModules(context, modules)]).catch(
+  (err) => {
+    console.error("[YTM Enhancer] Failed to initialize modules:", err);
+  },
+);
