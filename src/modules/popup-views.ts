@@ -6,6 +6,7 @@ import { createAudioVisualizerPopupView } from "./audio-visualizer/popup";
 import { createHotkeysPopupView } from "./hotkeys/popup";
 import { createMiniPlayerPopupView } from "./mini-player/popup";
 import { createNotificationsPopupView } from "./notifications/popup";
+import { createAboutPopupView } from "./about/popup";
 
 /**
  * Icons (Lucide-inspired SVG strings)
@@ -18,6 +19,7 @@ const ICONS = {
   hotkeys: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M6 12h.01"/><path d="M18 12h.01"/><path d="M10 12h.01"/><path d="M14 12h.01"/><path d="M8 16h8"/></svg>`,
   miniPlayer: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M21 15V5a2 2 0 0 0-2-2H9"/><path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9"/></svg>`,
   notifications: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`,
+  about: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`,
 };
 
 /**
@@ -35,5 +37,6 @@ export function getAllPopupViews(): PopupView[] {
     { ...createHotkeysPopupView(), icon: ICONS.hotkeys },
     { ...createMiniPlayerPopupView(), icon: ICONS.miniPlayer },
     { ...createNotificationsPopupView(), icon: ICONS.notifications },
+    { ...createAboutPopupView(), icon: ICONS.about },
   ];
 }
