@@ -1,4 +1,13 @@
+import type { NotificationFields } from "./index";
 import type { PopupView } from "@/core/types";
+
+const FIELD_LABELS: { key: keyof NotificationFields; label: string }[] = [
+  { key: "title", label: "Title" },
+  { key: "artist", label: "Artist" },
+  { key: "album", label: "Album" },
+  { key: "year", label: "Year" },
+  { key: "artwork", label: "Artwork" },
+];
 
 /** Create the notifications settings popup view. */
 export function createNotificationsPopupView(): PopupView {
@@ -74,6 +83,58 @@ export function createNotificationsPopupView(): PopupView {
           enabled: unpauseToggle.checked,
         });
       });
+
+      // Display fields section
+      const fieldsHeading = document.createElement("h3");
+      fieldsHeading.textContent = "Display fields";
+      container.appendChild(fieldsHeading);
+
+      const fieldCheckboxes: {
+        key: keyof NotificationFields;
+        input: HTMLInputElement;
+      }[] = [];
+
+      for (const { key, label: fieldLabel } of FIELD_LABELS) {
+        const row = document.createElement("label");
+        row.className = "field-row";
+
+        const span = document.createElement("span");
+        span.textContent = fieldLabel;
+        row.appendChild(span);
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.disabled = true;
+        row.appendChild(input);
+
+        fieldCheckboxes.push({ key, input });
+        container.appendChild(row);
+      }
+
+      chrome.runtime.sendMessage(
+        { type: "get-notification-fields" },
+        (response: { ok: boolean; data?: NotificationFields }) => {
+          if (response?.ok && response.data) {
+            for (const { key, input } of fieldCheckboxes) {
+              input.checked = response.data[key];
+              input.disabled = false;
+            }
+          }
+        },
+      );
+
+      for (const { input } of fieldCheckboxes) {
+        input.addEventListener("change", () => {
+          const fields = {} as NotificationFields;
+          for (const { key, input: cb } of fieldCheckboxes) {
+            fields[key] = cb.checked;
+          }
+          chrome.runtime.sendMessage({
+            type: "set-notification-fields",
+            fields,
+          });
+        });
+      }
     },
   };
 }
