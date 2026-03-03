@@ -21,6 +21,10 @@ export function createNotificationsPopupView(): PopupView {
       heading.textContent = "Notifications";
       container.appendChild(heading);
 
+      const generalCard = document.createElement("div");
+      generalCard.className = "settings-card";
+      container.appendChild(generalCard);
+
       const label = document.createElement("label");
       label.className = "toggle-row";
 
@@ -33,7 +37,7 @@ export function createNotificationsPopupView(): PopupView {
       toggle.disabled = true;
       label.appendChild(toggle);
 
-      container.appendChild(label);
+      generalCard.appendChild(label);
 
       // Query current state from the background script.
       chrome.runtime.sendMessage(
@@ -65,7 +69,7 @@ export function createNotificationsPopupView(): PopupView {
       unpauseToggle.disabled = true;
       unpauseLabel.appendChild(unpauseToggle);
 
-      container.appendChild(unpauseLabel);
+      generalCard.appendChild(unpauseLabel);
 
       chrome.runtime.sendMessage(
         { type: "get-notify-on-unpause" },
@@ -85,9 +89,13 @@ export function createNotificationsPopupView(): PopupView {
       });
 
       // Display fields section
+      const fieldsCard = document.createElement("div");
+      fieldsCard.className = "settings-card";
+      container.appendChild(fieldsCard);
+
       const fieldsHeading = document.createElement("h3");
       fieldsHeading.textContent = "Display fields";
-      container.appendChild(fieldsHeading);
+      fieldsCard.appendChild(fieldsHeading);
 
       const fieldCheckboxes: {
         key: keyof NotificationFields;
@@ -108,7 +116,7 @@ export function createNotificationsPopupView(): PopupView {
         row.appendChild(input);
 
         fieldCheckboxes.push({ key, input });
-        container.appendChild(row);
+        fieldsCard.appendChild(row);
       }
 
       chrome.runtime.sendMessage(

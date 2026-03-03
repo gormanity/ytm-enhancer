@@ -12,6 +12,10 @@ export function createAudioVisualizerPopupView(): PopupView {
       heading.textContent = "Audio Visualizer";
       container.appendChild(heading);
 
+      const card = document.createElement("div");
+      card.className = "settings-card";
+      container.appendChild(card);
+
       const toggleLabel = document.createElement("label");
       toggleLabel.className = "toggle-row";
 
@@ -24,7 +28,7 @@ export function createAudioVisualizerPopupView(): PopupView {
       toggle.disabled = true;
       toggleLabel.appendChild(toggle);
 
-      container.appendChild(toggleLabel);
+      card.appendChild(toggleLabel);
 
       const styleLabel = document.createElement("label");
       styleLabel.className = "toggle-row";
@@ -50,7 +54,7 @@ export function createAudioVisualizerPopupView(): PopupView {
       }
 
       styleLabel.appendChild(select);
-      container.appendChild(styleLabel);
+      card.appendChild(styleLabel);
 
       const targetLabel = document.createElement("label");
       targetLabel.className = "toggle-row";
@@ -78,7 +82,7 @@ export function createAudioVisualizerPopupView(): PopupView {
       }
 
       targetLabel.appendChild(targetSelect);
-      container.appendChild(targetLabel);
+      card.appendChild(targetLabel);
 
       chrome.runtime.sendMessage(
         { type: "get-audio-visualizer-enabled" },

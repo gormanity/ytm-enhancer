@@ -133,11 +133,15 @@
         background: #0f0f0f;
         border: 1px solid var(--border-color);
         border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 16px;
+        padding: 12px;
+        margin-bottom: 12px;
       }
 
       .settings-card h3 {
+        margin-top: 0;
+      }
+
+      .settings-card > :first-child {
         margin-top: 0;
       }
 
@@ -182,9 +186,22 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 0;
+        padding: 10px 0;
         cursor: pointer;
         border-bottom: 1px solid var(--border-color);
+      }
+
+      .settings-card > .toggle-row:first-child,
+      .settings-card > .field-row:first-child,
+      .settings-card > .shortcut-row:first-child {
+        padding-top: 0;
+      }
+
+      .settings-card > .toggle-row:last-child,
+      .settings-card > .field-row:last-child,
+      .settings-card > .shortcut-row:last-child {
+        padding-bottom: 0;
+        border-bottom: none;
       }
 
       .toggle-row:last-child {
@@ -255,7 +272,7 @@
       }
 
       .shortcuts-hint {
-        margin-top: 32px;
+        margin-top: 12px;
         font-size: 12px;
         color: var(--text-secondary);
         line-height: 1.6;

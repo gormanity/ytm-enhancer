@@ -32,22 +32,24 @@ describe("playback speed popup view", () => {
     expect(heading?.textContent).toBe("Playback Speed");
   });
 
-  it("should render a disabled select with eight speed options initially", () => {
+  it("should render a disabled select with placeholder initially", () => {
     const view = createPlaybackSpeedPopupView();
     const container = document.createElement("div");
 
     view.render(container);
 
-    const select = container.querySelector<HTMLSelectElement>("select");
+    const select = container.querySelector("select");
     expect(select).not.toBeNull();
     expect(select?.disabled).toBe(true);
-    expect(select?.options).toHaveLength(8);
-    expect(select?.options[0].value).toBe("0.25");
-    expect(select?.options[0].textContent).toBe("0.25x");
-    expect(select?.options[3].value).toBe("1");
-    expect(select?.options[3].textContent).toBe("1x");
-    expect(select?.options[7].value).toBe("2");
-    expect(select?.options[7].textContent).toBe("2x");
+    expect(select?.options).toHaveLength(9);
+    expect(select?.options[0].value).toBe("");
+    expect(select?.options[0].textContent).toBe("—");
+    expect(select?.options[1].value).toBe("0.25");
+    expect(select?.options[1].textContent).toBe("0.25x");
+    expect(select?.options[4].value).toBe("1");
+    expect(select?.options[4].textContent).toBe("1x");
+    expect(select?.options[8].value).toBe("2");
+    expect(select?.options[8].textContent).toBe("2x");
   });
 
   it("should query current speed on render", () => {
@@ -94,9 +96,7 @@ describe("playback speed popup view", () => {
       (message: unknown, callback?: (response: unknown) => void) => {
         const msg = message as { type: string };
         if (msg.type === "get-playback-speed" && callback) {
-          callback({
-            ok: true,
-          });
+          callback({ ok: true, data: undefined });
         }
       },
     );
@@ -120,10 +120,7 @@ describe("playback speed popup view", () => {
       (message: unknown, callback?: (response: unknown) => void) => {
         const msg = message as { type: string };
         if (msg.type === "get-playback-speed" && callback) {
-          callback({
-            ok: true,
-            data: 1,
-          });
+          callback({ ok: true, data: 1 });
         }
       },
     );
@@ -139,12 +136,12 @@ describe("playback speed popup view", () => {
     });
 
     const select = container.querySelector<HTMLSelectElement>("select")!;
-    select.value = "1.75";
+    select.value = "2";
     select.dispatchEvent(new Event("change"));
 
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-playback-speed",
-      rate: 1.75,
+      rate: 2,
     });
   });
 

@@ -12,6 +12,10 @@ export function createMiniPlayerPopupView(): PopupView {
       heading.textContent = "Mini Player";
       container.appendChild(heading);
 
+      const card = document.createElement("div");
+      card.className = "settings-card";
+      container.appendChild(card);
+
       const label = document.createElement("label");
       label.className = "toggle-row";
 
@@ -24,7 +28,7 @@ export function createMiniPlayerPopupView(): PopupView {
       toggle.disabled = true;
       label.appendChild(toggle);
 
-      container.appendChild(label);
+      card.appendChild(label);
 
       chrome.runtime.sendMessage(
         { type: "get-mini-player-enabled" },

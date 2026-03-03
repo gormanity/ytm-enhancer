@@ -12,6 +12,10 @@ export function createAutoPlayPopupView(): PopupView {
       heading.textContent = "Auto-Play";
       container.appendChild(heading);
 
+      const card = document.createElement("div");
+      card.className = "settings-card";
+      container.appendChild(card);
+
       const label = document.createElement("label");
       label.className = "toggle-row";
 
@@ -24,7 +28,7 @@ export function createAutoPlayPopupView(): PopupView {
       toggle.disabled = true;
       label.appendChild(toggle);
 
-      container.appendChild(label);
+      card.appendChild(label);
 
       // Query current state from the background script.
       chrome.runtime.sendMessage(

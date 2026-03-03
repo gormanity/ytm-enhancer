@@ -12,15 +12,19 @@ export function createHotkeysPopupView(): PopupView {
       heading.textContent = "Keyboard Shortcuts";
       container.appendChild(heading);
 
+      const card = document.createElement("div");
+      card.className = "settings-card";
+      container.appendChild(card);
+
       const list = document.createElement("div");
       list.className = "shortcuts-list";
-      container.appendChild(list);
+      card.appendChild(list);
 
       loadShortcuts(list);
 
       const actions = document.createElement("div");
       actions.style.marginTop = "24px";
-      container.appendChild(actions);
+      card.appendChild(actions);
 
       const configBtn = document.createElement("button");
       configBtn.textContent = "Configure Shortcuts";

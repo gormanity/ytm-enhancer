@@ -32,22 +32,24 @@ describe("stream quality popup view", () => {
     expect(heading?.textContent).toBe("Audio Quality");
   });
 
-  it("should render a disabled select with three options initially", () => {
+  it("should render a disabled select with placeholder initially", () => {
     const view = createStreamQualityPopupView();
     const container = document.createElement("div");
 
     view.render(container);
 
-    const select = container.querySelector<HTMLSelectElement>("select");
+    const select = container.querySelector("select");
     expect(select).not.toBeNull();
     expect(select?.disabled).toBe(true);
-    expect(select?.options).toHaveLength(3);
-    expect(select?.options[0].value).toBe("1");
-    expect(select?.options[0].textContent).toBe("Low");
-    expect(select?.options[1].value).toBe("2");
-    expect(select?.options[1].textContent).toBe("Normal");
-    expect(select?.options[2].value).toBe("3");
-    expect(select?.options[2].textContent).toBe("High");
+    expect(select?.options).toHaveLength(4);
+    expect(select?.options[0].value).toBe("");
+    expect(select?.options[0].textContent).toBe("—");
+    expect(select?.options[1].value).toBe("1");
+    expect(select?.options[1].textContent).toBe("Low");
+    expect(select?.options[2].value).toBe("2");
+    expect(select?.options[2].textContent).toBe("Normal");
+    expect(select?.options[3].value).toBe("3");
+    expect(select?.options[3].textContent).toBe("High");
   });
 
   it("should query current quality on render", () => {
