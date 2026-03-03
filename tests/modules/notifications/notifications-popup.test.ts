@@ -166,4 +166,134 @@ describe("notifications popup view", () => {
       enabled: false,
     });
   });
+
+  describe("display field checkboxes", () => {
+    const defaultFields = {
+      title: true,
+      artist: true,
+      album: false,
+      year: false,
+      artwork: true,
+    };
+
+    function setupWithFields(fields = defaultFields) {
+      sendMessageMock.mockImplementation(
+        (message: { type: string }, callback?: (response: unknown) => void) => {
+          if (callback) {
+            if (message.type === "get-notification-fields") {
+              callback({ ok: true, data: fields });
+            } else {
+              callback({ ok: true, data: true });
+            }
+          }
+        },
+      );
+    }
+
+    it("should render display field checkboxes", async () => {
+      setupWithFields();
+
+      const view = createNotificationsPopupView();
+      const container = document.createElement("div");
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const fieldCheckboxes =
+          container.querySelectorAll<HTMLInputElement>(".field-row input");
+        expect(fieldCheckboxes).toHaveLength(5);
+      });
+    });
+
+    it("should query notification fields on render", () => {
+      setupWithFields();
+
+      const view = createNotificationsPopupView();
+      const container = document.createElement("div");
+      view.render(container);
+
+      expect(sendMessageMock).toHaveBeenCalledWith(
+        { type: "get-notification-fields" },
+        expect.any(Function),
+      );
+    });
+
+    it("should reflect loaded field state in checkboxes", async () => {
+      setupWithFields({
+        title: true,
+        artist: false,
+        album: true,
+        year: false,
+        artwork: true,
+      });
+
+      const view = createNotificationsPopupView();
+      const container = document.createElement("div");
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const fieldCheckboxes =
+          container.querySelectorAll<HTMLInputElement>(".field-row input");
+        expect(fieldCheckboxes[0]?.disabled).toBe(false);
+      });
+
+      const checkboxes =
+        container.querySelectorAll<HTMLInputElement>(".field-row input");
+      expect(checkboxes[0]?.checked).toBe(true); // title
+      expect(checkboxes[1]?.checked).toBe(false); // artist
+      expect(checkboxes[2]?.checked).toBe(true); // album
+      expect(checkboxes[3]?.checked).toBe(false); // year
+      expect(checkboxes[4]?.checked).toBe(true); // artwork
+    });
+
+    it("should send set-notification-fields when a checkbox changes", async () => {
+      setupWithFields();
+
+      const view = createNotificationsPopupView();
+      const container = document.createElement("div");
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const fieldCheckboxes =
+          container.querySelectorAll<HTMLInputElement>(".field-row input");
+        expect(fieldCheckboxes[0]?.disabled).toBe(false);
+      });
+
+      const checkboxes =
+        container.querySelectorAll<HTMLInputElement>(".field-row input");
+      // Toggle album on
+      checkboxes[2].checked = true;
+      checkboxes[2].dispatchEvent(new Event("change"));
+
+      expect(sendMessageMock).toHaveBeenCalledWith({
+        type: "set-notification-fields",
+        fields: {
+          title: true,
+          artist: true,
+          album: true,
+          year: false,
+          artwork: true,
+        },
+      });
+    });
+
+    it("should render field labels", async () => {
+      setupWithFields();
+
+      const view = createNotificationsPopupView();
+      const container = document.createElement("div");
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const rows = container.querySelectorAll(".field-row");
+        expect(rows).toHaveLength(5);
+      });
+
+      const labels = container.querySelectorAll(".field-row span");
+      expect(labels[0]?.textContent).toBe("Title");
+      expect(labels[1]?.textContent).toBe("Artist");
+      expect(labels[2]?.textContent).toBe("Album");
+      expect(labels[3]?.textContent).toBe("Year");
+      expect(labels[4]?.textContent).toBe("Artwork");
+    });
+  });
 });
