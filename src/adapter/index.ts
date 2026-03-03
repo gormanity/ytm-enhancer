@@ -46,6 +46,20 @@ export class YTMAdapter {
     if (video) video.playbackRate = rate;
   }
 
+  getVolume(): number {
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+    return video?.volume ?? 1;
+  }
+
+  setVolume(volume: number): void {
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+    if (video) video.volume = volume;
+  }
+
   isCurrentTrackDisliked(): boolean {
     const btn = document.querySelector(SELECTORS.dislikeButton);
     return btn?.getAttribute("aria-pressed") === "true";
