@@ -9,6 +9,7 @@ import {
 } from "@/core";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import type { PlaybackState } from "@/core/types";
+import { AutoPlayModule } from "@/modules/auto-play";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
 import type {
@@ -24,6 +25,7 @@ import { StreamQualityModule } from "@/modules/stream-quality";
 
 const context = createExtensionContext();
 const send = createMessageSender();
+const autoPlay = new AutoPlayModule();
 const autoSkipDisliked = new AutoSkipDislikedModule();
 const audioVisualizer = new AudioVisualizerModule();
 const hotkeys = new HotkeysModule(send);
@@ -73,6 +75,20 @@ handler.on("get-notification-fields", async () => {
 handler.on("set-notification-fields", async (message) => {
   notifications.setFields(message.fields as NotificationFields);
   void saveModuleStateValue("notifications.fields", message.fields);
+  return { ok: true };
+});
+
+handler.on("get-auto-play-enabled", async () => {
+  return { ok: true, data: autoPlay.isEnabled() };
+});
+
+handler.on("set-auto-play-enabled", async (message) => {
+  autoPlay.setEnabled(message.enabled as boolean);
+  void saveModuleStateValue("auto-play.enabled", message.enabled);
+  void relayToYTMTab({
+    type: "set-auto-play-enabled",
+    enabled: message.enabled,
+  });
   return { ok: true };
 });
 
@@ -227,6 +243,7 @@ async function restoreModuleState(): Promise<void> {
       state["notifications.fields"] as NotificationFields,
     );
   }
+  autoPlay.setEnabled(bool("auto-play.enabled", false));
   autoSkipDisliked.setEnabled(bool("auto-skip-disliked.enabled", false));
   audioVisualizer.setEnabled(bool("audio-visualizer.enabled", true));
   audioVisualizer.setStyle(
@@ -239,6 +256,7 @@ async function restoreModuleState(): Promise<void> {
 }
 
 const modules: FeatureModule[] = [
+  autoPlay,
   autoSkipDisliked,
   audioVisualizer,
   hotkeys,

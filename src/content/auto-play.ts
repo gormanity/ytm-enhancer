@@ -2,11 +2,14 @@ import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
 
 const TIMEOUT_MS = 10_000;
+const HAVE_FUTURE_DATA = 3;
 
 export class AutoPlayController {
   private adapter = new YTMAdapter();
   private observer: MutationObserver | null = null;
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
+  private canplayHandler: (() => void) | null = null;
+  private canplayVideo: HTMLVideoElement | null = null;
   private enabled = false;
   private messageListener: (message: {
     type: string;
@@ -39,6 +42,7 @@ export class AutoPlayController {
     chrome.runtime.onMessage.removeListener(this.messageListener);
     this.observer?.disconnect();
     this.observer = null;
+    this.clearCanplayListener();
     if (this.timeoutId !== null) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -46,27 +50,68 @@ export class AutoPlayController {
   }
 
   private tryAutoPlay(): void {
-    const playPauseButton = document.querySelector(SELECTORS.playPauseButton);
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
 
-    if (playPauseButton) {
-      this.performAutoPlay();
+    if (video) {
+      this.onVideoFound(video);
     } else {
-      this.waitForPlayerBar();
+      this.waitForVideo();
     }
   }
 
-  private waitForPlayerBar(): void {
-    this.observer = new MutationObserver(() => {
-      const playPauseButton = document.querySelector(SELECTORS.playPauseButton);
+  /**
+   * Once the video element exists, check if the media is ready.
+   * If readyState >= HAVE_FUTURE_DATA the media is loaded and
+   * we can play immediately. Otherwise wait for the canplay event,
+   * which fires after YTM finishes its internal pause/load cycle.
+   */
+  private onVideoFound(video: HTMLVideoElement): void {
+    if (video.readyState >= HAVE_FUTURE_DATA) {
+      this.performAutoPlay(video);
+    } else {
+      this.waitForCanplay(video);
+    }
+  }
 
-      if (playPauseButton) {
+  private waitForCanplay(video: HTMLVideoElement): void {
+    this.canplayHandler = () => {
+      this.clearCanplayListener();
+      this.performAutoPlay(video);
+    };
+    this.canplayVideo = video;
+    video.addEventListener("canplay", this.canplayHandler, { once: true });
+  }
+
+  private clearCanplayListener(): void {
+    if (this.canplayHandler && this.canplayVideo) {
+      this.canplayVideo.removeEventListener("canplay", this.canplayHandler);
+    }
+    this.canplayHandler = null;
+    this.canplayVideo = null;
+  }
+
+  /**
+   * Wait for the video element to appear in the DOM. YTM creates
+   * the <video> element during player initialization. Clicking the
+   * play-pause button before the player API is wired up throws
+   * "playerApi.playVideo is not a function".
+   */
+  private waitForVideo(): void {
+    this.observer = new MutationObserver(() => {
+      const video = document.querySelector<HTMLVideoElement>(
+        SELECTORS.videoElement,
+      );
+
+      if (video) {
         this.observer?.disconnect();
         this.observer = null;
         if (this.timeoutId !== null) {
           clearTimeout(this.timeoutId);
           this.timeoutId = null;
         }
-        this.performAutoPlay();
+        this.onVideoFound(video);
       }
     });
 
@@ -82,21 +127,20 @@ export class AutoPlayController {
     }, TIMEOUT_MS);
   }
 
-  private performAutoPlay(): void {
+  private performAutoPlay(video: HTMLVideoElement): void {
     const state = this.adapter.getPlaybackState();
 
     if (state.isPlaying) return;
 
     if (state.title !== null) {
-      this.adapter.executeAction("play");
+      void video.play();
       return;
     }
 
     // No track loaded -- try clicking Quick Picks Play All
     const clicked = this.adapter.clickQuickPicksPlayAll();
     if (!clicked) {
-      // Last resort: try play action (may resume last queue)
-      this.adapter.executeAction("play");
+      void video.play();
     }
   }
 }

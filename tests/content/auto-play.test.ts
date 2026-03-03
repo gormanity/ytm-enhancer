@@ -16,6 +16,31 @@ vi.mock("@/adapter", () => {
   return { YTMAdapter: MockYTMAdapter };
 });
 
+/**
+ * Create a video element and optionally fire canplay to signal
+ * the media is ready. By default the video is NOT ready; call
+ * makeReady(video) to fire canplay.
+ */
+function createVideoElement(): HTMLVideoElement {
+  const video = document.createElement("video");
+  video.className = "html5-main-video";
+  video.play = vi.fn().mockResolvedValue(undefined);
+  document.body.appendChild(video);
+  return video;
+}
+
+function makeReady(video: HTMLVideoElement): void {
+  video.dispatchEvent(new Event("canplay"));
+}
+
+/** Create a video element that is immediately ready. */
+function createReadyVideo(): HTMLVideoElement {
+  const video = createVideoElement();
+  // Set readyState so sync check passes
+  Object.defineProperty(video, "readyState", { value: 3, writable: true });
+  return video;
+}
+
 describe("AutoPlayController", () => {
   let controller: AutoPlayController;
   let sendMessageMock: ReturnType<typeof vi.fn>;
@@ -26,6 +51,14 @@ describe("AutoPlayController", () => {
     executeAction: ReturnType<typeof vi.fn>;
     clickQuickPicksPlayAll: ReturnType<typeof vi.fn>;
   };
+
+  function enableAutoPlay(): void {
+    sendMessageMock.mockImplementation(
+      (_message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: true });
+      },
+    );
+  }
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -45,13 +78,11 @@ describe("AutoPlayController", () => {
       },
     });
 
-    // Reset all mocks (including prototype method call counts)
     vi.clearAllMocks();
     controller = new AutoPlayController();
     adapterInstance = vi.mocked(YTMAdapter).mock
       .instances[0] as unknown as typeof adapterInstance;
 
-    // Restore default return values after clearAllMocks
     adapterInstance.getPlaybackState.mockReturnValue({
       title: null,
       artist: null,
@@ -75,59 +106,74 @@ describe("AutoPlayController", () => {
     controller.init();
 
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
-    expect(adapterInstance.clickQuickPicksPlayAll).not.toHaveBeenCalled();
   });
 
   it("should not trigger play when enabled but already playing", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: true });
-      },
-    );
+    enableAutoPlay();
 
     adapterInstance.getPlaybackState.mockReturnValue({
       title: "Some Song",
       isPlaying: true,
     });
 
-    // Add play-pause button so the observer triggers immediately
-    const btn = document.createElement("button");
-    btn.id = "play-pause-button";
-    document.body.appendChild(btn);
-
+    const video = createReadyVideo();
     controller.init();
 
+    expect(video.play).not.toHaveBeenCalled();
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
-    expect(adapterInstance.clickQuickPicksPlayAll).not.toHaveBeenCalled();
   });
 
-  it("should call play when enabled, not playing, and track is loaded", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: true });
-      },
-    );
+  it("should call video.play() when video is ready, not playing, and track is loaded", () => {
+    enableAutoPlay();
 
     adapterInstance.getPlaybackState.mockReturnValue({
       title: "Some Song",
       isPlaying: false,
     });
 
-    const btn = document.createElement("button");
-    btn.id = "play-pause-button";
-    document.body.appendChild(btn);
-
+    const video = createReadyVideo();
     controller.init();
 
-    expect(adapterInstance.executeAction).toHaveBeenCalledWith("play");
+    expect(video.play).toHaveBeenCalled();
   });
 
-  it("should click Quick Picks when enabled, not playing, and no track loaded", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: true });
-      },
-    );
+  it("should wait for canplay event when video exists but is not ready", () => {
+    enableAutoPlay();
+
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    // Video exists but readyState is 0 (not ready)
+    const video = createVideoElement();
+    controller.init();
+
+    // Should not have played yet
+    expect(video.play).not.toHaveBeenCalled();
+
+    // Fire canplay -- now it should play
+    makeReady(video);
+
+    expect(video.play).toHaveBeenCalled();
+  });
+
+  it("should not use executeAction to play (avoids playerApi race)", () => {
+    enableAutoPlay();
+
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    createReadyVideo();
+    controller.init();
+
+    expect(adapterInstance.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("should click Quick Picks when not playing and no track loaded", () => {
+    enableAutoPlay();
 
     adapterInstance.getPlaybackState.mockReturnValue({
       title: null,
@@ -136,22 +182,14 @@ describe("AutoPlayController", () => {
 
     adapterInstance.clickQuickPicksPlayAll.mockReturnValue(true);
 
-    const btn = document.createElement("button");
-    btn.id = "play-pause-button";
-    document.body.appendChild(btn);
-
+    createReadyVideo();
     controller.init();
 
     expect(adapterInstance.clickQuickPicksPlayAll).toHaveBeenCalled();
-    expect(adapterInstance.executeAction).not.toHaveBeenCalled();
   });
 
-  it("should fall back to play action when Quick Picks not found", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: true });
-      },
-    );
+  it("should fall back to video.play() when Quick Picks not found", () => {
+    enableAutoPlay();
 
     adapterInstance.getPlaybackState.mockReturnValue({
       title: null,
@@ -160,71 +198,59 @@ describe("AutoPlayController", () => {
 
     adapterInstance.clickQuickPicksPlayAll.mockReturnValue(false);
 
-    const btn = document.createElement("button");
-    btn.id = "play-pause-button";
-    document.body.appendChild(btn);
-
+    const video = createReadyVideo();
     controller.init();
 
     expect(adapterInstance.clickQuickPicksPlayAll).toHaveBeenCalled();
-    expect(adapterInstance.executeAction).toHaveBeenCalledWith("play");
+    expect(video.play).toHaveBeenCalled();
   });
 
-  it("should wait for player bar before acting", async () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: true });
-      },
-    );
+  it("should wait for video element to appear then for canplay", async () => {
+    enableAutoPlay();
 
     adapterInstance.getPlaybackState.mockReturnValue({
       title: "Song",
       isPlaying: false,
     });
 
-    // No play-pause button yet
+    // No video element yet
     controller.init();
 
-    // Should not have acted yet
+    await Promise.resolve();
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
 
-    // Now add the button (simulates YTM rendering)
-    const btn = document.createElement("button");
-    btn.id = "play-pause-button";
-    document.body.appendChild(btn);
+    // Video appears but is not ready
+    const video = createVideoElement();
 
-    // MutationObserver callbacks are delivered as microtasks
     await vi.waitFor(() => {
-      expect(adapterInstance.executeAction).toHaveBeenCalledWith("play");
+      // Observer should have spotted the video and registered canplay
+      expect(video.play).not.toHaveBeenCalled();
     });
+
+    // Media becomes ready
+    makeReady(video);
+
+    expect(video.play).toHaveBeenCalled();
   });
 
   it("should stop observing after timeout", async () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: true });
-      },
-    );
+    enableAutoPlay();
 
-    // No play-pause button -- observer will be watching
     controller.init();
 
     // Advance past the timeout
     vi.advanceTimersByTime(11_000);
 
-    // Now add the button -- should NOT trigger play since timeout passed
     adapterInstance.getPlaybackState.mockReturnValue({
       title: "Song",
       isPlaying: false,
     });
 
-    const btn = document.createElement("button");
-    btn.id = "play-pause-button";
-    document.body.appendChild(btn);
+    const video = createReadyVideo();
 
-    // Flush microtasks to confirm observer doesn't fire
     await Promise.resolve();
 
+    expect(video.play).not.toHaveBeenCalled();
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
   });
 

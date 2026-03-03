@@ -4,7 +4,8 @@ import { createAutoPlayPopupView } from "./popup";
 export class AutoPlayModule implements FeatureModule {
   readonly id = "auto-play";
   readonly name = "Auto-Play";
-  readonly description = "Automatically start playback when YouTube Music loads";
+  readonly description =
+    "Automatically start playback when YouTube Music loads";
 
   private enabled = false;
 

@@ -10,6 +10,7 @@ import type {
 import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
 import { AudioBridgeInjector } from "./audio-bridge-injector";
 import { QualityBridgeInjector } from "./quality-bridge-injector";
+import { AutoPlayController } from "./auto-play";
 import { DislikeObserver } from "./dislike-observer";
 import { TrackObserver } from "./track-observer";
 
@@ -181,3 +182,6 @@ trackObserver.start();
 
 const miniPlayerController = new MiniPlayerController(overlayManager);
 void miniPlayerController.init();
+
+const autoPlayController = new AutoPlayController();
+autoPlayController.init();
