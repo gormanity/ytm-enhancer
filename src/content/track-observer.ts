@@ -5,7 +5,7 @@ const DEBOUNCE_MS = 150;
 
 export class TrackObserver {
   private titleObserver: MutationObserver | null = null;
-  private artistObserver: MutationObserver | null = null;
+  private subtitleObserver: MutationObserver | null = null;
   private buttonObserver: MutationObserver | null = null;
   private discoveryObserver: MutationObserver | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -22,12 +22,15 @@ export class TrackObserver {
   }
 
   start(): void {
-    const titleEl = document.querySelector(SELECTORS.trackTitle);
-    const artistEl = document.querySelector(SELECTORS.artistName);
-    const buttonEl = document.querySelector(SELECTORS.playPauseButton);
+    const elements = this.findElements();
 
-    if (titleEl && artistEl && buttonEl) {
-      this.observeElements(titleEl, artistEl, buttonEl);
+    if (elements) {
+      this.observeElements(
+        elements.titleEl,
+        elements.subtitleEl,
+        elements.buttonEl,
+      );
+      this.scheduleCheck();
     } else {
       this.waitForElements();
     }
@@ -36,8 +39,8 @@ export class TrackObserver {
   stop(): void {
     this.titleObserver?.disconnect();
     this.titleObserver = null;
-    this.artistObserver?.disconnect();
-    this.artistObserver = null;
+    this.subtitleObserver?.disconnect();
+    this.subtitleObserver = null;
     this.buttonObserver?.disconnect();
     this.buttonObserver = null;
     this.discoveryObserver?.disconnect();
@@ -48,12 +51,37 @@ export class TrackObserver {
     }
   }
 
+  /**
+   * Find the three DOM elements needed for observation.
+   *
+   * For the artist, we locate the <a> via the known-working artistName
+   * selector, then walk up to the nearest <span> container. The <a>
+   * itself gets destroyed and recreated on every track change, but
+   * the parent <span class="subtitle ..."> persists.
+   */
+  private findElements(): {
+    titleEl: Element;
+    subtitleEl: Element;
+    buttonEl: Element;
+  } | null {
+    const titleEl = document.querySelector(SELECTORS.trackTitle);
+    const artistEl = document.querySelector(SELECTORS.artistName);
+    const buttonEl = document.querySelector(SELECTORS.playPauseButton);
+
+    if (!titleEl || !artistEl || !buttonEl) return null;
+
+    const subtitleEl = artistEl.closest("span") ?? artistEl;
+    return { titleEl, subtitleEl, buttonEl };
+  }
+
   private observeElements(
     titleEl: Element,
-    artistEl: Element,
+    subtitleEl: Element,
     buttonEl: Element,
   ): void {
-    const handler = () => this.scheduleCheck();
+    const handler = () => {
+      this.scheduleCheck();
+    };
 
     this.titleObserver = new MutationObserver(handler);
     this.titleObserver.observe(titleEl, {
@@ -62,8 +90,8 @@ export class TrackObserver {
       childList: true,
     });
 
-    this.artistObserver = new MutationObserver(handler);
-    this.artistObserver.observe(artistEl, {
+    this.subtitleObserver = new MutationObserver(handler);
+    this.subtitleObserver.observe(subtitleEl, {
       characterData: true,
       subtree: true,
       childList: true,
@@ -78,14 +106,17 @@ export class TrackObserver {
 
   private waitForElements(): void {
     this.discoveryObserver = new MutationObserver(() => {
-      const titleEl = document.querySelector(SELECTORS.trackTitle);
-      const artistEl = document.querySelector(SELECTORS.artistName);
-      const buttonEl = document.querySelector(SELECTORS.playPauseButton);
+      const elements = this.findElements();
 
-      if (titleEl && artistEl && buttonEl) {
+      if (elements) {
         this.discoveryObserver?.disconnect();
         this.discoveryObserver = null;
-        this.observeElements(titleEl, artistEl, buttonEl);
+        this.observeElements(
+          elements.titleEl,
+          elements.subtitleEl,
+          elements.buttonEl,
+        );
+        this.scheduleCheck();
       }
     });
 

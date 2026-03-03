@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NotificationsModule } from "@/modules/notifications";
 import type { PlaybackState } from "@/core/types";
 
+const ID_PREFIX = "ytm-enhancer-now-playing-";
+
 function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
   return {
     title: "Song Title",
@@ -23,7 +25,8 @@ describe("NotificationsModule", () => {
 
   beforeEach(() => {
     createMock = vi.fn();
-    clearMock = vi.fn();
+    // Invoke the callback synchronously so create() fires in tests
+    clearMock = vi.fn((_id: string, cb?: () => void) => cb?.());
 
     vi.stubGlobal("chrome", {
       notifications: {
@@ -60,7 +63,7 @@ describe("NotificationsModule", () => {
     module.handleTrackChange(state);
 
     expect(createMock).toHaveBeenCalledWith(
-      "ytm-enhancer-now-playing",
+      expect.stringContaining(ID_PREFIX),
       {
         type: "basic",
         title: "Song Title",
@@ -132,20 +135,38 @@ describe("NotificationsModule", () => {
     const state2 = makeState({ title: "Song B" });
 
     module.handleTrackChange(state1);
+    const firstId = createMock.mock.calls[0][0] as string;
     clearMock.mockClear();
+    createMock.mockClear();
+
     module.handleTrackChange(state2);
 
-    expect(clearMock).toHaveBeenCalledWith(
-      "ytm-enhancer-now-playing",
+    // Previous notification is cleared before creating the new one
+    expect(clearMock).toHaveBeenCalledWith(firstId, expect.any(Function));
+    expect(createMock).toHaveBeenCalledWith(
+      expect.stringContaining(ID_PREFIX),
+      expect.objectContaining({ title: "Song B" }),
       expect.any(Function),
     );
+  });
+
+  it("should use unique notification IDs", () => {
+    module.handleTrackChange(makeState({ title: "Song A" }));
+    module.handleTrackChange(makeState({ title: "Song B" }));
+
+    const id1 = createMock.mock.calls[0][0] as string;
+    const id2 = createMock.mock.calls[1][0] as string;
+
+    expect(id1).toContain(ID_PREFIX);
+    expect(id2).toContain(ID_PREFIX);
+    expect(id1).not.toBe(id2);
   });
 
   it("should use fallback icon when artworkUrl is null", () => {
     module.handleTrackChange(makeState({ artworkUrl: null }));
 
     expect(createMock).toHaveBeenCalledWith(
-      "ytm-enhancer-now-playing",
+      expect.stringContaining(ID_PREFIX),
       expect.objectContaining({
         iconUrl: "chrome-extension://fake-id/icon48.png",
       }),
@@ -161,7 +182,7 @@ describe("NotificationsModule", () => {
     );
 
     expect(createMock).toHaveBeenCalledWith(
-      "ytm-enhancer-now-playing",
+      expect.stringContaining(ID_PREFIX),
       expect.objectContaining({
         iconUrl: "https://lh3.googleusercontent.com/abc=w256-h256-l90-rj",
       }),

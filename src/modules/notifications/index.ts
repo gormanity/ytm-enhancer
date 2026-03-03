@@ -1,7 +1,7 @@
 import type { FeatureModule, PlaybackState, PopupView } from "@/core/types";
 import { createNotificationsPopupView } from "./popup";
 
-const NOTIFICATION_ID = "ytm-enhancer-now-playing";
+const NOTIFICATION_ID_PREFIX = "ytm-enhancer-now-playing-";
 const FALLBACK_ICON = "icon48.png";
 
 /**
@@ -20,7 +20,8 @@ export class NotificationsModule implements FeatureModule {
   private enabled = true;
   private notifyOnUnpause = false;
   private lastTrackKey: string | null = null;
-  private hasShownNotification = false;
+  private lastNotificationId: string | null = null;
+  private notificationCounter = 0;
 
   init(): void {
     // No background-side setup needed; track changes are pushed
@@ -28,8 +29,8 @@ export class NotificationsModule implements FeatureModule {
   }
 
   destroy(): void {
-    this.hasShownNotification = false;
     this.lastTrackKey = null;
+    this.lastNotificationId = null;
   }
 
   isEnabled(): boolean {
@@ -58,38 +59,43 @@ export class NotificationsModule implements FeatureModule {
 
     const trackKey = `${state.title}\0${state.artist}`;
 
-    if (trackKey === this.lastTrackKey && !this.notifyOnUnpause) {
-      return;
-    }
+    if (trackKey === this.lastTrackKey && !this.notifyOnUnpause) return;
 
     this.lastTrackKey = trackKey;
-
-    if (this.hasShownNotification) {
-      chrome.notifications.clear(NOTIFICATION_ID, () => {});
-    }
-
-    this.hasShownNotification = true;
 
     const iconUrl = state.artworkUrl
       ? getNotificationArtworkUrl(state.artworkUrl)
       : chrome.runtime.getURL(FALLBACK_ICON);
 
-    chrome.notifications.create(
-      NOTIFICATION_ID,
-      {
-        type: "basic",
-        title: state.title,
-        message: state.artist,
-        iconUrl,
-      },
-      () => {
+    const notificationId = `${NOTIFICATION_ID_PREFIX}${++this.notificationCounter}`;
+    const options: chrome.notifications.NotificationCreateOptions = {
+      type: "basic",
+      title: state.title,
+      message: state.artist,
+      iconUrl,
+    };
+
+    const showNotification = () => {
+      this.lastNotificationId = notificationId;
+      chrome.notifications.create(notificationId, options, () => {
         if (chrome.runtime.lastError) {
           console.error(
-            "[YTM Enhancer] Notification failed:",
+            "[YTM Enhancer Notifications] create failed:",
             chrome.runtime.lastError.message,
           );
         }
-      },
-    );
+      });
+    };
+
+    // macOS suppresses new banners when a notification from the same
+    // app already exists in Notification Center. Clear the previous
+    // one first, then create the new one in the callback.
+    if (this.lastNotificationId) {
+      chrome.notifications.clear(this.lastNotificationId, () => {
+        showNotification();
+      });
+    } else {
+      showNotification();
+    }
   }
 }
