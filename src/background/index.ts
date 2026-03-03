@@ -80,6 +80,11 @@ handler.on("set-notification-fields", async (message) => {
   return { ok: true };
 });
 
+handler.on("preview-notification", async () => {
+  notifications.triggerPreview();
+  return { ok: true };
+});
+
 handler.on("get-auto-play-enabled", async () => {
   return { ok: true, data: autoPlay.isEnabled() };
 });

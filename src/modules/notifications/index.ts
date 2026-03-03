@@ -87,7 +87,27 @@ export class NotificationsModule implements FeatureModule {
     if (trackKey === this.lastTrackKey && !this.notifyOnUnpause) return;
 
     this.lastTrackKey = trackKey;
+    this.showNotification(state);
+  }
 
+  /** Trigger a test notification for preview purposes. */
+  triggerPreview(): void {
+    console.log("[YTM Enhancer Notifications] Triggering preview...");
+    this.showNotification({
+      title: "Test Track",
+      artist: "Example Artist",
+      album: "Demo Album",
+      year: 2026,
+      artworkUrl: null, // Use local fallback for preview reliability
+      isPlaying: true,
+      isLiked: false,
+      isDisliked: false,
+      progress: 0.5,
+      duration: 180,
+    });
+  }
+
+  private showNotification(state: PlaybackState): void {
     const notificationTitle =
       this.fields.title && state.title ? state.title : "Now Playing";
 
@@ -96,7 +116,11 @@ export class NotificationsModule implements FeatureModule {
     if (this.fields.album && state.album) messageParts.push(state.album);
     if (this.fields.year && state.year != null)
       messageParts.push(String(state.year));
-    const notificationMessage = messageParts.join(" \u2014 ");
+    
+    // Ensure message isn't empty, some platforms require this
+    const notificationMessage = messageParts.length > 0 
+      ? messageParts.join(" \u2014 ")
+      : "Previewing notification settings";
 
     const iconUrl =
       this.fields.artwork && state.artworkUrl
@@ -111,27 +135,26 @@ export class NotificationsModule implements FeatureModule {
       iconUrl,
     };
 
-    const showNotification = () => {
+    const display = () => {
       this.lastNotificationId = notificationId;
-      chrome.notifications.create(notificationId, options, () => {
+      chrome.notifications.create(notificationId, options, (id) => {
         if (chrome.runtime.lastError) {
           console.error(
             "[YTM Enhancer Notifications] create failed:",
             chrome.runtime.lastError.message,
           );
+        } else {
+          console.log("[YTM Enhancer Notifications] created:", id);
         }
       });
     };
 
-    // macOS suppresses new banners when a notification from the same
-    // app already exists in Notification Center. Clear the previous
-    // one first, then create the new one in the callback.
     if (this.lastNotificationId) {
       chrome.notifications.clear(this.lastNotificationId, () => {
-        showNotification();
+        display();
       });
     } else {
-      showNotification();
+      display();
     }
   }
 }
