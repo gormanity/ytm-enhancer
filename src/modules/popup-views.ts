@@ -6,6 +6,7 @@ import { createHotkeysPopupView } from "./hotkeys/popup";
 import { createMiniPlayerPopupView } from "./mini-player/popup";
 import { createNotificationsPopupView } from "./notifications/popup";
 import { createPlaybackSpeedPopupView } from "./playback-speed/popup";
+import { createPrecisionVolumePopupView } from "./precision-volume/popup";
 import { createStreamQualityPopupView } from "./stream-quality/popup";
 
 /**
@@ -23,6 +24,7 @@ export function getAllPopupViews(): PopupView[] {
     createMiniPlayerPopupView(),
     createNotificationsPopupView(),
     createPlaybackSpeedPopupView(),
+    createPrecisionVolumePopupView(),
     createStreamQualityPopupView(),
   ];
 }

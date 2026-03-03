@@ -21,6 +21,7 @@ import { MiniPlayerModule } from "@/modules/mini-player";
 import { NotificationsModule } from "@/modules/notifications";
 import type { NotificationFields } from "@/modules/notifications";
 import { PlaybackSpeedModule } from "@/modules/playback-speed";
+import { PrecisionVolumeModule } from "@/modules/precision-volume";
 import { StreamQualityModule } from "@/modules/stream-quality";
 
 const context = createExtensionContext();
@@ -32,6 +33,7 @@ const hotkeys = new HotkeysModule(send);
 const miniPlayer = new MiniPlayerModule();
 const notifications = new NotificationsModule();
 const playbackSpeed = new PlaybackSpeedModule();
+const precisionVolume = new PrecisionVolumeModule();
 const streamQuality = new StreamQualityModule();
 
 // Chrome MV3 service workers require event listeners to be registered
@@ -178,6 +180,26 @@ handler.on("set-playback-speed", async (message) => {
   return { ok: true };
 });
 
+handler.on("get-volume", async () => {
+  const tab = await findYTMTab();
+  if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
+  const response = await (
+    chrome.tabs.sendMessage as (
+      tabId: number,
+      message: unknown,
+    ) => Promise<{ ok: true; data?: unknown }>
+  )(tab.id, { type: "get-volume" });
+  return response;
+});
+
+handler.on("set-volume", async (message) => {
+  void relayToYTMTab({
+    type: "set-volume",
+    volume: message.volume,
+  });
+  return { ok: true };
+});
+
 handler.on("get-audio-visualizer-enabled", async () => {
   return { ok: true, data: audioVisualizer.isEnabled() };
 });
@@ -263,6 +285,7 @@ const modules: FeatureModule[] = [
   miniPlayer,
   notifications,
   playbackSpeed,
+  precisionVolume,
   streamQuality,
 ];
 

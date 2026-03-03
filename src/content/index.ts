@@ -118,6 +118,18 @@ handler.on("set-playback-speed", async (message) => {
   return { ok: true };
 });
 
+// --- Precision Volume ---
+
+handler.on("get-volume", async () => {
+  const volume = adapter.getVolume();
+  return { ok: true, data: volume };
+});
+
+handler.on("set-volume", async (message) => {
+  adapter.setVolume(message.volume as number);
+  return { ok: true };
+});
+
 // --- Auto-Skip Disliked ---
 
 let autoSkipDislikedEnabled = false;
