@@ -242,6 +242,26 @@ handler.on("set-audio-visualizer-target", async (message) => {
   return { ok: true };
 });
 
+handler.on("get-playback-state", async () => {
+  const tab = await findYTMTab();
+  if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
+  const response = await (
+    chrome.tabs.sendMessage as (
+      tabId: number,
+      message: unknown,
+    ) => Promise<{ ok: true; data?: PlaybackState }>
+  )(tab.id, { type: "get-playback-state" });
+  return response;
+});
+
+handler.on("playback-action", async (message) => {
+  void relayToYTMTab({
+    type: "playback-action",
+    action: message.action,
+  });
+  return { ok: true };
+});
+
 handler.start();
 
 async function restoreModuleState(): Promise<void> {

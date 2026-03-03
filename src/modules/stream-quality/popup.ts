@@ -28,6 +28,14 @@ export function createStreamQualityPopupView(): PopupView {
       const select = document.createElement("select");
       select.disabled = true;
 
+      // Add a placeholder option
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "—";
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      select.appendChild(placeholder);
+
       for (const opt of QUALITY_OPTIONS) {
         const option = document.createElement("option");
         option.value = opt.value;
@@ -38,25 +46,39 @@ export function createStreamQualityPopupView(): PopupView {
       label.appendChild(select);
       container.appendChild(label);
 
+      const hint = document.createElement("p");
+      hint.className = "status-hint";
+      hint.textContent = "Initial interaction on YTM page required";
+      hint.style.display = "block";
+      container.appendChild(hint);
+
       chrome.runtime.sendMessage(
         { type: "get-stream-quality" },
         (
           response: { ok: boolean; data?: { current: string | null } } | null,
         ) => {
-          if (!response?.ok) return;
-
-          if (response.data?.current) {
-            select.value = response.data.current;
+          if (response?.ok) {
+            if (response.data?.current) {
+              select.value = response.data.current;
+            } else {
+              // If we got OK but no current, maybe default to Normal (2)
+              select.value = "2";
+            }
+            select.disabled = false;
+            hint.style.display = "none";
+            // Remove placeholder once we have a value
+            placeholder.remove();
           }
-          select.disabled = false;
         },
       );
 
       select.addEventListener("change", () => {
-        chrome.runtime.sendMessage({
-          type: "set-stream-quality",
-          value: select.value,
-        });
+        if (select.value) {
+          chrome.runtime.sendMessage({
+            type: "set-stream-quality",
+            value: select.value,
+          });
+        }
       });
     },
   };

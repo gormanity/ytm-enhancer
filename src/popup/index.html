@@ -5,85 +5,434 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YTM Enhancer</title>
     <style>
+      :root {
+        --bg-color: #030303;
+        --sidebar-bg: #0f0f0f;
+        --text-color: #ffffff;
+        --text-secondary: #aaaaaa;
+        --accent-color: #ff0000;
+        --border-color: #2a2a2a;
+        --hover-bg: #272727;
+        --active-bg: #3f3f3f;
+      }
+
       body {
-        width: 320px;
-        min-height: 200px;
+        width: 480px;
+        height: 400px;
         margin: 0;
-        padding: 16px;
+        padding: 0;
         font-family:
-          system-ui,
-          -apple-system,
+          "Roboto",
+          "Arial",
           sans-serif;
         font-size: 14px;
-        color: #e8eaed;
-        background: #202124;
+        color: var(--text-color);
+        background: var(--bg-color);
+        display: flex;
+        overflow: hidden;
       }
-      h1 {
-        font-size: 16px;
-        margin: 0 0 12px;
-      }
-      h2 {
-        font-size: 14px;
-        margin: 12px 0 8px;
-      }
-      .shortcuts-list {
+
+      aside {
+        width: 160px;
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--border-color);
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        padding-top: 12px;
+        flex-shrink: 0;
       }
-      .shortcut-row {
+
+      .sidebar-header {
+        padding: 0 16px 16px;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 12px;
+      }
+
+      .sidebar-header h1 {
+        font-size: 14px;
+        margin: 0;
+        color: var(--text-color);
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        padding: 4px 0;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
       }
-      .shortcut-label {
-        color: #bdc1c6;
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition:
+          background 0.2s,
+          color 0.2s;
+        gap: 12px;
+        border-radius: 0 20px 20px 0;
+        margin-right: 8px;
+        user-select: none;
       }
-      .shortcut-key {
-        background: #303134;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-family: monospace;
+
+      .nav-item:hover {
+        background: var(--hover-bg);
+        color: var(--text-color);
+      }
+
+      .nav-item.active {
+        background: var(--active-bg);
+        color: var(--text-color);
+        font-weight: 500;
+      }
+
+      .nav-item svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        stroke-width: 2;
+        fill: none;
+      }
+
+      .sidebar-footer {
+        margin-top: auto;
+        padding: 16px;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: center;
+      }
+
+      .version-label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        opacity: 0.6;
+      }
+
+      main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      h2 {
+        font-size: 20px;
+        margin: 0 0 20px;
+        font-weight: 500;
+      }
+
+      h3 {
         font-size: 12px;
-        border: 1px solid #5f6368;
+        margin: 24px 0 12px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
-      .shortcuts-hint {
-        margin-top: 12px;
-        font-size: 12px;
-        color: #9aa0a6;
+
+      .settings-card {
+        background: #0f0f0f;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
       }
-      #view-container {
+
+      .settings-card h3 {
+        margin-top: 0;
+      }
+
+      .volume-group {
         margin-top: 8px;
       }
+
+      .volume-number-input {
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-color) !important;
+        font-size: 14px !important;
+        font-weight: 600;
+        text-align: right;
+        padding: 0 !important;
+        width: 38px !important;
+        outline: none;
+      }
+
+      .compact-select-group .toggle-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 0;
+        border-bottom: none;
+      }
+
+      .compact-select-group select {
+        width: 100%;
+      }
+
+      .status-hint {
+        font-size: 11px;
+        color: var(--text-secondary);
+        opacity: 0.7;
+        margin-top: 8px;
+        line-height: 1.4;
+      }
+
+      /* Module Specific Styles */
       .toggle-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 0;
+        padding: 12px 0;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .toggle-row:last-child {
+        border-bottom: none;
+      }
+
+      .toggle-row span {
+        font-size: 14px;
+      }
+
+      .field-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
         cursor: pointer;
       }
-      .toggle-row span {
-        color: #bdc1c6;
+
+      .field-row span {
+        font-size: 13px;
+        color: var(--text-secondary);
       }
-      input[type="range"] {
-        flex: 1;
-        margin: 0 8px;
+
+      .shortcuts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
-      input[type="number"] {
-        width: 48px;
+
+      .shortcut-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .shortcut-label {
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
+      .shortcut-key {
+        background: #333;
         padding: 2px 6px;
-        background: #303134;
-        border: 1px solid #5f6368;
-        color: #e8eaed;
         border-radius: 4px;
-        text-align: right;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        border: 1px solid #444;
+        color: #eee;
+        box-shadow: 0 2px 0 #111;
+        min-width: 20px;
+        text-align: center;
+        display: inline-block;
+      }
+
+      .key-symbol {
+        font-size: 14px;
+        font-weight: 900;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        font-family: "Arial", sans-serif;
+      }
+
+      .shortcuts-hint {
+        margin-top: 32px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        padding-left: 12px;
+        border-left: 2px solid var(--accent-color);
+      }
+
+      .primary-btn {
+        transition: background 0.2s, transform 0.1s;
+      }
+
+      .primary-btn:hover {
+        background: #cc0000 !important;
+      }
+
+      .primary-btn:active {
+        transform: scale(0.98);
+      }
+
+      .shortcuts-hint strong {
+        color: var(--text-color);
+      }
+
+      input[type="checkbox"] {
+        appearance: none;
+        width: 32px;
+        height: 18px;
+        background: #3f3f3f;
+        border-radius: 9px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.3s;
+        flex-shrink: 0;
+      }
+
+      input[type="checkbox"]:checked {
+        background: var(--accent-color);
+      }
+
+      input[type="checkbox"]::before {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+        left: 3px;
+        transition: transform 0.3s;
+      }
+
+      input[type="checkbox"]:checked::before {
+        transform: translateX(14px);
+      }
+
+      input[type="checkbox"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+input[type="range"] {
+  accent-color: var(--accent-color);
+  width: 100%;
+  margin: 12px 0;
+  cursor: pointer;
+  height: 6px;
+  background: #3f3f3f;
+  border-radius: 3px;
+  appearance: none;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--text-color);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+input[type="range"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input[type="range"]:disabled::-webkit-slider-thumb {
+  width: 0;
+  height: 0;
+}
+
+input[type="range"]:disabled::-moz-range-thumb {
+  width: 0;
+  height: 0;
+}
+        height: 0;
+      }
+
+      input[type="number"] {
+        background: #1a1a1a;
+        border: 1px solid var(--border-color);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        width: 50px;
+      }
+
+      select {
+        background: #1a1a1a;
+        border: 1px solid var(--border-color);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        outline: none;
+      }
+
+      select:focus {
+        border-color: var(--active-bg);
+      }
+
+      .icon-btn {
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition:
+          background 0.2s,
+          transform 0.1s;
+        outline: none;
+      }
+
+      .icon-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .icon-btn:active {
+        transform: scale(0.95);
+      }
+
+      /* Custom scrollbar */
+      main::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      main::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      main::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 4px;
+      }
+
+      main::-webkit-scrollbar-thumb:hover {
+        background: var(--active-bg);
       }
     </style>
   </head>
   <body>
-    <h1>YTM Enhancer</h1>
-    <div id="view-container"></div>
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <h1>YTM Enhancer</h1>
+      </div>
+      <nav id="nav-list"></nav>
+      <div class="sidebar-footer">
+        <span class="version-label">v0.1.0</span>
+      </div>
+    </aside>
+    <main>
+      <div id="view-container"></div>
+    </main>
     <script src="popup.js" type="module"></script>
   </body>
 </html>

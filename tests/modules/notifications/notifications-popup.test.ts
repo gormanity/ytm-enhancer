@@ -29,7 +29,7 @@ describe("notifications popup view", () => {
 
     const heading = container.querySelector("h2");
     expect(heading).not.toBeNull();
-    expect(heading?.textContent).toBe("Track Notifications");
+    expect(heading?.textContent).toBe("Notifications");
   });
 
   it("should render a toggle switch checked when enabled", async () => {
@@ -85,7 +85,7 @@ describe("notifications popup view", () => {
     const labels = container.querySelectorAll("label.toggle-row");
     expect(labels).toHaveLength(2);
     expect(labels[1].querySelector("span")?.textContent).toBe(
-      "Show notification when resuming playback",
+      "Show on resume playback",
     );
   });
 

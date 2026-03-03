@@ -22,6 +22,7 @@ export type PlaybackAction =
 export interface PopupView {
   id: string;
   label: string;
+  icon?: string;
   render: (container: HTMLElement) => void;
 }
 

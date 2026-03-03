@@ -18,14 +18,52 @@ export function createHotkeysPopupView(): PopupView {
 
       loadShortcuts(list);
 
-      const hint = document.createElement("p");
+      const actions = document.createElement("div");
+      actions.style.marginTop = "24px";
+      container.appendChild(actions);
+
+      const configBtn = document.createElement("button");
+      configBtn.textContent = "Configure Shortcuts";
+      configBtn.className = "primary-btn";
+      configBtn.style.width = "100%";
+      configBtn.style.padding = "10px";
+      configBtn.style.background = "var(--accent-color)";
+      configBtn.style.color = "white";
+      configBtn.style.border = "none";
+      configBtn.style.borderRadius = "4px";
+      configBtn.style.cursor = "pointer";
+      configBtn.style.fontWeight = "600";
+      configBtn.onclick = () => {
+        const url = __BROWSER__ === "firefox" 
+          ? "about:addons" 
+          : "chrome://extensions/shortcuts";
+        chrome.tabs.create({ url });
+      };
+      actions.appendChild(configBtn);
+
+      const hint = document.createElement("div");
       hint.className = "shortcuts-hint";
-      hint.textContent =
-        "To change shortcuts, visit your browser's extension shortcuts page.";
+      hint.innerHTML = `
+        <strong>Tip:</strong> Set shortcuts to <strong>Global</strong> in browser settings to control playback while using other apps.
+      `;
       container.appendChild(hint);
     },
   };
 }
+
+const KEY_SYMBOL_MAP: Record<string, string> = {
+  "Left": "←",
+  "Right": "→",
+  "Up": "↑",
+  "Down": "↓",
+  "ArrowLeft": "←",
+  "ArrowRight": "→",
+  "ArrowUp": "↑",
+  "ArrowDown": "↓",
+  "MediaNextTrack": "⏭",
+  "MediaPrevTrack": "⏮",
+  "MediaPlayPause": "⏯",
+};
 
 function loadShortcuts(container: HTMLElement): void {
   chrome.commands.getAll((commands) => {
@@ -39,12 +77,42 @@ function loadShortcuts(container: HTMLElement): void {
       label.className = "shortcut-label";
       label.textContent = cmd.description ?? cmd.name;
 
-      const key = document.createElement("kbd");
-      key.className = "shortcut-key";
-      key.textContent = cmd.shortcut || "Not set";
+      const keysContainer = document.createElement("div");
+      keysContainer.style.display = "flex";
+      keysContainer.style.gap = "4px";
+      keysContainer.style.alignItems = "center";
+
+      if (cmd.shortcut) {
+        const parts = cmd.shortcut.split("+");
+        for (let i = 0; i < parts.length; i++) {
+          const key = parts[i].trim();
+          const symbol = KEY_SYMBOL_MAP[key] || key;
+          
+          const kbd = document.createElement("kbd");
+          kbd.className = "shortcut-key";
+          if (KEY_SYMBOL_MAP[key]) {
+            kbd.classList.add("key-symbol");
+          }
+          kbd.textContent = symbol;
+          keysContainer.appendChild(kbd);
+
+          if (i < parts.length - 1) {
+            const separator = document.createElement("span");
+            separator.textContent = "+";
+            separator.style.fontSize = "10px";
+            separator.style.color = "var(--text-secondary)";
+            keysContainer.appendChild(separator);
+          }
+        }
+      } else {
+        const kbd = document.createElement("kbd");
+        kbd.className = "shortcut-key";
+        kbd.textContent = "Not set";
+        keysContainer.appendChild(kbd);
+      }
 
       row.appendChild(label);
-      row.appendChild(key);
+      row.appendChild(keysContainer);
       container.appendChild(row);
     }
   });

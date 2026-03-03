@@ -18,14 +18,14 @@ export function createNotificationsPopupView(): PopupView {
       container.innerHTML = "";
 
       const heading = document.createElement("h2");
-      heading.textContent = "Track Notifications";
+      heading.textContent = "Notifications";
       container.appendChild(heading);
 
       const label = document.createElement("label");
       label.className = "toggle-row";
 
       const text = document.createElement("span");
-      text.textContent = "Show notifications on track change";
+      text.textContent = "Show on track change";
       label.appendChild(text);
 
       const toggle = document.createElement("input");
@@ -57,7 +57,7 @@ export function createNotificationsPopupView(): PopupView {
       unpauseLabel.className = "toggle-row";
 
       const unpauseText = document.createElement("span");
-      unpauseText.textContent = "Show notification when resuming playback";
+      unpauseText.textContent = "Show on resume playback";
       unpauseLabel.appendChild(unpauseText);
 
       const unpauseToggle = document.createElement("input");

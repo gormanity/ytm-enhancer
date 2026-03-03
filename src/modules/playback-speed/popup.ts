@@ -23,6 +23,14 @@ export function createPlaybackSpeedPopupView(): PopupView {
       const select = document.createElement("select");
       select.disabled = true;
 
+      // Add a placeholder option
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "—";
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      select.appendChild(placeholder);
+
       for (const speed of SPEED_OPTIONS) {
         const option = document.createElement("option");
         option.value = String(speed);
@@ -36,18 +44,22 @@ export function createPlaybackSpeedPopupView(): PopupView {
       chrome.runtime.sendMessage(
         { type: "get-playback-speed" },
         (response: { ok: boolean; data?: number } | null) => {
-          if (!response?.ok) return;
-
-          select.value = String(response.data ?? 1);
-          select.disabled = false;
+          if (response?.ok) {
+            select.value = String(response.data ?? 1);
+            select.disabled = false;
+            // Remove placeholder once we have a value
+            placeholder.remove();
+          }
         },
       );
 
       select.addEventListener("change", () => {
-        chrome.runtime.sendMessage({
-          type: "set-playback-speed",
-          rate: Number(select.value),
-        });
+        if (select.value) {
+          chrome.runtime.sendMessage({
+            type: "set-playback-speed",
+            rate: Number(select.value),
+          });
+        }
       });
     },
   };
