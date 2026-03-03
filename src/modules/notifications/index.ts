@@ -4,6 +4,22 @@ import { createNotificationsPopupView } from "./popup";
 const NOTIFICATION_ID_PREFIX = "ytm-enhancer-now-playing-";
 const FALLBACK_ICON = "icon48.png";
 
+export interface NotificationFields {
+  title: boolean;
+  artist: boolean;
+  album: boolean;
+  year: boolean;
+  artwork: boolean;
+}
+
+const DEFAULT_FIELDS: NotificationFields = {
+  title: true,
+  artist: true,
+  album: false,
+  year: false,
+  artwork: true,
+};
+
 /**
  * Upgrade a YTM thumbnail URL to a larger size for notifications.
  * YTM artwork URLs contain size params like `=w60-h60-l90-rj`.
@@ -19,6 +35,7 @@ export class NotificationsModule implements FeatureModule {
 
   private enabled = true;
   private notifyOnUnpause = false;
+  private fields: NotificationFields = { ...DEFAULT_FIELDS };
   private lastTrackKey: string | null = null;
   private lastNotificationId: string | null = null;
   private notificationCounter = 0;
@@ -49,6 +66,14 @@ export class NotificationsModule implements FeatureModule {
     this.notifyOnUnpause = enabled;
   }
 
+  getFields(): NotificationFields {
+    return { ...this.fields };
+  }
+
+  setFields(fields: NotificationFields): void {
+    this.fields = { ...fields };
+  }
+
   getPopupViews(): PopupView[] {
     return [createNotificationsPopupView()];
   }
@@ -63,15 +88,26 @@ export class NotificationsModule implements FeatureModule {
 
     this.lastTrackKey = trackKey;
 
-    const iconUrl = state.artworkUrl
-      ? getNotificationArtworkUrl(state.artworkUrl)
-      : chrome.runtime.getURL(FALLBACK_ICON);
+    const notificationTitle =
+      this.fields.title && state.title ? state.title : "Now Playing";
+
+    const messageParts: string[] = [];
+    if (this.fields.artist && state.artist) messageParts.push(state.artist);
+    if (this.fields.album && state.album) messageParts.push(state.album);
+    if (this.fields.year && state.year != null)
+      messageParts.push(String(state.year));
+    const notificationMessage = messageParts.join(" \u2014 ");
+
+    const iconUrl =
+      this.fields.artwork && state.artworkUrl
+        ? getNotificationArtworkUrl(state.artworkUrl)
+        : chrome.runtime.getURL(FALLBACK_ICON);
 
     const notificationId = `${NOTIFICATION_ID_PREFIX}${++this.notificationCounter}`;
     const options: chrome.notifications.NotificationCreateOptions = {
       type: "basic",
-      title: state.title,
-      message: state.artist,
+      title: notificationTitle,
+      message: notificationMessage,
       iconUrl,
     };
 
