@@ -18,6 +18,7 @@ import type {
 import { HotkeysModule } from "@/modules/hotkeys";
 import { MiniPlayerModule } from "@/modules/mini-player";
 import { NotificationsModule } from "@/modules/notifications";
+import type { NotificationFields } from "@/modules/notifications";
 import { PlaybackSpeedModule } from "@/modules/playback-speed";
 import { StreamQualityModule } from "@/modules/stream-quality";
 
@@ -62,6 +63,16 @@ handler.on("get-notify-on-unpause", async () => {
 handler.on("set-notify-on-unpause", async (message) => {
   notifications.setNotifyOnUnpause(message.enabled as boolean);
   void saveModuleStateValue("notifications.notifyOnUnpause", message.enabled);
+  return { ok: true };
+});
+
+handler.on("get-notification-fields", async () => {
+  return { ok: true, data: notifications.getFields() };
+});
+
+handler.on("set-notification-fields", async (message) => {
+  notifications.setFields(message.fields as NotificationFields);
+  void saveModuleStateValue("notifications.fields", message.fields);
   return { ok: true };
 });
 
@@ -208,6 +219,14 @@ async function restoreModuleState(): Promise<void> {
   notifications.setNotifyOnUnpause(
     bool("notifications.notifyOnUnpause", false),
   );
+  if (
+    typeof state["notifications.fields"] === "object" &&
+    state["notifications.fields"] !== null
+  ) {
+    notifications.setFields(
+      state["notifications.fields"] as NotificationFields,
+    );
+  }
   autoSkipDisliked.setEnabled(bool("auto-skip-disliked.enabled", false));
   audioVisualizer.setEnabled(bool("audio-visualizer.enabled", true));
   audioVisualizer.setStyle(
