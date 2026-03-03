@@ -196,4 +196,200 @@ describe("NotificationsModule", () => {
     expect(views).toHaveLength(1);
     expect(views[0].id).toBe("notifications-settings");
   });
+
+  describe("notification fields", () => {
+    it("should have default fields", () => {
+      expect(module.getFields()).toEqual({
+        title: true,
+        artist: true,
+        album: false,
+        year: false,
+        artwork: true,
+      });
+    });
+
+    it("should allow setting fields", () => {
+      module.setFields({
+        title: true,
+        artist: false,
+        album: true,
+        year: true,
+        artwork: false,
+      });
+
+      expect(module.getFields()).toEqual({
+        title: true,
+        artist: false,
+        album: true,
+        year: true,
+        artwork: false,
+      });
+    });
+
+    it("should use 'Now Playing' as title when title field is disabled", () => {
+      module.setFields({
+        title: false,
+        artist: true,
+        album: false,
+        year: false,
+        artwork: true,
+      });
+
+      module.handleTrackChange(makeState());
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({ title: "Now Playing" }),
+        expect.any(Function),
+      );
+    });
+
+    it("should show only artist in message when only artist is enabled", () => {
+      module.setFields({
+        title: true,
+        artist: true,
+        album: false,
+        year: false,
+        artwork: true,
+      });
+
+      module.handleTrackChange(makeState());
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({ message: "Artist Name" }),
+        expect.any(Function),
+      );
+    });
+
+    it("should join artist, album, and year with dashes in message", () => {
+      module.setFields({
+        title: true,
+        artist: true,
+        album: true,
+        year: true,
+        artwork: true,
+      });
+
+      module.handleTrackChange(makeState({ album: "My Album", year: 2024 }));
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({
+          message: "Artist Name \u2014 My Album \u2014 2024",
+        }),
+        expect.any(Function),
+      );
+    });
+
+    it("should show only album in message when only album is enabled", () => {
+      module.setFields({
+        title: true,
+        artist: false,
+        album: true,
+        year: false,
+        artwork: true,
+      });
+
+      module.handleTrackChange(makeState({ album: "My Album" }));
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({ message: "My Album" }),
+        expect.any(Function),
+      );
+    });
+
+    it("should show only year in message when only year is enabled", () => {
+      module.setFields({
+        title: true,
+        artist: false,
+        album: false,
+        year: true,
+        artwork: true,
+      });
+
+      module.handleTrackChange(makeState({ year: 2024 }));
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({ message: "2024" }),
+        expect.any(Function),
+      );
+    });
+
+    it("should use empty message when no message fields are enabled", () => {
+      module.setFields({
+        title: true,
+        artist: false,
+        album: false,
+        year: false,
+        artwork: true,
+      });
+
+      module.handleTrackChange(makeState());
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({ message: "" }),
+        expect.any(Function),
+      );
+    });
+
+    it("should use fallback icon when artwork field is disabled", () => {
+      module.setFields({
+        title: true,
+        artist: true,
+        album: false,
+        year: false,
+        artwork: false,
+      });
+
+      module.handleTrackChange(makeState());
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({
+          iconUrl: "chrome-extension://fake-id/icon48.png",
+        }),
+        expect.any(Function),
+      );
+    });
+
+    it("should skip null album in message", () => {
+      module.setFields({
+        title: true,
+        artist: true,
+        album: true,
+        year: false,
+        artwork: true,
+      });
+
+      module.handleTrackChange(makeState({ album: null }));
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({ message: "Artist Name" }),
+        expect.any(Function),
+      );
+    });
+
+    it("should skip null year in message", () => {
+      module.setFields({
+        title: true,
+        artist: false,
+        album: false,
+        year: true,
+        artwork: true,
+      });
+
+      module.handleTrackChange(makeState({ year: null }));
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({ message: "" }),
+        expect.any(Function),
+      );
+    });
+  });
 });
