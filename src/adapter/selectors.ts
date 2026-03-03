@@ -21,4 +21,5 @@ export const SELECTORS = {
   songArtPanel: "#song-image.ytmusic-player",
   playerBarThumbnail: ".thumbnail-image-wrapper.style-scope.ytmusic-player-bar",
   dislikeButton: 'button[aria-label="Dislike"]',
+  shelfRenderer: "ytmusic-shelf-renderer",
 } as const;

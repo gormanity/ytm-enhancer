@@ -88,6 +88,24 @@ export class YTMAdapter {
     }
   }
 
+  clickQuickPicksPlayAll(): boolean {
+    const shelves = document.querySelectorAll(SELECTORS.shelfRenderer);
+
+    for (const shelf of shelves) {
+      const shelfText = shelf.textContent?.toLowerCase() ?? "";
+      if (!shelfText.includes("quick picks")) continue;
+
+      const playAll = shelf.querySelector("a.play-all") as HTMLElement | null;
+      if (playAll) {
+        playAll.click();
+        return true;
+      }
+      return false;
+    }
+
+    return false;
+  }
+
   private parseSubtitle(): { album: string | null; year: number | null } {
     const subtitleEl = document.querySelector(SELECTORS.subtitle);
     if (!subtitleEl) return { album: null, year: null };

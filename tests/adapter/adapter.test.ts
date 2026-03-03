@@ -323,6 +323,74 @@ describe("YTMAdapter", () => {
     });
   });
 
+  describe("clickQuickPicksPlayAll", () => {
+    it("should find Quick Picks shelf and click Play All", () => {
+      // Each shelf renderer has its own #header div (YTM uses
+      // shadow-DOM-like scoped IDs per custom element).
+      const shelf1 = document.createElement("ytmusic-shelf-renderer");
+      const header1 = document.createElement("div");
+      header1.id = "header";
+      header1.innerHTML = "<h2>Listen again</h2>";
+      shelf1.appendChild(header1);
+      const link1 = document.createElement("a");
+      link1.className = "play-all";
+      link1.textContent = "Play All";
+      shelf1.appendChild(link1);
+      document.body.appendChild(shelf1);
+
+      const shelf2 = document.createElement("ytmusic-shelf-renderer");
+      const header2 = document.createElement("div");
+      header2.id = "header";
+      header2.innerHTML = "<h2>Quick picks</h2>";
+      shelf2.appendChild(header2);
+      const playAllButton = document.createElement("a");
+      playAllButton.className = "play-all";
+      playAllButton.textContent = "Play All";
+      playAllButton.click = vi.fn();
+      shelf2.appendChild(playAllButton);
+      document.body.appendChild(shelf2);
+
+      const result = adapter.clickQuickPicksPlayAll();
+
+      expect(result).toBe(true);
+      expect(playAllButton.click).toHaveBeenCalled();
+    });
+
+    it("should return false when no Quick Picks shelf exists", () => {
+      const shelf = document.createElement("ytmusic-shelf-renderer");
+      const header = document.createElement("div");
+      header.id = "header";
+      header.innerHTML = "<h2>Listen again</h2>";
+      shelf.appendChild(header);
+      document.body.appendChild(shelf);
+
+      const result = adapter.clickQuickPicksPlayAll();
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when shelf has no Play All button", () => {
+      const shelf = document.createElement("ytmusic-shelf-renderer");
+      const header = document.createElement("div");
+      header.id = "header";
+      header.innerHTML = "<h2>Quick picks</h2>";
+      shelf.appendChild(header);
+      document.body.appendChild(shelf);
+
+      const result = adapter.clickQuickPicksPlayAll();
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when no shelves exist", () => {
+      document.body.innerHTML = "";
+
+      const result = adapter.clickQuickPicksPlayAll();
+
+      expect(result).toBe(false);
+    });
+  });
+
   describe("seekTo", () => {
     it("should set video currentTime", () => {
       document.body.innerHTML = `<video class="html5-main-video"></video>`;
