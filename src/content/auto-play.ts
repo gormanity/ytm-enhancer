@@ -8,7 +8,10 @@ export class AutoPlayController {
   private observer: MutationObserver | null = null;
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private enabled = false;
-  private messageListener: (message: { type: string; enabled?: boolean }) => void;
+  private messageListener: (message: {
+    type: string;
+    enabled?: boolean;
+  }) => void;
 
   constructor() {
     this.messageListener = (message) => {
@@ -43,9 +46,7 @@ export class AutoPlayController {
   }
 
   private tryAutoPlay(): void {
-    const playPauseButton = document.querySelector(
-      SELECTORS.playPauseButton,
-    );
+    const playPauseButton = document.querySelector(SELECTORS.playPauseButton);
 
     if (playPauseButton) {
       this.performAutoPlay();
@@ -56,9 +57,7 @@ export class AutoPlayController {
 
   private waitForPlayerBar(): void {
     this.observer = new MutationObserver(() => {
-      const playPauseButton = document.querySelector(
-        SELECTORS.playPauseButton,
-      );
+      const playPauseButton = document.querySelector(SELECTORS.playPauseButton);
 
       if (playPauseButton) {
         this.observer?.disconnect();

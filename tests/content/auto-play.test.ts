@@ -10,7 +10,9 @@ vi.mock("@/adapter", () => {
     isPlaying: false,
   });
   MockYTMAdapter.prototype.executeAction = vi.fn();
-  MockYTMAdapter.prototype.clickQuickPicksPlayAll = vi.fn().mockReturnValue(false);
+  MockYTMAdapter.prototype.clickQuickPicksPlayAll = vi
+    .fn()
+    .mockReturnValue(false);
   return { YTMAdapter: MockYTMAdapter };
 });
 
@@ -46,7 +48,8 @@ describe("AutoPlayController", () => {
     // Reset all mocks (including prototype method call counts)
     vi.clearAllMocks();
     controller = new AutoPlayController();
-    adapterInstance = vi.mocked(YTMAdapter).mock.instances[0] as unknown as typeof adapterInstance;
+    adapterInstance = vi.mocked(YTMAdapter).mock
+      .instances[0] as unknown as typeof adapterInstance;
 
     // Restore default return values after clearAllMocks
     adapterInstance.getPlaybackState.mockReturnValue({
