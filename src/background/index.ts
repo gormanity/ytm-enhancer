@@ -205,10 +205,12 @@ handler.on("get-auto-play-enabled", async () => {
 
 handler.on("set-auto-play-enabled", async (message) => {
   autoPlay.setEnabled(message.enabled as boolean);
-  void saveModuleStateValue("auto-play.enabled", message.enabled);
+  await saveModuleStateValue("auto-play.enabled", message.enabled);
   void relayToYTMTab({
     type: "set-auto-play-enabled",
     enabled: message.enabled,
+  }).catch(() => {
+    // Tab may be navigating/reloading; state is already persisted.
   });
   return { ok: true };
 });
