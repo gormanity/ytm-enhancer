@@ -71,7 +71,7 @@ export function createAudioVisualizerPopupView(): PopupView {
         { value: "all", text: "All Surfaces" },
         { value: "pip-only", text: "PiP Only" },
         { value: "song-art-only", text: "Song Art Only" },
-        { value: "player-bar-only", text: "Player Bar Only" },
+        { value: "player-bar-only", text: "Thumbnail Only" },
       ];
 
       for (const opt of targetOptions) {
@@ -87,7 +87,7 @@ export function createAudioVisualizerPopupView(): PopupView {
       const autoModeHint = document.createElement("div");
       autoModeHint.className = "shortcuts-hint";
       autoModeHint.innerHTML =
-        "<strong>Tip:</strong> <strong>Auto</strong> mode shows the visualizer on the most relevant visible surface: PiP first, then Song Art, then Player Bar.";
+        "<strong>Tip:</strong> <strong>Auto</strong> mode shows the visualizer on the most relevant visible surface: PiP first, then Song Art, then Thumbnail.";
       container.appendChild(autoModeHint);
 
       chrome.runtime.sendMessage(
