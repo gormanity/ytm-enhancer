@@ -14,7 +14,9 @@ export class MiniPlayerController {
   private adapter = new YTMAdapter();
   private pipButton = new PipButton(() => this.handlePipClick());
   private renderer = new PipWindowRenderer();
-  private videoFallback = new VideoPipFallback();
+  private videoFallback = new VideoPipFallback((open) => {
+    this.reportPipOpenState(open);
+  });
   private overlayManager: VisualizerOverlayManager | null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private observer: MutationObserver | null = null;
@@ -53,19 +55,20 @@ export class MiniPlayerController {
     this.stopPolling();
     this.observer?.disconnect();
     this.observer = null;
+    this.reportPipOpenState(false);
   }
 
   private async queryEnabled(): Promise<boolean> {
     return new Promise((resolve) => {
       try {
-        chrome.runtime.sendMessage(
+        this.sendRuntimeMessage(
           { type: "get-mini-player-enabled" },
-          (response: { ok: boolean; data?: boolean }) => {
-            if (chrome.runtime.lastError) {
+          (response: { ok?: boolean; data?: boolean }) => {
+            if (chrome.runtime.lastError || !response?.ok) {
               resolve(false);
               return;
             }
-            resolve(response?.ok === true && response.data === true);
+            resolve(response.data === true);
           },
         );
       } catch {
@@ -159,10 +162,12 @@ export class MiniPlayerController {
       }
 
       this.startPolling();
+      this.reportPipOpenState(true);
 
       pipWindow.addEventListener("pagehide", () => {
         this.stopPolling();
         this.overlayManager?.detachPip();
+        this.reportPipOpenState(false);
       });
 
       return true;
@@ -189,5 +194,29 @@ export class MiniPlayerController {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
+  }
+
+  private sendRuntimeMessage(
+    message: unknown,
+    callback?: (response: any) => void,
+  ): void {
+    if (!chrome.runtime?.id) {
+      callback?.({ ok: false });
+      return;
+    }
+
+    try {
+      if (callback) {
+        chrome.runtime.sendMessage(message, callback);
+      } else {
+        chrome.runtime.sendMessage(message);
+      }
+    } catch {
+      callback?.({ ok: false });
+    }
+  }
+
+  private reportPipOpenState(open: boolean): void {
+    this.sendRuntimeMessage({ type: "pip-open-state", open });
   }
 }

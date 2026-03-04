@@ -37,6 +37,7 @@ const playbackSpeed = new PlaybackSpeedModule();
 const precisionVolume = new PrecisionVolumeModule();
 const streamQuality = new StreamQualityModule();
 let selectedTabId: number | null = null;
+const pipOpenTabIds = new Set<number>();
 
 async function relayToSelectedTab(message: unknown): Promise<void> {
   const tab = await findYTMTab(selectedTabId);
@@ -89,6 +90,12 @@ chrome.runtime.onStartup.addListener(() => {
 const handler = createMessageHandler();
 
 handler.on("track-changed", async (message) => {
+  if (
+    miniPlayer.isSuppressNotificationsWhilePipOpenEnabled() &&
+    pipOpenTabIds.size > 0
+  ) {
+    return { ok: true };
+  }
   notifications.handleTrackChange(message.state as PlaybackState);
   return { ok: true };
 });
@@ -224,6 +231,33 @@ handler.on("get-mini-player-enabled", async () => {
 handler.on("set-mini-player-enabled", async (message) => {
   miniPlayer.setEnabled(message.enabled as boolean);
   void saveModuleStateValue("mini-player.enabled", message.enabled);
+  return { ok: true };
+});
+
+handler.on("get-mini-player-suppress-notifications", async () => {
+  return {
+    ok: true,
+    data: miniPlayer.isSuppressNotificationsWhilePipOpenEnabled(),
+  };
+});
+
+handler.on("set-mini-player-suppress-notifications", async (message) => {
+  miniPlayer.setSuppressNotificationsWhilePipOpen(message.enabled as boolean);
+  void saveModuleStateValue(
+    "mini-player.suppressNotificationsWhilePipOpen",
+    message.enabled,
+  );
+  return { ok: true };
+});
+
+handler.on("pip-open-state", async (message, sender) => {
+  const tabId = sender?.tab?.id;
+  if (tabId === undefined) return { ok: false, error: "No tab ID" };
+  if (message.open === true) {
+    pipOpenTabIds.add(tabId);
+  } else {
+    pipOpenTabIds.delete(tabId);
+  }
   return { ok: true };
 });
 
@@ -374,6 +408,10 @@ handler.on("playback-action", async (message) => {
 handler.start();
 void ensureYtmContentScripts();
 
+chrome.tabs.onRemoved.addListener((tabId) => {
+  pipOpenTabIds.delete(tabId);
+});
+
 async function restoreModuleState(): Promise<void> {
   const state = await loadModuleState();
 
@@ -405,6 +443,9 @@ async function restoreModuleState(): Promise<void> {
     str("audio-visualizer.target", "auto") as VisualizerTarget,
   );
   miniPlayer.setEnabled(bool("mini-player.enabled", true));
+  miniPlayer.setSuppressNotificationsWhilePipOpen(
+    bool("mini-player.suppressNotificationsWhilePipOpen", false),
+  );
 }
 
 const modules: FeatureModule[] = [

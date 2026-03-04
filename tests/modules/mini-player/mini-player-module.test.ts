@@ -25,6 +25,17 @@ describe("MiniPlayerModule", () => {
     expect(module.isEnabled()).toBe(true);
   });
 
+  it("should disable suppress notifications by default", () => {
+    expect(module.isSuppressNotificationsWhilePipOpenEnabled()).toBe(false);
+  });
+
+  it("should allow toggling suppress notifications state", () => {
+    module.setSuppressNotificationsWhilePipOpen(true);
+    expect(module.isSuppressNotificationsWhilePipOpenEnabled()).toBe(true);
+    module.setSuppressNotificationsWhilePipOpen(false);
+    expect(module.isSuppressNotificationsWhilePipOpenEnabled()).toBe(false);
+  });
+
   it("should provide popup views", () => {
     const views = module.getPopupViews();
     expect(views).toHaveLength(1);

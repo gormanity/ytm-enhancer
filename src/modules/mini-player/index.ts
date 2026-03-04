@@ -8,6 +8,7 @@ export class MiniPlayerModule implements FeatureModule {
     "Picture-in-Picture mini player with playback controls";
 
   private enabled = true;
+  private suppressNotificationsWhilePipOpen = false;
 
   init(): void {
     // No background-side setup needed; the mini player is controlled
@@ -24,6 +25,14 @@ export class MiniPlayerModule implements FeatureModule {
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+  }
+
+  isSuppressNotificationsWhilePipOpenEnabled(): boolean {
+    return this.suppressNotificationsWhilePipOpen;
+  }
+
+  setSuppressNotificationsWhilePipOpen(enabled: boolean): void {
+    this.suppressNotificationsWhilePipOpen = enabled;
   }
 
   getPopupViews(): PopupView[] {

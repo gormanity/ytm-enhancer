@@ -35,8 +35,15 @@ describe("mini player popup view", () => {
   it("should render a toggle switch checked when enabled", async () => {
     sendMessageMock.mockImplementation(
       (message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) {
-          callback({ ok: true, data: true });
+        if ((message as { type?: string }).type === "get-mini-player-enabled") {
+          callback?.({ ok: true, data: true });
+          return;
+        }
+        if (
+          (message as { type?: string }).type ===
+          "get-mini-player-suppress-notifications"
+        ) {
+          callback?.({ ok: true, data: false });
         }
       },
     );
@@ -47,16 +54,18 @@ describe("mini player popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const toggle = container.querySelector<HTMLInputElement>(
+      const toggles = container.querySelectorAll<HTMLInputElement>(
         'input[type="checkbox"]',
       );
-      expect(toggle).not.toBeNull();
-      expect(toggle?.checked).toBe(true);
-      expect(toggle?.disabled).toBe(false);
+      expect(toggles).toHaveLength(2);
+      expect(toggles[0]?.checked).toBe(true);
+      expect(toggles[0]?.disabled).toBe(false);
+      expect(toggles[1]?.checked).toBe(false);
+      expect(toggles[1]?.disabled).toBe(false);
     });
   });
 
-  it("should query current enabled state on render", () => {
+  it("should query current states on render", () => {
     const view = createMiniPlayerPopupView();
     const container = document.createElement("div");
 
@@ -66,13 +75,24 @@ describe("mini player popup view", () => {
       { type: "get-mini-player-enabled" },
       expect.any(Function),
     );
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      { type: "get-mini-player-suppress-notifications" },
+      expect.any(Function),
+    );
   });
 
   it("should send set-mini-player-enabled message on toggle", async () => {
     sendMessageMock.mockImplementation(
       (message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) {
-          callback({ ok: true, data: true });
+        if ((message as { type?: string }).type === "get-mini-player-enabled") {
+          callback?.({ ok: true, data: true });
+          return;
+        }
+        if (
+          (message as { type?: string }).type ===
+          "get-mini-player-suppress-notifications"
+        ) {
+          callback?.({ ok: true, data: false });
         }
       },
     );
@@ -83,21 +103,61 @@ describe("mini player popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const toggle = container.querySelector<HTMLInputElement>(
+      const toggles = container.querySelectorAll<HTMLInputElement>(
         'input[type="checkbox"]',
       );
-      expect(toggle?.disabled).toBe(false);
+      expect(toggles[0]?.disabled).toBe(false);
     });
 
-    const toggle = container.querySelector<HTMLInputElement>(
+    const toggles = container.querySelectorAll<HTMLInputElement>(
       'input[type="checkbox"]',
-    )!;
-    toggle.checked = false;
-    toggle.dispatchEvent(new Event("change"));
+    );
+    toggles[0]!.checked = false;
+    toggles[0]!.dispatchEvent(new Event("change"));
 
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-mini-player-enabled",
       enabled: false,
+    });
+  });
+
+  it("should send set-mini-player-suppress-notifications message on toggle", async () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) {
+          if (
+            (message as { type?: string }).type ===
+            "get-mini-player-suppress-notifications"
+          ) {
+            callback({ ok: true, data: false });
+          } else {
+            callback({ ok: true, data: true });
+          }
+        }
+      },
+    );
+
+    const view = createMiniPlayerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const toggles = container.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"]',
+      );
+      expect(toggles[1]?.disabled).toBe(false);
+    });
+
+    const toggles = container.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    toggles[1]!.checked = true;
+    toggles[1]!.dispatchEvent(new Event("change"));
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-mini-player-suppress-notifications",
+      enabled: true,
     });
   });
 });
