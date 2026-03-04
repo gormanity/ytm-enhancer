@@ -36,6 +36,13 @@ const notifications = new NotificationsModule();
 const playbackSpeed = new PlaybackSpeedModule();
 const precisionVolume = new PrecisionVolumeModule();
 const streamQuality = new StreamQualityModule();
+let selectedTabId: number | null = null;
+
+async function relayToSelectedTab(message: unknown): Promise<void> {
+  const tab = await findYTMTab(selectedTabId);
+  if (tab?.id === undefined) return;
+  void chrome.tabs.sendMessage(tab.id, message);
+}
 
 async function hasContentScript(tabId: number): Promise<boolean> {
   try {
@@ -88,6 +95,14 @@ handler.on("track-changed", async (message) => {
 
 handler.on("get-ytm-tabs", async () => {
   const tabs = await findAllYTMTabs();
+  const selectedExists =
+    selectedTabId !== null && tabs.some((tab) => tab.id === selectedTabId);
+  if (!selectedExists) {
+    const activeTab = tabs.find((tab) => tab.active === true);
+    selectedTabId = activeTab?.id ?? tabs[0]?.id ?? null;
+    hotkeys.setSelectedTabId(selectedTabId);
+  }
+
   const tabData = await Promise.all(
     tabs.map(async (tab) => {
       let artworkUrl: string | null = null;
@@ -110,12 +125,33 @@ handler.on("get-ytm-tabs", async () => {
         title: tab.title ?? "YouTube Music",
         artworkUrl,
         favIconUrl: tab.favIconUrl ?? null,
-        isActive: tab.active === true,
+        isSelected: tab.id === selectedTabId,
       };
     }),
   );
 
-  return { ok: true, data: tabData };
+  return { ok: true, data: { tabs: tabData, selectedTabId } };
+});
+
+handler.on("set-selected-tab", async (message) => {
+  const tabId =
+    typeof message.tabId === "number" ? (message.tabId as number) : null;
+  selectedTabId = tabId;
+  hotkeys.setSelectedTabId(selectedTabId);
+  return { ok: true };
+});
+
+handler.on("focus-ytm-tab", async (message) => {
+  const requestedTabId =
+    typeof message.tabId === "number" ? (message.tabId as number) : null;
+  const tab = await findYTMTab(requestedTabId ?? selectedTabId);
+  if (!tab?.id) return { ok: false, error: "No YTM tab" };
+
+  await chrome.tabs.update(tab.id, { active: true });
+  if (tab.windowId != null) {
+    await chrome.windows.update(tab.windowId, { focused: true });
+  }
+  return { ok: true };
 });
 
 handler.on("get-notifications-enabled", async () => {
@@ -214,7 +250,7 @@ handler.on("inject-quality-bridge", async (_message, sender) => {
 });
 
 handler.on("get-stream-quality", async () => {
-  const tab = await findYTMTab();
+  const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
   const response = await (
     chrome.tabs.sendMessage as (
@@ -226,7 +262,7 @@ handler.on("get-stream-quality", async () => {
 });
 
 handler.on("set-stream-quality", async (message) => {
-  void relayToYTMTab({
+  void relayToSelectedTab({
     type: "set-stream-quality",
     value: message.value,
   });
@@ -234,7 +270,7 @@ handler.on("set-stream-quality", async (message) => {
 });
 
 handler.on("get-playback-speed", async () => {
-  const tab = await findYTMTab();
+  const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
   const response = await (
     chrome.tabs.sendMessage as (
@@ -246,7 +282,7 @@ handler.on("get-playback-speed", async () => {
 });
 
 handler.on("set-playback-speed", async (message) => {
-  void relayToYTMTab({
+  void relayToSelectedTab({
     type: "set-playback-speed",
     rate: message.rate,
   });
@@ -254,7 +290,7 @@ handler.on("set-playback-speed", async (message) => {
 });
 
 handler.on("get-volume", async () => {
-  const tab = await findYTMTab();
+  const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
   const response = await (
     chrome.tabs.sendMessage as (
@@ -266,7 +302,7 @@ handler.on("get-volume", async () => {
 });
 
 handler.on("set-volume", async (message) => {
-  void relayToYTMTab({
+  void relayToSelectedTab({
     type: "set-volume",
     volume: message.volume,
   });
@@ -316,7 +352,7 @@ handler.on("set-audio-visualizer-target", async (message) => {
 });
 
 handler.on("get-playback-state", async () => {
-  const tab = await findYTMTab();
+  const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
   const response = await (
     chrome.tabs.sendMessage as (
@@ -328,7 +364,7 @@ handler.on("get-playback-state", async () => {
 });
 
 handler.on("playback-action", async (message) => {
-  void relayToYTMTab({
+  void relayToSelectedTab({
     type: "playback-action",
     action: message.action,
   });

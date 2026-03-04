@@ -17,6 +17,7 @@ export class HotkeysModule implements FeatureModule {
 
   private enabled = true;
   private executor: ActionExecutor;
+  private selectedTabId: number | null = null;
 
   constructor(send: MessageSender) {
     this.executor = new ActionExecutor(send);
@@ -39,6 +40,10 @@ export class HotkeysModule implements FeatureModule {
     this.enabled = enabled;
   }
 
+  setSelectedTabId(tabId: number | null): void {
+    this.selectedTabId = tabId;
+  }
+
   getPopupViews(): PopupView[] {
     return [createHotkeysPopupView()];
   }
@@ -52,7 +57,7 @@ export class HotkeysModule implements FeatureModule {
     const action = COMMAND_MAP[command];
     if (!action) return;
 
-    const tab = await findYTMTab();
+    const tab = await findYTMTab(this.selectedTabId);
     if (!tab?.id) return;
 
     try {
@@ -63,7 +68,7 @@ export class HotkeysModule implements FeatureModule {
   }
 
   private async focusYTMTab(): Promise<void> {
-    const tab = await findYTMTab();
+    const tab = await findYTMTab(this.selectedTabId);
     if (!tab?.id) return;
 
     await chrome.tabs.update(tab.id, { active: true });

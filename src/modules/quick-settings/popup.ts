@@ -8,7 +8,7 @@ interface YtmTabSummary {
   title: string;
   artworkUrl: string | null;
   favIconUrl: string | null;
-  isActive: boolean;
+  isSelected: boolean;
 }
 
 /** Create the combined Quick Settings popup view. */
@@ -103,7 +103,7 @@ function renderOpenTabs(container: HTMLElement) {
     for (const tab of tabs) {
       const item = document.createElement("div");
       item.className = "tab-item";
-      if (tab.isActive) item.classList.add("selected");
+      if (tab.isSelected) item.classList.add("selected");
 
       const icon = document.createElement("img");
       icon.src = tab.artworkUrl ?? tab.favIconUrl ?? "icon48.png";
@@ -113,6 +113,15 @@ function renderOpenTabs(container: HTMLElement) {
       };
 
       item.title = tab.title.replace(" - YouTube Music", "");
+      item.onclick = () => {
+        if (tab.id === null) return;
+        chrome.runtime.sendMessage({ type: "set-selected-tab", tabId: tab.id });
+        updateTabs();
+      };
+      item.ondblclick = () => {
+        if (tab.id === null) return;
+        chrome.runtime.sendMessage({ type: "focus-ytm-tab", tabId: tab.id });
+      };
 
       item.appendChild(icon);
       list.appendChild(item);
@@ -121,7 +130,7 @@ function renderOpenTabs(container: HTMLElement) {
 
   const updateTabs = () => {
     chrome.runtime.sendMessage({ type: "get-ytm-tabs" }, (response) => {
-      const tabs = (response?.ok ? response.data : []) as YtmTabSummary[];
+      const tabs = (response?.ok ? response.data?.tabs : []) as YtmTabSummary[];
       if (!Array.isArray(tabs) || tabs.length <= 1) {
         container.style.display = "none";
         return;
