@@ -84,6 +84,12 @@ export function createAudioVisualizerPopupView(): PopupView {
       targetLabel.appendChild(targetSelect);
       card.appendChild(targetLabel);
 
+      const autoModeHint = document.createElement("div");
+      autoModeHint.className = "status-hint";
+      autoModeHint.textContent =
+        "Auto mode shows the visualizer on the most relevant visible surface: PiP first, then Song Art, then Player Bar.";
+      card.appendChild(autoModeHint);
+
       chrome.runtime.sendMessage(
         { type: "get-audio-visualizer-enabled" },
         (response: { ok: boolean; data?: boolean }) => {
