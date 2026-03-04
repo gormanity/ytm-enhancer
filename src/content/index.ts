@@ -33,6 +33,9 @@ handler.on("get-playback-state", async () => {
 const audioBridge = new AudioBridgeInjector();
 const overlayManager = new VisualizerOverlayManager();
 let visualizerEnabled = false;
+let visualizerActive = false;
+let visualizerStateTimer: ReturnType<typeof setInterval> | null = null;
+const VISUALIZER_STATE_POLL_MS = 1000;
 
 function safeSendMessage<TResponse>(
   message: unknown,
@@ -51,11 +54,44 @@ function safeSendMessage<TResponse>(
   }
 }
 
+function shouldRunVisualizer(): boolean {
+  if (!visualizerEnabled) return false;
+  if (document.visibilityState !== "visible") return false;
+  return adapter.getPlaybackState().isPlaying;
+}
+
+function applyVisualizerRuntimeState(): void {
+  const shouldRun = shouldRunVisualizer();
+  if (shouldRun === visualizerActive) return;
+
+  visualizerActive = shouldRun;
+  if (shouldRun) {
+    audioBridge.resume();
+    overlayManager.startAll();
+  } else {
+    audioBridge.stop();
+    overlayManager.stopAll();
+  }
+}
+
+function startVisualizerStatePolling(): void {
+  stopVisualizerStatePolling();
+  visualizerStateTimer = setInterval(() => {
+    applyVisualizerRuntimeState();
+  }, VISUALIZER_STATE_POLL_MS);
+}
+
+function stopVisualizerStatePolling(): void {
+  if (visualizerStateTimer !== null) {
+    clearInterval(visualizerStateTimer);
+    visualizerStateTimer = null;
+  }
+}
+
 async function startVisualizer(): Promise<void> {
   await audioBridge.inject((data) => {
     overlayManager.updateFrequencyData(data);
   });
-  audioBridge.start();
 
   const playerBarEl = document.querySelector<HTMLElement>(
     SELECTORS.playerBarThumbnail,
@@ -69,10 +105,13 @@ async function startVisualizer(): Promise<void> {
     overlayManager.attachToSongArt(songArtEl);
   }
 
-  overlayManager.startAll();
+  startVisualizerStatePolling();
+  applyVisualizerRuntimeState();
 }
 
 function stopVisualizer(): void {
+  stopVisualizerStatePolling();
+  visualizerActive = false;
   audioBridge.stop();
   overlayManager.stopAll();
   overlayManager.destroyAll();
@@ -159,6 +198,10 @@ handler.on("set-auto-skip-disliked-enabled", async (message) => {
 });
 
 handler.start();
+
+document.addEventListener("visibilitychange", () => {
+  applyVisualizerRuntimeState();
+});
 
 // Query initial visualizer state from background
 safeSendMessage<{ ok: boolean; data?: boolean }>(
