@@ -1,4 +1,10 @@
 import type { PopupView } from "@/core/types";
+import {
+  DEFAULT_VISUALIZER_STYLE_TUNINGS,
+  type VisualizerStyle,
+  type VisualizerStyleTuning,
+  type VisualizerStyleTunings,
+} from "./styles";
 
 /** Create the audio visualizer settings popup view. */
 export function createAudioVisualizerPopupView(): PopupView {
@@ -88,7 +94,65 @@ export function createAudioVisualizerPopupView(): PopupView {
       autoModeHint.className = "shortcuts-hint";
       autoModeHint.innerHTML =
         "<strong>Tip:</strong> <strong>Auto</strong> mode shows the visualizer on the most relevant visible surface: PiP first, then Song Art, then Thumbnail.";
+      autoModeHint.style.marginBottom = "8px";
       container.appendChild(autoModeHint);
+
+      const tuningCard = document.createElement("div");
+      tuningCard.className = "settings-card";
+      container.appendChild(tuningCard);
+
+      const tuningHeading = document.createElement("h3");
+      tuningHeading.textContent = "Current Style Tuning";
+      tuningCard.appendChild(tuningHeading);
+
+      const intensityControl = createRangeControl(
+        tuningCard,
+        "Intensity",
+        "25",
+        "200",
+        "100",
+      );
+      const thicknessControl = createRangeControl(
+        tuningCard,
+        "Thickness",
+        "50",
+        "250",
+        "100",
+      );
+      const opacityControl = createRangeControl(
+        tuningCard,
+        "Opacity",
+        "10",
+        "100",
+        "100",
+      );
+
+      let styleTunings: VisualizerStyleTunings = {
+        bars: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.bars },
+        waveform: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.waveform },
+        circular: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.circular },
+      };
+
+      const refreshTuningControls = () => {
+        const currentStyle = select.value as VisualizerStyle;
+        const tuning = styleTunings[currentStyle];
+        intensityControl.range.value = String(
+          Math.round(tuning.intensity * 100),
+        );
+        thicknessControl.range.value = String(
+          Math.round(tuning.thickness * 100),
+        );
+        opacityControl.range.value = String(Math.round(tuning.opacity * 100));
+        intensityControl.value.textContent = `${intensityControl.range.value}%`;
+        thicknessControl.value.textContent = `${thicknessControl.range.value}%`;
+        opacityControl.value.textContent = `${opacityControl.range.value}%`;
+      };
+
+      const setTuningControlsEnabled = (enabled: boolean) => {
+        intensityControl.range.disabled = !enabled;
+        thicknessControl.range.disabled = !enabled;
+        opacityControl.range.disabled = !enabled;
+      };
 
       chrome.runtime.sendMessage(
         { type: "get-audio-visualizer-enabled" },
@@ -106,6 +170,7 @@ export function createAudioVisualizerPopupView(): PopupView {
           if (response?.ok && response.data) {
             select.value = response.data;
             select.disabled = false;
+            refreshTuningControls();
           }
         },
       );
@@ -116,6 +181,21 @@ export function createAudioVisualizerPopupView(): PopupView {
           if (response?.ok && response.data) {
             targetSelect.value = response.data;
             targetSelect.disabled = false;
+          }
+        },
+      );
+
+      chrome.runtime.sendMessage(
+        { type: "get-audio-visualizer-style-tunings" },
+        (response: { ok: boolean; data?: VisualizerStyleTunings }) => {
+          if (response?.ok && response.data) {
+            styleTunings = {
+              bars: { ...response.data.bars },
+              waveform: { ...response.data.waveform },
+              circular: { ...response.data.circular },
+            };
+            setTuningControlsEnabled(true);
+            refreshTuningControls();
           }
         },
       );
@@ -132,6 +212,7 @@ export function createAudioVisualizerPopupView(): PopupView {
           type: "set-audio-visualizer-style",
           style: select.value,
         });
+        refreshTuningControls();
       });
 
       targetSelect.addEventListener("change", () => {
@@ -140,6 +221,59 @@ export function createAudioVisualizerPopupView(): PopupView {
           target: targetSelect.value,
         });
       });
+
+      const onTuningInput = () => {
+        const style = select.value as VisualizerStyle;
+        const tuning: VisualizerStyleTuning = {
+          intensity: Number(intensityControl.range.value) / 100,
+          thickness: Number(thicknessControl.range.value) / 100,
+          opacity: Number(opacityControl.range.value) / 100,
+        };
+        styleTunings[style] = tuning;
+        refreshTuningControls();
+        chrome.runtime.sendMessage({
+          type: "set-audio-visualizer-style-tuning",
+          style,
+          tuning,
+        });
+      };
+
+      intensityControl.range.addEventListener("input", onTuningInput);
+      thicknessControl.range.addEventListener("input", onTuningInput);
+      opacityControl.range.addEventListener("input", onTuningInput);
     },
   };
+}
+
+function createRangeControl(
+  parent: HTMLElement,
+  labelText: string,
+  min: string,
+  max: string,
+  value: string,
+): {
+  range: HTMLInputElement;
+  value: HTMLElement;
+} {
+  const row = document.createElement("label");
+  row.className = "toggle-row";
+
+  const label = document.createElement("span");
+  label.textContent = labelText;
+  row.appendChild(label);
+
+  const range = document.createElement("input");
+  range.type = "range";
+  range.min = min;
+  range.max = max;
+  range.value = value;
+  range.disabled = true;
+  row.appendChild(range);
+
+  const valueText = document.createElement("span");
+  valueText.textContent = `${value}%`;
+  row.appendChild(valueText);
+
+  parent.appendChild(row);
+  return { range, value: valueText };
 }

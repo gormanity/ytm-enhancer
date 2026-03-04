@@ -57,6 +57,34 @@ describe("AudioVisualizerModule", () => {
     expect(views[0].label).toBe("Audio Visualizer");
   });
 
+  it("should provide per-style tunings with defaults", () => {
+    const mod = new AudioVisualizerModule();
+    expect(mod.getStyleTunings()).toEqual({
+      bars: { intensity: 1, thickness: 1, opacity: 1 },
+      waveform: { intensity: 1, thickness: 1, opacity: 1 },
+      circular: { intensity: 1, thickness: 1, opacity: 1 },
+    });
+  });
+
+  it("should set a tuning for one style", () => {
+    const mod = new AudioVisualizerModule();
+    mod.setStyleTuning("waveform", {
+      intensity: 1.5,
+      thickness: 1.2,
+      opacity: 0.8,
+    });
+    expect(mod.getStyleTunings().waveform).toEqual({
+      intensity: 1.5,
+      thickness: 1.2,
+      opacity: 0.8,
+    });
+    expect(mod.getStyleTunings().bars).toEqual({
+      intensity: 1,
+      thickness: 1,
+      opacity: 1,
+    });
+  });
+
   it("should init and destroy without error", () => {
     const mod = new AudioVisualizerModule();
     expect(() => mod.init()).not.toThrow();

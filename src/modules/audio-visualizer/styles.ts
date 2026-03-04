@@ -7,11 +7,40 @@ export type VisualizerTarget =
   | "song-art-only"
   | "player-bar-only";
 
+export interface VisualizerStyleTuning {
+  intensity: number;
+  thickness: number;
+  opacity: number;
+}
+
+export type VisualizerStyleTunings = Record<VisualizerStyle, VisualizerStyleTuning>;
+
+export const DEFAULT_VISUALIZER_STYLE_TUNING: VisualizerStyleTuning = {
+  intensity: 1,
+  thickness: 1,
+  opacity: 1,
+};
+
+export const DEFAULT_VISUALIZER_STYLE_TUNINGS: VisualizerStyleTunings = {
+  bars: { ...DEFAULT_VISUALIZER_STYLE_TUNING },
+  waveform: { ...DEFAULT_VISUALIZER_STYLE_TUNING },
+  circular: { ...DEFAULT_VISUALIZER_STYLE_TUNING },
+};
+
 export interface VisualizerDrawContext {
   ctx: CanvasRenderingContext2D;
   width: number;
   height: number;
   data: Uint8Array;
+  tuning: VisualizerStyleTuning;
+}
+
+function clampTuning(tuning: VisualizerStyleTuning): VisualizerStyleTuning {
+  return {
+    intensity: Math.max(0.25, Math.min(2, tuning.intensity)),
+    thickness: Math.max(0.5, Math.min(2.5, tuning.thickness)),
+    opacity: Math.max(0.1, Math.min(1, tuning.opacity)),
+  };
 }
 
 export function drawBars({
@@ -19,16 +48,22 @@ export function drawBars({
   width,
   height,
   data,
+  tuning,
 }: VisualizerDrawContext): void {
   ctx.clearRect(0, 0, width, height);
   if (data.length === 0) return;
+  const clamped = clampTuning(tuning);
 
   const barWidth = width / data.length;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+  const barWidthPx = Math.max(1, barWidth * 0.7 * clamped.thickness);
+  const alpha = 0.6 * clamped.opacity;
+  ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
 
   for (let i = 0; i < data.length; i++) {
-    const barHeight = (data[i] / 255) * height;
-    ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
+    const rawBarHeight = ((data[i] / 255) * height * clamped.intensity) / 1.15;
+    const barHeight = Math.max(0, Math.min(height, rawBarHeight));
+    const x = i * barWidth + (barWidth - barWidthPx) / 2;
+    ctx.fillRect(x, height - barHeight, barWidthPx, barHeight);
   }
 }
 
@@ -37,20 +72,22 @@ export function drawWaveform({
   width,
   height,
   data,
+  tuning,
 }: VisualizerDrawContext): void {
   ctx.clearRect(0, 0, width, height);
   if (data.length === 0) return;
+  const clamped = clampTuning(tuning);
 
   const sliceWidth = width / (data.length - 1);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * clamped.opacity})`;
+  ctx.lineWidth = 2 * clamped.thickness;
 
   ctx.beginPath();
-  const firstY = height - (data[0] / 255) * height;
+  const firstY = height - ((data[0] / 255) * height * clamped.intensity) / 1.15;
   ctx.moveTo(0, firstY);
 
   for (let i = 1; i < data.length; i++) {
-    const y = height - (data[i] / 255) * height;
+    const y = height - ((data[i] / 255) * height * clamped.intensity) / 1.15;
     ctx.lineTo(i * sliceWidth, y);
   }
 
@@ -62,17 +99,19 @@ export function drawCircular({
   width,
   height,
   data,
+  tuning,
 }: VisualizerDrawContext): void {
   ctx.clearRect(0, 0, width, height);
   if (data.length === 0) return;
+  const clamped = clampTuning(tuning);
 
   const centerX = width / 2;
   const centerY = height / 2;
   const baseRadius = Math.min(width, height) * 0.25;
-  const maxExtension = Math.min(width, height) * 0.2;
+  const maxExtension = Math.min(width, height) * 0.2 * clamped.intensity;
 
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * clamped.opacity})`;
+  ctx.lineWidth = 2 * clamped.thickness;
 
   ctx.beginPath();
   for (let i = 0; i < data.length; i++) {

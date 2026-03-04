@@ -1,4 +1,9 @@
-import type { VisualizerStyle, VisualizerTarget } from "./styles";
+import {
+  DEFAULT_VISUALIZER_STYLE_TUNINGS,
+  type VisualizerStyle,
+  type VisualizerStyleTunings,
+  type VisualizerTarget,
+} from "./styles";
 import { VisualizerCanvas } from "./visualizer-canvas";
 
 export class VisualizerOverlayManager {
@@ -6,6 +11,9 @@ export class VisualizerOverlayManager {
   private songArtCanvas: VisualizerCanvas | null = null;
   private pipCanvas: VisualizerCanvas | null = null;
   private currentStyle: VisualizerStyle = "bars";
+  private styleTunings: VisualizerStyleTunings = {
+    ...DEFAULT_VISUALIZER_STYLE_TUNINGS,
+  };
   private running = false;
   private target: VisualizerTarget = "auto";
 
@@ -63,6 +71,17 @@ export class VisualizerOverlayManager {
     }
   }
 
+  setStyleTunings(tunings: VisualizerStyleTunings): void {
+    this.styleTunings = {
+      bars: { ...tunings.bars },
+      waveform: { ...tunings.waveform },
+      circular: { ...tunings.circular },
+    };
+    for (const canvas of this.allCanvases()) {
+      canvas.setStyleTunings(this.styleTunings);
+    }
+  }
+
   startAll(): void {
     this.running = true;
     this.ensureObserver();
@@ -99,6 +118,7 @@ export class VisualizerOverlayManager {
     const canvas = new VisualizerCanvas();
     canvas.attach(container);
     canvas.setStyle(this.currentStyle);
+    canvas.setStyleTunings(this.styleTunings);
     return canvas;
   }
 

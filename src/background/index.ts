@@ -14,6 +14,8 @@ import { AutoPlayModule } from "@/modules/auto-play";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
 import type {
+  VisualizerStyleTuning,
+  VisualizerStyleTunings,
   VisualizerStyle,
   VisualizerTarget,
 } from "@/modules/audio-visualizer/styles";
@@ -385,6 +387,24 @@ handler.on("set-audio-visualizer-target", async (message) => {
   return { ok: true };
 });
 
+handler.on("get-audio-visualizer-style-tunings", async () => {
+  return { ok: true, data: audioVisualizer.getStyleTunings() };
+});
+
+handler.on("set-audio-visualizer-style-tuning", async (message) => {
+  audioVisualizer.setStyleTuning(
+    message.style as VisualizerStyle,
+    message.tuning as VisualizerStyleTuning,
+  );
+  const tunings = audioVisualizer.getStyleTunings();
+  void saveModuleStateValue("audio-visualizer.styleTunings", tunings);
+  void relayToYTMTab({
+    type: "set-audio-visualizer-style-tunings",
+    tunings,
+  });
+  return { ok: true };
+});
+
 handler.on("get-playback-state", async () => {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
@@ -442,6 +462,14 @@ async function restoreModuleState(): Promise<void> {
   audioVisualizer.setTarget(
     str("audio-visualizer.target", "auto") as VisualizerTarget,
   );
+  if (
+    typeof state["audio-visualizer.styleTunings"] === "object" &&
+    state["audio-visualizer.styleTunings"] !== null
+  ) {
+    audioVisualizer.setStyleTunings(
+      state["audio-visualizer.styleTunings"] as VisualizerStyleTunings,
+    );
+  }
   miniPlayer.setEnabled(bool("mini-player.enabled", true));
   miniPlayer.setSuppressNotificationsWhilePipOpen(
     bool("mini-player.suppressNotificationsWhilePipOpen", false),

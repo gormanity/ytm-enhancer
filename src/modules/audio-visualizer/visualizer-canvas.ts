@@ -1,4 +1,9 @@
-import { STYLE_RENDERERS, type VisualizerStyle } from "./styles";
+import {
+  DEFAULT_VISUALIZER_STYLE_TUNINGS,
+  STYLE_RENDERERS,
+  type VisualizerStyle,
+  type VisualizerStyleTunings,
+} from "./styles";
 
 export class VisualizerCanvas {
   private canvas: HTMLCanvasElement | null = null;
@@ -6,6 +11,9 @@ export class VisualizerCanvas {
   private container: HTMLElement | null = null;
   private animationId: number | null = null;
   private style: VisualizerStyle = "bars";
+  private styleTunings: VisualizerStyleTunings = {
+    ...DEFAULT_VISUALIZER_STYLE_TUNINGS,
+  };
   private frequencyData: Uint8Array<ArrayBuffer> = new Uint8Array(0);
 
   attach(container: HTMLElement): void {
@@ -30,6 +38,14 @@ export class VisualizerCanvas {
 
   setStyle(style: VisualizerStyle): void {
     this.style = style;
+  }
+
+  setStyleTunings(tunings: VisualizerStyleTunings): void {
+    this.styleTunings = {
+      bars: { ...tunings.bars },
+      waveform: { ...tunings.waveform },
+      circular: { ...tunings.circular },
+    };
   }
 
   updateFrequencyData(data: Uint8Array<ArrayBuffer>): void {
@@ -85,6 +101,7 @@ export class VisualizerCanvas {
       width,
       height,
       data: this.frequencyData,
+      tuning: this.styleTunings[this.style],
     });
   }
 }

@@ -26,7 +26,13 @@ function createMockContext(width = 200, height = 200): VisualizerDrawContext {
     restore: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
 
-  return { ctx, width, height, data: new Uint8Array([128, 64, 192, 255, 0]) };
+  return {
+    ctx,
+    width,
+    height,
+    data: new Uint8Array([128, 64, 192, 255, 0]),
+    tuning: { intensity: 1, thickness: 1, opacity: 1 },
+  };
 }
 
 describe("drawBars", () => {

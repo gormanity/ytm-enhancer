@@ -4,6 +4,7 @@ import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
 import { MiniPlayerController } from "@/modules/mini-player/controller";
 import type {
+  VisualizerStyleTunings,
   VisualizerStyle,
   VisualizerTarget,
 } from "@/modules/audio-visualizer/styles";
@@ -141,6 +142,11 @@ handler.on("set-audio-visualizer-target", async (message) => {
   return { ok: true };
 });
 
+handler.on("set-audio-visualizer-style-tunings", async (message) => {
+  overlayManager.setStyleTunings(message.tunings as VisualizerStyleTunings);
+  return { ok: true };
+});
+
 // --- Stream Quality ---
 
 const qualityBridge = new QualityBridgeInjector();
@@ -239,6 +245,15 @@ safeSendMessage<{ ok: boolean; data?: string }>(
   (response) => {
     if (response?.ok && response.data) {
       overlayManager.setTarget(response.data as VisualizerTarget);
+    }
+  },
+);
+
+safeSendMessage<{ ok: boolean; data?: VisualizerStyleTunings }>(
+  { type: "get-audio-visualizer-style-tunings" },
+  (response) => {
+    if (response?.ok && response.data) {
+      overlayManager.setStyleTunings(response.data);
     }
   },
 );

@@ -284,4 +284,69 @@ describe("audio visualizer popup view", () => {
       target: "all",
     });
   });
+
+  it("should query style tuning values on render", () => {
+    const view = createAudioVisualizerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      { type: "get-audio-visualizer-style-tunings" },
+      expect.any(Function),
+    );
+  });
+
+  it("should send style tuning update when slider changes", async () => {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (callback) {
+          if (message.type === "get-audio-visualizer-enabled") {
+            callback({ ok: true, data: true });
+          } else if (message.type === "get-audio-visualizer-style") {
+            callback({ ok: true, data: "bars" });
+          } else if (message.type === "get-audio-visualizer-target") {
+            callback({ ok: true, data: "auto" });
+          } else if (message.type === "get-audio-visualizer-style-tunings") {
+            callback({
+              ok: true,
+              data: {
+                bars: { intensity: 1, thickness: 1, opacity: 1 },
+                waveform: { intensity: 1, thickness: 1, opacity: 1 },
+                circular: { intensity: 1, thickness: 1, opacity: 1 },
+              },
+            });
+          }
+        }
+      },
+    );
+
+    const view = createAudioVisualizerPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const ranges = container.querySelectorAll<HTMLInputElement>(
+        'input[type="range"]',
+      );
+      expect(ranges).toHaveLength(3);
+      expect(ranges[0]?.disabled).toBe(false);
+    });
+
+    const ranges = container.querySelectorAll<HTMLInputElement>(
+      'input[type="range"]',
+    );
+    ranges[0].value = "140";
+    ranges[0].dispatchEvent(new Event("input"));
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-audio-visualizer-style-tuning",
+      style: "bars",
+      tuning: {
+        intensity: 1.4,
+        thickness: 1,
+        opacity: 1,
+      },
+    });
+  });
 });
