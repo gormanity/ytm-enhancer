@@ -310,6 +310,74 @@ describe("PipWindowRenderer", () => {
     expect(style).toMatch(/\.title\s*\{[^}]*flex-shrink:\s*0/);
   });
 
+  it("should include responsive breakpoints for resized PiP windows", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const style = doc.querySelector("style")!.textContent!;
+    expect(style).toContain("@media (max-width: 360px)");
+    expect(style).toContain("@media (max-width: 320px), (max-height: 145px)");
+    expect(style).toContain("@media (min-width: 460px)");
+    expect(style).toContain("@media (max-width: 285px), (max-height: 124px)");
+    expect(style).toContain(".volume-wrap svg {\n      display: none;");
+    expect(style).toContain("@media (max-height: 112px)");
+    expect(style).toContain(".primary-meta {\n      flex-direction: row;");
+    expect(style).toContain(".volume-wrap {\n      display: none;");
+  });
+
+  it("should render like/dislike and volume controls with handlers", () => {
+    const onLike = vi.fn();
+    const onDislike = vi.fn();
+    const onVolumeChange = vi.fn();
+
+    renderer.build(doc, makeState(), onAction, undefined, {
+      onLike,
+      onDislike,
+      onVolumeChange,
+      volume: 0.6,
+      isLiked: true,
+      isDisliked: false,
+    });
+
+    const likeBtn = doc.querySelector<HTMLButtonElement>(
+      'button[aria-label="Like"]',
+    );
+    const dislikeBtn = doc.querySelector<HTMLButtonElement>(
+      'button[aria-label="Dislike"]',
+    );
+    const volume = doc.querySelector<HTMLInputElement>("input.volume");
+
+    expect(likeBtn).not.toBeNull();
+    expect(dislikeBtn).not.toBeNull();
+    expect(volume).not.toBeNull();
+    expect(likeBtn?.classList.contains("active")).toBe(true);
+    expect(volume?.value).toBe("60");
+
+    likeBtn!.click();
+    dislikeBtn!.click();
+    volume!.value = "25";
+    volume!.dispatchEvent(new Event("input"));
+
+    expect(onLike).toHaveBeenCalled();
+    expect(onDislike).toHaveBeenCalled();
+    expect(onVolumeChange).toHaveBeenCalledWith(0.25);
+  });
+
+  it("should order dislike before like in auxiliary controls", () => {
+    renderer.build(doc, makeState(), onAction, undefined, {
+      onLike: vi.fn(),
+      onDislike: vi.fn(),
+      onVolumeChange: vi.fn(),
+      volume: 1,
+    });
+
+    const auxButtons = Array.from(
+      doc.querySelectorAll<HTMLButtonElement>(".aux-controls button"),
+    ).map((btn) => btn.getAttribute("aria-label"));
+
+    expect(auxButtons[0]).toBe("Dislike");
+    expect(auxButtons[1]).toBe("Like");
+  });
+
   it("should handle null artwork gracefully", () => {
     renderer.build(doc, makeState({ artworkUrl: null }), onAction);
 

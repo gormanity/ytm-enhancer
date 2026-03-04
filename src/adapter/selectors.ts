@@ -20,6 +20,7 @@ export const SELECTORS = {
   videoElement: "video.html5-main-video",
   songArtPanel: "#song-image.ytmusic-player",
   playerBarThumbnail: ".thumbnail-image-wrapper.style-scope.ytmusic-player-bar",
+  likeButton: 'button[aria-label="Like"]',
   dislikeButton: 'button[aria-label="Dislike"]',
   shelfRenderer: "ytmusic-shelf-renderer",
 } as const;

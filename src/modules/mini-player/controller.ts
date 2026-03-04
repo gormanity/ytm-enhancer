@@ -7,6 +7,8 @@ import { PipWindowRenderer } from "./renderer";
 import { VideoPipFallback } from "./video-fallback";
 
 const POLL_INTERVAL_MS = 1000;
+const DOCUMENT_PIP_WIDTH = 380;
+const DOCUMENT_PIP_HEIGHT = 170;
 
 export class MiniPlayerController {
   private adapter = new YTMAdapter();
@@ -125,8 +127,8 @@ export class MiniPlayerController {
 
     try {
       const pipWindow = await documentPictureInPicture.requestWindow({
-        width: 320,
-        height: 400,
+        width: DOCUMENT_PIP_WIDTH,
+        height: DOCUMENT_PIP_HEIGHT,
       });
 
       const state = this.adapter.getPlaybackState();
@@ -140,6 +142,14 @@ export class MiniPlayerController {
         },
         (time: number) => {
           this.adapter.seekTo(time);
+        },
+        {
+          onLike: () => this.adapter.toggleLike(),
+          onDislike: () => this.adapter.toggleDislike(),
+          onVolumeChange: (volume: number) => this.adapter.setVolume(volume),
+          volume: this.adapter.getVolume(),
+          isLiked: this.adapter.isCurrentTrackLiked(),
+          isDisliked: this.adapter.isCurrentTrackDisliked(),
         },
       );
 
@@ -166,6 +176,11 @@ export class MiniPlayerController {
     this.pollTimer = setInterval(() => {
       const state = this.adapter.getPlaybackState();
       this.renderer.update(state);
+      this.renderer.updateAuxState(
+        this.adapter.getVolume(),
+        this.adapter.isCurrentTrackLiked(),
+        this.adapter.isCurrentTrackDisliked(),
+      );
     }, POLL_INTERVAL_MS);
   }
 

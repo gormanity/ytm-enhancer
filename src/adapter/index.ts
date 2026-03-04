@@ -86,6 +86,11 @@ export class YTMAdapter {
     return btn?.getAttribute("aria-pressed") === "true";
   }
 
+  isCurrentTrackLiked(): boolean {
+    const btn = document.querySelector(SELECTORS.likeButton);
+    return btn?.getAttribute("aria-pressed") === "true";
+  }
+
   seekTo(time: number): void {
     const video = document.querySelector(
       SELECTORS.videoElement,
@@ -180,6 +185,14 @@ export class YTMAdapter {
   private clickButton(selector: string): void {
     const el = document.querySelector(selector) as HTMLElement | null;
     el?.click();
+  }
+
+  toggleLike(): void {
+    this.clickButton(SELECTORS.likeButton);
+  }
+
+  toggleDislike(): void {
+    this.clickButton(SELECTORS.dislikeButton);
   }
 
   private isElementVisible(el: HTMLElement): boolean {

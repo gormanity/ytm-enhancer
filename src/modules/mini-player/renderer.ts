@@ -1,28 +1,49 @@
 import type { PlaybackAction, PlaybackState } from "@/core/types";
 
-const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
-const PAUSE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>`;
-const PREV_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>`;
-const NEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z"/></svg>`;
+const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+const PAUSE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>`;
+const PREV_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>`;
+const NEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z"/></svg>`;
+const THUMBS_UP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.3l1-4.6v-.3c0-.4-.2-.8-.4-1.1L14 1 7.6 7.4C7.2 7.8 7 8.3 7 8.8V19c0 1.1.9 2 2 2h7c.8 0 1.5-.5 1.8-1.2l3-7c.1-.2.2-.5.2-.8v-2z"/></svg>`;
+const THUMBS_DOWN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H8c-.8 0-1.5.5-1.8 1.2l-3 7c-.1.2-.2.5-.2.8v2c0 1.1.9 2 2 2h6.3l-1 4.6v.3c0 .4.2.8.4 1.1L10 23l6.4-6.4c.4-.4.6-.9.6-1.4V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>`;
+const VOLUME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+
+interface AuxHandlers {
+  onLike?: () => void;
+  onDislike?: () => void;
+  onVolumeChange?: (volume: number) => void;
+  volume?: number;
+  isLiked?: boolean;
+  isDisliked?: boolean;
+}
 
 const STYLES = `
   body {
     margin: 0;
-    background: #212121;
+    padding: 10px;
+    box-sizing: border-box;
+    background: #121212;
     color: #fff;
     font-family: "Roboto", sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
+    height: 100%;
     overflow: hidden;
   }
+  .banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 8px;
+    box-sizing: border-box;
+  }
   .artwork-container {
-    width: 60%;
-    aspect-ratio: 1;
-    margin-bottom: 12px;
+    width: clamp(34px, 22vw, 72px);
+    height: clamp(34px, 22vw, 72px);
     flex-shrink: 1;
+    min-width: 0;
     min-height: 0;
     position: relative;
   }
@@ -39,67 +60,81 @@ const STYLES = `
     border-radius: 4px;
     pointer-events: none;
   }
+  .info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+  .primary-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
   .title {
-    font-size: 1em;
+    font-size: 13px;
     font-weight: 500;
-    text-align: center;
-    margin: 4px 8px;
+    text-align: left;
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 90%;
+    max-width: 100%;
     flex-shrink: 0;
   }
   .artist {
-    font-size: 0.8125em;
+    font-size: 11px;
     color: #aaa;
-    text-align: center;
-    margin: 2px 8px;
+    text-align: left;
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 90%;
+    max-width: 100%;
     flex-shrink: 0;
   }
   .album {
-    font-size: 0.75em;
+    font-size: 10px;
     color: #777;
-    text-align: center;
-    margin: 2px 8px 8px;
+    text-align: left;
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 90%;
+    max-width: 100%;
     flex-shrink: 0;
   }
   .progress-container {
-    width: 80%;
-    margin: 0 auto 4px;
+    width: 100%;
+    margin: 2px 0 0;
     flex-shrink: 0;
   }
   .progress-bar {
     width: 100%;
-    height: 3px;
+    height: 2px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 1.5px;
+    border-radius: 1px;
     position: relative;
     cursor: pointer;
-    padding: 6px 0;
+    padding: 5px 0;
     background-clip: content-box;
   }
   .progress-fill {
-    height: 3px;
+    height: 2px;
     background: #fff;
-    border-radius: 1.5px;
+    border-radius: 1px;
     transition: width 0.3s linear;
     pointer-events: none;
     position: absolute;
-    top: 6px;
+    top: 5px;
     left: 0;
   }
   .progress-thumb {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     background: #fff;
     border-radius: 50%;
     position: absolute;
@@ -109,24 +144,35 @@ const STYLES = `
     transition: left 0.3s linear;
   }
   .time-display {
-    font-size: 11px;
+    font-size: 10px;
     color: #aaa;
-    text-align: center;
-    margin: 2px 0 8px;
+    text-align: left;
+    margin: 0;
     flex-shrink: 0;
   }
   .controls {
     display: flex;
     align-items: center;
-    gap: 1em;
+    gap: 6px;
+    margin-top: 0;
     flex-shrink: 0;
+  }
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+    min-width: 0;
   }
   .controls button {
     background: none;
     border: none;
     color: #fff;
     cursor: pointer;
-    padding: 0.5em;
+    width: 30px;
+    height: 30px;
+    padding: 0;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -134,6 +180,189 @@ const STYLES = `
   }
   .controls button:hover {
     background: rgba(255, 255, 255, 0.1);
+  }
+  .aux-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  .aux-controls button {
+    border: none;
+    background: transparent;
+    color: #bbb;
+    width: clamp(18px, 8vw, 24px);
+    height: clamp(18px, 8vw, 24px);
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .aux-controls button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+  .aux-controls button.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .volume-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: clamp(34px, 14vw, 56px);
+  }
+  .volume-wrap svg {
+    color: #aaa;
+    flex-shrink: 0;
+  }
+  .volume {
+    width: 100%;
+    accent-color: #fff;
+    margin: 0;
+    min-width: 0;
+  }
+
+  @media (max-width: 360px), (max-height: 160px) {
+    .banner {
+      gap: 8px;
+      padding: 7px;
+    }
+    .artwork-container {
+      width: clamp(30px, 24vw, 62px);
+      height: clamp(30px, 24vw, 62px);
+    }
+    .title {
+      font-size: 12px;
+    }
+    .artist {
+      font-size: 10px;
+    }
+    .album {
+      font-size: 9px;
+    }
+    .controls button {
+      width: 28px;
+      height: 28px;
+    }
+    .aux-controls button {
+      width: 18px;
+      height: 18px;
+    }
+    .volume-wrap {
+      min-width: 36px;
+    }
+  }
+
+  @media (max-width: 320px), (max-height: 145px) {
+    body {
+      padding: 8px;
+    }
+    .banner {
+      gap: 7px;
+      padding: 6px;
+    }
+    .artwork-container {
+      width: clamp(24px, 25vw, 54px);
+      height: clamp(24px, 25vw, 54px);
+    }
+    .album {
+      display: none;
+    }
+    .progress-container {
+      margin-top: 0;
+    }
+    .time-display {
+      display: none;
+    }
+    .controls {
+      margin-top: 0;
+      gap: 4px;
+    }
+    .controls button {
+      width: 26px;
+      height: 26px;
+    }
+    .aux-controls {
+      gap: 4px;
+    }
+    .aux-controls button {
+      width: 16px;
+      height: 16px;
+    }
+    .volume-wrap {
+      min-width: 30px;
+    }
+    .volume-wrap svg {
+      display: none;
+    }
+  }
+
+  @media (max-width: 285px), (max-height: 124px) {
+    .volume-wrap {
+      display: none;
+    }
+  }
+
+  @media (max-height: 112px) {
+    .banner {
+      gap: 5px;
+      padding: 4px;
+    }
+    .artwork-container {
+      width: clamp(18px, 22vw, 42px);
+      height: clamp(18px, 22vw, 42px);
+    }
+    .primary-meta {
+      flex-direction: row;
+      align-items: baseline;
+      gap: 5px;
+    }
+    .title {
+      flex: 1;
+      min-width: 0;
+      font-size: 11px;
+    }
+    .artist {
+      flex: 0 1 44%;
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .album,
+    .progress-container,
+    .time-display {
+      display: none;
+    }
+  }
+
+  @media (min-width: 460px) {
+    .banner {
+      gap: 12px;
+      padding: 10px;
+    }
+    .artwork-container {
+      width: clamp(42px, 18vw, 84px);
+      height: clamp(42px, 18vw, 84px);
+    }
+    .title {
+      font-size: 14px;
+    }
+    .artist {
+      font-size: 12px;
+    }
+    .album {
+      font-size: 11px;
+    }
+    .controls button {
+      width: 32px;
+      height: 32px;
+    }
   }
 `;
 
@@ -150,6 +379,9 @@ export class PipWindowRenderer {
   private progressThumb: HTMLElement | null = null;
   private progressBarEl: HTMLElement | null = null;
   private timeDisplayEl: HTMLElement | null = null;
+  private likeBtn: HTMLButtonElement | null = null;
+  private dislikeBtn: HTMLButtonElement | null = null;
+  private volumeRange: HTMLInputElement | null = null;
   private onSeekCallback: ((time: number) => void) | null = null;
   private lastDuration = 0;
 
@@ -158,6 +390,7 @@ export class PipWindowRenderer {
     state: PlaybackState,
     onAction: (action: PlaybackAction) => void,
     onSeek?: (time: number) => void,
+    aux?: AuxHandlers,
   ): void {
     this.doc = doc;
     this.onSeekCallback = onSeek ?? null;
@@ -174,6 +407,10 @@ export class PipWindowRenderer {
     style.textContent = STYLES;
     doc.head.appendChild(style);
 
+    const banner = doc.createElement("div");
+    banner.className = "banner";
+    doc.body.appendChild(banner);
+
     const artworkContainer = doc.createElement("div");
     artworkContainer.className = "artwork-container";
     this.artworkContainerEl = artworkContainer;
@@ -185,25 +422,33 @@ export class PipWindowRenderer {
     this.artworkEl = artwork;
 
     artworkContainer.appendChild(artwork);
-    doc.body.appendChild(artworkContainer);
+    banner.appendChild(artworkContainer);
+
+    const info = doc.createElement("div");
+    info.className = "info";
+    banner.appendChild(info);
+
+    const primaryMeta = doc.createElement("div");
+    primaryMeta.className = "primary-meta";
+    info.appendChild(primaryMeta);
 
     const title = doc.createElement("div");
     title.className = "title";
     title.textContent = state.title ?? "";
     this.titleEl = title;
-    doc.body.appendChild(title);
+    primaryMeta.appendChild(title);
 
     const artist = doc.createElement("div");
     artist.className = "artist";
     artist.textContent = state.artist ?? "";
     this.artistEl = artist;
-    doc.body.appendChild(artist);
+    primaryMeta.appendChild(artist);
 
     const albumLine = doc.createElement("div");
     albumLine.className = "album";
     albumLine.textContent = this.formatAlbumLine(state);
     this.albumEl = albumLine;
-    doc.body.appendChild(albumLine);
+    info.appendChild(albumLine);
 
     const progressContainer = doc.createElement("div");
     progressContainer.className = "progress-container";
@@ -225,7 +470,7 @@ export class PipWindowRenderer {
     progressBar.appendChild(progressFill);
     progressBar.appendChild(progressThumb);
     progressContainer.appendChild(progressBar);
-    doc.body.appendChild(progressContainer);
+    info.appendChild(progressContainer);
 
     this.attachSeekListeners(doc, progressBar);
 
@@ -233,7 +478,10 @@ export class PipWindowRenderer {
     timeDisplay.className = "time-display";
     timeDisplay.textContent = this.formatTimeDisplay(state);
     this.timeDisplayEl = timeDisplay;
-    doc.body.appendChild(timeDisplay);
+    info.appendChild(timeDisplay);
+
+    const controlRow = doc.createElement("div");
+    controlRow.className = "control-row";
 
     const controls = doc.createElement("div");
     controls.className = "controls";
@@ -264,8 +512,48 @@ export class PipWindowRenderer {
     controls.appendChild(prevBtn);
     controls.appendChild(playPauseBtn);
     controls.appendChild(nextBtn);
+    controlRow.appendChild(controls);
 
-    doc.body.appendChild(controls);
+    const auxControls = doc.createElement("div");
+    auxControls.className = "aux-controls";
+
+    const dislikeBtn = doc.createElement("button");
+    dislikeBtn.innerHTML = THUMBS_DOWN_SVG;
+    dislikeBtn.setAttribute("aria-label", "Dislike");
+    dislikeBtn.addEventListener("click", () => aux?.onDislike?.());
+    this.dislikeBtn = dislikeBtn;
+    auxControls.appendChild(dislikeBtn);
+
+    const likeBtn = doc.createElement("button");
+    likeBtn.innerHTML = THUMBS_UP_SVG;
+    likeBtn.setAttribute("aria-label", "Like");
+    likeBtn.addEventListener("click", () => aux?.onLike?.());
+    this.likeBtn = likeBtn;
+    auxControls.appendChild(likeBtn);
+
+    const volumeWrap = doc.createElement("div");
+    volumeWrap.className = "volume-wrap";
+    volumeWrap.innerHTML = VOLUME_SVG;
+    const volumeRange = doc.createElement("input");
+    volumeRange.className = "volume";
+    volumeRange.type = "range";
+    volumeRange.min = "0";
+    volumeRange.max = "100";
+    volumeRange.value = String(Math.round((aux?.volume ?? 1) * 100));
+    volumeRange.addEventListener("input", () => {
+      aux?.onVolumeChange?.(Number(volumeRange.value) / 100);
+    });
+    this.volumeRange = volumeRange;
+    volumeWrap.appendChild(volumeRange);
+    auxControls.appendChild(volumeWrap);
+    controlRow.appendChild(auxControls);
+    info.appendChild(controlRow);
+
+    this.updateAuxState(
+      aux?.volume ?? 1,
+      aux?.isLiked === true,
+      aux?.isDisliked === true,
+    );
 
     this.updateDocTitle(state);
   }
@@ -302,6 +590,19 @@ export class PipWindowRenderer {
       );
     }
     this.updateDocTitle(state);
+  }
+
+  updateAuxState(volume: number, isLiked: boolean, isDisliked: boolean): void {
+    if (this.volumeRange) {
+      const clamped = Math.max(0, Math.min(100, Math.round(volume * 100)));
+      this.volumeRange.value = String(clamped);
+    }
+    if (this.likeBtn) {
+      this.likeBtn.classList.toggle("active", isLiked);
+    }
+    if (this.dislikeBtn) {
+      this.dislikeBtn.classList.toggle("active", isDisliked);
+    }
   }
 
   getArtworkContainer(): HTMLElement | null {
