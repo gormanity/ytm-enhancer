@@ -63,29 +63,6 @@ export function createAudioVisualizerPopupView(): PopupView {
       styleLabel.appendChild(select);
       card.appendChild(styleLabel);
 
-      const colorModeLabel = document.createElement("label");
-      colorModeLabel.className = "toggle-row";
-
-      const colorModeText = document.createElement("span");
-      colorModeText.textContent = "Color mode";
-      colorModeLabel.appendChild(colorModeText);
-
-      const colorModeSelect = document.createElement("select");
-      colorModeSelect.disabled = true;
-      const colorModeOptions = [
-        { value: "white", text: "White" },
-        { value: "artwork-adaptive", text: "Artwork Adaptive" },
-        { value: "monochrome-dim", text: "Monochrome Dim" },
-      ];
-      for (const opt of colorModeOptions) {
-        const option = document.createElement("option");
-        option.value = opt.value;
-        option.textContent = opt.text;
-        colorModeSelect.appendChild(option);
-      }
-      colorModeLabel.appendChild(colorModeSelect);
-      card.appendChild(colorModeLabel);
-
       const targetLabel = document.createElement("label");
       targetLabel.className = "toggle-row";
 
@@ -113,6 +90,29 @@ export function createAudioVisualizerPopupView(): PopupView {
 
       targetLabel.appendChild(targetSelect);
       card.appendChild(targetLabel);
+
+      const colorModeLabel = document.createElement("label");
+      colorModeLabel.className = "toggle-row";
+
+      const colorModeText = document.createElement("span");
+      colorModeText.textContent = "Color mode";
+      colorModeLabel.appendChild(colorModeText);
+
+      const colorModeSelect = document.createElement("select");
+      colorModeSelect.disabled = true;
+      const colorModeOptions = [
+        { value: "white", text: "White" },
+        { value: "artwork-adaptive", text: "Artwork Adaptive" },
+        { value: "monochrome-dim", text: "Monochrome Dim" },
+      ];
+      for (const opt of colorModeOptions) {
+        const option = document.createElement("option");
+        option.value = opt.value;
+        option.textContent = opt.text;
+        colorModeSelect.appendChild(option);
+      }
+      colorModeLabel.appendChild(colorModeSelect);
+      card.appendChild(colorModeLabel);
 
       const autoModeHint = document.createElement("div");
       autoModeHint.className = "shortcuts-hint";
