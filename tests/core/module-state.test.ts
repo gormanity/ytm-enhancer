@@ -85,5 +85,17 @@ describe("module-state", () => {
         moduleState: { "notifications.enabled": false },
       });
     });
+
+    it("serializes concurrent writes so values are not lost", async () => {
+      await Promise.all([
+        saveModuleStateValue("auto-play.enabled", false),
+        saveModuleStateValue("notifications.enabled", true),
+      ]);
+
+      expect(mockStorage._store.moduleState).toEqual({
+        "auto-play.enabled": false,
+        "notifications.enabled": true,
+      });
+    });
   });
 });
