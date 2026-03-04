@@ -1,5 +1,6 @@
 import type { PopupView } from "@/core/types";
 import {
+  type VisualizerColorMode,
   DEFAULT_VISUALIZER_STYLE_TUNINGS,
   type VisualizerStyle,
   type VisualizerStyleTuning,
@@ -61,6 +62,29 @@ export function createAudioVisualizerPopupView(): PopupView {
 
       styleLabel.appendChild(select);
       card.appendChild(styleLabel);
+
+      const colorModeLabel = document.createElement("label");
+      colorModeLabel.className = "toggle-row";
+
+      const colorModeText = document.createElement("span");
+      colorModeText.textContent = "Color mode";
+      colorModeLabel.appendChild(colorModeText);
+
+      const colorModeSelect = document.createElement("select");
+      colorModeSelect.disabled = true;
+      const colorModeOptions = [
+        { value: "white", text: "White" },
+        { value: "artwork-adaptive", text: "Artwork Adaptive" },
+        { value: "monochrome-dim", text: "Monochrome Dim" },
+      ];
+      for (const opt of colorModeOptions) {
+        const option = document.createElement("option");
+        option.value = opt.value;
+        option.textContent = opt.text;
+        colorModeSelect.appendChild(option);
+      }
+      colorModeLabel.appendChild(colorModeSelect);
+      card.appendChild(colorModeLabel);
 
       const targetLabel = document.createElement("label");
       targetLabel.className = "toggle-row";
@@ -200,6 +224,16 @@ export function createAudioVisualizerPopupView(): PopupView {
         },
       );
 
+      chrome.runtime.sendMessage(
+        { type: "get-audio-visualizer-color-mode" },
+        (response: { ok: boolean; data?: VisualizerColorMode }) => {
+          if (response?.ok && response.data) {
+            colorModeSelect.value = response.data;
+            colorModeSelect.disabled = false;
+          }
+        },
+      );
+
       toggle.addEventListener("change", () => {
         chrome.runtime.sendMessage({
           type: "set-audio-visualizer-enabled",
@@ -219,6 +253,13 @@ export function createAudioVisualizerPopupView(): PopupView {
         chrome.runtime.sendMessage({
           type: "set-audio-visualizer-target",
           target: targetSelect.value,
+        });
+      });
+
+      colorModeSelect.addEventListener("change", () => {
+        chrome.runtime.sendMessage({
+          type: "set-audio-visualizer-color-mode",
+          mode: colorModeSelect.value,
         });
       });
 

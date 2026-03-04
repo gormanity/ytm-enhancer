@@ -1,4 +1,8 @@
 export type VisualizerStyle = "bars" | "waveform" | "circular";
+export type VisualizerColorMode =
+  | "white"
+  | "artwork-adaptive"
+  | "monochrome-dim";
 
 export type VisualizerTarget =
   | "auto"
@@ -33,6 +37,7 @@ export interface VisualizerDrawContext {
   height: number;
   data: Uint8Array;
   tuning: VisualizerStyleTuning;
+  color: { r: number; g: number; b: number };
 }
 
 function clampTuning(tuning: VisualizerStyleTuning): VisualizerStyleTuning {
@@ -49,6 +54,7 @@ export function drawBars({
   height,
   data,
   tuning,
+  color,
 }: VisualizerDrawContext): void {
   ctx.clearRect(0, 0, width, height);
   if (data.length === 0) return;
@@ -57,7 +63,7 @@ export function drawBars({
   const barWidth = width / data.length;
   const barWidthPx = Math.max(1, barWidth * 0.7 * clamped.thickness);
   const alpha = 0.6 * clamped.opacity;
-  ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+  ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
 
   for (let i = 0; i < data.length; i++) {
     const rawBarHeight = ((data[i] / 255) * height * clamped.intensity) / 1.15;
@@ -73,13 +79,14 @@ export function drawWaveform({
   height,
   data,
   tuning,
+  color,
 }: VisualizerDrawContext): void {
   ctx.clearRect(0, 0, width, height);
   if (data.length === 0) return;
   const clamped = clampTuning(tuning);
 
   const sliceWidth = width / (data.length - 1);
-  ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * clamped.opacity})`;
+  ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${0.6 * clamped.opacity})`;
   ctx.lineWidth = 2 * clamped.thickness;
 
   ctx.beginPath();
@@ -100,6 +107,7 @@ export function drawCircular({
   height,
   data,
   tuning,
+  color,
 }: VisualizerDrawContext): void {
   ctx.clearRect(0, 0, width, height);
   if (data.length === 0) return;
@@ -110,7 +118,7 @@ export function drawCircular({
   const baseRadius = Math.min(width, height) * 0.25;
   const maxExtension = Math.min(width, height) * 0.2 * clamped.intensity;
 
-  ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * clamped.opacity})`;
+  ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${0.6 * clamped.opacity})`;
   ctx.lineWidth = 2 * clamped.thickness;
 
   ctx.beginPath();

@@ -4,6 +4,7 @@ import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
 import { MiniPlayerController } from "@/modules/mini-player/controller";
 import type {
+  VisualizerColorMode,
   VisualizerStyleTunings,
   VisualizerStyle,
   VisualizerTarget,
@@ -34,9 +35,13 @@ handler.on("get-playback-state", async () => {
 const audioBridge = new AudioBridgeInjector();
 const overlayManager = new VisualizerOverlayManager();
 let visualizerEnabled = false;
+let visualizerColorMode: VisualizerColorMode = "white";
 let visualizerActive = false;
 let visualizerStateTimer: ReturnType<typeof setInterval> | null = null;
 const VISUALIZER_STATE_POLL_MS = 1000;
+let lastArtworkUrl: string | null = null;
+const artworkColorCache = new Map<string, { r: number; g: number; b: number }>();
+let artworkColorRequestId = 0;
 
 function safeSendMessage<TResponse>(
   message: unknown,
@@ -61,6 +66,102 @@ function shouldRunVisualizer(): boolean {
   return adapter.getPlaybackState().isPlaying;
 }
 
+function setVisualizerColor(color: { r: number; g: number; b: number }): void {
+  overlayManager.setColor(color);
+}
+
+function getStaticVisualizerColor(mode: VisualizerColorMode): {
+  r: number;
+  g: number;
+  b: number;
+} {
+  if (mode === "monochrome-dim") return { r: 180, g: 180, b: 180 };
+  return { r: 255, g: 255, b: 255 };
+}
+
+async function resolveArtworkDominantColor(
+  artworkUrl: string,
+): Promise<{ r: number; g: number; b: number } | null> {
+  if (artworkColorCache.has(artworkUrl)) {
+    return artworkColorCache.get(artworkUrl)!;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.referrerPolicy = "no-referrer";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const size = 24;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, size, size);
+        const pixels = ctx.getImageData(0, 0, size, size).data;
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        let count = 0;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+          const alpha = pixels[i + 3];
+          if (alpha < 16) continue;
+          r += pixels[i];
+          g += pixels[i + 1];
+          b += pixels[i + 2];
+          count++;
+        }
+
+        if (count === 0) {
+          resolve(null);
+          return;
+        }
+
+        const color = {
+          r: Math.max(90, Math.min(255, Math.round(r / count))),
+          g: Math.max(90, Math.min(255, Math.round(g / count))),
+          b: Math.max(90, Math.min(255, Math.round(b / count))),
+        };
+        artworkColorCache.set(artworkUrl, color);
+        resolve(color);
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = artworkUrl;
+  });
+}
+
+async function refreshVisualizerColor(): Promise<void> {
+  if (visualizerColorMode !== "artwork-adaptive") {
+    setVisualizerColor(getStaticVisualizerColor(visualizerColorMode));
+    return;
+  }
+
+  const artworkUrl = adapter.getPlaybackState().artworkUrl;
+  if (!artworkUrl) {
+    setVisualizerColor(getStaticVisualizerColor("white"));
+    return;
+  }
+  if (artworkUrl === lastArtworkUrl && artworkColorCache.has(artworkUrl)) {
+    setVisualizerColor(artworkColorCache.get(artworkUrl)!);
+    return;
+  }
+
+  lastArtworkUrl = artworkUrl;
+  const requestId = ++artworkColorRequestId;
+  const color = await resolveArtworkDominantColor(artworkUrl);
+  if (requestId !== artworkColorRequestId) return;
+  if (visualizerColorMode !== "artwork-adaptive") return;
+  setVisualizerColor(color ?? getStaticVisualizerColor("white"));
+}
+
 function applyVisualizerRuntimeState(): void {
   const shouldRun = shouldRunVisualizer();
   if (shouldRun === visualizerActive) return;
@@ -79,6 +180,7 @@ function startVisualizerStatePolling(): void {
   stopVisualizerStatePolling();
   visualizerStateTimer = setInterval(() => {
     applyVisualizerRuntimeState();
+    void refreshVisualizerColor();
   }, VISUALIZER_STATE_POLL_MS);
 }
 
@@ -108,6 +210,7 @@ async function startVisualizer(): Promise<void> {
 
   startVisualizerStatePolling();
   applyVisualizerRuntimeState();
+  await refreshVisualizerColor();
 }
 
 function stopVisualizer(): void {
@@ -144,6 +247,12 @@ handler.on("set-audio-visualizer-target", async (message) => {
 
 handler.on("set-audio-visualizer-style-tunings", async (message) => {
   overlayManager.setStyleTunings(message.tunings as VisualizerStyleTunings);
+  return { ok: true };
+});
+
+handler.on("set-audio-visualizer-color-mode", async (message) => {
+  visualizerColorMode = message.mode as VisualizerColorMode;
+  await refreshVisualizerColor();
   return { ok: true };
 });
 
@@ -254,6 +363,16 @@ safeSendMessage<{ ok: boolean; data?: VisualizerStyleTunings }>(
   (response) => {
     if (response?.ok && response.data) {
       overlayManager.setStyleTunings(response.data);
+    }
+  },
+);
+
+safeSendMessage<{ ok: boolean; data?: VisualizerColorMode }>(
+  { type: "get-audio-visualizer-color-mode" },
+  (response) => {
+    if (response?.ok && response.data) {
+      visualizerColorMode = response.data;
+      void refreshVisualizerColor();
     }
   },
 );

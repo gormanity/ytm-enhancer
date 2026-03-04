@@ -2,6 +2,7 @@ import type { FeatureModule, PopupView } from "@/core/types";
 import {
   DEFAULT_VISUALIZER_STYLE_TUNING,
   DEFAULT_VISUALIZER_STYLE_TUNINGS,
+  type VisualizerColorMode,
   type VisualizerStyle,
   type VisualizerStyleTuning,
   type VisualizerStyleTunings,
@@ -18,6 +19,7 @@ export class AudioVisualizerModule implements FeatureModule {
   private enabled = true;
   private style: VisualizerStyle = "bars";
   private target: VisualizerTarget = "auto";
+  private colorMode: VisualizerColorMode = "white";
   private styleTunings: VisualizerStyleTunings = {
     bars: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.bars },
     waveform: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.waveform },
@@ -54,6 +56,14 @@ export class AudioVisualizerModule implements FeatureModule {
 
   setTarget(target: VisualizerTarget): void {
     this.target = target;
+  }
+
+  getColorMode(): VisualizerColorMode {
+    return this.colorMode;
+  }
+
+  setColorMode(mode: VisualizerColorMode): void {
+    this.colorMode = mode;
   }
 
   getStyleTunings(): VisualizerStyleTunings {

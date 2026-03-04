@@ -349,4 +349,60 @@ describe("audio visualizer popup view", () => {
       },
     });
   });
+
+  it("should query color mode on render", () => {
+    const view = createAudioVisualizerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      { type: "get-audio-visualizer-color-mode" },
+      expect.any(Function),
+    );
+  });
+
+  it("should send set-audio-visualizer-color-mode on color mode change", async () => {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (!callback) return;
+        if (message.type === "get-audio-visualizer-enabled") {
+          callback({ ok: true, data: true });
+        } else if (message.type === "get-audio-visualizer-style") {
+          callback({ ok: true, data: "bars" });
+        } else if (message.type === "get-audio-visualizer-target") {
+          callback({ ok: true, data: "auto" });
+        } else if (message.type === "get-audio-visualizer-style-tunings") {
+          callback({
+            ok: true,
+            data: {
+              bars: { intensity: 1, thickness: 1, opacity: 1 },
+              waveform: { intensity: 1, thickness: 1, opacity: 1 },
+              circular: { intensity: 1, thickness: 1, opacity: 1 },
+            },
+          });
+        } else if (message.type === "get-audio-visualizer-color-mode") {
+          callback({ ok: true, data: "white" });
+        }
+      },
+    );
+
+    const view = createAudioVisualizerPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const selects = container.querySelectorAll<HTMLSelectElement>("select");
+      expect(selects[2]?.disabled).toBe(false);
+    });
+
+    const selects = container.querySelectorAll<HTMLSelectElement>("select");
+    selects[2].value = "monochrome-dim";
+    selects[2].dispatchEvent(new Event("change"));
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-audio-visualizer-color-mode",
+      mode: "monochrome-dim",
+    });
+  });
 });

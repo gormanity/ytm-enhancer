@@ -14,6 +14,7 @@ import { AutoPlayModule } from "@/modules/auto-play";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
 import type {
+  VisualizerColorMode,
   VisualizerStyleTuning,
   VisualizerStyleTunings,
   VisualizerStyle,
@@ -405,6 +406,20 @@ handler.on("set-audio-visualizer-style-tuning", async (message) => {
   return { ok: true };
 });
 
+handler.on("get-audio-visualizer-color-mode", async () => {
+  return { ok: true, data: audioVisualizer.getColorMode() };
+});
+
+handler.on("set-audio-visualizer-color-mode", async (message) => {
+  audioVisualizer.setColorMode(message.mode as VisualizerColorMode);
+  void saveModuleStateValue("audio-visualizer.colorMode", message.mode);
+  void relayToYTMTab({
+    type: "set-audio-visualizer-color-mode",
+    mode: message.mode,
+  });
+  return { ok: true };
+});
+
 handler.on("get-playback-state", async () => {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
@@ -461,6 +476,9 @@ async function restoreModuleState(): Promise<void> {
   );
   audioVisualizer.setTarget(
     str("audio-visualizer.target", "auto") as VisualizerTarget,
+  );
+  audioVisualizer.setColorMode(
+    str("audio-visualizer.colorMode", "white") as VisualizerColorMode,
   );
   if (
     typeof state["audio-visualizer.styleTunings"] === "object" &&

@@ -14,6 +14,7 @@ export class VisualizerCanvas {
   private styleTunings: VisualizerStyleTunings = {
     ...DEFAULT_VISUALIZER_STYLE_TUNINGS,
   };
+  private color = { r: 255, g: 255, b: 255 };
   private frequencyData: Uint8Array<ArrayBuffer> = new Uint8Array(0);
 
   attach(container: HTMLElement): void {
@@ -46,6 +47,10 @@ export class VisualizerCanvas {
       waveform: { ...tunings.waveform },
       circular: { ...tunings.circular },
     };
+  }
+
+  setColor(color: { r: number; g: number; b: number }): void {
+    this.color = { r: color.r, g: color.g, b: color.b };
   }
 
   updateFrequencyData(data: Uint8Array<ArrayBuffer>): void {
@@ -102,6 +107,7 @@ export class VisualizerCanvas {
       height,
       data: this.frequencyData,
       tuning: this.styleTunings[this.style],
+      color: this.color,
     });
   }
 }

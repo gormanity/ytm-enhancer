@@ -16,6 +16,7 @@ interface MockCanvas {
   destroy: ReturnType<typeof vi.fn>;
   setStyle: ReturnType<typeof vi.fn>;
   setStyleTunings: ReturnType<typeof vi.fn>;
+  setColor: ReturnType<typeof vi.fn>;
   updateFrequencyData: ReturnType<typeof vi.fn>;
 }
 
@@ -29,6 +30,7 @@ vi.mock("@/modules/audio-visualizer/visualizer-canvas", () => {
     destroy = vi.fn();
     setStyle = vi.fn();
     setStyleTunings = vi.fn();
+    setColor = vi.fn();
     updateFrequencyData = vi.fn();
     constructor() {
       mockCanvases.push(this as unknown as MockCanvas);
@@ -257,6 +259,25 @@ describe("VisualizerOverlayManager", () => {
     manager.attachToPlayerBar(c);
 
     expect(mockCanvases[0].setStyle).toHaveBeenCalledWith("circular");
+  });
+
+  it("should set color on all canvases", () => {
+    const c1 = document.createElement("div");
+    const c2 = document.createElement("div");
+    manager.attachToPlayerBar(c1);
+    manager.attachToSongArt(c2);
+    manager.setColor({ r: 200, g: 150, b: 100 });
+
+    expect(mockCanvases[0].setColor).toHaveBeenCalledWith({
+      r: 200,
+      g: 150,
+      b: 100,
+    });
+    expect(mockCanvases[1].setColor).toHaveBeenCalledWith({
+      r: 200,
+      g: 150,
+      b: 100,
+    });
   });
 
   it("should set style tunings on all canvases", () => {

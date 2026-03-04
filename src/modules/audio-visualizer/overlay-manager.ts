@@ -14,6 +14,7 @@ export class VisualizerOverlayManager {
   private styleTunings: VisualizerStyleTunings = {
     ...DEFAULT_VISUALIZER_STYLE_TUNINGS,
   };
+  private color = { r: 255, g: 255, b: 255 };
   private running = false;
   private target: VisualizerTarget = "auto";
 
@@ -82,6 +83,13 @@ export class VisualizerOverlayManager {
     }
   }
 
+  setColor(color: { r: number; g: number; b: number }): void {
+    this.color = { r: color.r, g: color.g, b: color.b };
+    for (const canvas of this.allCanvases()) {
+      canvas.setColor(this.color);
+    }
+  }
+
   startAll(): void {
     this.running = true;
     this.ensureObserver();
@@ -119,6 +127,7 @@ export class VisualizerOverlayManager {
     canvas.attach(container);
     canvas.setStyle(this.currentStyle);
     canvas.setStyleTunings(this.styleTunings);
+    canvas.setColor(this.color);
     return canvas;
   }
 

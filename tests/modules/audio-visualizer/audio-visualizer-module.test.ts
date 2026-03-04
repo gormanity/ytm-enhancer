@@ -41,12 +41,25 @@ describe("AudioVisualizerModule", () => {
     expect(mod.getTarget()).toBe("auto");
   });
 
+  it("should default to white color mode", () => {
+    const mod = new AudioVisualizerModule();
+    expect(mod.getColorMode()).toBe("white");
+  });
+
   it("should change target", () => {
     const mod = new AudioVisualizerModule();
     mod.setTarget("pip-only");
     expect(mod.getTarget()).toBe("pip-only");
     mod.setTarget("all");
     expect(mod.getTarget()).toBe("all");
+  });
+
+  it("should change color mode", () => {
+    const mod = new AudioVisualizerModule();
+    mod.setColorMode("artwork-adaptive");
+    expect(mod.getColorMode()).toBe("artwork-adaptive");
+    mod.setColorMode("monochrome-dim");
+    expect(mod.getColorMode()).toBe("monochrome-dim");
   });
 
   it("should return popup views", () => {
