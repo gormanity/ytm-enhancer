@@ -5,6 +5,27 @@ export { SELECTORS } from "./selectors";
 
 /** Adapter layer encapsulating all YouTube Music DOM interaction. */
 export class YTMAdapter {
+  /**
+   * Infer whether YTM is currently in video-focused playback mode.
+   * Song mode typically keeps the video element hidden/minimized.
+   */
+  isVideoMode(): boolean {
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+    if (!video) return false;
+
+    if (
+      video.readyState < 1 ||
+      video.videoWidth === 0 ||
+      video.videoHeight === 0
+    ) {
+      return false;
+    }
+
+    return this.isElementVisible(video);
+  }
+
   getPlaybackState(): PlaybackState {
     const titleEl = document.querySelector(SELECTORS.trackTitle);
     const artistEl = document.querySelector(SELECTORS.artistName);
@@ -159,5 +180,18 @@ export class YTMAdapter {
   private clickButton(selector: string): void {
     const el = document.querySelector(selector) as HTMLElement | null;
     el?.click();
+  }
+
+  private isElementVisible(el: HTMLElement): boolean {
+    const style = window.getComputedStyle(el);
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.opacity === "0"
+    ) {
+      return false;
+    }
+
+    return el.getClientRects().length > 0;
   }
 }

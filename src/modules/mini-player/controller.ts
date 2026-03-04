@@ -104,44 +104,61 @@ export class MiniPlayerController {
   }
 
   private handlePipClick(): void {
-    if (typeof documentPictureInPicture !== "undefined") {
-      void this.openDocumentPip();
-    } else {
-      void this.videoFallback.open();
-    }
+    void this.openPreferredPip();
   }
 
-  private async openDocumentPip(): Promise<void> {
-    const pipWindow = await documentPictureInPicture.requestWindow({
-      width: 320,
-      height: 400,
-    });
-
-    const state = this.adapter.getPlaybackState();
-    const pipDoc = pipWindow.document;
-
-    this.renderer.build(
-      pipDoc,
-      state,
-      (action: PlaybackAction) => {
-        this.adapter.executeAction(action);
-      },
-      (time: number) => {
-        this.adapter.seekTo(time);
-      },
-    );
-
-    const artworkContainer = this.renderer.getArtworkContainer();
-    if (artworkContainer && this.overlayManager) {
-      this.overlayManager.attachToPip(artworkContainer);
+  private async openPreferredPip(): Promise<void> {
+    // In Song mode, prefer Document PiP to avoid switching to the video track.
+    // In Video mode, prefer native video PiP for compact native UX.
+    if (this.adapter.isVideoMode()) {
+      if (await this.videoFallback.open()) return;
+      await this.openDocumentPip();
+      return;
     }
 
-    this.startPolling();
+    if (await this.openDocumentPip()) return;
+    await this.videoFallback.open();
+  }
 
-    pipWindow.addEventListener("pagehide", () => {
-      this.stopPolling();
-      this.overlayManager?.detachPip();
-    });
+  private async openDocumentPip(): Promise<boolean> {
+    if (typeof documentPictureInPicture === "undefined") return false;
+
+    try {
+      const pipWindow = await documentPictureInPicture.requestWindow({
+        width: 320,
+        height: 400,
+      });
+
+      const state = this.adapter.getPlaybackState();
+      const pipDoc = pipWindow.document;
+
+      this.renderer.build(
+        pipDoc,
+        state,
+        (action: PlaybackAction) => {
+          this.adapter.executeAction(action);
+        },
+        (time: number) => {
+          this.adapter.seekTo(time);
+        },
+      );
+
+      const artworkContainer = this.renderer.getArtworkContainer();
+      if (artworkContainer && this.overlayManager) {
+        this.overlayManager.attachToPip(artworkContainer);
+      }
+
+      this.startPolling();
+
+      pipWindow.addEventListener("pagehide", () => {
+        this.stopPolling();
+        this.overlayManager?.detachPip();
+      });
+
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private startPolling(): void {

@@ -7,17 +7,19 @@ export class VideoPipFallback {
     return this.open_;
   }
 
-  async open(): Promise<void> {
+  async open(): Promise<boolean> {
     const video = document.querySelector(
       SELECTORS.videoElement,
     ) as HTMLVideoElement | null;
-    if (!video) return;
+    if (!video) return false;
 
     try {
       await video.requestPictureInPicture();
       this.open_ = true;
+      return true;
     } catch {
       // PiP may be unavailable or denied by the browser.
+      return false;
     }
   }
 

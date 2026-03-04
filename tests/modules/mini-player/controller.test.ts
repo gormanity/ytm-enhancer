@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MiniPlayerController } from "@/modules/mini-player/controller";
+import { YTMAdapter } from "@/adapter";
 import { SELECTORS } from "@/adapter/selectors";
 
 type MessageListener = (
@@ -186,6 +187,75 @@ describe("MiniPlayerController", () => {
       width: 320,
       height: 400,
     });
+  });
+
+  it("should prefer native video PiP in video mode", async () => {
+    const nativeButton = createNativeMiniPlayerButton();
+    vi.spyOn(YTMAdapter.prototype, "isVideoMode").mockReturnValue(true);
+
+    const requestPiP = vi.fn().mockResolvedValue({});
+    const video = document.createElement("video");
+    video.className = "html5-main-video";
+    video.requestPictureInPicture = requestPiP;
+    document.body.appendChild(video);
+
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
+    const pipWindow = {
+      document: pipDoc,
+      addEventListener: vi.fn(),
+    };
+    const requestWindow = vi.fn().mockResolvedValue(pipWindow);
+    vi.stubGlobal("documentPictureInPicture", {
+      requestWindow,
+    });
+
+    const original = document.querySelector.bind(document);
+    vi.spyOn(document, "querySelector").mockImplementation((sel: string) => {
+      if (sel === SELECTORS.videoElement) return video;
+      if (sel === SELECTORS.nativeMiniPlayerButton) return nativeButton;
+      return original(sel);
+    });
+
+    controller = new MiniPlayerController();
+    await controller.init();
+
+    nativeButton.click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(requestPiP).toHaveBeenCalled();
+    expect(requestWindow).not.toHaveBeenCalled();
+  });
+
+  it("should fall back to native video PiP if Document PiP fails", async () => {
+    const nativeButton = createNativeMiniPlayerButton();
+    vi.spyOn(YTMAdapter.prototype, "isVideoMode").mockReturnValue(false);
+
+    const requestPiP = vi.fn().mockResolvedValue({});
+    const video = document.createElement("video");
+    video.className = "html5-main-video";
+    video.requestPictureInPicture = requestPiP;
+    document.body.appendChild(video);
+
+    const requestWindow = vi.fn().mockRejectedValue(new Error("blocked"));
+    vi.stubGlobal("documentPictureInPicture", {
+      requestWindow,
+    });
+
+    const original = document.querySelector.bind(document);
+    vi.spyOn(document, "querySelector").mockImplementation((sel: string) => {
+      if (sel === SELECTORS.videoElement) return video;
+      if (sel === SELECTORS.nativeMiniPlayerButton) return nativeButton;
+      return original(sel);
+    });
+
+    controller = new MiniPlayerController();
+    await controller.init();
+
+    nativeButton.click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(requestWindow).toHaveBeenCalled();
+    expect(requestPiP).toHaveBeenCalled();
   });
 
   it("should seek video when PiP seek bar is used", async () => {
