@@ -318,7 +318,7 @@ describe("NotificationsModule", () => {
       );
     });
 
-    it("should use empty message when no message fields are enabled", () => {
+    it("should use fallback message when no message fields are enabled", () => {
       module.setFields({
         title: true,
         artist: false,
@@ -331,7 +331,9 @@ describe("NotificationsModule", () => {
 
       expect(createMock).toHaveBeenCalledWith(
         expect.stringContaining(ID_PREFIX),
-        expect.objectContaining({ message: "" }),
+        expect.objectContaining({
+          message: "Previewing notification settings",
+        }),
         expect.any(Function),
       );
     });
@@ -374,7 +376,7 @@ describe("NotificationsModule", () => {
       );
     });
 
-    it("should skip null year in message", () => {
+    it("should use fallback message when year is enabled but missing", () => {
       module.setFields({
         title: true,
         artist: false,
@@ -387,7 +389,9 @@ describe("NotificationsModule", () => {
 
       expect(createMock).toHaveBeenCalledWith(
         expect.stringContaining(ID_PREFIX),
-        expect.objectContaining({ message: "" }),
+        expect.objectContaining({
+          message: "Previewing notification settings",
+        }),
         expect.any(Function),
       );
     });
