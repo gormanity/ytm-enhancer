@@ -42,9 +42,12 @@ export function createAutoPlayPopupView(): PopupView {
       );
 
       toggle.addEventListener("change", () => {
+        toggle.disabled = true;
         chrome.runtime.sendMessage({
           type: "set-auto-play-enabled",
           enabled: toggle.checked,
+        }, () => {
+          toggle.disabled = false;
         });
       });
     },

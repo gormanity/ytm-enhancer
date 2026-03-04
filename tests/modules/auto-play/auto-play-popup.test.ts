@@ -98,6 +98,6 @@ describe("auto-play popup view", () => {
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-auto-play-enabled",
       enabled: true,
-    });
+    }, expect.any(Function));
   });
 });
