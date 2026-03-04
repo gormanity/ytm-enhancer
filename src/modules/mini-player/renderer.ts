@@ -20,28 +20,36 @@ interface AuxHandlers {
 const STYLES = `
   body {
     margin: 0;
-    padding: 10px;
+    padding: clamp(6px, 2.2vw, 10px);
     box-sizing: border-box;
-    background: #121212;
+    background: radial-gradient(circle at 20% -10%, #222 0%, #121212 58%);
     color: #fff;
     font-family: "Roboto", sans-serif;
     height: 100%;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
   }
   .banner {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: clamp(6px, 2.2vw, 10px);
     width: 100%;
     height: 100%;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 8px;
+    border-radius: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.07),
+      rgba(255, 255, 255, 0.03)
+    );
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+    padding: clamp(5px, 1.8vw, 8px);
     box-sizing: border-box;
+    transition: background-color 140ms ease, border-color 140ms ease;
   }
   .artwork-container {
-    width: clamp(34px, 22vw, 72px);
-    height: clamp(34px, 22vw, 72px);
+    width: clamp(18px, 22vw, 72px);
+    height: clamp(18px, 22vw, 72px);
     flex-shrink: 1;
     min-width: 0;
     min-height: 0;
@@ -51,7 +59,7 @@ const STYLES = `
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 4px;
+    border-radius: 5px;
     display: block;
   }
   .visualizer-canvas {
@@ -75,8 +83,9 @@ const STYLES = `
     min-width: 0;
   }
   .title {
-    font-size: 13px;
-    font-weight: 500;
+    font-size: clamp(12px, 3.2vw, 13px);
+    font-weight: 600;
+    letter-spacing: 0.01em;
     text-align: left;
     margin: 0;
     white-space: nowrap;
@@ -86,8 +95,8 @@ const STYLES = `
     flex-shrink: 0;
   }
   .artist {
-    font-size: 11px;
-    color: #aaa;
+    font-size: clamp(10px, 2.7vw, 11px);
+    color: #b7b7b7;
     text-align: left;
     margin: 0;
     white-space: nowrap;
@@ -97,8 +106,8 @@ const STYLES = `
     flex-shrink: 0;
   }
   .album {
-    font-size: 10px;
-    color: #777;
+    font-size: clamp(9px, 2.2vw, 10px);
+    color: #919191;
     text-align: left;
     margin: 0;
     white-space: nowrap;
@@ -109,43 +118,44 @@ const STYLES = `
   }
   .progress-container {
     width: 100%;
-    margin: 2px 0 0;
+    margin: 3px 0 0;
     flex-shrink: 0;
   }
   .progress-bar {
     width: 100%;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 1px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.17);
+    border-radius: 999px;
     position: relative;
     cursor: pointer;
-    padding: 5px 0;
+    padding: 4px 0;
     background-clip: content-box;
   }
   .progress-fill {
-    height: 2px;
+    height: 3px;
     background: #fff;
-    border-radius: 1px;
-    transition: width 0.3s linear;
+    border-radius: 999px;
+    transition: width 140ms ease-out;
     pointer-events: none;
     position: absolute;
-    top: 5px;
+    top: 4px;
     left: 0;
   }
   .progress-thumb {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     background: #fff;
     border-radius: 50%;
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
     pointer-events: none;
-    transition: left 0.3s linear;
+    transition: left 140ms ease-out;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
   }
   .time-display {
     font-size: 10px;
-    color: #aaa;
+    color: #adadad;
     text-align: left;
     margin: 0;
     flex-shrink: 0;
@@ -162,24 +172,36 @@ const STYLES = `
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 2px;
+    margin-top: 1px;
     min-width: 0;
   }
   .controls button {
-    background: none;
-    border: none;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: #fff;
     cursor: pointer;
-    width: 30px;
-    height: 30px;
+    width: 31px;
+    height: 31px;
     padding: 0;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 120ms ease, transform 120ms ease,
+      border-color 120ms ease;
   }
   .controls button:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  .controls button:active {
+    transform: scale(0.96);
+  }
+  .controls .primary-control {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.17);
+    border-color: rgba(255, 255, 255, 0.22);
   }
   .aux-controls {
     display: flex;
@@ -200,10 +222,15 @@ const STYLES = `
     justify-content: center;
     cursor: pointer;
     padding: 0;
+    transition: background-color 120ms ease, color 120ms ease,
+      transform 120ms ease;
   }
   .aux-controls button:hover {
     background: rgba(255, 255, 255, 0.08);
     color: #fff;
+  }
+  .aux-controls button:active {
+    transform: scale(0.96);
   }
   .aux-controls button.active {
     color: #fff;
@@ -225,6 +252,12 @@ const STYLES = `
     accent-color: #fff;
     margin: 0;
     min-width: 0;
+    height: 14px;
+  }
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
   }
 
   @media (max-width: 360px), (max-height: 160px) {
@@ -248,6 +281,10 @@ const STYLES = `
     .controls button {
       width: 28px;
       height: 28px;
+    }
+    .controls .primary-control {
+      width: 32px;
+      height: 32px;
     }
     .aux-controls button {
       width: 18px;
@@ -286,6 +323,10 @@ const STYLES = `
     .controls button {
       width: 26px;
       height: 26px;
+    }
+    .controls .primary-control {
+      width: 29px;
+      height: 29px;
     }
     .aux-controls {
       gap: 4px;
@@ -362,6 +403,10 @@ const STYLES = `
     .controls button {
       width: 32px;
       height: 32px;
+    }
+    .controls .primary-control {
+      width: 38px;
+      height: 38px;
     }
   }
 `;
@@ -500,6 +545,7 @@ export class PipWindowRenderer {
       state.isPlaying ? "Pause" : "Play",
       onAction,
     );
+    playPauseBtn.classList.add("primary-control");
     const nextBtn = this.createControlButton(
       doc,
       "next",
