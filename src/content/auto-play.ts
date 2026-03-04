@@ -10,6 +10,11 @@ export class AutoPlayController {
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private canplayHandler: (() => void) | null = null;
   private canplayVideo: HTMLVideoElement | null = null;
+  private suppressObserver: MutationObserver | null = null;
+  private suppressTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private suppressPlayHandler: (() => void) | null = null;
+  private suppressVideo: HTMLVideoElement | null = null;
+  private suppressArmed = false;
   private enabled = false;
   private messageListener: (message: {
     type: string;
@@ -19,7 +24,14 @@ export class AutoPlayController {
   constructor() {
     this.messageListener = (message) => {
       if (message.type === "set-auto-play-enabled") {
-        this.enabled = message.enabled === true;
+        const nextEnabled = message.enabled === true;
+        if (nextEnabled === this.enabled) return;
+        this.enabled = nextEnabled;
+        if (this.enabled) {
+          this.cancelInitialSuppression();
+        } else {
+          this.cancelPendingAutoPlay();
+        }
       }
     };
   }
@@ -32,9 +44,11 @@ export class AutoPlayController {
         { type: "get-auto-play-enabled" },
         (response: { ok: boolean; data?: boolean }) => {
           if (chrome.runtime.lastError) return;
-          if (response?.ok && response.data === true) {
-            this.enabled = true;
+          this.enabled = response?.ok === true && response.data === true;
+          if (this.enabled) {
             this.tryAutoPlay();
+          } else {
+            this.armInitialSuppression();
           }
         },
       );
@@ -48,6 +62,7 @@ export class AutoPlayController {
     this.observer?.disconnect();
     this.observer = null;
     this.clearCanplayListener();
+    this.cancelInitialSuppression();
     if (this.timeoutId !== null) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -55,6 +70,8 @@ export class AutoPlayController {
   }
 
   private tryAutoPlay(): void {
+    if (!this.enabled) return;
+
     const video = document.querySelector<HTMLVideoElement>(
       SELECTORS.videoElement,
     );
@@ -73,6 +90,7 @@ export class AutoPlayController {
    * which fires after YTM finishes its internal pause/load cycle.
    */
   private onVideoFound(video: HTMLVideoElement): void {
+    if (!this.enabled) return;
     if (video.readyState >= HAVE_FUTURE_DATA) {
       this.performAutoPlay(video);
     } else {
@@ -82,6 +100,7 @@ export class AutoPlayController {
 
   private waitForCanplay(video: HTMLVideoElement): void {
     this.canplayHandler = () => {
+      if (!this.enabled) return;
       this.clearCanplayListener();
       this.performAutoPlay(video);
     };
@@ -105,6 +124,7 @@ export class AutoPlayController {
    */
   private waitForVideo(): void {
     this.observer = new MutationObserver(() => {
+      if (!this.enabled) return;
       const video = document.querySelector<HTMLVideoElement>(
         SELECTORS.videoElement,
       );
@@ -133,6 +153,8 @@ export class AutoPlayController {
   }
 
   private performAutoPlay(video: HTMLVideoElement): void {
+    if (!this.enabled) return;
+
     const state = this.adapter.getPlaybackState();
 
     if (state.isPlaying) return;
@@ -147,5 +169,81 @@ export class AutoPlayController {
     if (!clicked) {
       void video.play();
     }
+  }
+
+  private cancelPendingAutoPlay(): void {
+    this.observer?.disconnect();
+    this.observer = null;
+    this.clearCanplayListener();
+    if (this.timeoutId !== null) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+  }
+
+  private armInitialSuppression(): void {
+    if (this.suppressArmed) return;
+    this.suppressArmed = true;
+
+    const video = document.querySelector<HTMLVideoElement>(SELECTORS.videoElement);
+    if (video) {
+      this.attachSuppression(video);
+      return;
+    }
+
+    this.suppressObserver = new MutationObserver(() => {
+      const found = document.querySelector<HTMLVideoElement>(SELECTORS.videoElement);
+      if (!found) return;
+      this.suppressObserver?.disconnect();
+      this.suppressObserver = null;
+      this.attachSuppression(found);
+    });
+
+    this.suppressObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    this.suppressTimeoutId = setTimeout(() => {
+      this.cancelInitialSuppression();
+    }, TIMEOUT_MS);
+  }
+
+  private attachSuppression(video: HTMLVideoElement): void {
+    if (!this.suppressArmed) return;
+    this.suppressVideo = video;
+    this.suppressPlayHandler = () => {
+      if (!this.suppressArmed) return;
+      video.pause();
+      this.cancelInitialSuppression();
+    };
+    video.addEventListener("play", this.suppressPlayHandler);
+
+    if (!video.paused) {
+      video.pause();
+      this.cancelInitialSuppression();
+      return;
+    }
+
+    if (this.suppressTimeoutId === null) {
+      this.suppressTimeoutId = setTimeout(() => {
+        this.cancelInitialSuppression();
+      }, TIMEOUT_MS);
+    }
+  }
+
+  private cancelInitialSuppression(): void {
+    this.suppressArmed = false;
+    this.suppressObserver?.disconnect();
+    this.suppressObserver = null;
+    if (this.suppressTimeoutId !== null) {
+      clearTimeout(this.suppressTimeoutId);
+      this.suppressTimeoutId = null;
+    }
+    if (this.suppressVideo && this.suppressPlayHandler) {
+      this.suppressVideo.removeEventListener("play", this.suppressPlayHandler);
+    }
+    this.suppressVideo = null;
+    this.suppressPlayHandler = null;
   }
 }

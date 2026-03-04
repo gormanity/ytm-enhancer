@@ -25,6 +25,7 @@ function createVideoElement(): HTMLVideoElement {
   const video = document.createElement("video");
   video.className = "html5-main-video";
   video.play = vi.fn().mockResolvedValue(undefined);
+  video.pause = vi.fn();
   document.body.appendChild(video);
   return video;
 }
@@ -46,6 +47,9 @@ describe("AutoPlayController", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
   let addListenerMock: ReturnType<typeof vi.fn>;
   let removeListenerMock: ReturnType<typeof vi.fn>;
+  let runtimeMessageListener:
+    | ((message: { type: string; enabled?: boolean }) => void)
+    | null;
   let adapterInstance: {
     getPlaybackState: ReturnType<typeof vi.fn>;
     executeAction: ReturnType<typeof vi.fn>;
@@ -65,7 +69,12 @@ describe("AutoPlayController", () => {
     document.body.innerHTML = "";
 
     sendMessageMock = vi.fn();
-    addListenerMock = vi.fn();
+    runtimeMessageListener = null;
+    addListenerMock = vi.fn((listener) => {
+      runtimeMessageListener = listener as (
+        message: { type: string; enabled?: boolean },
+      ) => void;
+    });
     removeListenerMock = vi.fn();
 
     vi.stubGlobal("chrome", {
@@ -91,6 +100,13 @@ describe("AutoPlayController", () => {
     adapterInstance.clickQuickPicksPlayAll.mockReturnValue(false);
   });
 
+  function sendRuntimeMessage(message: {
+    type: string;
+    enabled?: boolean;
+  }): void {
+    runtimeMessageListener?.(message);
+  }
+
   afterEach(() => {
     controller.destroy();
     vi.useRealTimers();
@@ -106,6 +122,35 @@ describe("AutoPlayController", () => {
     controller.init();
 
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("should pause when disabled and video is already playing", () => {
+    sendMessageMock.mockImplementation(
+      (_message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: false });
+      },
+    );
+
+    const video = createReadyVideo();
+    Object.defineProperty(video, "paused", { value: false, configurable: true });
+
+    controller.init();
+
+    expect(video.pause).toHaveBeenCalled();
+  });
+
+  it("should pause initial play event when disabled", () => {
+    sendMessageMock.mockImplementation(
+      (_message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: false });
+      },
+    );
+
+    const video = createReadyVideo();
+    controller.init();
+    video.dispatchEvent(new Event("play"));
+
+    expect(video.pause).toHaveBeenCalled();
   });
 
   it("should not trigger play when enabled but already playing", () => {
@@ -265,5 +310,42 @@ describe("AutoPlayController", () => {
     controller.destroy();
 
     expect(removeListenerMock).toHaveBeenCalled();
+  });
+
+  it("should not auto-play if disabled before canplay fires", () => {
+    enableAutoPlay();
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    const video = createVideoElement();
+    controller.init();
+    expect(video.play).not.toHaveBeenCalled();
+
+    sendRuntimeMessage({ type: "set-auto-play-enabled", enabled: false });
+    makeReady(video);
+
+    expect(video.play).not.toHaveBeenCalled();
+  });
+
+  it("should not auto-play when enabled via runtime message", () => {
+    sendMessageMock.mockImplementation(
+      (_message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: false });
+      },
+    );
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    const video = createReadyVideo();
+    controller.init();
+    expect(video.play).not.toHaveBeenCalled();
+
+    sendRuntimeMessage({ type: "set-auto-play-enabled", enabled: true });
+
+    expect(video.play).not.toHaveBeenCalled();
   });
 });
