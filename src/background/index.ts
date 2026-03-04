@@ -37,11 +37,46 @@ const playbackSpeed = new PlaybackSpeedModule();
 const precisionVolume = new PrecisionVolumeModule();
 const streamQuality = new StreamQualityModule();
 
+async function hasContentScript(tabId: number): Promise<boolean> {
+  try {
+    const response = (await chrome.tabs.sendMessage(tabId, {
+      type: "get-playback-state",
+    })) as { ok?: boolean } | undefined;
+    return typeof response?.ok === "boolean";
+  } catch {
+    return false;
+  }
+}
+
+async function ensureYtmContentScripts(): Promise<void> {
+  const tabs = await findAllYTMTabs();
+
+  await Promise.allSettled(
+    tabs.map(async (tab) => {
+      if (tab.id === undefined) return;
+      if (await hasContentScript(tab.id)) return;
+
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["content.js"],
+      });
+    }),
+  );
+}
+
 // Chrome MV3 service workers require event listeners to be registered
 // synchronously at the top level of the script, during the first turn
 // of the event loop. Registering inside an async init() is too late.
 chrome.commands.onCommand.addListener((command: string) => {
   void hotkeys.handleCommand(command);
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  void ensureYtmContentScripts();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  void ensureYtmContentScripts();
 });
 
 const handler = createMessageHandler();
@@ -301,6 +336,7 @@ handler.on("playback-action", async (message) => {
 });
 
 handler.start();
+void ensureYtmContentScripts();
 
 async function restoreModuleState(): Promise<void> {
   const state = await loadModuleState();
