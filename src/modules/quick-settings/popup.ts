@@ -255,6 +255,10 @@ function renderCompactNowPlaying(container: HTMLElement) {
   artwork.style.objectFit = "cover";
   artwork.style.background = "#1a1a1a";
   artwork.style.display = "none";
+  artwork.onerror = () => {
+    artwork.removeAttribute("src");
+    artwork.style.display = "none";
+  };
   trackInfo.appendChild(artwork);
 
   const meta = document.createElement("div");
@@ -322,15 +326,18 @@ function renderCompactNowPlaying(container: HTMLElement) {
       ) => {
         if (response?.ok && response.data) {
           const state = response.data;
-          if (state.artworkUrl) {
+          const hasTrack = Boolean(state.title && state.artist);
+
+          if (hasTrack && state.artworkUrl) {
             artwork.src = state.artworkUrl;
             artwork.style.display = "block";
           } else {
+            artwork.removeAttribute("src");
             artwork.style.display = "none";
           }
-          title.textContent = state.title || "Unknown Track";
-          artist.textContent = state.artist || "Unknown Artist";
-          controls.style.display = "flex";
+          title.textContent = state.title || "No track loaded";
+          artist.textContent = state.artist || "Start playback to see details";
+          controls.style.display = hasTrack ? "flex" : "none";
 
           if (state.isPlaying) {
             playBtn.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
