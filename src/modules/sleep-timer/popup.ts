@@ -1,7 +1,6 @@
 import type { PopupView } from "@/core/types";
 
 const PRESET_MINUTES = [15, 30, 45, 60, 90];
-const CUSTOM_OPTION = "custom";
 
 interface SleepTimerState {
   active: boolean;
@@ -24,6 +23,13 @@ function formatPausedAt(timestampMs: number): string {
   });
 }
 
+function parseDurationMinutes(value: string): number | null {
+  const minutes = Number(value);
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  if (!Number.isInteger(minutes)) return null;
+  return minutes;
+}
+
 /** Create the sleep timer settings popup view. */
 export function createSleepTimerPopupView(): PopupView {
   return {
@@ -40,44 +46,79 @@ export function createSleepTimerPopupView(): PopupView {
       card.className = "settings-card";
       container.appendChild(card);
 
+      const presetsLabel = document.createElement("div");
+      presetsLabel.textContent = "Quick durations";
+      presetsLabel.style.fontSize = "12px";
+      presetsLabel.style.color = "var(--text-secondary)";
+      card.appendChild(presetsLabel);
+
+      const presetGroup = document.createElement("div");
+      presetGroup.style.display = "flex";
+      presetGroup.style.gap = "6px";
+      presetGroup.style.flexWrap = "wrap";
+      presetGroup.style.marginTop = "8px";
+      card.appendChild(presetGroup);
+
+      const presetButtons = new Map<number, HTMLButtonElement>();
+      let selectedPresetMinutes: number | null = 30;
+
       const durationRow = document.createElement("label");
-      durationRow.className = "toggle-row";
+      durationRow.className = "field-row";
+      durationRow.style.marginTop = "10px";
       card.appendChild(durationRow);
 
-      const label = document.createElement("span");
-      label.textContent = "Duration";
-      durationRow.appendChild(label);
+      const durationLabel = document.createElement("span");
+      durationLabel.textContent = "Minutes";
+      durationRow.appendChild(durationLabel);
 
-      const select = document.createElement("select");
-      select.style.width = "140px";
+      const durationInput = document.createElement("input");
+      durationInput.type = "number";
+      durationInput.min = "1";
+      durationInput.step = "1";
+      durationInput.value = "30";
+      durationInput.setAttribute("aria-label", "Timer duration in minutes");
+      durationRow.appendChild(durationInput);
+
+      const durationHint = document.createElement("p");
+      durationHint.className = "status-hint";
+      durationHint.style.marginTop = "8px";
+      durationHint.style.marginBottom = "0";
+      durationHint.style.display = "none";
+      card.appendChild(durationHint);
+
+      const refreshPresetStyles = () => {
+        for (const [minutes, button] of presetButtons) {
+          const isSelected = selectedPresetMinutes === minutes;
+          button.style.background = isSelected
+            ? "var(--accent-color)"
+            : "#1a1a1a";
+          button.style.color = isSelected ? "white" : "var(--text-color)";
+          button.style.borderColor = isSelected
+            ? "var(--accent-color)"
+            : "var(--border-color)";
+        }
+      };
+
       for (const minutes of PRESET_MINUTES) {
-        const option = document.createElement("option");
-        option.value = String(minutes);
-        option.textContent = `${minutes} minutes`;
-        select.appendChild(option);
+        const presetBtn = document.createElement("button");
+        presetBtn.className = "secondary-btn";
+        presetBtn.textContent = `${minutes}m`;
+        presetBtn.style.padding = "6px 10px";
+        presetBtn.style.borderRadius = "14px";
+        presetBtn.style.border = "1px solid var(--border-color)";
+        presetBtn.style.background = "#1a1a1a";
+        presetBtn.style.color = "var(--text-color)";
+        presetBtn.style.cursor = "pointer";
+        presetBtn.addEventListener("click", () => {
+          selectedPresetMinutes = minutes;
+          durationInput.value = String(minutes);
+          durationHint.style.display = "none";
+          refreshPresetStyles();
+          updateStartEnabled();
+        });
+        presetButtons.set(minutes, presetBtn);
+        presetGroup.appendChild(presetBtn);
       }
-      const customOption = document.createElement("option");
-      customOption.value = CUSTOM_OPTION;
-      customOption.textContent = "Custom…";
-      select.appendChild(customOption);
-      durationRow.appendChild(select);
-
-      const customRow = document.createElement("label");
-      customRow.className = "field-row";
-      customRow.style.display = "none";
-      card.appendChild(customRow);
-
-      const customLabel = document.createElement("span");
-      customLabel.textContent = "Custom minutes";
-      customRow.appendChild(customLabel);
-
-      const customInput = document.createElement("input");
-      customInput.type = "number";
-      customInput.min = "1";
-      customInput.step = "1";
-      customInput.value = "20";
-      customInput.setAttribute("aria-label", "Custom minutes");
-      customRow.appendChild(customInput);
 
       const buttons = document.createElement("div");
       buttons.style.display = "flex";
@@ -145,24 +186,19 @@ export function createSleepTimerPopupView(): PopupView {
       let statePollTimer: number | null = null;
 
       const getDurationMinutes = (): number | null => {
-        if (select.value !== CUSTOM_OPTION) {
-          const preset = Number(select.value);
-          if (!Number.isFinite(preset) || preset <= 0) return null;
-          return preset;
-        }
-
-        const custom = Number(customInput.value);
-        if (!Number.isFinite(custom) || custom <= 0) return null;
-        return Math.floor(custom);
-      };
-
-      const updateDurationMode = () => {
-        const isCustom = select.value === CUSTOM_OPTION;
-        customRow.style.display = isCustom ? "flex" : "none";
+        return parseDurationMinutes(durationInput.value);
       };
 
       const updateStartEnabled = () => {
-        startBtn.disabled = getDurationMinutes() === null;
+        const minutes = getDurationMinutes();
+        startBtn.disabled = minutes === null;
+        if (minutes === null) {
+          durationHint.textContent =
+            "Duration must be a whole number of minutes.";
+          durationHint.style.display = "block";
+          return;
+        }
+        durationHint.style.display = "none";
       };
 
       const applyState = (state: SleepTimerState) => {
@@ -245,13 +281,15 @@ export function createSleepTimerPopupView(): PopupView {
         });
       });
 
-      select.addEventListener("change", () => {
-        updateDurationMode();
+      durationInput.addEventListener("input", () => {
+        const minutes = parseDurationMinutes(durationInput.value);
+        selectedPresetMinutes =
+          minutes !== null && PRESET_MINUTES.includes(minutes) ? minutes : null;
+        refreshPresetStyles();
         updateStartEnabled();
       });
-      customInput.addEventListener("input", updateStartEnabled);
 
-      updateDurationMode();
+      refreshPresetStyles();
       updateStartEnabled();
       queryState();
       countdownTimer = window.setInterval(updateCountdown, 1000);

@@ -63,9 +63,11 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const select = container.querySelector<HTMLSelectElement>("select")!;
-    select.value = "30";
-    select.dispatchEvent(new Event("change"));
+    const input = container.querySelector<HTMLInputElement>(
+      'input[type="number"]',
+    )!;
+    input.value = "30";
+    input.dispatchEvent(new Event("input"));
 
     const startBtn =
       container.querySelector<HTMLButtonElement>("button.primary-btn")!;
@@ -95,8 +97,10 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const buttons = container.querySelectorAll<HTMLButtonElement>("button");
-    const cancelBtn = buttons[1]!;
+    const cancelBtn = Array.from(
+      container.querySelectorAll<HTMLButtonElement>("button"),
+    ).find((button) => button.textContent === "Cancel");
+    if (!cancelBtn) throw new Error("Cancel button not found");
     cancelBtn.click();
 
     expect(sendMessageMock).toHaveBeenCalledWith(
@@ -122,10 +126,6 @@ describe("sleep timer popup view", () => {
     const view = createSleepTimerPopupView();
     const container = document.createElement("div");
     view.render(container);
-
-    const select = container.querySelector<HTMLSelectElement>("select")!;
-    select.value = "custom";
-    select.dispatchEvent(new Event("change"));
 
     const customInput = container.querySelector<HTMLInputElement>(
       'input[type="number"]',
@@ -209,5 +209,48 @@ describe("sleep timer popup view", () => {
       type: "set-sleep-timer-notify-enabled",
       enabled: false,
     });
+  });
+
+  it("should reject fractional minute values", () => {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: {
+              active: false,
+              remainingMs: 0,
+              endAt: null,
+              lastPausedAt: null,
+            },
+          });
+          return;
+        }
+        if (message.type === "get-sleep-timer-notify-enabled") {
+          callback?.({ ok: true, data: true });
+          return;
+        }
+        callback?.({ ok: true });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    const input = container.querySelector<HTMLInputElement>(
+      'input[type="number"]',
+    )!;
+    input.value = "20.3";
+    input.dispatchEvent(new Event("input"));
+
+    const startBtn =
+      container.querySelector<HTMLButtonElement>("button.primary-btn")!;
+    startBtn.click();
+
+    expect(sendMessageMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "start-sleep-timer" }),
+      expect.any(Function),
+    );
   });
 });
