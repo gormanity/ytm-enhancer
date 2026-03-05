@@ -100,4 +100,42 @@ describe("sleep timer popup view", () => {
       expect.any(Function),
     );
   });
+
+  it("should send start message with custom duration", () => {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: { active: false, remainingMs: 0, endAt: null },
+          });
+          return;
+        }
+        callback?.({ ok: true });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    const select = container.querySelector<HTMLSelectElement>("select")!;
+    select.value = "custom";
+    select.dispatchEvent(new Event("change"));
+
+    const customInput = container.querySelector<HTMLInputElement>(
+      'input[type="number"]',
+    )!;
+    customInput.value = "17";
+    customInput.dispatchEvent(new Event("input"));
+
+    const startBtn =
+      container.querySelector<HTMLButtonElement>("button.primary-btn")!;
+    startBtn.click();
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      { type: "start-sleep-timer", durationMs: 17 * 60 * 1000 },
+      expect.any(Function),
+    );
+  });
 });
