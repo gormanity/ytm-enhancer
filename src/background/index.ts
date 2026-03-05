@@ -46,6 +46,8 @@ let selectedTabId: number | null = null;
 const pipOpenTabIds = new Set<number>();
 const SLEEP_TIMER_ALARM = "sleep-timer";
 let sleepTimerEndAt: number | null = null;
+let sleepTimerLastPausedAt: number | null = null;
+let sleepTimerNotifyOnEnd = true;
 
 async function relayToSelectedTab(message: unknown): Promise<void> {
   const tab = await findYTMTab(selectedTabId);
@@ -98,15 +100,31 @@ function getSleepTimerState(): {
   active: boolean;
   remainingMs: number;
   endAt: number | null;
+  lastPausedAt: number | null;
 } {
   if (sleepTimerEndAt === null) {
-    return { active: false, remainingMs: 0, endAt: null };
+    return {
+      active: false,
+      remainingMs: 0,
+      endAt: null,
+      lastPausedAt: sleepTimerLastPausedAt,
+    };
   }
   const remainingMs = Math.max(0, sleepTimerEndAt - Date.now());
   if (remainingMs <= 0) {
-    return { active: false, remainingMs: 0, endAt: null };
+    return {
+      active: false,
+      remainingMs: 0,
+      endAt: null,
+      lastPausedAt: sleepTimerLastPausedAt,
+    };
   }
-  return { active: true, remainingMs, endAt: sleepTimerEndAt };
+  return {
+    active: true,
+    remainingMs,
+    endAt: sleepTimerEndAt,
+    lastPausedAt: sleepTimerLastPausedAt,
+  };
 }
 
 // Chrome MV3 service workers require event listeners to be registered
@@ -126,8 +144,25 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== SLEEP_TIMER_ALARM) return;
+  sleepTimerLastPausedAt = Date.now();
   sleepTimerEndAt = null;
   void saveModuleStateValue("sleep-timer.endAt", null);
+  void saveModuleStateValue("sleep-timer.lastPausedAt", sleepTimerLastPausedAt);
+  if (sleepTimerNotifyOnEnd) {
+    const pausedAtLabel = new Date(sleepTimerLastPausedAt).toLocaleTimeString(
+      [],
+      {
+        hour: "numeric",
+        minute: "2-digit",
+      },
+    );
+    void chrome.notifications.create({
+      type: "basic",
+      iconUrl: "icon48.png",
+      title: "Sleep Timer",
+      message: `Playback paused at ${pausedAtLabel}`,
+    });
+  }
   void relayToSelectedTab({
     type: "playback-action",
     action: "pause",
@@ -496,6 +531,16 @@ handler.on("cancel-sleep-timer", async () => {
   return { ok: true };
 });
 
+handler.on("get-sleep-timer-notify-enabled", async () => {
+  return { ok: true, data: sleepTimerNotifyOnEnd };
+});
+
+handler.on("set-sleep-timer-notify-enabled", async (message) => {
+  sleepTimerNotifyOnEnd = message.enabled === true;
+  await saveModuleStateValue("sleep-timer.notifyOnEnd", sleepTimerNotifyOnEnd);
+  return { ok: true };
+});
+
 handler.on("playback-action", async (message) => {
   void relayToSelectedTab({
     type: "playback-action",
@@ -562,6 +607,8 @@ async function restoreModuleState(): Promise<void> {
   hotkeys.setSelectedTabId(selectedTabId);
 
   const restoredSleepTimerEndAt = num("sleep-timer.endAt");
+  sleepTimerLastPausedAt = num("sleep-timer.lastPausedAt");
+  sleepTimerNotifyOnEnd = bool("sleep-timer.notifyOnEnd", true);
   if (
     restoredSleepTimerEndAt !== null &&
     restoredSleepTimerEndAt > Date.now()

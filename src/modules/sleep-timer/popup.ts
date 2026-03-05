@@ -7,6 +7,7 @@ interface SleepTimerState {
   active: boolean;
   remainingMs: number;
   endAt: number | null;
+  lastPausedAt: number | null;
 }
 
 function formatRemaining(remainingMs: number): string {
@@ -14,6 +15,13 @@ function formatRemaining(remainingMs: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatPausedAt(timestampMs: number): string {
+  return new Date(timestampMs).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /** Create the sleep timer settings popup view. */
@@ -81,6 +89,13 @@ export function createSleepTimerPopupView(): PopupView {
       startBtn.className = "primary-btn";
       startBtn.textContent = "Start Timer";
       startBtn.style.flex = "1";
+      startBtn.style.padding = "10px";
+      startBtn.style.background = "var(--accent-color)";
+      startBtn.style.color = "white";
+      startBtn.style.border = "none";
+      startBtn.style.borderRadius = "6px";
+      startBtn.style.cursor = "pointer";
+      startBtn.style.fontWeight = "600";
       buttons.appendChild(startBtn);
 
       const cancelBtn = document.createElement("button");
@@ -100,6 +115,30 @@ export function createSleepTimerPopupView(): PopupView {
       status.style.marginTop = "12px";
       status.style.marginBottom = "0";
       card.appendChild(status);
+
+      const pausedAt = document.createElement("p");
+      pausedAt.className = "status-hint";
+      pausedAt.style.marginTop = "8px";
+      pausedAt.style.marginBottom = "0";
+      pausedAt.style.display = "none";
+      card.appendChild(pausedAt);
+
+      const notificationCard = document.createElement("div");
+      notificationCard.className = "settings-card";
+      container.appendChild(notificationCard);
+
+      const notificationRow = document.createElement("label");
+      notificationRow.className = "toggle-row";
+      notificationCard.appendChild(notificationRow);
+
+      const notificationText = document.createElement("span");
+      notificationText.textContent = "Show notification when timer ends";
+      notificationRow.appendChild(notificationText);
+
+      const notificationToggle = document.createElement("input");
+      notificationToggle.type = "checkbox";
+      notificationToggle.disabled = true;
+      notificationRow.appendChild(notificationToggle);
 
       let activeEndAt: number | null = null;
       let countdownTimer: number | null = null;
@@ -129,12 +168,21 @@ export function createSleepTimerPopupView(): PopupView {
       const applyState = (state: SleepTimerState) => {
         activeEndAt = state.active ? state.endAt : null;
         if (state.active && state.remainingMs > 0) {
+          startBtn.textContent = "Restart Timer";
           status.textContent = `Timer active: ${formatRemaining(state.remainingMs)} remaining`;
           cancelBtn.disabled = false;
+          pausedAt.style.display = "none";
         } else {
+          startBtn.textContent = "Start Timer";
           status.textContent = "Timer is off";
           cancelBtn.disabled = true;
           activeEndAt = null;
+          if (typeof state.lastPausedAt === "number") {
+            pausedAt.textContent = `Playback paused at ${formatPausedAt(state.lastPausedAt)}`;
+            pausedAt.style.display = "block";
+          } else {
+            pausedAt.style.display = "none";
+          }
         }
       };
 
@@ -178,6 +226,22 @@ export function createSleepTimerPopupView(): PopupView {
         cancelBtn.disabled = true;
         chrome.runtime.sendMessage({ type: "cancel-sleep-timer" }, () => {
           queryState();
+        });
+      });
+
+      chrome.runtime.sendMessage(
+        { type: "get-sleep-timer-notify-enabled" },
+        (response: { ok: boolean; data?: boolean } | null) => {
+          if (!response?.ok) return;
+          notificationToggle.checked = response.data === true;
+          notificationToggle.disabled = false;
+        },
+      );
+
+      notificationToggle.addEventListener("change", () => {
+        chrome.runtime.sendMessage({
+          type: "set-sleep-timer-notify-enabled",
+          enabled: notificationToggle.checked,
         });
       });
 

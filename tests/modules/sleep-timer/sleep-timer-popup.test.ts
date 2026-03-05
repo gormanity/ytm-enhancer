@@ -39,6 +39,10 @@ describe("sleep timer popup view", () => {
       { type: "get-sleep-timer-state" },
       expect.any(Function),
     );
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      { type: "get-sleep-timer-notify-enabled" },
+      expect.any(Function),
+    );
   });
 
   it("should send start message with selected duration", async () => {
@@ -137,5 +141,73 @@ describe("sleep timer popup view", () => {
       { type: "start-sleep-timer", durationMs: 17 * 60 * 1000 },
       expect.any(Function),
     );
+  });
+
+  it("should label start button as restart when timer is active", () => {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: {
+              active: true,
+              remainingMs: 5 * 60 * 1000,
+              endAt: Date.now() + 5 * 60 * 1000,
+              lastPausedAt: null,
+            },
+          });
+          return;
+        }
+        callback?.({ ok: true, data: true });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    const startBtn =
+      container.querySelector<HTMLButtonElement>("button.primary-btn")!;
+    expect(startBtn.textContent).toBe("Restart Timer");
+  });
+
+  it("should send notification setting updates on toggle", () => {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: {
+              active: false,
+              remainingMs: 0,
+              endAt: null,
+              lastPausedAt: null,
+            },
+          });
+          return;
+        }
+        if (message.type === "get-sleep-timer-notify-enabled") {
+          callback?.({ ok: true, data: true });
+          return;
+        }
+        callback?.({ ok: true });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    const toggles = container.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    const notificationToggle = toggles[0]!;
+    notificationToggle.checked = false;
+    notificationToggle.dispatchEvent(new Event("change"));
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-sleep-timer-notify-enabled",
+      enabled: false,
+    });
   });
 });
