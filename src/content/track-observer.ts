@@ -2,6 +2,7 @@ import { SELECTORS } from "@/adapter/selectors";
 import type { PlaybackState } from "@/core/types";
 
 const DEBOUNCE_MS = 150;
+const HAVE_FUTURE_DATA = 3;
 
 export class TrackObserver {
   private titleObserver: MutationObserver | null = null;
@@ -140,6 +141,7 @@ export class TrackObserver {
     const state = this.getPlaybackState();
 
     if (!state.isPlaying) {
+      if (this.isLikelyBufferingPause()) return;
       this.lastTrackKey = null;
       return;
     }
@@ -155,5 +157,13 @@ export class TrackObserver {
       // Extension may have been reloaded and invalidated this content context.
     }
     this.onTrackChange?.(state);
+  }
+
+  private isLikelyBufferingPause(): boolean {
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+    if (!video || video.ended) return false;
+    return video.readyState < HAVE_FUTURE_DATA;
   }
 }

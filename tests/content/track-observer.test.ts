@@ -61,6 +61,23 @@ function createPlayPauseButton(title: string): HTMLElement {
   return el;
 }
 
+function createVideoElement(readyState: number): HTMLVideoElement {
+  const video = document.createElement("video");
+  video.className = "html5-main-video";
+  Object.defineProperty(video, "readyState", {
+    value: readyState,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(video, "ended", {
+    value: false,
+    writable: true,
+    configurable: true,
+  });
+  document.body.appendChild(video);
+  return video;
+}
+
 describe("TrackObserver", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
   let getStateMock: ReturnType<typeof vi.fn<() => PlaybackState>>;
@@ -211,6 +228,36 @@ describe("TrackObserver", () => {
       type: "track-changed",
       state,
     });
+  });
+
+  it("should not send message when playback resumes after buffering pause", async () => {
+    const playerBar = createPlayerBar();
+    createTitleElement("Song", playerBar);
+    createArtistElement("Artist Name", playerBar);
+    const playPauseBtn = createPlayPauseButton("Pause");
+    const video = createVideoElement(4);
+
+    const state = makeState();
+    getStateMock.mockReturnValue(state);
+
+    observer.start();
+
+    await flush();
+    sendMessageMock.mockClear();
+
+    // Simulate buffering: player reports not playing while media lacks future data.
+    Object.defineProperty(video, "readyState", { value: 2, writable: true });
+    getStateMock.mockReturnValue(makeState({ isPlaying: false }));
+    playPauseBtn.setAttribute("title", "Play");
+    await flush();
+
+    // Resume same track after buffering.
+    Object.defineProperty(video, "readyState", { value: 4, writable: true });
+    getStateMock.mockReturnValue(state);
+    playPauseBtn.setAttribute("title", "Pause");
+    await flush();
+
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
   it("should call onTrackChange callback when track changes", async () => {
