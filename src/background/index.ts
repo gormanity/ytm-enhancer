@@ -10,6 +10,7 @@ import {
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import type { PlaybackState } from "@/core/types";
+import { parseSelectedTabId, resolveSelectedTabId } from "./selected-tab";
 import { AutoPlayModule } from "@/modules/auto-play";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
@@ -105,12 +106,11 @@ handler.on("track-changed", async (message) => {
 
 handler.on("get-ytm-tabs", async () => {
   const tabs = await findAllYTMTabs();
-  const selectedExists =
-    selectedTabId !== null && tabs.some((tab) => tab.id === selectedTabId);
-  if (!selectedExists) {
-    const activeTab = tabs.find((tab) => tab.active === true);
-    selectedTabId = activeTab?.id ?? tabs[0]?.id ?? null;
+  const nextSelectedTabId = resolveSelectedTabId(tabs, selectedTabId);
+  if (nextSelectedTabId !== selectedTabId) {
+    selectedTabId = nextSelectedTabId;
     hotkeys.setSelectedTabId(selectedTabId);
+    void saveModuleStateValue("tabs.selectedTabId", selectedTabId);
   }
 
   const tabData = await Promise.all(
@@ -148,6 +148,7 @@ handler.on("set-selected-tab", async (message) => {
     typeof message.tabId === "number" ? (message.tabId as number) : null;
   selectedTabId = tabId;
   hotkeys.setSelectedTabId(selectedTabId);
+  await saveModuleStateValue("tabs.selectedTabId", selectedTabId);
   return { ok: true };
 });
 
@@ -494,6 +495,8 @@ async function restoreModuleState(): Promise<void> {
   miniPlayer.setSuppressNotificationsWhilePipOpen(
     bool("mini-player.suppressNotificationsWhilePipOpen", false),
   );
+  selectedTabId = parseSelectedTabId(state["tabs.selectedTabId"]);
+  hotkeys.setSelectedTabId(selectedTabId);
 }
 
 const modules: FeatureModule[] = [
