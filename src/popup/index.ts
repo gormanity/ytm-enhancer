@@ -1,5 +1,4 @@
 import { getAllPopupViews } from "@/modules/popup-views";
-import type { PopupView } from "@/core/types";
 
 const container = document.getElementById("view-container");
 const navList = document.getElementById("nav-list");

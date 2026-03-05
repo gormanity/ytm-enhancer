@@ -196,12 +196,12 @@ export class MiniPlayerController {
     }
   }
 
-  private sendRuntimeMessage(
+  private sendRuntimeMessage<TResponse = unknown>(
     message: unknown,
-    callback?: (response: any) => void,
+    callback?: (response: TResponse) => void,
   ): void {
     if (!chrome.runtime?.id) {
-      callback?.({ ok: false });
+      callback?.({ ok: false } as TResponse);
       return;
     }
 
@@ -212,7 +212,7 @@ export class MiniPlayerController {
         chrome.runtime.sendMessage(message);
       }
     } catch {
-      callback?.({ ok: false });
+      callback?.({ ok: false } as TResponse);
     }
   }
 

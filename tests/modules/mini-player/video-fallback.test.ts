@@ -4,10 +4,10 @@ import { SELECTORS } from "@/adapter/selectors";
 
 describe("VideoPipFallback", () => {
   let fallback: VideoPipFallback;
-  let onOpenChangeMock: any;
+  let onOpenChangeMock = vi.fn<(open: boolean) => void>();
 
   beforeEach(() => {
-    onOpenChangeMock = vi.fn();
+    onOpenChangeMock = vi.fn<(open: boolean) => void>();
     fallback = new VideoPipFallback((open: boolean) => {
       onOpenChangeMock(open);
     });

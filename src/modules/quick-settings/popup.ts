@@ -1,5 +1,4 @@
 import type { PopupView, PlaybackState } from "@/core/types";
-import { createPrecisionVolumePopupView } from "../precision-volume/popup";
 import { createPlaybackSpeedPopupView } from "../playback-speed/popup";
 import { createStreamQualityPopupView } from "../stream-quality/popup";
 
@@ -234,7 +233,7 @@ function renderIntegratedVolume(container: HTMLElement) {
   });
 
   numberInput.addEventListener("change", () => {
-    let val = Math.max(0, Math.min(100, Number(numberInput.value)));
+    const val = Math.max(0, Math.min(100, Number(numberInput.value)));
     numberInput.value = String(val);
     range.value = String(val);
     updateVol(val);
@@ -354,5 +353,5 @@ function renderCompactNowPlaying(container: HTMLElement) {
   };
 
   update();
-  const interval = setInterval(update, 1000);
+  setInterval(update, 1000);
 }
