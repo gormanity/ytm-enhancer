@@ -153,6 +153,23 @@ describe("AutoPlayController", () => {
     expect(video.pause).toHaveBeenCalled();
   });
 
+  it("should not suppress playback on late injection into an existing tab", () => {
+    const perfSpy = vi.spyOn(performance, "now").mockReturnValue(60_000);
+    sendMessageMock.mockImplementation(
+      (_message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: false });
+      },
+    );
+
+    const video = createReadyVideo();
+    Object.defineProperty(video, "paused", { value: false, configurable: true });
+    controller.init();
+    video.dispatchEvent(new Event("play"));
+
+    expect(video.pause).not.toHaveBeenCalled();
+    perfSpy.mockRestore();
+  });
+
   it("should not trigger play when enabled but already playing", () => {
     enableAutoPlay();
 

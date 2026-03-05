@@ -3,6 +3,7 @@ import { YTMAdapter } from "@/adapter";
 
 const TIMEOUT_MS = 10_000;
 const HAVE_FUTURE_DATA = 3;
+const INITIAL_SUPPRESSION_MAX_AGE_MS = 8_000;
 
 export class AutoPlayController {
   private adapter = new YTMAdapter();
@@ -47,7 +48,7 @@ export class AutoPlayController {
           this.enabled = response?.ok === true && response.data === true;
           if (this.enabled) {
             this.tryAutoPlay();
-          } else {
+          } else if (this.shouldSuppressInitialPlayback()) {
             this.armInitialSuppression();
           }
         },
@@ -179,6 +180,10 @@ export class AutoPlayController {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
+  }
+
+  private shouldSuppressInitialPlayback(): boolean {
+    return performance.now() <= INITIAL_SUPPRESSION_MAX_AGE_MS;
   }
 
   private armInitialSuppression(): void {
