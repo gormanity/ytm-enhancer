@@ -197,6 +197,39 @@ describe("NotificationsModule", () => {
     expect(views[0].id).toBe("notifications-settings");
   });
 
+  it("should use dedicated preview artwork for test notifications", () => {
+    module.triggerPreview();
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.stringContaining(ID_PREFIX),
+      expect.objectContaining({
+        title: "Test Track",
+        iconUrl: "chrome-extension://fake-id/preview-artwork.png",
+      }),
+      expect.any(Function),
+    );
+  });
+
+  it("should use fallback icon for preview when artwork field is disabled", () => {
+    module.setFields({
+      title: true,
+      artist: true,
+      album: false,
+      year: false,
+      artwork: false,
+    });
+
+    module.triggerPreview();
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.stringContaining(ID_PREFIX),
+      expect.objectContaining({
+        iconUrl: "chrome-extension://fake-id/icon48.png",
+      }),
+      expect.any(Function),
+    );
+  });
+
   describe("notification fields", () => {
     it("should have default fields", () => {
       expect(module.getFields()).toEqual({

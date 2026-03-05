@@ -3,6 +3,7 @@ import { createNotificationsPopupView } from "./popup";
 
 const NOTIFICATION_ID_PREFIX = "ytm-enhancer-now-playing-";
 const FALLBACK_ICON = "icon48.png";
+const PREVIEW_ARTWORK = "preview-artwork.png";
 
 export interface NotificationFields {
   title: boolean;
@@ -98,7 +99,7 @@ export class NotificationsModule implements FeatureModule {
       artist: "Example Artist",
       album: "Demo Album",
       year: 2026,
-      artworkUrl: null, // Use local fallback for preview reliability
+      artworkUrl: chrome.runtime.getURL(PREVIEW_ARTWORK),
       isPlaying: true,
       progress: 0.5,
       duration: 180,

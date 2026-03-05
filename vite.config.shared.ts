@@ -24,6 +24,11 @@ function copyAssets(browser: string): Plugin {
       );
 
       copyFileSync(
+        resolve(__dirname, "src/assets/preview-artwork.png"),
+        resolve(outDir, "preview-artwork.png"),
+      );
+
+      copyFileSync(
         resolve(__dirname, "src/content/audio-bridge.js"),
         resolve(outDir, "audio-bridge.js"),
       );
