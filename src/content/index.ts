@@ -40,7 +40,10 @@ let visualizerActive = false;
 let visualizerStateTimer: ReturnType<typeof setInterval> | null = null;
 const VISUALIZER_STATE_POLL_MS = 1000;
 let lastArtworkUrl: string | null = null;
-const artworkColorCache = new Map<string, { r: number; g: number; b: number }>();
+const artworkColorCache = new Map<
+  string,
+  { r: number; g: number; b: number }
+>();
 let artworkColorRequestId = 0;
 
 function safeSendMessage<TResponse>(

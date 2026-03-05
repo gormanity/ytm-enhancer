@@ -38,9 +38,10 @@ export function createHotkeysPopupView(): PopupView {
       configBtn.style.cursor = "pointer";
       configBtn.style.fontWeight = "600";
       configBtn.onclick = () => {
-        const url = __BROWSER__ === "firefox" 
-          ? "about:addons" 
-          : "chrome://extensions/shortcuts";
+        const url =
+          __BROWSER__ === "firefox"
+            ? "about:addons"
+            : "chrome://extensions/shortcuts";
         chrome.tabs.create({ url });
       };
       actions.appendChild(configBtn);
@@ -56,17 +57,17 @@ export function createHotkeysPopupView(): PopupView {
 }
 
 const KEY_SYMBOL_MAP: Record<string, string> = {
-  "Left": "←",
-  "Right": "→",
-  "Up": "↑",
-  "Down": "↓",
-  "ArrowLeft": "←",
-  "ArrowRight": "→",
-  "ArrowUp": "↑",
-  "ArrowDown": "↓",
-  "MediaNextTrack": "⏭",
-  "MediaPrevTrack": "⏮",
-  "MediaPlayPause": "⏯",
+  Left: "←",
+  Right: "→",
+  Up: "↑",
+  Down: "↓",
+  ArrowLeft: "←",
+  ArrowRight: "→",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+  MediaNextTrack: "⏭",
+  MediaPrevTrack: "⏮",
+  MediaPlayPause: "⏯",
 };
 
 function loadShortcuts(container: HTMLElement): void {
@@ -91,7 +92,7 @@ function loadShortcuts(container: HTMLElement): void {
         for (let i = 0; i < parts.length; i++) {
           const key = parts[i].trim();
           const symbol = KEY_SYMBOL_MAP[key] || key;
-          
+
           const kbd = document.createElement("kbd");
           kbd.className = "shortcut-key";
           if (KEY_SYMBOL_MAP[key]) {

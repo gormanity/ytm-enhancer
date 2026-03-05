@@ -424,8 +424,7 @@ describe("MiniPlayerController", () => {
       sendMessage.mock.calls.some(
         ([message]) =>
           (message as { type?: string; open?: boolean }).type ===
-            "pip-open-state" &&
-          (message as { open?: boolean }).open === true,
+            "pip-open-state" && (message as { open?: boolean }).open === true,
       ),
     ).toBe(true);
 
@@ -439,8 +438,7 @@ describe("MiniPlayerController", () => {
       sendMessage.mock.calls.some(
         ([message]) =>
           (message as { type?: string; open?: boolean }).type ===
-            "pip-open-state" &&
-          (message as { open?: boolean }).open === false,
+            "pip-open-state" && (message as { open?: boolean }).open === false,
       ),
     ).toBe(true);
   });
@@ -479,8 +477,7 @@ describe("MiniPlayerController", () => {
       sendMessage.mock.calls.some(
         ([message]) =>
           (message as { type?: string; open?: boolean }).type ===
-            "pip-open-state" &&
-          (message as { open?: boolean }).open === true,
+            "pip-open-state" && (message as { open?: boolean }).open === true,
       ),
     ).toBe(true);
 
@@ -490,8 +487,7 @@ describe("MiniPlayerController", () => {
       sendMessage.mock.calls.some(
         ([message]) =>
           (message as { type?: string; open?: boolean }).type ===
-            "pip-open-state" &&
-          (message as { open?: boolean }).open === false,
+            "pip-open-state" && (message as { open?: boolean }).open === false,
       ),
     ).toBe(true);
   });

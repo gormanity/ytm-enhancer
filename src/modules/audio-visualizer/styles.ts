@@ -17,7 +17,10 @@ export interface VisualizerStyleTuning {
   opacity: number;
 }
 
-export type VisualizerStyleTunings = Record<VisualizerStyle, VisualizerStyleTuning>;
+export type VisualizerStyleTunings = Record<
+  VisualizerStyle,
+  VisualizerStyleTuning
+>;
 
 export const DEFAULT_VISUALIZER_STYLE_TUNING: VisualizerStyleTuning = {
   intensity: 1,

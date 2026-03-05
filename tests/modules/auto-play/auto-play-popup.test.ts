@@ -95,9 +95,12 @@ describe("auto-play popup view", () => {
     toggle.checked = true;
     toggle.dispatchEvent(new Event("change"));
 
-    expect(sendMessageMock).toHaveBeenCalledWith({
-      type: "set-auto-play-enabled",
-      enabled: true,
-    }, expect.any(Function));
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      {
+        type: "set-auto-play-enabled",
+        enabled: true,
+      },
+      expect.any(Function),
+    );
   });
 });

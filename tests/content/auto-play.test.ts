@@ -71,9 +71,10 @@ describe("AutoPlayController", () => {
     sendMessageMock = vi.fn();
     runtimeMessageListener = null;
     addListenerMock = vi.fn((listener) => {
-      runtimeMessageListener = listener as (
-        message: { type: string; enabled?: boolean },
-      ) => void;
+      runtimeMessageListener = listener as (message: {
+        type: string;
+        enabled?: boolean;
+      }) => void;
     });
     removeListenerMock = vi.fn();
 
@@ -132,7 +133,10 @@ describe("AutoPlayController", () => {
     );
 
     const video = createReadyVideo();
-    Object.defineProperty(video, "paused", { value: false, configurable: true });
+    Object.defineProperty(video, "paused", {
+      value: false,
+      configurable: true,
+    });
 
     controller.init();
 
@@ -162,7 +166,10 @@ describe("AutoPlayController", () => {
     );
 
     const video = createReadyVideo();
-    Object.defineProperty(video, "paused", { value: false, configurable: true });
+    Object.defineProperty(video, "paused", {
+      value: false,
+      configurable: true,
+    });
     controller.init();
     video.dispatchEvent(new Event("play"));
 

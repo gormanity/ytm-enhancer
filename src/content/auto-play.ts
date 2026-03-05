@@ -190,14 +190,18 @@ export class AutoPlayController {
     if (this.suppressArmed) return;
     this.suppressArmed = true;
 
-    const video = document.querySelector<HTMLVideoElement>(SELECTORS.videoElement);
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
     if (video) {
       this.attachSuppression(video);
       return;
     }
 
     this.suppressObserver = new MutationObserver(() => {
-      const found = document.querySelector<HTMLVideoElement>(SELECTORS.videoElement);
+      const found = document.querySelector<HTMLVideoElement>(
+        SELECTORS.videoElement,
+      );
       if (!found) return;
       this.suppressObserver?.disconnect();
       this.suppressObserver = null;
