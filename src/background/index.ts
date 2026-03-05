@@ -27,6 +27,7 @@ import { NotificationsModule } from "@/modules/notifications";
 import type { NotificationFields } from "@/modules/notifications";
 import { PlaybackSpeedModule } from "@/modules/playback-speed";
 import { PrecisionVolumeModule } from "@/modules/precision-volume";
+import { SleepTimerModule } from "@/modules/sleep-timer";
 import { StreamQualityModule } from "@/modules/stream-quality";
 
 const context = createExtensionContext();
@@ -39,9 +40,12 @@ const miniPlayer = new MiniPlayerModule();
 const notifications = new NotificationsModule();
 const playbackSpeed = new PlaybackSpeedModule();
 const precisionVolume = new PrecisionVolumeModule();
+const sleepTimer = new SleepTimerModule();
 const streamQuality = new StreamQualityModule();
 let selectedTabId: number | null = null;
 const pipOpenTabIds = new Set<number>();
+const SLEEP_TIMER_ALARM = "sleep-timer";
+let sleepTimerEndAt: number | null = null;
 
 async function relayToSelectedTab(message: unknown): Promise<void> {
   const tab = await findYTMTab(selectedTabId);
@@ -76,6 +80,35 @@ async function ensureYtmContentScripts(): Promise<void> {
   );
 }
 
+async function cancelSleepTimer(): Promise<void> {
+  sleepTimerEndAt = null;
+  await chrome.alarms.clear(SLEEP_TIMER_ALARM);
+  await saveModuleStateValue("sleep-timer.endAt", null);
+}
+
+async function startSleepTimer(durationMs: number): Promise<void> {
+  const endAt = Date.now() + durationMs;
+  sleepTimerEndAt = endAt;
+  await chrome.alarms.clear(SLEEP_TIMER_ALARM);
+  await chrome.alarms.create(SLEEP_TIMER_ALARM, { when: endAt });
+  await saveModuleStateValue("sleep-timer.endAt", endAt);
+}
+
+function getSleepTimerState(): {
+  active: boolean;
+  remainingMs: number;
+  endAt: number | null;
+} {
+  if (sleepTimerEndAt === null) {
+    return { active: false, remainingMs: 0, endAt: null };
+  }
+  const remainingMs = Math.max(0, sleepTimerEndAt - Date.now());
+  if (remainingMs <= 0) {
+    return { active: false, remainingMs: 0, endAt: null };
+  }
+  return { active: true, remainingMs, endAt: sleepTimerEndAt };
+}
+
 // Chrome MV3 service workers require event listeners to be registered
 // synchronously at the top level of the script, during the first turn
 // of the event loop. Registering inside an async init() is too late.
@@ -89,6 +122,16 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onStartup.addListener(() => {
   void ensureYtmContentScripts();
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name !== SLEEP_TIMER_ALARM) return;
+  sleepTimerEndAt = null;
+  void saveModuleStateValue("sleep-timer.endAt", null);
+  void relayToSelectedTab({
+    type: "playback-action",
+    action: "pause",
+  });
 });
 
 const handler = createMessageHandler();
@@ -435,6 +478,24 @@ handler.on("get-playback-state", async () => {
   return response;
 });
 
+handler.on("get-sleep-timer-state", async () => {
+  return { ok: true, data: getSleepTimerState() };
+});
+
+handler.on("start-sleep-timer", async (message) => {
+  const durationMs = Number(message.durationMs);
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    return { ok: false, error: "Invalid duration" };
+  }
+  await startSleepTimer(durationMs);
+  return { ok: true };
+});
+
+handler.on("cancel-sleep-timer", async () => {
+  await cancelSleepTimer();
+  return { ok: true };
+});
+
 handler.on("playback-action", async (message) => {
   void relayToSelectedTab({
     type: "playback-action",
@@ -458,6 +519,8 @@ async function restoreModuleState(): Promise<void> {
 
   const str = (key: string, fallback: string) =>
     typeof state[key] === "string" ? (state[key] as string) : fallback;
+  const num = (key: string) =>
+    typeof state[key] === "number" ? (state[key] as number) : null;
 
   notifications.setEnabled(bool("notifications.enabled", true));
   notifications.setNotifyOnUnpause(
@@ -497,6 +560,21 @@ async function restoreModuleState(): Promise<void> {
   );
   selectedTabId = parseSelectedTabId(state["tabs.selectedTabId"]);
   hotkeys.setSelectedTabId(selectedTabId);
+
+  const restoredSleepTimerEndAt = num("sleep-timer.endAt");
+  if (
+    restoredSleepTimerEndAt !== null &&
+    restoredSleepTimerEndAt > Date.now()
+  ) {
+    sleepTimerEndAt = restoredSleepTimerEndAt;
+    await chrome.alarms.create(SLEEP_TIMER_ALARM, {
+      when: restoredSleepTimerEndAt,
+    });
+  } else {
+    sleepTimerEndAt = null;
+    await chrome.alarms.clear(SLEEP_TIMER_ALARM);
+    void saveModuleStateValue("sleep-timer.endAt", null);
+  }
 }
 
 const modules: FeatureModule[] = [
@@ -508,6 +586,7 @@ const modules: FeatureModule[] = [
   notifications,
   playbackSpeed,
   precisionVolume,
+  sleepTimer,
   streamQuality,
 ];
 

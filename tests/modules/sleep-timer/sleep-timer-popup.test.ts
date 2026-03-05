@@ -63,9 +63,8 @@ describe("sleep timer popup view", () => {
     select.value = "30";
     select.dispatchEvent(new Event("change"));
 
-    const startBtn = container.querySelector<HTMLButtonElement>(
-      "button.primary-btn",
-    )!;
+    const startBtn =
+      container.querySelector<HTMLButtonElement>("button.primary-btn")!;
     startBtn.click();
 
     expect(sendMessageMock).toHaveBeenCalledWith(
