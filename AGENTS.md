@@ -63,6 +63,8 @@ the extension can be optested.
 
 ## Change Cycle Checklist
 
+- After every change cycle (even if small), run `pnpm run format`.
+- After formatting, run `pnpm run format:check` as part of validation.
 - After every change cycle (even if small), rebuild both targets:
   `pnpm run build:chrome` and `pnpm run build:firefox`.
 - Do not consider a feature cycle complete until both builds finish
