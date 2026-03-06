@@ -3,9 +3,25 @@ import { createSleepTimerPopupView } from "@/modules/sleep-timer/popup";
 
 describe("sleep timer popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
+  const LAST_PAUSED_AT_SEEN_KEY = "sleep-timer.last-paused-at-seen";
+  let storageData: Record<string, string>;
 
   beforeEach(() => {
     sendMessageMock = vi.fn();
+    storageData = {};
+
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => (key in storageData ? storageData[key] : null),
+      setItem: (key: string, value: string) => {
+        storageData[key] = String(value);
+      },
+      removeItem: (key: string) => {
+        delete storageData[key];
+      },
+      clear: () => {
+        storageData = {};
+      },
+    });
 
     vi.stubGlobal("chrome", {
       runtime: {
@@ -345,5 +361,80 @@ describe("sleep timer popup view", () => {
     (cleanup as () => void)();
     expect(vi.getTimerCount()).toBe(0);
     vi.useRealTimers();
+  });
+
+  it("should hide stale paused message after it has been seen", () => {
+    const pausedAt = Date.now() - 8 * 60 * 60 * 1000;
+    localStorage.setItem(LAST_PAUSED_AT_SEEN_KEY, String(pausedAt));
+
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: {
+              active: false,
+              remainingMs: 0,
+              endAt: null,
+              lastPausedAt: pausedAt,
+            },
+          });
+          return;
+        }
+        callback?.({ ok: true, data: true });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    const pausedHint = container.querySelector<HTMLElement>(
+      '[data-role="sleep-paused-at"]',
+    );
+    expect(pausedHint).not.toBeNull();
+    expect(pausedHint?.classList.contains("is-hidden")).toBe(true);
+  });
+
+  it("should show a paused message once before hiding stale entries", () => {
+    const pausedAt = Date.now() - 8 * 60 * 60 * 1000;
+
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: {
+              active: false,
+              remainingMs: 0,
+              endAt: null,
+              lastPausedAt: pausedAt,
+            },
+          });
+          return;
+        }
+        callback?.({ ok: true, data: true });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const firstContainer = document.createElement("div");
+    view.render(firstContainer);
+
+    const firstPausedHint = firstContainer.querySelector<HTMLElement>(
+      '[data-role="sleep-paused-at"]',
+    );
+    expect(firstPausedHint?.classList.contains("is-hidden")).toBe(false);
+    expect(localStorage.getItem(LAST_PAUSED_AT_SEEN_KEY)).toBe(
+      String(pausedAt),
+    );
+
+    const secondContainer = document.createElement("div");
+    view.render(secondContainer);
+
+    const secondPausedHint = secondContainer.querySelector<HTMLElement>(
+      '[data-role="sleep-paused-at"]',
+    );
+    expect(secondPausedHint?.classList.contains("is-hidden")).toBe(true);
   });
 });

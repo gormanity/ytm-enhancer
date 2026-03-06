@@ -5,6 +5,8 @@ import templateHtml from "./popup.html?raw";
 const PRESET_MINUTES = [15, 30, 45, 60];
 const HOURS_STORAGE_KEY = "sleep-timer.duration-hours";
 const MINUTES_STORAGE_KEY = "sleep-timer.duration-minutes";
+const PAUSED_AT_LAST_SEEN_KEY = "sleep-timer.last-paused-at-seen";
+const PAUSED_AT_EPHEMERAL_MS = 30 * 60 * 1000;
 
 type TimerMode = "duration" | "absolute";
 
@@ -133,6 +135,21 @@ function persistDurationSegments(
   ) {
     storage.setItem(MINUTES_STORAGE_KEY, String(parsedMinutes));
   }
+}
+
+function loadStoredInteger(key: string): number | null {
+  const storage = getPopupStorage();
+  const raw = storage?.getItem(key);
+  if (raw === null) return null;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function persistStoredInteger(key: string, value: number): void {
+  const storage = getPopupStorage();
+  if (!storage) return;
+  if (!Number.isInteger(value)) return;
+  storage.setItem(key, String(value));
 }
 
 /** Create the sleep timer settings popup view. */
@@ -358,8 +375,25 @@ export function createSleepTimerPopupView(): PopupView {
           cancelBtn.classList.add("is-hidden");
           activeEndAt = null;
           if (typeof state.lastPausedAt === "number") {
-            pausedAt.textContent = `Playback paused at ${formatPausedAt(state.lastPausedAt)}`;
-            pausedAt.classList.remove("is-hidden");
+            const hasExpired =
+              Date.now() - state.lastPausedAt > PAUSED_AT_EPHEMERAL_MS;
+            const lastSeenPausedAt = loadStoredInteger(PAUSED_AT_LAST_SEEN_KEY);
+            const hasBeenSeen = lastSeenPausedAt === state.lastPausedAt;
+
+            // Keep this message visible for each pause event until:
+            // 1) a new timer starts (background clears lastPausedAt), or
+            // 2) it has been seen in the Sleep Timer module and is older than
+            //    the ephemerality window.
+            const shouldShow = !hasBeenSeen || !hasExpired;
+
+            persistStoredInteger(PAUSED_AT_LAST_SEEN_KEY, state.lastPausedAt);
+
+            if (shouldShow) {
+              pausedAt.textContent = `Playback paused at ${formatPausedAt(state.lastPausedAt)}`;
+              pausedAt.classList.remove("is-hidden");
+            } else {
+              pausedAt.classList.add("is-hidden");
+            }
           } else {
             pausedAt.classList.add("is-hidden");
           }

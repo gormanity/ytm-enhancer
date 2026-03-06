@@ -92,9 +92,11 @@ async function cancelSleepTimer(): Promise<void> {
 async function startSleepTimer(durationMs: number): Promise<void> {
   const endAt = Date.now() + durationMs;
   sleepTimerEndAt = endAt;
+  sleepTimerLastPausedAt = null;
   await chrome.alarms.clear(SLEEP_TIMER_ALARM);
   await chrome.alarms.create(SLEEP_TIMER_ALARM, { when: endAt });
   await saveModuleStateValue("sleep-timer.endAt", endAt);
+  await saveModuleStateValue("sleep-timer.lastPausedAt", null);
 }
 
 function getSleepTimerState(): {
