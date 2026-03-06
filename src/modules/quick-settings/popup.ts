@@ -150,8 +150,17 @@ function renderOpenTabs(
 ): () => void {
   let lastRenderedSignature: string | null = null;
   let renderEpoch = 0;
-  const artworkCache = new Map<number, string | null>();
+  const artworkCache = new Map<number, string>();
   const artworkRequests = new Set<number>();
+  const attemptedArtworkTabs = new Set<number>();
+
+  const preloadImage = (url: string): Promise<boolean> =>
+    new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve(true);
+      image.onerror = () => resolve(false);
+      image.src = url;
+    });
 
   const pickTabIconCandidates = (
     tab: YtmTabSummary,
@@ -184,8 +193,7 @@ function renderOpenTabs(
 
       if (tab.isSelected) item.classList.add("selected");
       icon.alt = "";
-      const cachedArtwork =
-        tab.id === null ? null : (artworkCache.get(tab.id) ?? null);
+      const cachedArtwork = tab.id === null ? null : artworkCache.get(tab.id);
       const iconCandidates = pickTabIconCandidates(tab, cachedArtwork);
       let candidateIndex = 0;
       const assignNextCandidate = () => {
@@ -214,26 +222,30 @@ function renderOpenTabs(
 
       if (tab.id === null) continue;
       const tabId = tab.id;
-      if (cachedArtwork !== null || artworkRequests.has(tabId)) continue;
+      if (
+        cachedArtwork !== undefined ||
+        attemptedArtworkTabs.has(tabId) ||
+        artworkRequests.has(tabId)
+      ) {
+        continue;
+      }
+      attemptedArtworkTabs.add(tabId);
       artworkRequests.add(tabId);
       chrome.runtime.sendMessage(
         { type: "get-ytm-tab-artwork", tabId },
-        (response) => {
+        async (response) => {
           artworkRequests.delete(tabId);
           const artworkUrl = response?.ok
             ? (response.data?.artworkUrl as string | null)
             : null;
+          if (!artworkUrl) return;
+          const didLoad = await preloadImage(artworkUrl);
+          if (!didLoad) return;
           artworkCache.set(tabId, artworkUrl);
-          if (
-            currentEpoch !== renderEpoch ||
-            !artworkUrl ||
-            !icon.isConnected
-          ) {
+          if (currentEpoch !== renderEpoch || !icon.isConnected) {
             return;
           }
-          icon.onerror = () => {
-            icon.src = YTM_FALLBACK_ICON_URL;
-          };
+          icon.onerror = null;
           icon.src = artworkUrl;
         },
       );
