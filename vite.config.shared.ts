@@ -1,11 +1,26 @@
 import { resolve } from "path";
-import { copyFileSync } from "fs";
+import { readFileSync, copyFileSync } from "fs";
+import sharp from "sharp";
 import { build, Plugin, InlineConfig } from "vite";
+
+const ICON_SIZES = [16, 48, 128];
+
+async function generateIcons(outDir: string): Promise<void> {
+  const svgBuffer = readFileSync(resolve(__dirname, "src/assets/icon.svg"));
+  await Promise.all(
+    ICON_SIZES.map((size) =>
+      sharp(svgBuffer)
+        .resize(size, size)
+        .png()
+        .toFile(resolve(outDir, `icon${size}.png`)),
+    ),
+  );
+}
 
 function copyAssets(browser: string): Plugin {
   return {
     name: "copy-assets",
-    closeBundle() {
+    async closeBundle() {
       const outDir = resolve(__dirname, `dist/${browser}`);
 
       copyFileSync(
@@ -22,10 +37,7 @@ function copyAssets(browser: string): Plugin {
         resolve(outDir, "index.css"),
       );
 
-      copyFileSync(
-        resolve(__dirname, "src/assets/icon48.png"),
-        resolve(outDir, "icon48.png"),
-      );
+      await generateIcons(outDir);
 
       copyFileSync(
         resolve(__dirname, "src/assets/preview-artwork.png"),
