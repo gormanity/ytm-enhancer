@@ -448,6 +448,85 @@ describe("sleep timer popup view", () => {
     expect(secondPausedHint?.classList.contains("is-hidden")).toBe(true);
   });
 
+  it("should keep paused message visible when seen but still within 30 minutes", () => {
+    vi.useFakeTimers();
+    const now = new Date("2026-03-06T09:00:00.000Z");
+    vi.setSystemTime(now);
+    const pausedAt = now.getTime() - 5 * 60 * 1000;
+
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: {
+              active: false,
+              remainingMs: 0,
+              endAt: null,
+              lastPausedAt: pausedAt,
+            },
+          });
+          return;
+        }
+        callback?.({ ok: true, data: true });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const firstContainer = document.createElement("div");
+    view.render(firstContainer);
+
+    const secondContainer = document.createElement("div");
+    view.render(secondContainer);
+    const secondPausedHint = secondContainer.querySelector<HTMLElement>(
+      '[data-role="sleep-paused-at"]',
+    );
+    expect(secondPausedHint?.classList.contains("is-hidden")).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it("should hide paused message after 30 minutes once seen on module access", () => {
+    vi.useFakeTimers();
+    const base = new Date("2026-03-06T09:00:00.000Z");
+    const pausedAt = base.getTime() - 29 * 60 * 1000;
+
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: {
+              active: false,
+              remainingMs: 0,
+              endAt: null,
+              lastPausedAt: pausedAt,
+            },
+          });
+          return;
+        }
+        callback?.({ ok: true, data: true });
+      },
+    );
+
+    vi.setSystemTime(base);
+    const view = createSleepTimerPopupView();
+    const firstContainer = document.createElement("div");
+    view.render(firstContainer);
+
+    // Message has been seen in-module once; once it crosses 30 minutes,
+    // reopening the module should hide it.
+    vi.setSystemTime(new Date(base.getTime() + 2 * 60 * 1000));
+    const secondContainer = document.createElement("div");
+    view.render(secondContainer);
+    const secondPausedHint = secondContainer.querySelector<HTMLElement>(
+      '[data-role="sleep-paused-at"]',
+    );
+    expect(secondPausedHint?.classList.contains("is-hidden")).toBe(true);
+
+    vi.useRealTimers();
+  });
+
   it('should replace "Timer is off" with paused message when shown', () => {
     const pausedAt = Date.now();
 
