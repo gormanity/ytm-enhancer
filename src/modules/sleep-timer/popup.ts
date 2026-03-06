@@ -8,6 +8,8 @@ const MINUTES_STORAGE_KEY = "sleep-timer.duration-minutes";
 const ABSOLUTE_TIME_STORAGE_KEY = "sleep-timer.absolute-time";
 const PAUSED_AT_LAST_SEEN_KEY = "sleep-timer.last-paused-at-seen";
 const PAUSED_AT_EPHEMERAL_MS = 30 * 60 * 1000;
+const COUNTDOWN_UPDATE_INTERVAL_MS = 1000;
+const STATE_POLL_INTERVAL_MS = 15000;
 
 type TimerMode = "duration" | "absolute";
 
@@ -542,10 +544,13 @@ export function createSleepTimerPopupView(): PopupView {
       refreshPresetStyles();
       updateStartEnabled();
       queryState();
-      countdownTimer = window.setInterval(updateCountdown, 1000);
+      countdownTimer = window.setInterval(
+        updateCountdown,
+        COUNTDOWN_UPDATE_INTERVAL_MS,
+      );
 
       // Refresh from background periodically to avoid drift in long sessions.
-      statePollTimer = window.setInterval(queryState, 15000);
+      statePollTimer = window.setInterval(queryState, STATE_POLL_INTERVAL_MS);
 
       return () => {
         if (countdownTimer !== null) {

@@ -12,6 +12,8 @@ const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 const PLAY_ICON_TEMPLATE = createSvgIconTemplate(PLAY_SVG);
 const PAUSE_ICON_TEMPLATE = createSvgIconTemplate(PAUSE_SVG);
+const TAB_LIST_POLL_INTERVAL_MS = 3000;
+const PLAYBACK_STATE_POLL_INTERVAL_MS = 1000;
 
 interface YtmTabSummary {
   id: number | null;
@@ -323,7 +325,7 @@ function renderOpenTabs(
 
   document.addEventListener("keydown", handleKeydown);
   updateTabs();
-  const pollId = window.setInterval(updateTabs, 3000);
+  const pollId = window.setInterval(updateTabs, TAB_LIST_POLL_INTERVAL_MS);
   return () => {
     document.removeEventListener("keydown", handleKeydown);
     window.clearInterval(pollId);
@@ -446,7 +448,7 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
   };
 
   update();
-  const pollId = window.setInterval(update, 1000);
+  const pollId = window.setInterval(update, PLAYBACK_STATE_POLL_INTERVAL_MS);
   return () => {
     window.clearInterval(pollId);
   };

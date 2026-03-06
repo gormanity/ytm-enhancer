@@ -10,6 +10,7 @@ const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 const PLAY_ICON_TEMPLATE = createSvgIconTemplate(PLAY_SVG);
 const PAUSE_ICON_TEMPLATE = createSvgIconTemplate(PAUSE_SVG);
+const PLAYBACK_STATE_POLL_INTERVAL_MS = 1000;
 
 /** Create the home/now-playing popup view. */
 export function createHomePopupView(): PopupView {
@@ -71,7 +72,10 @@ export function createHomePopupView(): PopupView {
       };
 
       update();
-      const pollId = window.setInterval(update, 1000);
+      const pollId = window.setInterval(
+        update,
+        PLAYBACK_STATE_POLL_INTERVAL_MS,
+      );
       return () => {
         window.clearInterval(pollId);
       };
