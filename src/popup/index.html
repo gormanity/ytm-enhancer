@@ -41,7 +41,7 @@
         grid-template-columns: 160px minmax(0, 1fr);
       }
 
-      aside {
+      #sidebar {
         min-height: 0;
         box-sizing: border-box;
         background: var(--sidebar-bg);
@@ -115,7 +115,7 @@
         opacity: 0.6;
       }
 
-      main {
+      #main-content {
         box-sizing: border-box;
         min-height: 0;
         overflow-y: auto;
@@ -483,20 +483,20 @@
       }
 
       /* Custom scrollbar */
-      main::-webkit-scrollbar {
+      #main-content::-webkit-scrollbar {
         width: 8px;
       }
 
-      main::-webkit-scrollbar-track {
+      #main-content::-webkit-scrollbar-track {
         background: transparent;
       }
 
-      main::-webkit-scrollbar-thumb {
+      #main-content::-webkit-scrollbar-thumb {
         background: var(--border-color);
         border-radius: 4px;
       }
 
-      main::-webkit-scrollbar-thumb:hover {
+      #main-content::-webkit-scrollbar-thumb:hover {
         background: var(--active-bg);
       }
     </style>
@@ -509,7 +509,7 @@
         </div>
         <nav id="nav-list"></nav>
       </aside>
-      <main>
+      <main id="main-content">
         <div id="view-container"></div>
       </main>
     </div>
