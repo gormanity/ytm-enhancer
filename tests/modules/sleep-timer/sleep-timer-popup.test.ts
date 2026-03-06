@@ -3,11 +3,15 @@ import { createSleepTimerPopupView } from "@/modules/sleep-timer/popup";
 
 describe("sleep timer popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
+  let onMessageAddListenerMock: ReturnType<typeof vi.fn>;
+  let onMessageRemoveListenerMock: ReturnType<typeof vi.fn>;
   const LAST_PAUSED_AT_SEEN_KEY = "sleep-timer.last-paused-at-seen";
   const ABSOLUTE_TIME_STORAGE_KEY = "sleep-timer.absolute-time";
   let storageData: Record<string, string>;
 
   beforeEach(() => {
+    onMessageAddListenerMock = vi.fn();
+    onMessageRemoveListenerMock = vi.fn();
     sendMessageMock = vi.fn();
     storageData = {};
 
@@ -27,6 +31,10 @@ describe("sleep timer popup view", () => {
     vi.stubGlobal("chrome", {
       runtime: {
         sendMessage: sendMessageMock,
+        onMessage: {
+          addListener: onMessageAddListenerMock,
+          removeListener: onMessageRemoveListenerMock,
+        },
       },
     });
   });
@@ -357,10 +365,11 @@ describe("sleep timer popup view", () => {
     const cleanup = view.render(container);
 
     expect(typeof cleanup).toBe("function");
-    expect(vi.getTimerCount()).toBeGreaterThanOrEqual(2);
+    expect(vi.getTimerCount()).toBeGreaterThanOrEqual(1);
 
     (cleanup as () => void)();
     expect(vi.getTimerCount()).toBe(0);
+    expect(onMessageRemoveListenerMock).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 

@@ -9,7 +9,6 @@ const ABSOLUTE_TIME_STORAGE_KEY = "sleep-timer.absolute-time";
 const PAUSED_AT_LAST_SEEN_KEY = "sleep-timer.last-paused-at-seen";
 const PAUSED_AT_EPHEMERAL_MS = 30 * 60 * 1000;
 const COUNTDOWN_UPDATE_INTERVAL_MS = 1000;
-const STATE_POLL_INTERVAL_MS = 15000;
 
 type TimerMode = "duration" | "absolute";
 
@@ -294,7 +293,6 @@ export function createSleepTimerPopupView(): PopupView {
 
       let activeEndAt: number | null = null;
       let countdownTimer: number | null = null;
-      let statePollTimer: number | null = null;
 
       const clampAndPadSegment = (
         input: HTMLInputElement,
@@ -418,6 +416,12 @@ export function createSleepTimerPopupView(): PopupView {
           },
         );
       };
+      const runtimeMessageListener = (message: { type?: string }) => {
+        if (message.type === "sleep-timer-state-changed") {
+          queryState();
+        }
+      };
+      chrome.runtime.onMessage.addListener(runtimeMessageListener);
 
       const updateCountdown = () => {
         if (activeEndAt === null) return;
@@ -549,15 +553,10 @@ export function createSleepTimerPopupView(): PopupView {
         COUNTDOWN_UPDATE_INTERVAL_MS,
       );
 
-      // Refresh from background periodically to avoid drift in long sessions.
-      statePollTimer = window.setInterval(queryState, STATE_POLL_INTERVAL_MS);
-
       return () => {
+        chrome.runtime.onMessage.removeListener(runtimeMessageListener);
         if (countdownTimer !== null) {
           clearInterval(countdownTimer);
-        }
-        if (statePollTimer !== null) {
-          clearInterval(statePollTimer);
         }
       };
     },

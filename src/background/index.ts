@@ -50,6 +50,23 @@ let sleepTimerEndAt: number | null = null;
 let sleepTimerLastPausedAt: number | null = null;
 let sleepTimerNotifyOnEnd = true;
 let sleepTimerMode: "duration" | "absolute" = "duration";
+type PopupRuntimeMessage =
+  | { type: "ytm-tabs-changed" }
+  | { type: "sleep-timer-state-changed" };
+
+function broadcastPopupMessage(message: PopupRuntimeMessage): void {
+  void chrome.runtime.sendMessage(message).catch(() => {
+    // It's normal for there to be no popup listener.
+  });
+}
+
+function notifyYtmTabsChanged(): void {
+  broadcastPopupMessage({ type: "ytm-tabs-changed" });
+}
+
+function notifySleepTimerStateChanged(): void {
+  broadcastPopupMessage({ type: "sleep-timer-state-changed" });
+}
 
 async function relayToSelectedTab(message: unknown): Promise<void> {
   const tab = await findYTMTab(selectedTabId);
@@ -88,6 +105,7 @@ async function cancelSleepTimer(): Promise<void> {
   sleepTimerEndAt = null;
   await chrome.alarms.clear(SLEEP_TIMER_ALARM);
   await saveModuleStateValue("sleep-timer.endAt", null);
+  notifySleepTimerStateChanged();
 }
 
 async function startSleepTimer(durationMs: number): Promise<void> {
@@ -98,6 +116,7 @@ async function startSleepTimer(durationMs: number): Promise<void> {
   await chrome.alarms.create(SLEEP_TIMER_ALARM, { when: endAt });
   await saveModuleStateValue("sleep-timer.endAt", endAt);
   await saveModuleStateValue("sleep-timer.lastPausedAt", null);
+  notifySleepTimerStateChanged();
 }
 
 function getSleepTimerState(): {
@@ -171,6 +190,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     type: "playback-action",
     action: "pause",
   });
+  notifySleepTimerStateChanged();
 });
 
 const handler = createMessageHandler();
@@ -215,6 +235,7 @@ handler.on("get-ytm-tabs", async () => {
     selectedTabId = nextSelectedTabId;
     hotkeys.setSelectedTabId(selectedTabId);
     void saveModuleStateValue("tabs.selectedTabId", selectedTabId);
+    notifyYtmTabsChanged();
   }
 
   const tabData = tabs.map((tab) => ({
@@ -241,6 +262,7 @@ handler.on("set-selected-tab", async (message) => {
   selectedTabId = tabId;
   hotkeys.setSelectedTabId(selectedTabId);
   await saveModuleStateValue("tabs.selectedTabId", selectedTabId);
+  notifyYtmTabsChanged();
   return { ok: true };
 });
 
@@ -585,6 +607,25 @@ void ensureYtmContentScripts();
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   pipOpenTabIds.delete(tabId);
+  notifyYtmTabsChanged();
+});
+
+chrome.tabs.onActivated.addListener(() => {
+  notifyYtmTabsChanged();
+});
+
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  if (tab.url?.startsWith("https://music.youtube.com/")) {
+    notifyYtmTabsChanged();
+    return;
+  }
+  if (changeInfo.url?.startsWith("https://music.youtube.com/")) {
+    notifyYtmTabsChanged();
+    return;
+  }
+  if (changeInfo.status === "complete") {
+    notifyYtmTabsChanged();
+  }
 });
 
 async function restoreModuleState(): Promise<void> {

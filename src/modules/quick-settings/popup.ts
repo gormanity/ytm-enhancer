@@ -12,7 +12,6 @@ const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 const PLAY_ICON_TEMPLATE = createSvgIconTemplate(PLAY_SVG);
 const PAUSE_ICON_TEMPLATE = createSvgIconTemplate(PAUSE_SVG);
-const TAB_LIST_POLL_INTERVAL_MS = 3000;
 const PLAYBACK_STATE_POLL_INTERVAL_MS = 1000;
 
 interface YtmTabSummary {
@@ -324,11 +323,16 @@ function renderOpenTabs(
   };
 
   document.addEventListener("keydown", handleKeydown);
+  const runtimeMessageListener = (message: { type?: string }) => {
+    if (message.type === "ytm-tabs-changed") {
+      updateTabs();
+    }
+  };
+  chrome.runtime.onMessage.addListener(runtimeMessageListener);
   updateTabs();
-  const pollId = window.setInterval(updateTabs, TAB_LIST_POLL_INTERVAL_MS);
   return () => {
+    chrome.runtime.onMessage.removeListener(runtimeMessageListener);
     document.removeEventListener("keydown", handleKeydown);
-    window.clearInterval(pollId);
   };
 }
 

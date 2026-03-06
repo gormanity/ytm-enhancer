@@ -26,9 +26,13 @@ class MockImage {
 
 describe("quick settings popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
+  let onMessageAddListenerMock: ReturnType<typeof vi.fn>;
+  let onMessageRemoveListenerMock: ReturnType<typeof vi.fn>;
   const svgLogoMarker = "data:image/svg+xml";
 
   beforeEach(() => {
+    onMessageAddListenerMock = vi.fn();
+    onMessageRemoveListenerMock = vi.fn();
     sendMessageMock = vi.fn(
       (message: RuntimeMessage, callback?: (response: unknown) => void) => {
         switch (message.type) {
@@ -95,6 +99,10 @@ describe("quick settings popup view", () => {
     vi.stubGlobal("chrome", {
       runtime: {
         sendMessage: sendMessageMock,
+        onMessage: {
+          addListener: onMessageAddListenerMock,
+          removeListener: onMessageRemoveListenerMock,
+        },
       },
     });
   });
