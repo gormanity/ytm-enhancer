@@ -112,17 +112,12 @@ export function createSleepTimerPopupView(): PopupView {
       modeRow.appendChild(modeSelect);
 
       const presetsLabel = document.createElement("div");
+      presetsLabel.className = "sleep-presets-label";
       presetsLabel.textContent = "Quick durations";
-      presetsLabel.style.fontSize = "12px";
-      presetsLabel.style.color = "var(--text-secondary)";
-      presetsLabel.style.marginTop = "12px";
       card.appendChild(presetsLabel);
 
       const presetGroup = document.createElement("div");
-      presetGroup.style.display = "flex";
-      presetGroup.style.gap = "6px";
-      presetGroup.style.flexWrap = "wrap";
-      presetGroup.style.marginTop = "8px";
+      presetGroup.className = "sleep-preset-group";
       card.appendChild(presetGroup);
 
       const presetButtons = new Map<number, HTMLButtonElement>();
@@ -130,8 +125,7 @@ export function createSleepTimerPopupView(): PopupView {
       let mode: TimerMode = "duration";
 
       const durationRow = document.createElement("label");
-      durationRow.className = "field-row";
-      durationRow.style.marginTop = "10px";
+      durationRow.className = "field-row sleep-duration-row";
       card.appendChild(durationRow);
 
       const durationLabel = document.createElement("span");
@@ -139,9 +133,7 @@ export function createSleepTimerPopupView(): PopupView {
       durationRow.appendChild(durationLabel);
 
       const timeInputGroup = document.createElement("div");
-      timeInputGroup.style.display = "flex";
-      timeInputGroup.style.alignItems = "center";
-      timeInputGroup.style.gap = "4px";
+      timeInputGroup.className = "sleep-time-input-group";
       durationRow.appendChild(timeInputGroup);
 
       const hoursInput = document.createElement("input");
@@ -152,13 +144,12 @@ export function createSleepTimerPopupView(): PopupView {
       hoursInput.value = "00";
       hoursInput.placeholder = "HH";
       hoursInput.setAttribute("aria-label", "Hours");
-      hoursInput.style.width = "44px";
+      hoursInput.className = "sleep-time-input";
       timeInputGroup.appendChild(hoursInput);
 
       const colon = document.createElement("span");
+      colon.className = "sleep-time-colon";
       colon.textContent = ":";
-      colon.style.color = "var(--text-secondary)";
-      colon.style.fontWeight = "600";
       timeInputGroup.appendChild(colon);
 
       const minutesInput = document.createElement("input");
@@ -169,13 +160,11 @@ export function createSleepTimerPopupView(): PopupView {
       minutesInput.value = "30";
       minutesInput.placeholder = "MM";
       minutesInput.setAttribute("aria-label", "Minutes");
-      minutesInput.style.width = "44px";
+      minutesInput.className = "sleep-time-input";
       timeInputGroup.appendChild(minutesInput);
 
       const absoluteRow = document.createElement("label");
-      absoluteRow.className = "field-row";
-      absoluteRow.style.marginTop = "10px";
-      absoluteRow.style.display = "none";
+      absoluteRow.className = "field-row sleep-absolute-row is-hidden";
       card.appendChild(absoluteRow);
 
       const absoluteLabel = document.createElement("span");
@@ -189,8 +178,7 @@ export function createSleepTimerPopupView(): PopupView {
       absoluteRow.appendChild(absoluteInput);
 
       const tomorrowRow = document.createElement("label");
-      tomorrowRow.className = "toggle-row";
-      tomorrowRow.style.display = "none";
+      tomorrowRow.className = "toggle-row is-hidden";
       card.appendChild(tomorrowRow);
 
       const tomorrowText = document.createElement("span");
@@ -202,42 +190,24 @@ export function createSleepTimerPopupView(): PopupView {
       tomorrowRow.appendChild(tomorrowToggle);
 
       const durationHint = document.createElement("p");
-      durationHint.className = "status-hint";
-      durationHint.style.marginTop = "8px";
-      durationHint.style.marginBottom = "0";
-      durationHint.style.display = "none";
+      durationHint.className = "status-hint sleep-hint is-hidden";
       card.appendChild(durationHint);
 
       const absolutePreview = document.createElement("p");
-      absolutePreview.className = "status-hint";
-      absolutePreview.style.marginTop = "8px";
-      absolutePreview.style.marginBottom = "0";
-      absolutePreview.style.display = "none";
+      absolutePreview.className = "status-hint sleep-hint is-hidden";
       card.appendChild(absolutePreview);
 
       const refreshPresetStyles = () => {
         for (const [minutes, button] of presetButtons) {
           const isSelected = selectedPresetMinutes === minutes;
-          button.style.background = isSelected
-            ? "var(--accent-color)"
-            : "#1a1a1a";
-          button.style.color = isSelected ? "white" : "var(--text-color)";
-          button.style.borderColor = isSelected
-            ? "var(--accent-color)"
-            : "var(--border-color)";
+          button.classList.toggle("sleep-preset-btn--selected", isSelected);
         }
       };
 
       for (const minutes of PRESET_MINUTES) {
         const presetBtn = document.createElement("button");
+        presetBtn.className = "sleep-preset-btn";
         presetBtn.textContent = `${minutes}m`;
-        presetBtn.style.padding = "6px 10px";
-        presetBtn.style.borderRadius = "14px";
-        presetBtn.style.border = "1px solid var(--border-color)";
-        presetBtn.style.background = "#1a1a1a";
-        presetBtn.style.color = "var(--text-color)";
-        presetBtn.style.cursor = "pointer";
-        presetBtn.style.transition = "background 0.2s, transform 0.1s";
         presetBtn.addEventListener("click", () => {
           selectedPresetMinutes = minutes;
           const [hh, mm] = formatMinutesAsHhMm(minutes).split(":");
@@ -249,61 +219,31 @@ export function createSleepTimerPopupView(): PopupView {
           refreshPresetStyles();
           updateStartEnabled();
         });
-        presetBtn.addEventListener("mouseenter", () => {
-          if (selectedPresetMinutes === minutes) return;
-          presetBtn.style.background = "#4f4f4f";
-        });
-        presetBtn.addEventListener("mouseleave", () => {
-          refreshPresetStyles();
-        });
         presetButtons.set(minutes, presetBtn);
         presetGroup.appendChild(presetBtn);
       }
 
       const buttons = document.createElement("div");
-      buttons.style.display = "flex";
-      buttons.style.gap = "8px";
-      buttons.style.marginTop = "12px";
+      buttons.className = "sleep-buttons";
       card.appendChild(buttons);
 
       const startBtn = document.createElement("button");
-      startBtn.className = "primary-btn";
+      startBtn.className = "primary-btn sleep-start-btn";
       startBtn.textContent = "Start Timer";
-      startBtn.style.flex = "1";
-      startBtn.style.padding = "10px";
-      startBtn.style.background = "var(--accent-color)";
-      startBtn.style.color = "white";
-      startBtn.style.border = "none";
-      startBtn.style.borderRadius = "6px";
-      startBtn.style.cursor = "pointer";
-      startBtn.style.fontWeight = "600";
       buttons.appendChild(startBtn);
 
       const cancelBtn = document.createElement("button");
-      cancelBtn.className = "secondary-btn";
+      cancelBtn.className = "secondary-btn sleep-cancel-btn is-hidden";
       cancelBtn.textContent = "Cancel";
-      cancelBtn.style.flex = "1";
-      cancelBtn.style.padding = "10px";
-      cancelBtn.style.borderRadius = "6px";
-      cancelBtn.style.border = "1px solid var(--border-color)";
-      cancelBtn.style.background = "var(--card-bg)";
-      cancelBtn.style.color = "var(--text-color)";
-      cancelBtn.style.cursor = "pointer";
       cancelBtn.disabled = true;
-      cancelBtn.style.display = "none";
       buttons.appendChild(cancelBtn);
 
       const status = document.createElement("p");
-      status.className = "status-hint";
-      status.style.marginTop = "12px";
-      status.style.marginBottom = "0";
+      status.className = "status-hint sleep-status";
       card.appendChild(status);
 
       const pausedAt = document.createElement("p");
-      pausedAt.className = "status-hint";
-      pausedAt.style.marginTop = "8px";
-      pausedAt.style.marginBottom = "0";
-      pausedAt.style.display = "none";
+      pausedAt.className = "status-hint sleep-hint is-hidden";
       card.appendChild(pausedAt);
 
       const notificationCard = document.createElement("div");
@@ -370,11 +310,11 @@ export function createSleepTimerPopupView(): PopupView {
 
       const updateModeVisibility = () => {
         const showDuration = mode === "duration";
-        presetsLabel.style.display = showDuration ? "block" : "none";
-        presetGroup.style.display = showDuration ? "flex" : "none";
-        durationRow.style.display = showDuration ? "flex" : "none";
-        absoluteRow.style.display = showDuration ? "none" : "flex";
-        tomorrowRow.style.display = showDuration ? "none" : "flex";
+        presetsLabel.classList.toggle("is-hidden", !showDuration);
+        presetGroup.classList.toggle("is-hidden", !showDuration);
+        durationRow.classList.toggle("is-hidden", !showDuration);
+        absoluteRow.classList.toggle("is-hidden", showDuration);
+        tomorrowRow.classList.toggle("is-hidden", showDuration);
       };
 
       const updateStartEnabled = () => {
@@ -386,17 +326,17 @@ export function createSleepTimerPopupView(): PopupView {
             mode === "duration"
               ? "Enter a valid HH:MM duration greater than 00:00."
               : "Choose a valid clock time.";
-          durationHint.style.display = "block";
-          absolutePreview.style.display = "none";
+          durationHint.classList.remove("is-hidden");
+          absolutePreview.classList.add("is-hidden");
           return;
         }
 
-        durationHint.style.display = "none";
+        durationHint.classList.add("is-hidden");
         if (mode === "absolute") {
           absolutePreview.textContent = `Will pause in ${formatRelativeDuration(durationMs)}.`;
-          absolutePreview.style.display = "block";
+          absolutePreview.classList.remove("is-hidden");
         } else {
-          absolutePreview.style.display = "none";
+          absolutePreview.classList.add("is-hidden");
         }
       };
 
@@ -406,19 +346,19 @@ export function createSleepTimerPopupView(): PopupView {
           startBtn.textContent = "Restart Timer";
           status.textContent = `Timer active: ${formatRemaining(state.remainingMs)} remaining`;
           cancelBtn.disabled = false;
-          cancelBtn.style.display = "block";
-          pausedAt.style.display = "none";
+          cancelBtn.classList.remove("is-hidden");
+          pausedAt.classList.add("is-hidden");
         } else {
           startBtn.textContent = "Start Timer";
           status.textContent = "Timer is off";
           cancelBtn.disabled = true;
-          cancelBtn.style.display = "none";
+          cancelBtn.classList.add("is-hidden");
           activeEndAt = null;
           if (typeof state.lastPausedAt === "number") {
             pausedAt.textContent = `Playback paused at ${formatPausedAt(state.lastPausedAt)}`;
-            pausedAt.style.display = "block";
+            pausedAt.classList.remove("is-hidden");
           } else {
-            pausedAt.style.display = "none";
+            pausedAt.classList.add("is-hidden");
           }
         }
       };
@@ -441,7 +381,7 @@ export function createSleepTimerPopupView(): PopupView {
           activeEndAt = null;
           status.textContent = "Timer is off";
           cancelBtn.disabled = true;
-          cancelBtn.style.display = "none";
+          cancelBtn.classList.add("is-hidden");
           return;
         }
         status.textContent = `Timer active: ${formatRemaining(remainingMs)} remaining`;

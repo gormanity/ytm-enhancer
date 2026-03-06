@@ -757,6 +757,94 @@ select:focus {
   padding: 6px;
 }
 
+/* Sleep Timer View */
+.sleep-presets-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 12px;
+}
+
+.sleep-preset-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.sleep-duration-row,
+.sleep-absolute-row {
+  margin-top: 10px;
+}
+
+.sleep-time-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sleep-time-input {
+  width: 44px;
+}
+
+.sleep-time-colon {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.sleep-preset-btn {
+  padding: 6px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: #1a1a1a;
+  color: var(--text-color);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+}
+
+.sleep-preset-btn--selected {
+  background: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+}
+
+.sleep-preset-btn:not(.sleep-preset-btn--selected):hover {
+  background: #4f4f4f;
+}
+
+.sleep-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sleep-start-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.sleep-cancel-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.sleep-status {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.sleep-hint {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
 /* Custom scrollbar */
 /* Main Panel Scrollbar */
 #main-content::-webkit-scrollbar {
