@@ -1,4 +1,5 @@
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
 import {
   type VisualizerColorMode,
   DEFAULT_VISUALIZER_STYLE_TUNINGS,
@@ -6,6 +7,7 @@ import {
   type VisualizerStyleTuning,
   type VisualizerStyleTunings,
 } from "./styles";
+import templateHtml from "./popup.html?raw";
 
 /** Create the audio visualizer settings popup view. */
 export function createAudioVisualizerPopupView(): PopupView {
@@ -13,142 +15,64 @@ export function createAudioVisualizerPopupView(): PopupView {
     id: "audio-visualizer-settings",
     label: "Audio Visualizer",
     render(container: HTMLElement) {
-      container.innerHTML = "";
+      renderPopupTemplate(container, templateHtml);
 
-      const heading = document.createElement("h2");
-      heading.textContent = "Audio Visualizer";
-      container.appendChild(heading);
+      const toggle = container.querySelector<HTMLInputElement>(
+        '[data-role="audio-visualizer-enabled-toggle"]',
+      );
+      const select = container.querySelector<HTMLSelectElement>(
+        '[data-role="audio-visualizer-style-select"]',
+      );
+      const targetSelect = container.querySelector<HTMLSelectElement>(
+        '[data-role="audio-visualizer-target-select"]',
+      );
+      const colorModeSelect = container.querySelector<HTMLSelectElement>(
+        '[data-role="audio-visualizer-color-mode-select"]',
+      );
+      const intensityRange = container.querySelector<HTMLInputElement>(
+        '[data-role="audio-visualizer-intensity-range"]',
+      );
+      const intensityValue = container.querySelector<HTMLElement>(
+        '[data-role="audio-visualizer-intensity-value"]',
+      );
+      const thicknessRange = container.querySelector<HTMLInputElement>(
+        '[data-role="audio-visualizer-thickness-range"]',
+      );
+      const thicknessValue = container.querySelector<HTMLElement>(
+        '[data-role="audio-visualizer-thickness-value"]',
+      );
+      const opacityRange = container.querySelector<HTMLInputElement>(
+        '[data-role="audio-visualizer-opacity-range"]',
+      );
+      const opacityValue = container.querySelector<HTMLElement>(
+        '[data-role="audio-visualizer-opacity-value"]',
+      );
+      if (
+        !toggle ||
+        !select ||
+        !targetSelect ||
+        !colorModeSelect ||
+        !intensityRange ||
+        !intensityValue ||
+        !thicknessRange ||
+        !thicknessValue ||
+        !opacityRange ||
+        !opacityValue
+      ) {
+        return;
+      }
 
-      const card = document.createElement("div");
-      card.className = "settings-card";
-      container.appendChild(card);
-
-      const toggleLabel = document.createElement("label");
-      toggleLabel.className = "toggle-row";
-
-      const toggleText = document.createElement("span");
-      toggleText.textContent = "Enable audio visualizer";
-      toggleLabel.appendChild(toggleText);
-
-      const toggle = document.createElement("input");
-      toggle.type = "checkbox";
       toggle.disabled = true;
-      toggleLabel.appendChild(toggle);
-
-      card.appendChild(toggleLabel);
-
-      const styleLabel = document.createElement("label");
-      styleLabel.className = "toggle-row";
-
-      const styleText = document.createElement("span");
-      styleText.textContent = "Visualization style";
-      styleLabel.appendChild(styleText);
-
-      const select = document.createElement("select");
       select.disabled = true;
-
-      const options = [
-        { value: "bars", text: "Frequency Bars" },
-        { value: "waveform", text: "Waveform" },
-        { value: "circular", text: "Circular" },
-      ];
-
-      for (const opt of options) {
-        const option = document.createElement("option");
-        option.value = opt.value;
-        option.textContent = opt.text;
-        select.appendChild(option);
-      }
-
-      styleLabel.appendChild(select);
-      card.appendChild(styleLabel);
-
-      const targetLabel = document.createElement("label");
-      targetLabel.className = "toggle-row";
-
-      const targetText = document.createElement("span");
-      targetText.textContent = "Display surface";
-      targetLabel.appendChild(targetText);
-
-      const targetSelect = document.createElement("select");
       targetSelect.disabled = true;
-
-      const targetOptions = [
-        { value: "auto", text: "Auto" },
-        { value: "all", text: "All Surfaces" },
-        { value: "pip-only", text: "PiP Only" },
-        { value: "song-art-only", text: "Song Art Only" },
-        { value: "player-bar-only", text: "Thumbnail Only" },
-      ];
-
-      for (const opt of targetOptions) {
-        const option = document.createElement("option");
-        option.value = opt.value;
-        option.textContent = opt.text;
-        targetSelect.appendChild(option);
-      }
-
-      targetLabel.appendChild(targetSelect);
-      card.appendChild(targetLabel);
-
-      const colorModeLabel = document.createElement("label");
-      colorModeLabel.className = "toggle-row";
-
-      const colorModeText = document.createElement("span");
-      colorModeText.textContent = "Color mode";
-      colorModeLabel.appendChild(colorModeText);
-
-      const colorModeSelect = document.createElement("select");
       colorModeSelect.disabled = true;
-      const colorModeOptions = [
-        { value: "white", text: "White" },
-        { value: "artwork-adaptive", text: "Artwork Adaptive" },
-        { value: "monochrome-dim", text: "Monochrome Dim" },
-      ];
-      for (const opt of colorModeOptions) {
-        const option = document.createElement("option");
-        option.value = opt.value;
-        option.textContent = opt.text;
-        colorModeSelect.appendChild(option);
-      }
-      colorModeLabel.appendChild(colorModeSelect);
-      card.appendChild(colorModeLabel);
+      intensityRange.disabled = true;
+      thicknessRange.disabled = true;
+      opacityRange.disabled = true;
 
-      const autoModeHint = document.createElement("div");
-      autoModeHint.className = "shortcuts-hint shortcuts-hint--spaced";
-      autoModeHint.innerHTML =
-        "<strong>Tip:</strong> <strong>Auto</strong> mode shows the visualizer on the most relevant visible surface: PiP first, then Song Art, then Thumbnail.";
-      container.appendChild(autoModeHint);
-
-      const tuningCard = document.createElement("div");
-      tuningCard.className = "settings-card";
-      container.appendChild(tuningCard);
-
-      const tuningHeading = document.createElement("h3");
-      tuningHeading.textContent = "Current Style Tuning";
-      tuningCard.appendChild(tuningHeading);
-
-      const intensityControl = createRangeControl(
-        tuningCard,
-        "Intensity",
-        "25",
-        "200",
-        "100",
-      );
-      const thicknessControl = createRangeControl(
-        tuningCard,
-        "Thickness",
-        "50",
-        "250",
-        "100",
-      );
-      const opacityControl = createRangeControl(
-        tuningCard,
-        "Opacity",
-        "10",
-        "100",
-        "100",
-      );
+      const intensityControl = { range: intensityRange, value: intensityValue };
+      const thicknessControl = { range: thicknessRange, value: thicknessValue };
+      const opacityControl = { range: opacityRange, value: opacityValue };
 
       let styleTunings: VisualizerStyleTunings = {
         bars: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.bars },
@@ -283,37 +207,4 @@ export function createAudioVisualizerPopupView(): PopupView {
       opacityControl.range.addEventListener("input", onTuningInput);
     },
   };
-}
-
-function createRangeControl(
-  parent: HTMLElement,
-  labelText: string,
-  min: string,
-  max: string,
-  value: string,
-): {
-  range: HTMLInputElement;
-  value: HTMLElement;
-} {
-  const row = document.createElement("label");
-  row.className = "toggle-row";
-
-  const label = document.createElement("span");
-  label.textContent = labelText;
-  row.appendChild(label);
-
-  const range = document.createElement("input");
-  range.type = "range";
-  range.min = min;
-  range.max = max;
-  range.value = value;
-  range.disabled = true;
-  row.appendChild(range);
-
-  const valueText = document.createElement("span");
-  valueText.textContent = `${value}%`;
-  row.appendChild(valueText);
-
-  parent.appendChild(row);
-  return { range, value: valueText };
 }

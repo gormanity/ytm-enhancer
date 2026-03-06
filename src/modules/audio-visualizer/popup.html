@@ -1,0 +1,83 @@
+<h2>Audio Visualizer</h2>
+
+<div class="settings-card">
+  <label class="toggle-row">
+    <span>Enable audio visualizer</span>
+    <input type="checkbox" data-role="audio-visualizer-enabled-toggle" />
+  </label>
+
+  <label class="toggle-row">
+    <span>Visualization style</span>
+    <select data-role="audio-visualizer-style-select">
+      <option value="bars">Frequency Bars</option>
+      <option value="waveform">Waveform</option>
+      <option value="circular">Circular</option>
+    </select>
+  </label>
+
+  <label class="toggle-row">
+    <span>Display surface</span>
+    <select data-role="audio-visualizer-target-select">
+      <option value="auto">Auto</option>
+      <option value="all">All Surfaces</option>
+      <option value="pip-only">PiP Only</option>
+      <option value="song-art-only">Song Art Only</option>
+      <option value="player-bar-only">Thumbnail Only</option>
+    </select>
+  </label>
+
+  <label class="toggle-row">
+    <span>Color mode</span>
+    <select data-role="audio-visualizer-color-mode-select">
+      <option value="white">White</option>
+      <option value="artwork-adaptive">Artwork Adaptive</option>
+      <option value="monochrome-dim">Monochrome Dim</option>
+    </select>
+  </label>
+</div>
+
+<div class="shortcuts-hint shortcuts-hint--spaced">
+  <strong>Tip:</strong>
+  <strong>Auto</strong> mode shows the visualizer on the most relevant visible
+  surface: PiP first, then Song Art, then Thumbnail.
+</div>
+
+<div class="settings-card">
+  <h3>Current Style Tuning</h3>
+
+  <label class="toggle-row">
+    <span>Intensity</span>
+    <input
+      type="range"
+      min="25"
+      max="200"
+      value="100"
+      data-role="audio-visualizer-intensity-range"
+    />
+    <span data-role="audio-visualizer-intensity-value">100%</span>
+  </label>
+
+  <label class="toggle-row">
+    <span>Thickness</span>
+    <input
+      type="range"
+      min="50"
+      max="250"
+      value="100"
+      data-role="audio-visualizer-thickness-range"
+    />
+    <span data-role="audio-visualizer-thickness-value">100%</span>
+  </label>
+
+  <label class="toggle-row">
+    <span>Opacity</span>
+    <input
+      type="range"
+      min="10"
+      max="100"
+      value="100"
+      data-role="audio-visualizer-opacity-range"
+    />
+    <span data-role="audio-visualizer-opacity-value">100%</span>
+  </label>
+</div>
