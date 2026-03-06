@@ -29,12 +29,14 @@ function formatMinutesAsHhMm(totalMinutes: number): string {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-function parseHhMmToMinutes(value: string): number | null {
-  const match = value.trim().match(/^(\d{1,2}):([0-5]\d)$/);
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+function parseHhMmToMinutes(
+  hoursValue: string,
+  minutesValue: string,
+): number | null {
+  const hours = Number(hoursValue);
+  const minutes = Number(minutesValue);
+  if (!Number.isInteger(hours) || hours < 0) return null;
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 59) return null;
   const totalMinutes = hours * 60 + minutes;
   if (totalMinutes <= 0) return null;
   return totalMinutes;
@@ -81,13 +83,38 @@ export function createSleepTimerPopupView(): PopupView {
       durationLabel.textContent = "Duration (HH:MM)";
       durationRow.appendChild(durationLabel);
 
-      const durationInput = document.createElement("input");
-      durationInput.type = "text";
-      durationInput.inputMode = "numeric";
-      durationInput.value = "00:30";
-      durationInput.placeholder = "00:30";
-      durationInput.setAttribute("aria-label", "Timer duration in HH:MM");
-      durationRow.appendChild(durationInput);
+      const timeInputGroup = document.createElement("div");
+      timeInputGroup.style.display = "flex";
+      timeInputGroup.style.alignItems = "center";
+      timeInputGroup.style.gap = "4px";
+      durationRow.appendChild(timeInputGroup);
+
+      const hoursInput = document.createElement("input");
+      hoursInput.type = "number";
+      hoursInput.min = "0";
+      hoursInput.step = "1";
+      hoursInput.value = "00";
+      hoursInput.placeholder = "HH";
+      hoursInput.setAttribute("aria-label", "Hours");
+      hoursInput.style.width = "44px";
+      timeInputGroup.appendChild(hoursInput);
+
+      const colon = document.createElement("span");
+      colon.textContent = ":";
+      colon.style.color = "var(--text-secondary)";
+      colon.style.fontWeight = "600";
+      timeInputGroup.appendChild(colon);
+
+      const minutesInput = document.createElement("input");
+      minutesInput.type = "number";
+      minutesInput.min = "0";
+      minutesInput.max = "59";
+      minutesInput.step = "1";
+      minutesInput.value = "30";
+      minutesInput.placeholder = "MM";
+      minutesInput.setAttribute("aria-label", "Minutes");
+      minutesInput.style.width = "44px";
+      timeInputGroup.appendChild(minutesInput);
 
       const durationHint = document.createElement("p");
       durationHint.className = "status-hint";
@@ -121,7 +148,9 @@ export function createSleepTimerPopupView(): PopupView {
         presetBtn.style.cursor = "pointer";
         presetBtn.addEventListener("click", () => {
           selectedPresetMinutes = minutes;
-          durationInput.value = formatMinutesAsHhMm(minutes);
+          const [hh, mm] = formatMinutesAsHhMm(minutes).split(":");
+          hoursInput.value = hh;
+          minutesInput.value = mm;
           durationHint.style.display = "none";
           refreshPresetStyles();
           updateStartEnabled();
@@ -195,15 +224,43 @@ export function createSleepTimerPopupView(): PopupView {
       let countdownTimer: number | null = null;
       let statePollTimer: number | null = null;
 
+      const clampAndPadSegment = (
+        input: HTMLInputElement,
+        min: number,
+        max: number,
+      ) => {
+        const parsed = Number(input.value);
+        if (!Number.isFinite(parsed)) return;
+        const next = Math.max(min, Math.min(max, Math.floor(parsed)));
+        input.value = String(next).padStart(2, "0");
+      };
+
+      const handleArrowAdjust = (
+        event: KeyboardEvent,
+        input: HTMLInputElement,
+        min: number,
+        max: number,
+      ) => {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+        event.preventDefault();
+        const current = Number(input.value);
+        const base = Number.isFinite(current) ? current : min;
+        const delta = event.key === "ArrowUp" ? 1 : -1;
+        const next = Math.max(min, Math.min(max, base + delta));
+        input.value = String(next).padStart(2, "0");
+        input.dispatchEvent(new Event("input"));
+      };
+
       const getDurationMinutes = (): number | null => {
-        return parseHhMmToMinutes(durationInput.value);
+        return parseHhMmToMinutes(hoursInput.value, minutesInput.value);
       };
 
       const updateStartEnabled = () => {
         const minutes = getDurationMinutes();
         startBtn.disabled = minutes === null;
         if (minutes === null) {
-          durationHint.textContent = "Use HH:MM format (for example, 01:30).";
+          durationHint.textContent =
+            "Enter a valid HH:MM duration greater than 00:00.";
           durationHint.style.display = "block";
           return;
         }
@@ -290,13 +347,43 @@ export function createSleepTimerPopupView(): PopupView {
         });
       });
 
-      durationInput.addEventListener("input", () => {
-        const minutes = parseHhMmToMinutes(durationInput.value);
+      hoursInput.addEventListener("input", () => {
+        if (hoursInput.value.length >= 2) {
+          minutesInput.focus();
+          minutesInput.select();
+        }
+        const minutes = parseHhMmToMinutes(
+          hoursInput.value,
+          minutesInput.value,
+        );
         selectedPresetMinutes =
           minutes !== null && PRESET_MINUTES.includes(minutes) ? minutes : null;
         refreshPresetStyles();
         updateStartEnabled();
       });
+      minutesInput.addEventListener("input", () => {
+        const minutes = parseHhMmToMinutes(
+          hoursInput.value,
+          minutesInput.value,
+        );
+        selectedPresetMinutes =
+          minutes !== null && PRESET_MINUTES.includes(minutes) ? minutes : null;
+        refreshPresetStyles();
+        updateStartEnabled();
+      });
+
+      hoursInput.addEventListener("blur", () =>
+        clampAndPadSegment(hoursInput, 0, 99),
+      );
+      minutesInput.addEventListener("blur", () =>
+        clampAndPadSegment(minutesInput, 0, 59),
+      );
+      hoursInput.addEventListener("keydown", (event) =>
+        handleArrowAdjust(event, hoursInput, 0, 99),
+      );
+      minutesInput.addEventListener("keydown", (event) =>
+        handleArrowAdjust(event, minutesInput, 0, 59),
+      );
 
       refreshPresetStyles();
       updateStartEnabled();

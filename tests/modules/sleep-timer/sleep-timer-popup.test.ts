@@ -63,10 +63,15 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const input =
-      container.querySelector<HTMLInputElement>('input[type="text"]')!;
-    input.value = "00:30";
-    input.dispatchEvent(new Event("input"));
+    const hours = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Hours"]',
+    )!;
+    const minutes = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Minutes"]',
+    )!;
+    hours.value = "00";
+    minutes.value = "30";
+    minutes.dispatchEvent(new Event("input"));
 
     const startBtn =
       container.querySelector<HTMLButtonElement>("button.primary-btn")!;
@@ -126,10 +131,15 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const customInput =
-      container.querySelector<HTMLInputElement>('input[type="text"]')!;
-    customInput.value = "01:17";
-    customInput.dispatchEvent(new Event("input"));
+    const hours = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Hours"]',
+    )!;
+    const minutes = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Minutes"]',
+    )!;
+    hours.value = "01";
+    minutes.value = "17";
+    minutes.dispatchEvent(new Event("input"));
 
     const startBtn =
       container.querySelector<HTMLButtonElement>("button.primary-btn")!;
@@ -236,10 +246,15 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const input =
-      container.querySelector<HTMLInputElement>('input[type="text"]')!;
-    input.value = "20.3";
-    input.dispatchEvent(new Event("input"));
+    const hours = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Hours"]',
+    )!;
+    const minutes = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Minutes"]',
+    )!;
+    hours.value = "00";
+    minutes.value = "20.3";
+    minutes.dispatchEvent(new Event("input"));
 
     const startBtn =
       container.querySelector<HTMLButtonElement>("button.primary-btn")!;
