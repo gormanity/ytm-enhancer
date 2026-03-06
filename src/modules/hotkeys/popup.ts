@@ -40,9 +40,18 @@ export function createHotkeysPopupView(): PopupView {
 
       const hint = document.createElement("div");
       hint.className = "shortcuts-hint";
-      hint.innerHTML = `
-        <strong>Tip:</strong> Set shortcuts to <strong>Global</strong> in browser settings to control playback while using other apps.
-      `;
+      const hintPrefix = document.createElement("strong");
+      hintPrefix.textContent = "Tip:";
+      hint.appendChild(hintPrefix);
+      hint.appendChild(document.createTextNode(" Set shortcuts to "));
+      const globalText = document.createElement("strong");
+      globalText.textContent = "Global";
+      hint.appendChild(globalText);
+      hint.appendChild(
+        document.createTextNode(
+          " in browser settings to control playback while using other apps.",
+        ),
+      );
       container.appendChild(hint);
     },
   };

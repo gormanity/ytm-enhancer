@@ -53,9 +53,15 @@ export function createAboutPopupView(): PopupView {
       // MIT License section
       const licenseNote = document.createElement("div");
       licenseNote.className = "status-hint about-license-note";
-      licenseNote.innerHTML = `
-        This extension is provided as open source under the <strong>MIT License</strong>.
-      `;
+      licenseNote.appendChild(
+        document.createTextNode(
+          "This extension is provided as open source under the ",
+        ),
+      );
+      const mitLabel = document.createElement("strong");
+      mitLabel.textContent = "MIT License";
+      licenseNote.appendChild(mitLabel);
+      licenseNote.appendChild(document.createTextNode("."));
       linksCard.appendChild(licenseNote);
 
       // Store Links Card (Future)
@@ -69,17 +75,34 @@ export function createAboutPopupView(): PopupView {
 
       const chromePlaceholder = document.createElement("div");
       chromePlaceholder.className = "toggle-row about-placeholder-row";
-      chromePlaceholder.innerHTML =
-        "<span>Chrome Web Store</span><span class='about-coming-soon'>Coming soon</span>";
+      chromePlaceholder.appendChild(
+        createStorePlaceholderLabel("Chrome Web Store"),
+      );
+      chromePlaceholder.appendChild(createComingSoonLabel());
       storeCard.appendChild(chromePlaceholder);
 
       const firefoxPlaceholder = document.createElement("div");
       firefoxPlaceholder.className = "toggle-row about-placeholder-row";
-      firefoxPlaceholder.innerHTML =
-        "<span>Firefox Add-ons</span><span class='about-coming-soon'>Coming soon</span>";
+      firefoxPlaceholder.appendChild(
+        createStorePlaceholderLabel("Firefox Add-ons"),
+      );
+      firefoxPlaceholder.appendChild(createComingSoonLabel());
       storeCard.appendChild(firefoxPlaceholder);
     },
   };
+}
+
+function createStorePlaceholderLabel(text: string): HTMLElement {
+  const label = document.createElement("span");
+  label.textContent = text;
+  return label;
+}
+
+function createComingSoonLabel(): HTMLElement {
+  const status = document.createElement("span");
+  status.className = "about-coming-soon";
+  status.textContent = "Coming soon";
+  return status;
 }
 
 function createLinkRow(svg: string, label: string, url: string): HTMLElement {
