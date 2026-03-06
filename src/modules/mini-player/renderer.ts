@@ -1,4 +1,5 @@
 import type { PlaybackAction, PlaybackState } from "@/core/types";
+import { setElementSvgIcon } from "@/core/svg-icon";
 
 const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 const PAUSE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>`;
@@ -7,38 +8,6 @@ const NEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19"
 const THUMBS_UP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.3l1-4.6v-.3c0-.4-.2-.8-.4-1.1L14 1 7.6 7.4C7.2 7.8 7 8.3 7 8.8V19c0 1.1.9 2 2 2h7c.8 0 1.5-.5 1.8-1.2l3-7c.1-.2.2-.5.2-.8v-2z"/></svg>`;
 const THUMBS_DOWN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H8c-.8 0-1.5.5-1.8 1.2l-3 7c-.1.2-.2.5-.2.8v2c0 1.1.9 2 2 2h6.3l-1 4.6v.3c0 .4.2.8.4 1.1L10 23l6.4-6.4c.4-.4.6-.9.6-1.4V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>`;
 const VOLUME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
-const SVG_TEMPLATE_CACHE = new Map<string, SVGElement>();
-
-function getCachedSvgTemplate(svg: string): SVGElement | null {
-  const cached = SVG_TEMPLATE_CACHE.get(svg);
-  if (cached) return cached;
-
-  const template = document.createElement("template");
-  template.innerHTML = svg.trim();
-  const parsed =
-    template.content.firstElementChild instanceof SVGElement
-      ? template.content.firstElementChild
-      : null;
-  if (!parsed) return null;
-  SVG_TEMPLATE_CACHE.set(svg, parsed);
-  return parsed;
-}
-
-function cloneSvgIntoDocument(doc: Document, svg: string): SVGElement | null {
-  const parsed = getCachedSvgTemplate(svg);
-  return parsed ? (doc.importNode(parsed, true) as SVGElement) : null;
-}
-
-function setElementSvgIcon(
-  element: HTMLElement,
-  doc: Document,
-  svg: string,
-): void {
-  const icon = cloneSvgIntoDocument(doc, svg);
-  if (!icon) return;
-  element.replaceChildren(icon);
-}
-
 interface AuxHandlers {
   onLike?: () => void;
   onDislike?: () => void;
@@ -595,14 +564,14 @@ export class PipWindowRenderer {
     auxControls.className = "aux-controls";
 
     const dislikeBtn = doc.createElement("button");
-    setElementSvgIcon(dislikeBtn, doc, THUMBS_DOWN_SVG);
+    setElementSvgIcon(dislikeBtn, THUMBS_DOWN_SVG, doc);
     dislikeBtn.setAttribute("aria-label", "Dislike");
     dislikeBtn.addEventListener("click", () => aux?.onDislike?.());
     this.dislikeBtn = dislikeBtn;
     auxControls.appendChild(dislikeBtn);
 
     const likeBtn = doc.createElement("button");
-    setElementSvgIcon(likeBtn, doc, THUMBS_UP_SVG);
+    setElementSvgIcon(likeBtn, THUMBS_UP_SVG, doc);
     likeBtn.setAttribute("aria-label", "Like");
     likeBtn.addEventListener("click", () => aux?.onLike?.());
     this.likeBtn = likeBtn;
@@ -610,7 +579,7 @@ export class PipWindowRenderer {
 
     const volumeWrap = doc.createElement("div");
     volumeWrap.className = "volume-wrap";
-    setElementSvgIcon(volumeWrap, doc, VOLUME_SVG);
+    setElementSvgIcon(volumeWrap, VOLUME_SVG, doc);
     const volumeRange = doc.createElement("input");
     volumeRange.className = "volume";
     volumeRange.type = "range";
@@ -662,8 +631,8 @@ export class PipWindowRenderer {
     if (this.playPauseBtn) {
       setElementSvgIcon(
         this.playPauseBtn,
-        this.doc ?? document,
         state.isPlaying ? PAUSE_SVG : PLAY_SVG,
+        this.doc ?? document,
       );
       this.playPauseBtn.setAttribute(
         "aria-label",
@@ -761,7 +730,7 @@ export class PipWindowRenderer {
     onAction: (action: PlaybackAction) => void,
   ): HTMLButtonElement {
     const button = doc.createElement("button");
-    setElementSvgIcon(button, doc, svg);
+    setElementSvgIcon(button, svg, doc);
     button.setAttribute("data-action", action);
     button.setAttribute("aria-label", label);
     button.addEventListener("click", () => onAction(action));

@@ -1,21 +1,9 @@
+import { setElementSvgIcon } from "@/core/svg-icon";
+
 const PIP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <rect x="2" y="3" width="20" height="14" rx="2"/>
   <rect x="12" y="9" width="8" height="6" rx="1"/>
 </svg>`;
-const PIP_ICON_TEMPLATE = (() => {
-  const template = document.createElement("template");
-  template.innerHTML = PIP_ICON_SVG.trim();
-  return template;
-})();
-
-function clonePipIcon(): SVGElement | null {
-  const fragment = PIP_ICON_TEMPLATE.content.cloneNode(
-    true,
-  ) as DocumentFragment;
-  return fragment.firstElementChild instanceof SVGElement
-    ? fragment.firstElementChild
-    : null;
-}
 
 export class PipButton {
   private customButton: HTMLButtonElement | null = null;
@@ -38,10 +26,7 @@ export class PipButton {
     if (!container) return;
 
     const button = document.createElement("button");
-    const icon = clonePipIcon();
-    if (icon) {
-      button.appendChild(icon);
-    }
+    setElementSvgIcon(button, PIP_ICON_SVG, button.ownerDocument);
     button.setAttribute("aria-label", "Open mini player");
     button.className = "ytm-enhancer-pip-button";
     button.addEventListener("click", this.onClick);
