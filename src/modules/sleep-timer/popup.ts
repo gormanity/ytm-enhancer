@@ -23,11 +23,21 @@ function formatPausedAt(timestampMs: number): string {
   });
 }
 
-function parseDurationMinutes(value: string): number | null {
-  const minutes = Number(value);
-  if (!Number.isFinite(minutes) || minutes <= 0) return null;
-  if (!Number.isInteger(minutes)) return null;
-  return minutes;
+function formatMinutesAsHhMm(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function parseHhMmToMinutes(value: string): number | null {
+  const match = value.trim().match(/^(\d{1,2}):([0-5]\d)$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  const totalMinutes = hours * 60 + minutes;
+  if (totalMinutes <= 0) return null;
+  return totalMinutes;
 }
 
 /** Create the sleep timer settings popup view. */
@@ -68,15 +78,15 @@ export function createSleepTimerPopupView(): PopupView {
       card.appendChild(durationRow);
 
       const durationLabel = document.createElement("span");
-      durationLabel.textContent = "Minutes";
+      durationLabel.textContent = "Duration (HH:MM)";
       durationRow.appendChild(durationLabel);
 
       const durationInput = document.createElement("input");
-      durationInput.type = "number";
-      durationInput.min = "1";
-      durationInput.step = "1";
-      durationInput.value = "30";
-      durationInput.setAttribute("aria-label", "Timer duration in minutes");
+      durationInput.type = "text";
+      durationInput.inputMode = "numeric";
+      durationInput.value = "00:30";
+      durationInput.placeholder = "00:30";
+      durationInput.setAttribute("aria-label", "Timer duration in HH:MM");
       durationRow.appendChild(durationInput);
 
       const durationHint = document.createElement("p");
@@ -111,7 +121,7 @@ export function createSleepTimerPopupView(): PopupView {
         presetBtn.style.cursor = "pointer";
         presetBtn.addEventListener("click", () => {
           selectedPresetMinutes = minutes;
-          durationInput.value = String(minutes);
+          durationInput.value = formatMinutesAsHhMm(minutes);
           durationHint.style.display = "none";
           refreshPresetStyles();
           updateStartEnabled();
@@ -186,15 +196,14 @@ export function createSleepTimerPopupView(): PopupView {
       let statePollTimer: number | null = null;
 
       const getDurationMinutes = (): number | null => {
-        return parseDurationMinutes(durationInput.value);
+        return parseHhMmToMinutes(durationInput.value);
       };
 
       const updateStartEnabled = () => {
         const minutes = getDurationMinutes();
         startBtn.disabled = minutes === null;
         if (minutes === null) {
-          durationHint.textContent =
-            "Duration must be a whole number of minutes.";
+          durationHint.textContent = "Use HH:MM format (for example, 01:30).";
           durationHint.style.display = "block";
           return;
         }
@@ -282,7 +291,7 @@ export function createSleepTimerPopupView(): PopupView {
       });
 
       durationInput.addEventListener("input", () => {
-        const minutes = parseDurationMinutes(durationInput.value);
+        const minutes = parseHhMmToMinutes(durationInput.value);
         selectedPresetMinutes =
           minutes !== null && PRESET_MINUTES.includes(minutes) ? minutes : null;
         refreshPresetStyles();

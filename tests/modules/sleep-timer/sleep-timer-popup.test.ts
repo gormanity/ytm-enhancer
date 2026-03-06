@@ -63,10 +63,9 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const input = container.querySelector<HTMLInputElement>(
-      'input[type="number"]',
-    )!;
-    input.value = "30";
+    const input =
+      container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = "00:30";
     input.dispatchEvent(new Event("input"));
 
     const startBtn =
@@ -127,10 +126,9 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const customInput = container.querySelector<HTMLInputElement>(
-      'input[type="number"]',
-    )!;
-    customInput.value = "17";
+    const customInput =
+      container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    customInput.value = "01:17";
     customInput.dispatchEvent(new Event("input"));
 
     const startBtn =
@@ -138,7 +136,7 @@ describe("sleep timer popup view", () => {
     startBtn.click();
 
     expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "start-sleep-timer", durationMs: 17 * 60 * 1000 },
+      { type: "start-sleep-timer", durationMs: 77 * 60 * 1000 },
       expect.any(Function),
     );
   });
@@ -238,9 +236,8 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const input = container.querySelector<HTMLInputElement>(
-      'input[type="number"]',
-    )!;
+    const input =
+      container.querySelector<HTMLInputElement>('input[type="text"]')!;
     input.value = "20.3";
     input.dispatchEvent(new Event("input"));
 
