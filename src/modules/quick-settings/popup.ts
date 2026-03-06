@@ -2,6 +2,7 @@ import type { PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createPlaybackSpeedPopupView } from "../playback-speed/popup";
 import { createStreamQualityPopupView } from "../stream-quality/popup";
+import ytmTabFallbackIconUrl from "@/assets/ytm-tab-fallback.svg";
 import templateHtml from "./popup.html?raw";
 
 const PLAY_SVG =
@@ -16,7 +17,7 @@ interface YtmTabSummary {
   isSelected: boolean;
 }
 
-const YTM_FALLBACK_ICON_URL = "ytm-tab-fallback.svg";
+const YTM_FALLBACK_ICON_URL = ytmTabFallbackIconUrl;
 
 interface VolumeElements {
   numberInput: HTMLInputElement;
