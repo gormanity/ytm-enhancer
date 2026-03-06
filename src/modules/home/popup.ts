@@ -14,46 +14,23 @@ export function createHomePopupView(): PopupView {
       container.appendChild(heading);
 
       const trackInfo = document.createElement("div");
-      trackInfo.style.display = "flex";
-      trackInfo.style.flexDirection = "column";
-      trackInfo.style.alignItems = "center";
-      trackInfo.style.padding = "20px 0";
+      trackInfo.className = "home-track-info";
       container.appendChild(trackInfo);
 
       const artwork = document.createElement("img");
-      artwork.style.width = "180px";
-      artwork.style.height = "180px";
-      artwork.style.borderRadius = "8px";
-      artwork.style.objectFit = "cover";
-      artwork.style.background = "#1a1a1a";
-      artwork.style.boxShadow = "0 8px 16px rgba(0,0,0,0.5)";
-      artwork.style.marginBottom = "24px";
-      artwork.style.display = "none";
+      artwork.className = "home-artwork";
       trackInfo.appendChild(artwork);
 
       const title = document.createElement("div");
-      title.style.fontSize = "18px";
-      title.style.fontWeight = "600";
-      title.style.marginBottom = "4px";
-      title.style.textAlign = "center";
-      title.style.width = "100%";
-      title.style.whiteSpace = "nowrap";
-      title.style.overflow = "hidden";
-      title.style.textOverflow = "ellipsis";
+      title.className = "home-track-title";
       trackInfo.appendChild(title);
 
       const artist = document.createElement("div");
-      artist.style.fontSize = "14px";
-      artist.style.color = "#aaaaaa";
-      artist.style.textAlign = "center";
+      artist.className = "home-track-artist";
       trackInfo.appendChild(artist);
 
       const controls = document.createElement("div");
-      controls.style.display = "flex";
-      controls.style.justifyContent = "center";
-      controls.style.gap = "24px";
-      controls.style.marginTop = "32px";
-      controls.style.alignItems = "center";
+      controls.className = "home-controls";
       container.appendChild(controls);
 
       const prevBtn = createControlBtn(
@@ -83,9 +60,9 @@ export function createHomePopupView(): PopupView {
               const state = response.data;
               if (state.artworkUrl) {
                 artwork.src = state.artworkUrl;
-                artwork.style.display = "block";
+                artwork.classList.add("home-artwork--visible");
               } else {
-                artwork.style.display = "none";
+                artwork.classList.remove("home-artwork--visible");
               }
               title.textContent = state.title || "Unknown Track";
               artist.textContent = state.artist || "Unknown Artist";
@@ -98,7 +75,7 @@ export function createHomePopupView(): PopupView {
             } else {
               title.textContent = "YouTube Music not found";
               artist.textContent = "Open YTM to see now playing";
-              artwork.style.display = "none";
+              artwork.classList.remove("home-artwork--visible");
               playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
             }
           },
@@ -116,49 +93,10 @@ export function createHomePopupView(): PopupView {
 function createControlBtn(svg: string, large = false): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.innerHTML = svg;
-  btn.style.background = "none";
-  btn.style.border = "none";
-  btn.style.color = "#fff";
-  btn.style.cursor = "pointer";
-  btn.style.padding = "8px";
-  btn.style.display = "flex";
-  btn.style.alignItems = "center";
-  btn.style.justifyContent = "center";
-  btn.style.borderRadius = "50%";
-  btn.style.transition = "background 0.2s, transform 0.1s";
-
+  btn.className = "home-control-btn";
   if (large) {
-    btn.style.width = "48px";
-    btn.style.height = "48px";
-    btn.style.background = "#fff";
-    btn.style.color = "#000";
-    const svgEl = btn.querySelector("svg");
-    if (svgEl) {
-      svgEl.style.width = "28px";
-      svgEl.style.height = "28px";
-    }
-  } else {
-    btn.style.width = "40px";
-    btn.style.height = "40px";
-    const svgEl = btn.querySelector("svg");
-    if (svgEl) {
-      svgEl.style.width = "24px";
-      svgEl.style.height = "24px";
-    }
+    btn.classList.add("home-control-btn--primary");
   }
-
-  btn.onmouseover = () => {
-    btn.style.background = large ? "#eeeeee" : "rgba(255,255,255,0.1)";
-  };
-  btn.onmouseout = () => {
-    btn.style.background = large ? "#ffffff" : "none";
-  };
-  btn.onmousedown = () => {
-    btn.style.transform = "scale(0.95)";
-  };
-  btn.onmouseup = () => {
-    btn.style.transform = "scale(1)";
-  };
 
   return btn;
 }
