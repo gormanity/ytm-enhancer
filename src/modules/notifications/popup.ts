@@ -3,12 +3,12 @@ import type { PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import templateHtml from "./popup.html?raw";
 
-const FIELD_LABELS: { key: keyof NotificationFields; label: string }[] = [
-  { key: "title", label: "Title" },
-  { key: "artist", label: "Artist" },
-  { key: "album", label: "Album" },
-  { key: "year", label: "Year" },
-  { key: "artwork", label: "Artwork" },
+const FIELD_KEYS: Array<keyof NotificationFields> = [
+  "title",
+  "artist",
+  "album",
+  "year",
+  "artwork",
 ];
 
 /** Create the notifications settings popup view. */
@@ -25,13 +25,10 @@ export function createNotificationsPopupView(): PopupView {
       const unpauseToggle = container.querySelector<HTMLInputElement>(
         '[data-role="notifications-unpause-toggle"]',
       );
-      const fieldsRoot = container.querySelector<HTMLElement>(
-        '[data-role="notifications-fields"]',
-      );
       const previewBtn = container.querySelector<HTMLButtonElement>(
         '[data-role="notifications-preview-btn"]',
       );
-      if (!toggle || !unpauseToggle || !fieldsRoot || !previewBtn) return;
+      if (!toggle || !unpauseToggle || !previewBtn) return;
 
       toggle.disabled = true;
 
@@ -77,21 +74,13 @@ export function createNotificationsPopupView(): PopupView {
         input: HTMLInputElement;
       }[] = [];
 
-      for (const { key, label: fieldLabel } of FIELD_LABELS) {
-        const row = document.createElement("label");
-        row.className = "field-row";
-
-        const span = document.createElement("span");
-        span.textContent = fieldLabel;
-        row.appendChild(span);
-
-        const input = document.createElement("input");
-        input.type = "checkbox";
+      for (const key of FIELD_KEYS) {
+        const input = container.querySelector<HTMLInputElement>(
+          `[data-role="notifications-field-${key}"]`,
+        );
+        if (!input) continue;
         input.disabled = true;
-        row.appendChild(input);
-
         fieldCheckboxes.push({ key, input });
-        fieldsRoot.appendChild(row);
       }
 
       chrome.runtime.sendMessage(
