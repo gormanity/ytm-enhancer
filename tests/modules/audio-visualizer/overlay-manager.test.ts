@@ -8,6 +8,7 @@ import {
   type Mock,
 } from "vitest";
 import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
+import type { VisualizerStyleTunings } from "@/modules/audio-visualizer/styles";
 
 interface MockCanvas {
   attach: ReturnType<typeof vi.fn>;
@@ -286,7 +287,7 @@ describe("VisualizerOverlayManager", () => {
     manager.attachToPlayerBar(c1);
     manager.attachToSongArt(c2);
 
-    const tunings = {
+    const tunings: VisualizerStyleTunings = {
       bars: {
         intensity: 1.2,
         thickness: 1.1,

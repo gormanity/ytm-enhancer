@@ -171,7 +171,7 @@ function renderOpenTabs(
 
   const pickTabIconCandidates = (
     tab: YtmTabSummary,
-    artworkUrl?: string,
+    artworkUrl?: string | null,
   ): string[] => {
     const result: string[] = [];
     const candidates = [artworkUrl ?? tab.artworkUrl, YTM_FALLBACK_ICON_URL];
@@ -190,7 +190,9 @@ function renderOpenTabs(
     list.replaceChildren();
 
     for (const tab of tabs) {
-      const itemFragment = itemTemplate.content.cloneNode(true);
+      const itemFragment = itemTemplate.content.cloneNode(
+        true,
+      ) as DocumentFragment;
       const item =
         itemFragment.firstElementChild instanceof HTMLElement
           ? itemFragment.firstElementChild

@@ -64,7 +64,7 @@ function loadShortcuts(
     value: string,
     isSymbol: boolean,
   ): HTMLElement | null => {
-    const keyFragment = keyTemplate.content.cloneNode(true);
+    const keyFragment = keyTemplate.content.cloneNode(true) as DocumentFragment;
     const key =
       keyFragment.firstElementChild instanceof HTMLElement
         ? keyFragment.firstElementChild
@@ -78,7 +78,9 @@ function loadShortcuts(
   };
 
   const createSeparatorElement = (): HTMLElement | null => {
-    const separatorFragment = separatorTemplate.content.cloneNode(true);
+    const separatorFragment = separatorTemplate.content.cloneNode(
+      true,
+    ) as DocumentFragment;
     const separator =
       separatorFragment.firstElementChild instanceof HTMLElement
         ? separatorFragment.firstElementChild
@@ -90,7 +92,9 @@ function loadShortcuts(
     for (const cmd of commands) {
       if (!cmd.name || cmd.name === "_execute_action") continue;
 
-      const rowFragment = rowTemplate.content.cloneNode(true);
+      const rowFragment = rowTemplate.content.cloneNode(
+        true,
+      ) as DocumentFragment;
       const row =
         rowFragment.firstElementChild instanceof HTMLDivElement
           ? rowFragment.firstElementChild

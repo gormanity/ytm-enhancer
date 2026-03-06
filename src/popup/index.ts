@@ -31,7 +31,7 @@ function createNavItem(
 ): HTMLDivElement | null {
   if (!navItemTemplate) return null;
 
-  const fragment = navItemTemplate.content.cloneNode(true);
+  const fragment = navItemTemplate.content.cloneNode(true) as DocumentFragment;
   const item =
     fragment.firstElementChild instanceof HTMLDivElement
       ? fragment.firstElementChild

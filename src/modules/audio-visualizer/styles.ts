@@ -50,6 +50,7 @@ function clampTuning(tuning: VisualizerStyleTuning): VisualizerStyleTuning {
     intensity: Math.max(0.25, Math.min(2, tuning.intensity)),
     thickness: Math.max(0.5, Math.min(2.5, tuning.thickness)),
     opacity: Math.max(0.1, Math.min(1, tuning.opacity)),
+    colorMode: tuning.colorMode,
   };
 }
 
