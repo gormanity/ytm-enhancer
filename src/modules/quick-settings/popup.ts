@@ -9,6 +9,8 @@ const PLAY_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+const PLAY_ICON_TEMPLATE = createIconTemplate(PLAY_SVG);
+const PAUSE_ICON_TEMPLATE = createIconTemplate(PAUSE_SVG);
 
 interface YtmTabSummary {
   id: number | null;
@@ -337,6 +339,21 @@ function updateSliderBackground(range: HTMLInputElement) {
   range.style.background = `linear-gradient(to right, var(--accent-color) 0%, var(--accent-color) ${percent}%, #3f3f3f ${percent}%, #3f3f3f 100%)`;
 }
 
+function createIconTemplate(svgMarkup: string): SVGElement | null {
+  const template = document.createElement("template");
+  template.innerHTML = svgMarkup.trim();
+  const root = template.content.firstElementChild;
+  return root instanceof SVGElement ? root : null;
+}
+
+function setButtonIcon(
+  button: HTMLButtonElement,
+  iconTemplate: SVGElement | null,
+): void {
+  if (!iconTemplate) return;
+  button.replaceChildren(iconTemplate.cloneNode(true));
+}
+
 /** Renders a specifically styled volume control that associates the slider and input */
 function renderIntegratedVolume(elements: VolumeElements) {
   const { numberInput, range, placeholder } = elements;
@@ -427,7 +444,10 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
           artist.textContent = state.artist || "Start playback to see details";
           controls.classList.toggle("is-hidden", !hasTrack);
 
-          playButton.innerHTML = state.isPlaying ? PAUSE_SVG : PLAY_SVG;
+          setButtonIcon(
+            playButton,
+            state.isPlaying ? PAUSE_ICON_TEMPLATE : PLAY_ICON_TEMPLATE,
+          );
         } else {
           artwork.classList.add("is-hidden");
           controls.classList.add("is-hidden");

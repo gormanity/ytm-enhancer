@@ -7,6 +7,8 @@ const PLAY_SVG =
   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+const PLAY_ICON_TEMPLATE = createIconTemplate(PLAY_SVG);
+const PAUSE_ICON_TEMPLATE = createIconTemplate(PAUSE_SVG);
 
 /** Create the home/now-playing popup view. */
 export function createHomePopupView(): PopupView {
@@ -53,12 +55,15 @@ export function createHomePopupView(): PopupView {
               }
               title.textContent = state.title || "Unknown Track";
               artist.textContent = state.artist || "Unknown Artist";
-              playBtn.innerHTML = state.isPlaying ? PAUSE_SVG : PLAY_SVG;
+              setButtonIcon(
+                playBtn,
+                state.isPlaying ? PAUSE_ICON_TEMPLATE : PLAY_ICON_TEMPLATE,
+              );
             } else {
               title.textContent = "YouTube Music not found";
               artist.textContent = "Open YTM to see now playing";
               artwork.classList.remove("home-artwork--visible");
-              playBtn.innerHTML = PLAY_SVG;
+              setButtonIcon(playBtn, PLAY_ICON_TEMPLATE);
             }
           },
         );
@@ -75,4 +80,19 @@ export function createHomePopupView(): PopupView {
 
 function sendAction(action: string) {
   chrome.runtime.sendMessage({ type: "playback-action", action });
+}
+
+function createIconTemplate(svgMarkup: string): SVGElement | null {
+  const template = document.createElement("template");
+  template.innerHTML = svgMarkup.trim();
+  const root = template.content.firstElementChild;
+  return root instanceof SVGElement ? root : null;
+}
+
+function setButtonIcon(
+  button: HTMLButtonElement,
+  iconTemplate: SVGElement | null,
+): void {
+  if (!iconTemplate) return;
+  button.replaceChildren(iconTemplate.cloneNode(true));
 }
