@@ -4,14 +4,10 @@ import { createPlaybackSpeedPopupView } from "../playback-speed/popup";
 import { createStreamQualityPopupView } from "../stream-quality/popup";
 import templateHtml from "./popup.html?raw";
 
-const PREV_SVG =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>';
 const PLAY_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-const NEXT_SVG =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
 
 interface YtmTabSummary {
   id: number | null;
@@ -32,6 +28,9 @@ interface NowPlayingElements {
   title: HTMLElement;
   artist: HTMLElement;
   controls: HTMLElement;
+  prevButton: HTMLButtonElement;
+  playButton: HTMLButtonElement;
+  nextButton: HTMLButtonElement;
 }
 
 /** Create the combined Quick Settings popup view. */
@@ -49,6 +48,9 @@ export function createQuickSettingsPopupView(): PopupView {
       const tabsList = container.querySelector<HTMLElement>(
         '[data-role="quick-tabs-list"]',
       );
+      const tabItemTemplate = container.querySelector<HTMLTemplateElement>(
+        '[data-role="quick-tab-item-template"]',
+      );
       const artwork = container.querySelector<HTMLImageElement>(
         '[data-role="quick-now-playing-artwork"]',
       );
@@ -60,6 +62,15 @@ export function createQuickSettingsPopupView(): PopupView {
       );
       const controls = container.querySelector<HTMLElement>(
         '[data-role="quick-now-playing-controls"]',
+      );
+      const prevButton = container.querySelector<HTMLButtonElement>(
+        '[data-role="quick-now-playing-prev"]',
+      );
+      const playButton = container.querySelector<HTMLButtonElement>(
+        '[data-role="quick-now-playing-play"]',
+      );
+      const nextButton = container.querySelector<HTMLButtonElement>(
+        '[data-role="quick-now-playing-next"]',
       );
       const numberInput = container.querySelector<HTMLInputElement>(
         '[data-role="quick-volume-number-input"]',
@@ -79,10 +90,14 @@ export function createQuickSettingsPopupView(): PopupView {
       if (
         !tabsCard ||
         !tabsList ||
+        !tabItemTemplate ||
         !artwork ||
         !title ||
         !artist ||
         !controls ||
+        !prevButton ||
+        !playButton ||
+        !nextButton ||
         !numberInput ||
         !range ||
         !speedSlot ||
@@ -91,9 +106,17 @@ export function createQuickSettingsPopupView(): PopupView {
         return;
       }
 
-      cleanups.push(renderOpenTabs(tabsCard, tabsList));
+      cleanups.push(renderOpenTabs(tabsCard, tabsList, tabItemTemplate));
       cleanups.push(
-        renderCompactNowPlaying({ artwork, title, artist, controls }),
+        renderCompactNowPlaying({
+          artwork,
+          title,
+          artist,
+          controls,
+          prevButton,
+          playButton,
+          nextButton,
+        }),
       );
       renderIntegratedVolume({ numberInput, range, placeholder });
       renderEmbeddedSelect(createPlaybackSpeedPopupView(), speedSlot);
@@ -118,16 +141,24 @@ function renderEmbeddedSelect(view: PopupView, target: HTMLElement): void {
   target.appendChild(content);
 }
 
-function renderOpenTabs(card: HTMLElement, list: HTMLElement): () => void {
+function renderOpenTabs(
+  card: HTMLElement,
+  list: HTMLElement,
+  itemTemplate: HTMLTemplateElement,
+): () => void {
   const renderTabs = (tabs: YtmTabSummary[]) => {
     list.innerHTML = "";
 
     for (const tab of tabs) {
-      const item = document.createElement("div");
-      item.className = "tab-item";
-      if (tab.isSelected) item.classList.add("selected");
+      const itemFragment = itemTemplate.content.cloneNode(true);
+      const item =
+        itemFragment.firstElementChild instanceof HTMLElement
+          ? itemFragment.firstElementChild
+          : null;
+      const icon = item?.querySelector("img");
+      if (!item || !icon) continue;
 
-      const icon = document.createElement("img");
+      if (tab.isSelected) item.classList.add("selected");
       icon.src = tab.artworkUrl ?? tab.favIconUrl ?? "icon48.png";
       icon.alt = "";
       icon.onerror = () => {
@@ -220,30 +251,30 @@ function renderIntegratedVolume(elements: VolumeElements) {
 }
 
 function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
-  const { artwork, title, artist, controls } = elements;
+  const {
+    artwork,
+    title,
+    artist,
+    controls,
+    prevButton,
+    playButton,
+    nextButton,
+  } = elements;
 
   artwork.onerror = () => {
     artwork.removeAttribute("src");
     artwork.classList.add("is-hidden");
   };
 
-  const createBtn = (svg: string, action: string, isSmall = true) => {
-    const btn = document.createElement("button");
-    btn.innerHTML = svg;
-    btn.className = "icon-btn";
-    if (!isSmall) btn.classList.add("quick-now-playing-btn-padded");
-    btn.onclick = () =>
-      chrome.runtime.sendMessage({ type: "playback-action", action });
-    return btn;
-  };
-
-  const prevBtn = createBtn(PREV_SVG, "previous");
-  const playBtn = createBtn(PLAY_SVG, "togglePlay", false);
-  const nextBtn = createBtn(NEXT_SVG, "next");
-
-  controls.appendChild(prevBtn);
-  controls.appendChild(playBtn);
-  controls.appendChild(nextBtn);
+  prevButton.onclick = () =>
+    chrome.runtime.sendMessage({ type: "playback-action", action: "previous" });
+  playButton.onclick = () =>
+    chrome.runtime.sendMessage({
+      type: "playback-action",
+      action: "togglePlay",
+    });
+  nextButton.onclick = () =>
+    chrome.runtime.sendMessage({ type: "playback-action", action: "next" });
 
   const update = () => {
     chrome.runtime.sendMessage(
@@ -266,7 +297,7 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
           artist.textContent = state.artist || "Start playback to see details";
           controls.classList.toggle("is-hidden", !hasTrack);
 
-          playBtn.innerHTML = state.isPlaying ? PAUSE_SVG : PLAY_SVG;
+          playButton.innerHTML = state.isPlaying ? PAUSE_SVG : PLAY_SVG;
         } else {
           artwork.classList.add("is-hidden");
           controls.classList.add("is-hidden");

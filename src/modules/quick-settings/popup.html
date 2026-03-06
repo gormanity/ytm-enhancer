@@ -3,6 +3,11 @@
 <div class="settings-card is-hidden" data-role="quick-tabs-card">
   <h3>Music Source</h3>
   <div class="tab-list-horizontal" data-role="quick-tabs-list"></div>
+  <template data-role="quick-tab-item-template">
+    <div class="tab-item">
+      <img alt="" />
+    </div>
+  </template>
 </div>
 
 <div class="settings-card">
@@ -24,7 +29,35 @@
       <div
         class="quick-now-playing-controls"
         data-role="quick-now-playing-controls"
-      ></div>
+      >
+        <button
+          class="icon-btn"
+          data-role="quick-now-playing-prev"
+          type="button"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+          </svg>
+        </button>
+        <button
+          class="icon-btn quick-now-playing-btn-padded"
+          data-role="quick-now-playing-play"
+          type="button"
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </button>
+        <button
+          class="icon-btn"
+          data-role="quick-now-playing-next"
+          type="button"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 </div>
