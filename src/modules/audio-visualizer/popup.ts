@@ -2,6 +2,7 @@ import type { PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import {
   type VisualizerColorMode,
+  DEFAULT_VISUALIZER_STYLE_TUNING,
   DEFAULT_VISUALIZER_STYLE_TUNINGS,
   type VisualizerStyle,
   type VisualizerStyleTuning,
@@ -80,6 +81,29 @@ export function createAudioVisualizerPopupView(): PopupView {
         circular: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.circular },
       };
 
+      const normalizeStyleTuning = (
+        tuning: Partial<VisualizerStyleTuning> | undefined,
+      ): VisualizerStyleTuning => ({
+        intensity:
+          typeof tuning?.intensity === "number"
+            ? tuning.intensity
+            : DEFAULT_VISUALIZER_STYLE_TUNING.intensity,
+        thickness:
+          typeof tuning?.thickness === "number"
+            ? tuning.thickness
+            : DEFAULT_VISUALIZER_STYLE_TUNING.thickness,
+        opacity:
+          typeof tuning?.opacity === "number"
+            ? tuning.opacity
+            : DEFAULT_VISUALIZER_STYLE_TUNING.opacity,
+        colorMode:
+          tuning?.colorMode === "white" ||
+          tuning?.colorMode === "artwork-adaptive" ||
+          tuning?.colorMode === "monochrome-dim"
+            ? tuning.colorMode
+            : "white",
+      });
+
       const refreshTuningControls = () => {
         const currentStyle = select.value as VisualizerStyle;
         const tuning = styleTunings[currentStyle];
@@ -90,12 +114,14 @@ export function createAudioVisualizerPopupView(): PopupView {
           Math.round(tuning.thickness * 100),
         );
         opacityControl.range.value = String(Math.round(tuning.opacity * 100));
+        colorModeSelect.value = tuning.colorMode;
         intensityControl.value.textContent = `${intensityControl.range.value}%`;
         thicknessControl.value.textContent = `${thicknessControl.range.value}%`;
         opacityControl.value.textContent = `${opacityControl.range.value}%`;
       };
 
       const setTuningControlsEnabled = (enabled: boolean) => {
+        colorModeSelect.disabled = !enabled;
         intensityControl.range.disabled = !enabled;
         thicknessControl.range.disabled = !enabled;
         opacityControl.range.disabled = !enabled;
@@ -134,25 +160,20 @@ export function createAudioVisualizerPopupView(): PopupView {
 
       chrome.runtime.sendMessage(
         { type: "get-audio-visualizer-style-tunings" },
-        (response: { ok: boolean; data?: VisualizerStyleTunings }) => {
+        (response: {
+          ok: boolean;
+          data?: Partial<
+            Record<VisualizerStyle, Partial<VisualizerStyleTuning>>
+          >;
+        }) => {
           if (response?.ok && response.data) {
             styleTunings = {
-              bars: { ...response.data.bars },
-              waveform: { ...response.data.waveform },
-              circular: { ...response.data.circular },
+              bars: normalizeStyleTuning(response.data.bars),
+              waveform: normalizeStyleTuning(response.data.waveform),
+              circular: normalizeStyleTuning(response.data.circular),
             };
             setTuningControlsEnabled(true);
             refreshTuningControls();
-          }
-        },
-      );
-
-      chrome.runtime.sendMessage(
-        { type: "get-audio-visualizer-color-mode" },
-        (response: { ok: boolean; data?: VisualizerColorMode }) => {
-          if (response?.ok && response.data) {
-            colorModeSelect.value = response.data;
-            colorModeSelect.disabled = false;
           }
         },
       );
@@ -180,6 +201,11 @@ export function createAudioVisualizerPopupView(): PopupView {
       });
 
       colorModeSelect.addEventListener("change", () => {
+        const style = select.value as VisualizerStyle;
+        styleTunings[style] = {
+          ...styleTunings[style],
+          colorMode: colorModeSelect.value as VisualizerColorMode,
+        };
         chrome.runtime.sendMessage({
           type: "set-audio-visualizer-color-mode",
           mode: colorModeSelect.value,
@@ -192,6 +218,7 @@ export function createAudioVisualizerPopupView(): PopupView {
           intensity: Number(intensityControl.range.value) / 100,
           thickness: Number(thicknessControl.range.value) / 100,
           opacity: Number(opacityControl.range.value) / 100,
+          colorMode: styleTunings[style].colorMode,
         };
         styleTunings[style] = tuning;
         refreshTuningControls();

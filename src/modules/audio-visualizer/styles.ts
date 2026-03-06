@@ -15,6 +15,7 @@ export interface VisualizerStyleTuning {
   intensity: number;
   thickness: number;
   opacity: number;
+  colorMode: VisualizerColorMode;
 }
 
 export type VisualizerStyleTunings = Record<
@@ -26,6 +27,7 @@ export const DEFAULT_VISUALIZER_STYLE_TUNING: VisualizerStyleTuning = {
   intensity: 1,
   thickness: 1,
   opacity: 1,
+  colorMode: "white",
 };
 
 export const DEFAULT_VISUALIZER_STYLE_TUNINGS: VisualizerStyleTunings = {

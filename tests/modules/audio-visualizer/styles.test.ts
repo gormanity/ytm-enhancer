@@ -31,7 +31,7 @@ function createMockContext(width = 200, height = 200): VisualizerDrawContext {
     width,
     height,
     data: new Uint8Array([128, 64, 192, 255, 0]),
-    tuning: { intensity: 1, thickness: 1, opacity: 1 },
+    tuning: { intensity: 1, thickness: 1, opacity: 1, colorMode: "white" },
     color: { r: 255, g: 255, b: 255 },
   };
 }

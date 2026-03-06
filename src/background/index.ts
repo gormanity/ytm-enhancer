@@ -453,6 +453,10 @@ handler.on("set-audio-visualizer-style", async (message) => {
     type: "set-audio-visualizer-style",
     style: message.style,
   });
+  void relayToYTMTab({
+    type: "set-audio-visualizer-color-mode",
+    mode: audioVisualizer.getColorMode(),
+  });
   return { ok: true };
 });
 
@@ -494,7 +498,10 @@ handler.on("get-audio-visualizer-color-mode", async () => {
 
 handler.on("set-audio-visualizer-color-mode", async (message) => {
   audioVisualizer.setColorMode(message.mode as VisualizerColorMode);
-  void saveModuleStateValue("audio-visualizer.colorMode", message.mode);
+  void saveModuleStateValue(
+    "audio-visualizer.styleTunings",
+    audioVisualizer.getStyleTunings(),
+  );
   void relayToYTMTab({
     type: "set-audio-visualizer-color-mode",
     mode: message.mode,
@@ -599,16 +606,20 @@ async function restoreModuleState(): Promise<void> {
   audioVisualizer.setTarget(
     str("audio-visualizer.target", "auto") as VisualizerTarget,
   );
-  audioVisualizer.setColorMode(
-    str("audio-visualizer.colorMode", "white") as VisualizerColorMode,
-  );
+  const legacyColorMode = str(
+    "audio-visualizer.colorMode",
+    "white",
+  ) as VisualizerColorMode;
   if (
     typeof state["audio-visualizer.styleTunings"] === "object" &&
     state["audio-visualizer.styleTunings"] !== null
   ) {
     audioVisualizer.setStyleTunings(
       state["audio-visualizer.styleTunings"] as VisualizerStyleTunings,
+      legacyColorMode,
     );
+  } else {
+    audioVisualizer.setAllStyleColorModes(legacyColorMode);
   }
   miniPlayer.setEnabled(bool("mini-player.enabled", true));
   miniPlayer.setSuppressNotificationsWhilePipOpen(

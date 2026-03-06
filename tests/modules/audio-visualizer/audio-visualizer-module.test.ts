@@ -58,6 +58,8 @@ describe("AudioVisualizerModule", () => {
     const mod = new AudioVisualizerModule();
     mod.setColorMode("artwork-adaptive");
     expect(mod.getColorMode()).toBe("artwork-adaptive");
+    mod.setStyle("waveform");
+    expect(mod.getColorMode()).toBe("white");
     mod.setColorMode("monochrome-dim");
     expect(mod.getColorMode()).toBe("monochrome-dim");
   });
@@ -73,9 +75,9 @@ describe("AudioVisualizerModule", () => {
   it("should provide per-style tunings with defaults", () => {
     const mod = new AudioVisualizerModule();
     expect(mod.getStyleTunings()).toEqual({
-      bars: { intensity: 1, thickness: 1, opacity: 1 },
-      waveform: { intensity: 1, thickness: 1, opacity: 1 },
-      circular: { intensity: 1, thickness: 1, opacity: 1 },
+      bars: { intensity: 1, thickness: 1, opacity: 1, colorMode: "white" },
+      waveform: { intensity: 1, thickness: 1, opacity: 1, colorMode: "white" },
+      circular: { intensity: 1, thickness: 1, opacity: 1, colorMode: "white" },
     });
   });
 
@@ -85,16 +87,19 @@ describe("AudioVisualizerModule", () => {
       intensity: 1.5,
       thickness: 1.2,
       opacity: 0.8,
+      colorMode: "monochrome-dim",
     });
     expect(mod.getStyleTunings().waveform).toEqual({
       intensity: 1.5,
       thickness: 1.2,
       opacity: 0.8,
+      colorMode: "monochrome-dim",
     });
     expect(mod.getStyleTunings().bars).toEqual({
       intensity: 1,
       thickness: 1,
       opacity: 1,
+      colorMode: "white",
     });
   });
 

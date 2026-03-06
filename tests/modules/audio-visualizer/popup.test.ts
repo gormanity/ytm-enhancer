@@ -3,6 +3,18 @@ import { createAudioVisualizerPopupView } from "@/modules/audio-visualizer/popup
 
 describe("audio visualizer popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
+  const getStyleSelect = (container: HTMLElement) =>
+    container.querySelector<HTMLSelectElement>(
+      '[data-role="audio-visualizer-style-select"]',
+    );
+  const getTargetSelect = (container: HTMLElement) =>
+    container.querySelector<HTMLSelectElement>(
+      '[data-role="audio-visualizer-target-select"]',
+    );
+  const getColorModeSelect = (container: HTMLElement) =>
+    container.querySelector<HTMLSelectElement>(
+      '[data-role="audio-visualizer-color-mode-select"]',
+    );
 
   beforeEach(() => {
     sendMessageMock = vi.fn();
@@ -123,8 +135,7 @@ describe("audio visualizer popup view", () => {
 
     view.render(container);
 
-    const selects = container.querySelectorAll("select");
-    const select = selects[0];
+    const select = getStyleSelect(container);
     expect(select).not.toBeNull();
     expect(select?.options).toHaveLength(3);
     expect(select?.options[0].value).toBe("bars");
@@ -153,9 +164,9 @@ describe("audio visualizer popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const selects = container.querySelectorAll<HTMLSelectElement>("select");
-      expect(selects[0]?.value).toBe("waveform");
-      expect(selects[0]?.disabled).toBe(false);
+      const select = getStyleSelect(container);
+      expect(select?.value).toBe("waveform");
+      expect(select?.disabled).toBe(false);
     });
   });
 
@@ -180,13 +191,13 @@ describe("audio visualizer popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const selects = container.querySelectorAll<HTMLSelectElement>("select");
-      expect(selects[0]?.disabled).toBe(false);
+      const select = getStyleSelect(container);
+      expect(select?.disabled).toBe(false);
     });
 
-    const selects = container.querySelectorAll<HTMLSelectElement>("select");
-    selects[0].value = "circular";
-    selects[0].dispatchEvent(new Event("change"));
+    const select = getStyleSelect(container)!;
+    select.value = "circular";
+    select.dispatchEvent(new Event("change"));
 
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-audio-visualizer-style",
@@ -212,8 +223,7 @@ describe("audio visualizer popup view", () => {
 
     view.render(container);
 
-    const selects = container.querySelectorAll("select");
-    const targetSelect = selects[1];
+    const targetSelect = getTargetSelect(container);
     expect(targetSelect).not.toBeNull();
     expect(targetSelect?.options).toHaveLength(5);
     expect(targetSelect?.options[0].value).toBe("auto");
@@ -244,9 +254,9 @@ describe("audio visualizer popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const selects = container.querySelectorAll<HTMLSelectElement>("select");
-      expect(selects[1]?.value).toBe("pip-only");
-      expect(selects[1]?.disabled).toBe(false);
+      const targetSelect = getTargetSelect(container);
+      expect(targetSelect?.value).toBe("pip-only");
+      expect(targetSelect?.disabled).toBe(false);
     });
   });
 
@@ -271,13 +281,13 @@ describe("audio visualizer popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const selects = container.querySelectorAll<HTMLSelectElement>("select");
-      expect(selects[1]?.disabled).toBe(false);
+      const targetSelect = getTargetSelect(container);
+      expect(targetSelect?.disabled).toBe(false);
     });
 
-    const selects = container.querySelectorAll<HTMLSelectElement>("select");
-    selects[1].value = "all";
-    selects[1].dispatchEvent(new Event("change"));
+    const targetSelect = getTargetSelect(container)!;
+    targetSelect.value = "all";
+    targetSelect.dispatchEvent(new Event("change"));
 
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-audio-visualizer-target",
@@ -346,20 +356,9 @@ describe("audio visualizer popup view", () => {
         intensity: 1.4,
         thickness: 1,
         opacity: 1,
+        colorMode: "white",
       },
     });
-  });
-
-  it("should query color mode on render", () => {
-    const view = createAudioVisualizerPopupView();
-    const container = document.createElement("div");
-
-    view.render(container);
-
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "get-audio-visualizer-color-mode" },
-      expect.any(Function),
-    );
   });
 
   it("should send set-audio-visualizer-color-mode on color mode change", async () => {
@@ -376,13 +375,26 @@ describe("audio visualizer popup view", () => {
           callback({
             ok: true,
             data: {
-              bars: { intensity: 1, thickness: 1, opacity: 1 },
-              waveform: { intensity: 1, thickness: 1, opacity: 1 },
-              circular: { intensity: 1, thickness: 1, opacity: 1 },
+              bars: {
+                intensity: 1,
+                thickness: 1,
+                opacity: 1,
+                colorMode: "white",
+              },
+              waveform: {
+                intensity: 1,
+                thickness: 1,
+                opacity: 1,
+                colorMode: "artwork-adaptive",
+              },
+              circular: {
+                intensity: 1,
+                thickness: 1,
+                opacity: 1,
+                colorMode: "monochrome-dim",
+              },
             },
           });
-        } else if (message.type === "get-audio-visualizer-color-mode") {
-          callback({ ok: true, data: "white" });
         }
       },
     );
@@ -392,13 +404,14 @@ describe("audio visualizer popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const selects = container.querySelectorAll<HTMLSelectElement>("select");
-      expect(selects[2]?.disabled).toBe(false);
+      const colorModeSelect = getColorModeSelect(container);
+      expect(colorModeSelect?.disabled).toBe(false);
+      expect(colorModeSelect?.value).toBe("white");
     });
 
-    const selects = container.querySelectorAll<HTMLSelectElement>("select");
-    selects[2].value = "monochrome-dim";
-    selects[2].dispatchEvent(new Event("change"));
+    const colorModeSelect = getColorModeSelect(container)!;
+    colorModeSelect.value = "monochrome-dim";
+    colorModeSelect.dispatchEvent(new Event("change"));
 
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-audio-visualizer-color-mode",

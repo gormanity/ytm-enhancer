@@ -287,9 +287,24 @@ describe("VisualizerOverlayManager", () => {
     manager.attachToSongArt(c2);
 
     const tunings = {
-      bars: { intensity: 1.2, thickness: 1.1, opacity: 0.9 },
-      waveform: { intensity: 0.9, thickness: 1.4, opacity: 0.7 },
-      circular: { intensity: 1, thickness: 1, opacity: 1 },
+      bars: {
+        intensity: 1.2,
+        thickness: 1.1,
+        opacity: 0.9,
+        colorMode: "white",
+      },
+      waveform: {
+        intensity: 0.9,
+        thickness: 1.4,
+        opacity: 0.7,
+        colorMode: "artwork-adaptive",
+      },
+      circular: {
+        intensity: 1,
+        thickness: 1,
+        opacity: 1,
+        colorMode: "monochrome-dim",
+      },
     };
     manager.setStyleTunings(tunings);
 

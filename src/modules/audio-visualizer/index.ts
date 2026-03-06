@@ -19,7 +19,6 @@ export class AudioVisualizerModule implements FeatureModule {
   private enabled = true;
   private style: VisualizerStyle = "bars";
   private target: VisualizerTarget = "auto";
-  private colorMode: VisualizerColorMode = "white";
   private styleTunings: VisualizerStyleTunings = {
     bars: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.bars },
     waveform: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.waveform },
@@ -59,11 +58,18 @@ export class AudioVisualizerModule implements FeatureModule {
   }
 
   getColorMode(): VisualizerColorMode {
-    return this.colorMode;
+    return this.styleTunings[this.style].colorMode;
   }
 
   setColorMode(mode: VisualizerColorMode): void {
-    this.colorMode = mode;
+    const current = this.styleTunings[this.style];
+    this.styleTunings = {
+      ...this.styleTunings,
+      [this.style]: {
+        ...this.normalizeTuning(current),
+        colorMode: mode,
+      },
+    };
   }
 
   getStyleTunings(): VisualizerStyleTunings {
@@ -81,16 +87,28 @@ export class AudioVisualizerModule implements FeatureModule {
     };
   }
 
-  setStyleTunings(tunings: VisualizerStyleTunings): void {
+  setStyleTunings(
+    tunings: VisualizerStyleTunings,
+    fallbackColorMode: VisualizerColorMode = "white",
+  ): void {
     this.styleTunings = {
-      bars: this.normalizeTuning(tunings.bars),
-      waveform: this.normalizeTuning(tunings.waveform),
-      circular: this.normalizeTuning(tunings.circular),
+      bars: this.normalizeTuning(tunings.bars, fallbackColorMode),
+      waveform: this.normalizeTuning(tunings.waveform, fallbackColorMode),
+      circular: this.normalizeTuning(tunings.circular, fallbackColorMode),
+    };
+  }
+
+  setAllStyleColorModes(mode: VisualizerColorMode): void {
+    this.styleTunings = {
+      bars: this.normalizeTuning(this.styleTunings.bars, mode),
+      waveform: this.normalizeTuning(this.styleTunings.waveform, mode),
+      circular: this.normalizeTuning(this.styleTunings.circular, mode),
     };
   }
 
   private normalizeTuning(
     tuning: Partial<VisualizerStyleTuning> | undefined,
+    fallbackColorMode: VisualizerColorMode = "white",
   ): VisualizerStyleTuning {
     const defaultTuning = DEFAULT_VISUALIZER_STYLE_TUNING;
     return {
@@ -106,6 +124,12 @@ export class AudioVisualizerModule implements FeatureModule {
         typeof tuning?.opacity === "number"
           ? tuning.opacity
           : defaultTuning.opacity,
+      colorMode:
+        tuning?.colorMode === "white" ||
+        tuning?.colorMode === "artwork-adaptive" ||
+        tuning?.colorMode === "monochrome-dim"
+          ? tuning.colorMode
+          : fallbackColorMode,
     };
   }
 
