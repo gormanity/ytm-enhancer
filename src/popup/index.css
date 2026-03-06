@@ -487,6 +487,55 @@ select:focus {
   transform: scale(0.95);
 }
 
+/* About View */
+.about-version-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.about-name-label {
+  font-weight: 600;
+}
+
+.version-label--strong {
+  opacity: 1;
+}
+
+.about-license-note {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.about-link-row {
+  text-decoration: none;
+  color: inherit;
+}
+
+.about-link-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.about-link-icon {
+  display: flex;
+  opacity: 0.7;
+}
+
+.about-link-arrow {
+  opacity: 0.4;
+}
+
+.about-placeholder-row {
+  cursor: default;
+  color: var(--text-secondary);
+}
+
+.about-coming-soon {
+  font-size: 11px;
+}
+
 /* Custom scrollbar */
 /* Main Panel Scrollbar */
 #main-content::-webkit-scrollbar {

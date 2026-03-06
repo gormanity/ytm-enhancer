@@ -14,21 +14,17 @@ export function createAboutPopupView(): PopupView {
 
       // Version Card
       const versionCard = document.createElement("div");
-      versionCard.className = "settings-card";
-      versionCard.style.display = "flex";
-      versionCard.style.justifyContent = "space-between";
-      versionCard.style.alignItems = "center";
+      versionCard.className = "settings-card about-version-row";
       container.appendChild(versionCard);
 
       const nameLabel = document.createElement("span");
       nameLabel.textContent = "YTM Enhancer";
-      nameLabel.style.fontWeight = "600";
+      nameLabel.className = "about-name-label";
       versionCard.appendChild(nameLabel);
 
       const versionLabel = document.createElement("span");
       versionLabel.textContent = "v0.1.0";
-      versionLabel.className = "version-label";
-      versionLabel.style.opacity = "1"; // Override default opacity
+      versionLabel.className = "version-label version-label--strong";
       versionCard.appendChild(versionLabel);
 
       // Links Card
@@ -56,9 +52,7 @@ export function createAboutPopupView(): PopupView {
 
       // MIT License section
       const licenseNote = document.createElement("div");
-      licenseNote.className = "status-hint";
-      licenseNote.style.marginTop = "12px";
-      licenseNote.style.marginBottom = "0";
+      licenseNote.className = "status-hint about-license-note";
       licenseNote.innerHTML = `
         This extension is provided as open source under the <strong>MIT License</strong>.
       `;
@@ -74,19 +68,15 @@ export function createAboutPopupView(): PopupView {
       storeCard.appendChild(storeHeading);
 
       const chromePlaceholder = document.createElement("div");
-      chromePlaceholder.className = "toggle-row";
-      chromePlaceholder.style.cursor = "default";
-      chromePlaceholder.style.color = "var(--text-secondary)";
+      chromePlaceholder.className = "toggle-row about-placeholder-row";
       chromePlaceholder.innerHTML =
-        "<span>Chrome Web Store</span><span style='font-size: 11px'>Coming soon</span>";
+        "<span>Chrome Web Store</span><span class='about-coming-soon'>Coming soon</span>";
       storeCard.appendChild(chromePlaceholder);
 
       const firefoxPlaceholder = document.createElement("div");
-      firefoxPlaceholder.className = "toggle-row";
-      firefoxPlaceholder.style.cursor = "default";
-      firefoxPlaceholder.style.color = "var(--text-secondary)";
+      firefoxPlaceholder.className = "toggle-row about-placeholder-row";
       firefoxPlaceholder.innerHTML =
-        "<span>Firefox Add-ons</span><span style='font-size: 11px'>Coming soon</span>";
+        "<span>Firefox Add-ons</span><span class='about-coming-soon'>Coming soon</span>";
       storeCard.appendChild(firefoxPlaceholder);
     },
   };
@@ -96,19 +86,14 @@ function createLinkRow(svg: string, label: string, url: string): HTMLElement {
   const row = document.createElement("a");
   row.href = url;
   row.target = "_blank";
-  row.className = "toggle-row";
-  row.style.textDecoration = "none";
-  row.style.color = "inherit";
+  row.className = "toggle-row about-link-row";
 
   const content = document.createElement("div");
-  content.style.display = "flex";
-  content.style.alignItems = "center";
-  content.style.gap = "12px";
+  content.className = "about-link-content";
 
   const icon = document.createElement("div");
   icon.innerHTML = svg;
-  icon.style.display = "flex";
-  icon.style.opacity = "0.7";
+  icon.className = "about-link-icon";
 
   const text = document.createElement("span");
   text.textContent = label;
@@ -118,8 +103,8 @@ function createLinkRow(svg: string, label: string, url: string): HTMLElement {
   row.appendChild(content);
 
   const arrow = document.createElement("span");
+  arrow.className = "about-link-arrow";
   arrow.textContent = "→";
-  arrow.style.opacity = "0.4";
   row.appendChild(arrow);
 
   return row;
