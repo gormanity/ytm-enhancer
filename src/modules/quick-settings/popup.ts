@@ -17,8 +17,7 @@ interface YtmTabSummary {
   isSelected: boolean;
 }
 
-const YTM_FALLBACK_ICON_DATA_URL =
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='%23ff0000'/><polygon points='26,20 48,32 26,44' fill='white'/></svg>";
+const YTM_FALLBACK_ICON_URL = "preview-artwork.png";
 
 interface VolumeElements {
   numberInput: HTMLInputElement;
@@ -156,7 +155,7 @@ function renderOpenTabs(
     const candidates = [
       tab.artworkUrl,
       tab.favIconUrl,
-      YTM_FALLBACK_ICON_DATA_URL,
+      YTM_FALLBACK_ICON_URL,
       "icon48.png",
     ];
     for (const candidate of candidates) {
