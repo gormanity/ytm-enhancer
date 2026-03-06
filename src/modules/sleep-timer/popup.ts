@@ -1,6 +1,8 @@
 import type { PopupView } from "@/core/types";
 
-const PRESET_MINUTES = [15, 30, 45, 60, 90];
+const PRESET_MINUTES = [15, 30, 45, 60];
+
+type TimerMode = "duration" | "absolute";
 
 interface SleepTimerState {
   active: boolean;
@@ -42,6 +44,38 @@ function parseHhMmToMinutes(
   return totalMinutes;
 }
 
+function computeAbsoluteDurationMs(
+  timeValue: string,
+  useTomorrow: boolean,
+): number | null {
+  const match = timeValue.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(hours, minutes, 0, 0);
+  if (useTomorrow || target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  const durationMs = target.getTime() - now.getTime();
+  if (!Number.isFinite(durationMs) || durationMs <= 0) return null;
+  return durationMs;
+}
+
+function formatRelativeDuration(durationMs: number): string {
+  const totalMinutes = Math.max(1, Math.ceil(durationMs / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
 /** Create the sleep timer settings popup view. */
 export function createSleepTimerPopupView(): PopupView {
   return {
@@ -58,10 +92,30 @@ export function createSleepTimerPopupView(): PopupView {
       card.className = "settings-card";
       container.appendChild(card);
 
+      const modeRow = document.createElement("label");
+      modeRow.className = "toggle-row";
+      card.appendChild(modeRow);
+
+      const modeLabel = document.createElement("span");
+      modeLabel.textContent = "Timer mode";
+      modeRow.appendChild(modeLabel);
+
+      const modeSelect = document.createElement("select");
+      const durationOption = document.createElement("option");
+      durationOption.value = "duration";
+      durationOption.textContent = "Duration";
+      modeSelect.appendChild(durationOption);
+      const atTimeOption = document.createElement("option");
+      atTimeOption.value = "absolute";
+      atTimeOption.textContent = "At time";
+      modeSelect.appendChild(atTimeOption);
+      modeRow.appendChild(modeSelect);
+
       const presetsLabel = document.createElement("div");
       presetsLabel.textContent = "Quick durations";
       presetsLabel.style.fontSize = "12px";
       presetsLabel.style.color = "var(--text-secondary)";
+      presetsLabel.style.marginTop = "12px";
       card.appendChild(presetsLabel);
 
       const presetGroup = document.createElement("div");
@@ -73,6 +127,7 @@ export function createSleepTimerPopupView(): PopupView {
 
       const presetButtons = new Map<number, HTMLButtonElement>();
       let selectedPresetMinutes: number | null = 30;
+      let mode: TimerMode = "duration";
 
       const durationRow = document.createElement("label");
       durationRow.className = "field-row";
@@ -92,6 +147,7 @@ export function createSleepTimerPopupView(): PopupView {
       const hoursInput = document.createElement("input");
       hoursInput.type = "number";
       hoursInput.min = "0";
+      hoursInput.max = "99";
       hoursInput.step = "1";
       hoursInput.value = "00";
       hoursInput.placeholder = "HH";
@@ -116,12 +172,48 @@ export function createSleepTimerPopupView(): PopupView {
       minutesInput.style.width = "44px";
       timeInputGroup.appendChild(minutesInput);
 
+      const absoluteRow = document.createElement("label");
+      absoluteRow.className = "field-row";
+      absoluteRow.style.marginTop = "10px";
+      absoluteRow.style.display = "none";
+      card.appendChild(absoluteRow);
+
+      const absoluteLabel = document.createElement("span");
+      absoluteLabel.textContent = "Pause at";
+      absoluteRow.appendChild(absoluteLabel);
+
+      const absoluteInput = document.createElement("input");
+      absoluteInput.type = "time";
+      absoluteInput.value = "23:00";
+      absoluteInput.setAttribute("aria-label", "Pause at time");
+      absoluteRow.appendChild(absoluteInput);
+
+      const tomorrowRow = document.createElement("label");
+      tomorrowRow.className = "toggle-row";
+      tomorrowRow.style.display = "none";
+      card.appendChild(tomorrowRow);
+
+      const tomorrowText = document.createElement("span");
+      tomorrowText.textContent = "Use tomorrow";
+      tomorrowRow.appendChild(tomorrowText);
+
+      const tomorrowToggle = document.createElement("input");
+      tomorrowToggle.type = "checkbox";
+      tomorrowRow.appendChild(tomorrowToggle);
+
       const durationHint = document.createElement("p");
       durationHint.className = "status-hint";
       durationHint.style.marginTop = "8px";
       durationHint.style.marginBottom = "0";
       durationHint.style.display = "none";
       card.appendChild(durationHint);
+
+      const absolutePreview = document.createElement("p");
+      absolutePreview.className = "status-hint";
+      absolutePreview.style.marginTop = "8px";
+      absolutePreview.style.marginBottom = "0";
+      absolutePreview.style.display = "none";
+      card.appendChild(absolutePreview);
 
       const refreshPresetStyles = () => {
         for (const [minutes, button] of presetButtons) {
@@ -138,7 +230,6 @@ export function createSleepTimerPopupView(): PopupView {
 
       for (const minutes of PRESET_MINUTES) {
         const presetBtn = document.createElement("button");
-        presetBtn.className = "secondary-btn";
         presetBtn.textContent = `${minutes}m`;
         presetBtn.style.padding = "6px 10px";
         presetBtn.style.borderRadius = "14px";
@@ -146,14 +237,24 @@ export function createSleepTimerPopupView(): PopupView {
         presetBtn.style.background = "#1a1a1a";
         presetBtn.style.color = "var(--text-color)";
         presetBtn.style.cursor = "pointer";
+        presetBtn.style.transition = "background 0.2s, transform 0.1s";
         presetBtn.addEventListener("click", () => {
           selectedPresetMinutes = minutes;
           const [hh, mm] = formatMinutesAsHhMm(minutes).split(":");
           hoursInput.value = hh;
           minutesInput.value = mm;
-          durationHint.style.display = "none";
+          mode = "duration";
+          modeSelect.value = "duration";
+          updateModeVisibility();
           refreshPresetStyles();
           updateStartEnabled();
+        });
+        presetBtn.addEventListener("mouseenter", () => {
+          if (selectedPresetMinutes === minutes) return;
+          presetBtn.style.background = "#4f4f4f";
+        });
+        presetBtn.addEventListener("mouseleave", () => {
+          refreshPresetStyles();
         });
         presetButtons.set(minutes, presetBtn);
         presetGroup.appendChild(presetBtn);
@@ -188,6 +289,8 @@ export function createSleepTimerPopupView(): PopupView {
       cancelBtn.style.background = "var(--card-bg)";
       cancelBtn.style.color = "var(--text-color)";
       cancelBtn.style.cursor = "pointer";
+      cancelBtn.disabled = true;
+      cancelBtn.style.display = "none";
       buttons.appendChild(cancelBtn);
 
       const status = document.createElement("p");
@@ -251,20 +354,50 @@ export function createSleepTimerPopupView(): PopupView {
         input.dispatchEvent(new Event("input"));
       };
 
-      const getDurationMinutes = (): number | null => {
-        return parseHhMmToMinutes(hoursInput.value, minutesInput.value);
+      const getDurationMs = (): number | null => {
+        if (mode === "duration") {
+          const minutes = parseHhMmToMinutes(
+            hoursInput.value,
+            minutesInput.value,
+          );
+          return minutes === null ? null : minutes * 60 * 1000;
+        }
+        return computeAbsoluteDurationMs(
+          absoluteInput.value,
+          tomorrowToggle.checked,
+        );
+      };
+
+      const updateModeVisibility = () => {
+        const showDuration = mode === "duration";
+        presetsLabel.style.display = showDuration ? "block" : "none";
+        presetGroup.style.display = showDuration ? "flex" : "none";
+        durationRow.style.display = showDuration ? "flex" : "none";
+        absoluteRow.style.display = showDuration ? "none" : "flex";
+        tomorrowRow.style.display = showDuration ? "none" : "flex";
       };
 
       const updateStartEnabled = () => {
-        const minutes = getDurationMinutes();
-        startBtn.disabled = minutes === null;
-        if (minutes === null) {
+        const durationMs = getDurationMs();
+        startBtn.disabled = durationMs === null;
+
+        if (durationMs === null) {
           durationHint.textContent =
-            "Enter a valid HH:MM duration greater than 00:00.";
+            mode === "duration"
+              ? "Enter a valid HH:MM duration greater than 00:00."
+              : "Choose a valid clock time.";
           durationHint.style.display = "block";
+          absolutePreview.style.display = "none";
           return;
         }
+
         durationHint.style.display = "none";
+        if (mode === "absolute") {
+          absolutePreview.textContent = `Will pause in ${formatRelativeDuration(durationMs)}.`;
+          absolutePreview.style.display = "block";
+        } else {
+          absolutePreview.style.display = "none";
+        }
       };
 
       const applyState = (state: SleepTimerState) => {
@@ -273,11 +406,13 @@ export function createSleepTimerPopupView(): PopupView {
           startBtn.textContent = "Restart Timer";
           status.textContent = `Timer active: ${formatRemaining(state.remainingMs)} remaining`;
           cancelBtn.disabled = false;
+          cancelBtn.style.display = "block";
           pausedAt.style.display = "none";
         } else {
           startBtn.textContent = "Start Timer";
           status.textContent = "Timer is off";
           cancelBtn.disabled = true;
+          cancelBtn.style.display = "none";
           activeEndAt = null;
           if (typeof state.lastPausedAt === "number") {
             pausedAt.textContent = `Playback paused at ${formatPausedAt(state.lastPausedAt)}`;
@@ -306,17 +441,18 @@ export function createSleepTimerPopupView(): PopupView {
           activeEndAt = null;
           status.textContent = "Timer is off";
           cancelBtn.disabled = true;
+          cancelBtn.style.display = "none";
           return;
         }
         status.textContent = `Timer active: ${formatRemaining(remainingMs)} remaining`;
       };
 
       startBtn.addEventListener("click", () => {
-        const minutes = getDurationMinutes();
-        if (minutes === null) return;
+        const durationMs = getDurationMs();
+        if (durationMs === null) return;
         startBtn.disabled = true;
         chrome.runtime.sendMessage(
-          { type: "start-sleep-timer", durationMs: minutes * 60 * 1000 },
+          { type: "start-sleep-timer", durationMs },
           () => {
             updateStartEnabled();
             queryState();
@@ -340,10 +476,31 @@ export function createSleepTimerPopupView(): PopupView {
         },
       );
 
+      chrome.runtime.sendMessage(
+        { type: "get-sleep-timer-mode" },
+        (response: { ok: boolean; data?: string } | null) => {
+          if (!response?.ok) return;
+          mode = response.data === "absolute" ? "absolute" : "duration";
+          modeSelect.value = mode;
+          updateModeVisibility();
+          updateStartEnabled();
+        },
+      );
+
       notificationToggle.addEventListener("change", () => {
         chrome.runtime.sendMessage({
           type: "set-sleep-timer-notify-enabled",
           enabled: notificationToggle.checked,
+        });
+      });
+
+      modeSelect.addEventListener("change", () => {
+        mode = modeSelect.value === "absolute" ? "absolute" : "duration";
+        updateModeVisibility();
+        updateStartEnabled();
+        chrome.runtime.sendMessage({
+          type: "set-sleep-timer-mode",
+          mode,
         });
       });
 
@@ -372,6 +529,9 @@ export function createSleepTimerPopupView(): PopupView {
         updateStartEnabled();
       });
 
+      absoluteInput.addEventListener("input", updateStartEnabled);
+      tomorrowToggle.addEventListener("change", updateStartEnabled);
+
       hoursInput.addEventListener("blur", () =>
         clampAndPadSegment(hoursInput, 0, 99),
       );
@@ -385,6 +545,7 @@ export function createSleepTimerPopupView(): PopupView {
         handleArrowAdjust(event, minutesInput, 0, 59),
       );
 
+      updateModeVisibility();
       refreshPresetStyles();
       updateStartEnabled();
       queryState();

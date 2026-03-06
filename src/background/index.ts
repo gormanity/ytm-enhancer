@@ -48,6 +48,7 @@ const SLEEP_TIMER_ALARM = "sleep-timer";
 let sleepTimerEndAt: number | null = null;
 let sleepTimerLastPausedAt: number | null = null;
 let sleepTimerNotifyOnEnd = true;
+let sleepTimerMode: "duration" | "absolute" = "duration";
 
 async function relayToSelectedTab(message: unknown): Promise<void> {
   const tab = await findYTMTab(selectedTabId);
@@ -541,6 +542,16 @@ handler.on("set-sleep-timer-notify-enabled", async (message) => {
   return { ok: true };
 });
 
+handler.on("get-sleep-timer-mode", async () => {
+  return { ok: true, data: sleepTimerMode };
+});
+
+handler.on("set-sleep-timer-mode", async (message) => {
+  sleepTimerMode = message.mode === "absolute" ? "absolute" : "duration";
+  await saveModuleStateValue("sleep-timer.mode", sleepTimerMode);
+  return { ok: true };
+});
+
 handler.on("playback-action", async (message) => {
   void relayToSelectedTab({
     type: "playback-action",
@@ -609,6 +620,8 @@ async function restoreModuleState(): Promise<void> {
   const restoredSleepTimerEndAt = num("sleep-timer.endAt");
   sleepTimerLastPausedAt = num("sleep-timer.lastPausedAt");
   sleepTimerNotifyOnEnd = bool("sleep-timer.notifyOnEnd", true);
+  sleepTimerMode =
+    state["sleep-timer.mode"] === "absolute" ? "absolute" : "duration";
   if (
     restoredSleepTimerEndAt !== null &&
     restoredSleepTimerEndAt > Date.now()
