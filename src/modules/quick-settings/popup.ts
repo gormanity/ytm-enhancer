@@ -25,7 +25,7 @@ export function createQuickSettingsPopupView(): PopupView {
       // 1. Open Tabs Card
       const tabsCard = document.createElement("div");
       tabsCard.className = "settings-card";
-      tabsCard.style.display = "none";
+      tabsCard.classList.add("is-hidden");
       container.appendChild(tabsCard);
       renderOpenTabs(tabsCard);
 
@@ -52,9 +52,7 @@ export function createQuickSettingsPopupView(): PopupView {
 
       // Speed & Quality Row
       const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.gap = "12px";
-      row.style.marginTop = "16px";
+      row.className = "quick-settings-inline-row";
       audioGroup.appendChild(row);
 
       // Speed
@@ -66,7 +64,10 @@ export function createQuickSettingsPopupView(): PopupView {
       speedContent.querySelector("h2")?.remove();
       // Style the label to be smaller
       const speedLabel = speedContent.querySelector(".toggle-row span");
-      if (speedLabel) (speedLabel as HTMLElement).style.fontSize = "12px";
+      if (speedLabel)
+        (speedLabel as HTMLElement).classList.add(
+          "quick-settings-select-label",
+        );
 
       speedContainer.appendChild(speedContent);
       row.appendChild(speedContainer);
@@ -79,7 +80,10 @@ export function createQuickSettingsPopupView(): PopupView {
       qualityView.render(qualityContent);
       qualityContent.querySelector("h2")?.remove();
       const qualityLabel = qualityContent.querySelector(".toggle-row span");
-      if (qualityLabel) (qualityLabel as HTMLElement).style.fontSize = "12px";
+      if (qualityLabel)
+        (qualityLabel as HTMLElement).classList.add(
+          "quick-settings-select-label",
+        );
 
       qualityContainer.appendChild(qualityContent);
       row.appendChild(qualityContainer);
@@ -131,11 +135,11 @@ function renderOpenTabs(container: HTMLElement) {
     chrome.runtime.sendMessage({ type: "get-ytm-tabs" }, (response) => {
       const tabs = (response?.ok ? response.data?.tabs : []) as YtmTabSummary[];
       if (!Array.isArray(tabs) || tabs.length <= 1) {
-        container.style.display = "none";
+        container.classList.add("is-hidden");
         return;
       }
 
-      container.style.display = "block";
+      container.classList.remove("is-hidden");
       renderTabs(tabs);
     });
   };
@@ -153,27 +157,20 @@ function updateSliderBackground(range: HTMLInputElement) {
 /** Renders a specifically styled volume control that associates the slider and input */
 function renderIntegratedVolume(container: HTMLElement) {
   const wrapper = document.createElement("div");
-  wrapper.style.display = "flex";
-  wrapper.style.flexDirection = "column";
-  wrapper.style.gap = "8px";
+  wrapper.className = "quick-volume-wrapper";
   container.appendChild(wrapper);
 
   const labelRow = document.createElement("div");
-  labelRow.style.display = "flex";
-  labelRow.style.justifyContent = "space-between";
-  labelRow.style.alignItems = "center";
+  labelRow.className = "quick-volume-label-row";
   wrapper.appendChild(labelRow);
 
   const label = document.createElement("span");
   label.textContent = "Volume";
-  label.style.fontSize = "12px";
-  label.style.color = "var(--text-secondary)";
+  label.className = "quick-volume-label";
   labelRow.appendChild(label);
 
   const inputGroup = document.createElement("div");
-  inputGroup.style.display = "flex";
-  inputGroup.style.alignItems = "center";
-  inputGroup.style.gap = "4px";
+  inputGroup.className = "quick-volume-input-group";
   labelRow.appendChild(inputGroup);
 
   const numberInput = document.createElement("input");
@@ -187,15 +184,12 @@ function renderIntegratedVolume(container: HTMLElement) {
 
   const placeholder = document.createElement("span");
   placeholder.textContent = "—";
-  placeholder.style.fontSize = "14px";
-  placeholder.style.fontWeight = "600";
-  placeholder.style.color = "var(--text-color)";
+  placeholder.className = "quick-volume-placeholder";
   inputGroup.appendChild(placeholder);
 
   const percent = document.createElement("span");
   percent.textContent = "%";
-  percent.style.fontSize = "12px";
-  percent.style.color = "var(--text-secondary)";
+  percent.className = "quick-volume-percent";
   inputGroup.appendChild(percent);
 
   const range = document.createElement("input");
@@ -243,58 +237,38 @@ function renderIntegratedVolume(container: HTMLElement) {
 
 function renderCompactNowPlaying(container: HTMLElement) {
   const trackInfo = document.createElement("div");
-  trackInfo.style.display = "flex";
-  trackInfo.style.gap = "16px";
-  trackInfo.style.alignItems = "center";
+  trackInfo.className = "quick-now-playing-track-info";
   container.appendChild(trackInfo);
 
   const artwork = document.createElement("img");
-  artwork.style.width = "64px";
-  artwork.style.height = "64px";
-  artwork.style.borderRadius = "4px";
-  artwork.style.objectFit = "cover";
-  artwork.style.background = "#1a1a1a";
-  artwork.style.display = "none";
+  artwork.className = "quick-now-playing-artwork is-hidden";
   artwork.onerror = () => {
     artwork.removeAttribute("src");
-    artwork.style.display = "none";
+    artwork.classList.add("is-hidden");
   };
   trackInfo.appendChild(artwork);
 
   const meta = document.createElement("div");
-  meta.style.flex = "1";
-  meta.style.minWidth = "0";
+  meta.className = "quick-now-playing-meta";
   trackInfo.appendChild(meta);
 
   const title = document.createElement("div");
-  title.style.fontSize = "15px";
-  title.style.fontWeight = "600";
-  title.style.whiteSpace = "nowrap";
-  title.style.overflow = "hidden";
-  title.style.textOverflow = "ellipsis";
+  title.className = "quick-now-playing-title";
   meta.appendChild(title);
 
   const artist = document.createElement("div");
-  artist.style.fontSize = "12px";
-  artist.style.color = "var(--text-secondary)";
-  artist.style.marginTop = "2px";
-  artist.style.whiteSpace = "nowrap";
-  artist.style.overflow = "hidden";
-  artist.style.textOverflow = "ellipsis";
+  artist.className = "quick-now-playing-artist";
   meta.appendChild(artist);
 
   const controls = document.createElement("div");
-  controls.style.display = "flex";
-  controls.style.gap = "12px";
-  controls.style.marginTop = "8px";
-  controls.style.alignItems = "center";
+  controls.className = "quick-now-playing-controls";
   meta.appendChild(controls);
 
   const createBtn = (svg: string, action: string, isSmall = true) => {
     const btn = document.createElement("button");
     btn.innerHTML = svg;
     btn.className = "icon-btn";
-    if (!isSmall) btn.style.padding = "6px";
+    if (!isSmall) btn.classList.add("quick-now-playing-btn-padded");
     btn.onclick = () =>
       chrome.runtime.sendMessage({ type: "playback-action", action });
     return btn;
@@ -330,14 +304,14 @@ function renderCompactNowPlaying(container: HTMLElement) {
 
           if (hasTrack && state.artworkUrl) {
             artwork.src = state.artworkUrl;
-            artwork.style.display = "block";
+            artwork.classList.remove("is-hidden");
           } else {
             artwork.removeAttribute("src");
-            artwork.style.display = "none";
+            artwork.classList.add("is-hidden");
           }
           title.textContent = state.title || "No track loaded";
           artist.textContent = state.artist || "Start playback to see details";
-          controls.style.display = hasTrack ? "flex" : "none";
+          controls.classList.toggle("is-hidden", !hasTrack);
 
           if (state.isPlaying) {
             playBtn.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -345,8 +319,8 @@ function renderCompactNowPlaying(container: HTMLElement) {
             playBtn.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
           }
         } else {
-          artwork.style.display = "none";
-          controls.style.display = "none";
+          artwork.classList.add("is-hidden");
+          controls.classList.add("is-hidden");
           if (response?.error === "No YTM tab") {
             title.textContent = "YouTube Music not found";
             artist.textContent = "Open YTM to get started";

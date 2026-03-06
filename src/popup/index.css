@@ -536,6 +536,11 @@ select:focus {
   font-size: 11px;
 }
 
+/* Shared Utilities */
+.is-hidden {
+  display: none !important;
+}
+
 /* Home View */
 .home-track-info {
   display: flex;
@@ -628,6 +633,98 @@ select:focus {
 
 .home-control-btn--primary:hover {
   background: #eee;
+}
+
+/* Quick Settings View */
+.quick-settings-inline-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.quick-settings-select-label {
+  font-size: 12px !important;
+}
+
+.quick-volume-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick-volume-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quick-volume-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.quick-volume-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quick-volume-placeholder {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.quick-volume-percent {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.quick-now-playing-track-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.quick-now-playing-artwork {
+  width: 64px;
+  height: 64px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #1a1a1a;
+}
+
+.quick-now-playing-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-now-playing-title {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-now-playing-artist {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-now-playing-controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.quick-now-playing-btn-padded {
+  padding: 6px;
 }
 
 /* Custom scrollbar */
