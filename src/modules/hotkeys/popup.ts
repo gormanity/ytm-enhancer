@@ -60,13 +60,16 @@ function loadShortcuts(
   keyTemplate: HTMLTemplateElement,
   separatorTemplate: HTMLTemplateElement,
 ): void {
-  const createKeyElement = (value: string, isSymbol: boolean): HTMLElement => {
+  const createKeyElement = (
+    value: string,
+    isSymbol: boolean,
+  ): HTMLElement | null => {
     const keyFragment = keyTemplate.content.cloneNode(true);
     const key =
       keyFragment.firstElementChild instanceof HTMLElement
         ? keyFragment.firstElementChild
         : null;
-    if (!key) return document.createElement("kbd");
+    if (!key) return null;
     key.textContent = value;
     if (isSymbol) {
       key.classList.add("key-symbol");
@@ -74,18 +77,12 @@ function loadShortcuts(
     return key;
   };
 
-  const createSeparatorElement = (): HTMLElement => {
+  const createSeparatorElement = (): HTMLElement | null => {
     const separatorFragment = separatorTemplate.content.cloneNode(true);
     const separator =
       separatorFragment.firstElementChild instanceof HTMLElement
         ? separatorFragment.firstElementChild
         : null;
-    if (!separator) {
-      const fallback = document.createElement("span");
-      fallback.className = "shortcut-separator";
-      fallback.textContent = "+";
-      return fallback;
-    }
     return separator;
   };
 
@@ -112,20 +109,21 @@ function loadShortcuts(
           const symbol = KEY_SYMBOL_MAP[key] || key;
 
           const kbd = createKeyElement(symbol, Boolean(KEY_SYMBOL_MAP[key]));
+          if (!kbd) continue;
           keysContainer.appendChild(kbd);
 
           if (i < parts.length - 1) {
             const separator = createSeparatorElement();
+            if (!separator) continue;
             keysContainer.appendChild(separator);
           }
         }
       } else {
         const kbd = createKeyElement("Not set", false);
+        if (!kbd) continue;
         keysContainer.appendChild(kbd);
       }
 
-      row.appendChild(label);
-      row.appendChild(keysContainer);
       container.appendChild(row);
     }
   });

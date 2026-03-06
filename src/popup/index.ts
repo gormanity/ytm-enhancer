@@ -28,20 +28,7 @@ function createNavItem(
   label: string,
   icon?: string,
 ): HTMLDivElement | null {
-  if (!navItemTemplate) {
-    const fallback = document.createElement("div");
-    fallback.className = "nav-item";
-    if (icon) {
-      const iconWrapper = document.createElement("span");
-      iconWrapper.innerHTML = icon;
-      fallback.appendChild(iconWrapper);
-    }
-    const labelElement = document.createElement("span");
-    labelElement.textContent = label;
-    fallback.appendChild(labelElement);
-    fallback.dataset.viewId = id;
-    return fallback;
-  }
+  if (!navItemTemplate) return null;
 
   const fragment = navItemTemplate.content.cloneNode(true);
   const item =
