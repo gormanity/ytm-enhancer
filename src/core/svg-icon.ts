@@ -16,7 +16,7 @@ function getCachedSvgTemplate(svgMarkup: string): SVGElement | null {
   return parsed;
 }
 
-export function cloneSvgIcon(
+function cloneSvgIcon(
   svgMarkup: string,
   targetDoc: Document,
 ): SVGElement | null {
