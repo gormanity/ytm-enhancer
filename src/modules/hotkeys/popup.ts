@@ -1,4 +1,6 @@
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 /** Create the hotkeys settings popup view. */
 export function createHotkeysPopupView(): PopupView {
@@ -6,29 +8,18 @@ export function createHotkeysPopupView(): PopupView {
     id: "hotkeys-settings",
     label: "Hotkeys",
     render(container: HTMLElement) {
-      container.innerHTML = "";
+      renderPopupTemplate(container, templateHtml);
 
-      const heading = document.createElement("h2");
-      heading.textContent = "Keyboard Shortcuts";
-      container.appendChild(heading);
-
-      const card = document.createElement("div");
-      card.className = "settings-card";
-      container.appendChild(card);
-
-      const list = document.createElement("div");
-      list.className = "shortcuts-list";
-      card.appendChild(list);
-
+      const list = container.querySelector<HTMLElement>(
+        '[data-role="shortcuts-list"]',
+      );
+      if (!list) return;
       loadShortcuts(list);
 
-      const actions = document.createElement("div");
-      actions.className = "panel-actions";
-      card.appendChild(actions);
-
-      const configBtn = document.createElement("button");
-      configBtn.textContent = "Configure Shortcuts";
-      configBtn.className = "primary-btn primary-btn--block";
+      const configBtn = container.querySelector<HTMLButtonElement>(
+        '[data-role="configure-shortcuts"]',
+      );
+      if (!configBtn) return;
       configBtn.onclick = () => {
         const url =
           __BROWSER__ === "firefox"
@@ -36,23 +27,6 @@ export function createHotkeysPopupView(): PopupView {
             : "chrome://extensions/shortcuts";
         chrome.tabs.create({ url });
       };
-      actions.appendChild(configBtn);
-
-      const hint = document.createElement("div");
-      hint.className = "shortcuts-hint";
-      const hintPrefix = document.createElement("strong");
-      hintPrefix.textContent = "Tip:";
-      hint.appendChild(hintPrefix);
-      hint.appendChild(document.createTextNode(" Set shortcuts to "));
-      const globalText = document.createElement("strong");
-      globalText.textContent = "Global";
-      hint.appendChild(globalText);
-      hint.appendChild(
-        document.createTextNode(
-          " in browser settings to control playback while using other apps.",
-        ),
-      );
-      container.appendChild(hint);
     },
   };
 }
