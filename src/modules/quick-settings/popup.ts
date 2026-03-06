@@ -17,6 +17,8 @@ interface YtmTabSummary {
   isSelected: boolean;
 }
 
+const YTM_FAVICON_URL = "https://music.youtube.com/favicon.ico";
+
 interface VolumeElements {
   numberInput: HTMLInputElement;
   range: HTMLInputElement;
@@ -146,6 +148,21 @@ function renderOpenTabs(
   list: HTMLElement,
   itemTemplate: HTMLTemplateElement,
 ): () => void {
+  const pickTabIconUrl = (tab: YtmTabSummary): string => {
+    const candidates = [
+      tab.artworkUrl,
+      tab.favIconUrl,
+      YTM_FAVICON_URL,
+      "icon48.png",
+    ];
+    for (const candidate of candidates) {
+      if (typeof candidate !== "string") continue;
+      const trimmed = candidate.trim();
+      if (trimmed.length > 0) return trimmed;
+    }
+    return "icon48.png";
+  };
+
   const renderTabs = (tabs: YtmTabSummary[]) => {
     list.innerHTML = "";
 
@@ -159,9 +176,10 @@ function renderOpenTabs(
       if (!item || !icon) continue;
 
       if (tab.isSelected) item.classList.add("selected");
-      icon.src = tab.artworkUrl ?? tab.favIconUrl ?? "icon48.png";
+      icon.src = pickTabIconUrl(tab);
       icon.alt = "";
       icon.onerror = () => {
+        icon.onerror = null;
         icon.src = "icon48.png";
       };
 
