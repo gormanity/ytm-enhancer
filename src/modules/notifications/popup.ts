@@ -1,5 +1,7 @@
 import type { NotificationFields } from "./index";
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 const FIELD_LABELS: { key: keyof NotificationFields; label: string }[] = [
   { key: "title", label: "Title" },
@@ -15,29 +17,23 @@ export function createNotificationsPopupView(): PopupView {
     id: "notifications-settings",
     label: "Notifications",
     render(container: HTMLElement) {
-      container.innerHTML = "";
+      renderPopupTemplate(container, templateHtml);
 
-      const heading = document.createElement("h2");
-      heading.textContent = "Notifications";
-      container.appendChild(heading);
+      const toggle = container.querySelector<HTMLInputElement>(
+        '[data-role="notifications-toggle"]',
+      );
+      const unpauseToggle = container.querySelector<HTMLInputElement>(
+        '[data-role="notifications-unpause-toggle"]',
+      );
+      const fieldsRoot = container.querySelector<HTMLElement>(
+        '[data-role="notifications-fields"]',
+      );
+      const previewBtn = container.querySelector<HTMLButtonElement>(
+        '[data-role="notifications-preview-btn"]',
+      );
+      if (!toggle || !unpauseToggle || !fieldsRoot || !previewBtn) return;
 
-      const generalCard = document.createElement("div");
-      generalCard.className = "settings-card";
-      container.appendChild(generalCard);
-
-      const label = document.createElement("label");
-      label.className = "toggle-row";
-
-      const text = document.createElement("span");
-      text.textContent = "Show on track change";
-      label.appendChild(text);
-
-      const toggle = document.createElement("input");
-      toggle.type = "checkbox";
       toggle.disabled = true;
-      label.appendChild(toggle);
-
-      generalCard.appendChild(label);
 
       // Query current state from the background script.
       chrome.runtime.sendMessage(
@@ -56,20 +52,7 @@ export function createNotificationsPopupView(): PopupView {
           enabled: toggle.checked,
         });
       });
-
-      const unpauseLabel = document.createElement("label");
-      unpauseLabel.className = "toggle-row";
-
-      const unpauseText = document.createElement("span");
-      unpauseText.textContent = "Show on resume playback";
-      unpauseLabel.appendChild(unpauseText);
-
-      const unpauseToggle = document.createElement("input");
-      unpauseToggle.type = "checkbox";
       unpauseToggle.disabled = true;
-      unpauseLabel.appendChild(unpauseToggle);
-
-      generalCard.appendChild(unpauseLabel);
 
       chrome.runtime.sendMessage(
         { type: "get-notify-on-unpause" },
@@ -89,14 +72,6 @@ export function createNotificationsPopupView(): PopupView {
       });
 
       // Display fields section
-      const fieldsCard = document.createElement("div");
-      fieldsCard.className = "settings-card";
-      container.appendChild(fieldsCard);
-
-      const fieldsHeading = document.createElement("h3");
-      fieldsHeading.textContent = "Display fields";
-      fieldsCard.appendChild(fieldsHeading);
-
       const fieldCheckboxes: {
         key: keyof NotificationFields;
         input: HTMLInputElement;
@@ -116,7 +91,7 @@ export function createNotificationsPopupView(): PopupView {
         row.appendChild(input);
 
         fieldCheckboxes.push({ key, input });
-        fieldsCard.appendChild(row);
+        fieldsRoot.appendChild(row);
       }
 
       chrome.runtime.sendMessage(
@@ -145,17 +120,9 @@ export function createNotificationsPopupView(): PopupView {
       }
 
       // Preview section
-      const previewCard = document.createElement("div");
-      previewCard.className = "settings-card";
-      container.appendChild(previewCard);
-
-      const previewBtn = document.createElement("button");
-      previewBtn.textContent = "Preview Notification";
-      previewBtn.className = "primary-btn primary-btn--block";
       previewBtn.onclick = () => {
         chrome.runtime.sendMessage({ type: "preview-notification" });
       };
-      previewCard.appendChild(previewBtn);
     },
   };
 }
