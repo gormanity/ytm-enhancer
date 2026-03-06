@@ -45,7 +45,11 @@ export function createPlaybackSpeedPopupView(): PopupView {
     label: "Playback Speed",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
-      initializePlaybackSpeedControl(container);
+      const slot = container.querySelector<HTMLElement>(
+        '[data-role="playback-speed-control-slot"]',
+      );
+      if (!slot) return;
+      renderPlaybackSpeedSelectControl(slot);
     },
   };
 }

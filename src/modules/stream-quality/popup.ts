@@ -54,7 +54,11 @@ export function createStreamQualityPopupView(): PopupView {
     label: "Stream Quality",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
-      initializeStreamQualityControl(container);
+      const slot = container.querySelector<HTMLElement>(
+        '[data-role="stream-quality-control-slot"]',
+      );
+      if (!slot) return;
+      renderStreamQualitySelectControl(slot);
     },
   };
 }
