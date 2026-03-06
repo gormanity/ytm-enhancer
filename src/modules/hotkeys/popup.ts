@@ -13,8 +13,11 @@ export function createHotkeysPopupView(): PopupView {
       const list = container.querySelector<HTMLElement>(
         '[data-role="shortcuts-list"]',
       );
-      if (!list) return;
-      loadShortcuts(list);
+      const rowTemplate = container.querySelector<HTMLTemplateElement>(
+        '[data-role="shortcut-row-template"]',
+      );
+      if (!list || !rowTemplate) return;
+      loadShortcuts(list, rowTemplate);
 
       const configBtn = container.querySelector<HTMLButtonElement>(
         '[data-role="configure-shortcuts"]',
@@ -45,20 +48,25 @@ const KEY_SYMBOL_MAP: Record<string, string> = {
   MediaPlayPause: "⏯",
 };
 
-function loadShortcuts(container: HTMLElement): void {
+function loadShortcuts(
+  container: HTMLElement,
+  rowTemplate: HTMLTemplateElement,
+): void {
   chrome.commands.getAll((commands) => {
     for (const cmd of commands) {
       if (!cmd.name || cmd.name === "_execute_action") continue;
 
-      const row = document.createElement("div");
-      row.className = "shortcut-row";
+      const rowFragment = rowTemplate.content.cloneNode(true);
+      const row =
+        rowFragment.firstElementChild instanceof HTMLDivElement
+          ? rowFragment.firstElementChild
+          : null;
+      if (!row) continue;
 
-      const label = document.createElement("span");
-      label.className = "shortcut-label";
+      const label = row.querySelector<HTMLElement>(".shortcut-label");
+      const keysContainer = row.querySelector<HTMLElement>(".shortcut-keys");
+      if (!label || !keysContainer) continue;
       label.textContent = cmd.description ?? cmd.name;
-
-      const keysContainer = document.createElement("div");
-      keysContainer.className = "shortcut-keys";
 
       if (cmd.shortcut) {
         const parts = cmd.shortcut.split("+");
