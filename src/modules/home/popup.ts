@@ -81,9 +81,10 @@ export function createHomePopupView(): PopupView {
       };
 
       update();
-      setInterval(update, 1000);
-
-      // Cleanup when popup closes is automatic as the script context is destroyed.
+      const pollId = window.setInterval(update, 1000);
+      return () => {
+        window.clearInterval(pollId);
+      };
     },
   };
 }

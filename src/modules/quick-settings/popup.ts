@@ -26,6 +26,7 @@ export function createQuickSettingsPopupView(): PopupView {
     label: "Quick Settings",
     render(container: HTMLElement) {
       container.innerHTML = "";
+      const cleanups: Array<() => void> = [];
 
       const heading = document.createElement("h2");
       heading.textContent = "Quick Settings";
@@ -36,13 +37,13 @@ export function createQuickSettingsPopupView(): PopupView {
       tabsCard.className = "settings-card";
       tabsCard.classList.add("is-hidden");
       container.appendChild(tabsCard);
-      renderOpenTabs(tabsCard);
+      cleanups.push(renderOpenTabs(tabsCard));
 
       // 2. Now Playing Card
       const nowPlayingCard = document.createElement("div");
       nowPlayingCard.className = "settings-card";
       container.appendChild(nowPlayingCard);
-      renderCompactNowPlaying(nowPlayingCard);
+      cleanups.push(renderCompactNowPlaying(nowPlayingCard));
 
       // 3. Audio & Playback Group
       const audioGroup = document.createElement("div");
@@ -96,11 +97,15 @@ export function createQuickSettingsPopupView(): PopupView {
 
       qualityContainer.appendChild(qualityContent);
       row.appendChild(qualityContainer);
+
+      return () => {
+        for (const cleanup of cleanups) cleanup();
+      };
     },
   };
 }
 
-function renderOpenTabs(container: HTMLElement) {
+function renderOpenTabs(container: HTMLElement): () => void {
   const heading = document.createElement("h3");
   heading.textContent = "Music Source";
   container.appendChild(heading);
@@ -154,7 +159,10 @@ function renderOpenTabs(container: HTMLElement) {
   };
 
   updateTabs();
-  setInterval(updateTabs, 3000);
+  const pollId = window.setInterval(updateTabs, 3000);
+  return () => {
+    window.clearInterval(pollId);
+  };
 }
 
 /** Helper to update the red foreground fill on range inputs */
@@ -244,7 +252,7 @@ function renderIntegratedVolume(container: HTMLElement) {
   });
 }
 
-function renderCompactNowPlaying(container: HTMLElement) {
+function renderCompactNowPlaying(container: HTMLElement): () => void {
   const trackInfo = document.createElement("div");
   trackInfo.className = "quick-now-playing-track-info";
   container.appendChild(trackInfo);
@@ -329,5 +337,8 @@ function renderCompactNowPlaying(container: HTMLElement) {
   };
 
   update();
-  setInterval(update, 1000);
+  const pollId = window.setInterval(update, 1000);
+  return () => {
+    window.clearInterval(pollId);
+  };
 }
