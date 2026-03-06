@@ -16,8 +16,14 @@ export function createHotkeysPopupView(): PopupView {
       const rowTemplate = container.querySelector<HTMLTemplateElement>(
         '[data-role="shortcut-row-template"]',
       );
-      if (!list || !rowTemplate) return;
-      loadShortcuts(list, rowTemplate);
+      const keyTemplate = container.querySelector<HTMLTemplateElement>(
+        '[data-role="shortcut-key-template"]',
+      );
+      const separatorTemplate = container.querySelector<HTMLTemplateElement>(
+        '[data-role="shortcut-separator-template"]',
+      );
+      if (!list || !rowTemplate || !keyTemplate || !separatorTemplate) return;
+      loadShortcuts(list, rowTemplate, keyTemplate, separatorTemplate);
 
       const configBtn = container.querySelector<HTMLButtonElement>(
         '[data-role="configure-shortcuts"]',
@@ -51,7 +57,38 @@ const KEY_SYMBOL_MAP: Record<string, string> = {
 function loadShortcuts(
   container: HTMLElement,
   rowTemplate: HTMLTemplateElement,
+  keyTemplate: HTMLTemplateElement,
+  separatorTemplate: HTMLTemplateElement,
 ): void {
+  const createKeyElement = (value: string, isSymbol: boolean): HTMLElement => {
+    const keyFragment = keyTemplate.content.cloneNode(true);
+    const key =
+      keyFragment.firstElementChild instanceof HTMLElement
+        ? keyFragment.firstElementChild
+        : null;
+    if (!key) return document.createElement("kbd");
+    key.textContent = value;
+    if (isSymbol) {
+      key.classList.add("key-symbol");
+    }
+    return key;
+  };
+
+  const createSeparatorElement = (): HTMLElement => {
+    const separatorFragment = separatorTemplate.content.cloneNode(true);
+    const separator =
+      separatorFragment.firstElementChild instanceof HTMLElement
+        ? separatorFragment.firstElementChild
+        : null;
+    if (!separator) {
+      const fallback = document.createElement("span");
+      fallback.className = "shortcut-separator";
+      fallback.textContent = "+";
+      return fallback;
+    }
+    return separator;
+  };
+
   chrome.commands.getAll((commands) => {
     for (const cmd of commands) {
       if (!cmd.name || cmd.name === "_execute_action") continue;
@@ -74,25 +111,16 @@ function loadShortcuts(
           const key = parts[i].trim();
           const symbol = KEY_SYMBOL_MAP[key] || key;
 
-          const kbd = document.createElement("kbd");
-          kbd.className = "shortcut-key";
-          if (KEY_SYMBOL_MAP[key]) {
-            kbd.classList.add("key-symbol");
-          }
-          kbd.textContent = symbol;
+          const kbd = createKeyElement(symbol, Boolean(KEY_SYMBOL_MAP[key]));
           keysContainer.appendChild(kbd);
 
           if (i < parts.length - 1) {
-            const separator = document.createElement("span");
-            separator.className = "shortcut-separator";
-            separator.textContent = "+";
+            const separator = createSeparatorElement();
             keysContainer.appendChild(separator);
           }
         }
       } else {
-        const kbd = document.createElement("kbd");
-        kbd.className = "shortcut-key";
-        kbd.textContent = "Not set";
+        const kbd = createKeyElement("Not set", false);
         keysContainer.appendChild(kbd);
       }
 
