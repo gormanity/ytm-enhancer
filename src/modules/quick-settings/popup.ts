@@ -1,6 +1,8 @@
 import type { PopupView, PlaybackState } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
 import { createPlaybackSpeedPopupView } from "../playback-speed/popup";
 import { createStreamQualityPopupView } from "../stream-quality/popup";
+import templateHtml from "./popup.html?raw";
 
 const PREV_SVG =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>';
@@ -19,84 +21,83 @@ interface YtmTabSummary {
   isSelected: boolean;
 }
 
+interface VolumeElements {
+  numberInput: HTMLInputElement;
+  range: HTMLInputElement;
+  placeholder: HTMLElement | null;
+}
+
+interface NowPlayingElements {
+  artwork: HTMLImageElement;
+  title: HTMLElement;
+  artist: HTMLElement;
+  controls: HTMLElement;
+}
+
 /** Create the combined Quick Settings popup view. */
 export function createQuickSettingsPopupView(): PopupView {
   return {
     id: "quick-settings",
     label: "Quick Settings",
     render(container: HTMLElement) {
-      container.innerHTML = "";
+      renderPopupTemplate(container, templateHtml);
       const cleanups: Array<() => void> = [];
 
-      const heading = document.createElement("h2");
-      heading.textContent = "Quick Settings";
-      container.appendChild(heading);
+      const tabsCard = container.querySelector<HTMLElement>(
+        '[data-role="quick-tabs-card"]',
+      );
+      const tabsList = container.querySelector<HTMLElement>(
+        '[data-role="quick-tabs-list"]',
+      );
+      const artwork = container.querySelector<HTMLImageElement>(
+        '[data-role="quick-now-playing-artwork"]',
+      );
+      const title = container.querySelector<HTMLElement>(
+        '[data-role="quick-now-playing-title"]',
+      );
+      const artist = container.querySelector<HTMLElement>(
+        '[data-role="quick-now-playing-artist"]',
+      );
+      const controls = container.querySelector<HTMLElement>(
+        '[data-role="quick-now-playing-controls"]',
+      );
+      const numberInput = container.querySelector<HTMLInputElement>(
+        '[data-role="quick-volume-number-input"]',
+      );
+      const range = container.querySelector<HTMLInputElement>(
+        '[data-role="quick-volume-range"]',
+      );
+      const placeholder = container.querySelector<HTMLElement>(
+        '[data-role="quick-volume-placeholder"]',
+      );
+      const speedSlot = container.querySelector<HTMLElement>(
+        '[data-role="quick-speed-slot"]',
+      );
+      const qualitySlot = container.querySelector<HTMLElement>(
+        '[data-role="quick-quality-slot"]',
+      );
+      if (
+        !tabsCard ||
+        !tabsList ||
+        !artwork ||
+        !title ||
+        !artist ||
+        !controls ||
+        !numberInput ||
+        !range ||
+        !speedSlot ||
+        !qualitySlot
+      ) {
+        return;
+      }
 
-      // 1. Open Tabs Card
-      const tabsCard = document.createElement("div");
-      tabsCard.className = "settings-card";
-      tabsCard.classList.add("is-hidden");
-      container.appendChild(tabsCard);
-      cleanups.push(renderOpenTabs(tabsCard));
-
-      // 2. Now Playing Card
-      const nowPlayingCard = document.createElement("div");
-      nowPlayingCard.className = "settings-card";
-      container.appendChild(nowPlayingCard);
-      cleanups.push(renderCompactNowPlaying(nowPlayingCard));
-
-      // 3. Audio & Playback Group
-      const audioGroup = document.createElement("div");
-      audioGroup.className = "settings-card";
-      container.appendChild(audioGroup);
-
-      const audioHeading = document.createElement("h3");
-      audioHeading.textContent = "Audio & Playback";
-      audioGroup.appendChild(audioHeading);
-
-      // Volume Section (Integrated and Restyled)
-      const volumeSection = document.createElement("div");
-      volumeSection.className = "volume-group";
-      audioGroup.appendChild(volumeSection);
-      renderIntegratedVolume(volumeSection);
-
-      // Speed & Quality Row
-      const row = document.createElement("div");
-      row.className = "quick-settings-inline-row";
-      audioGroup.appendChild(row);
-
-      // Speed
-      const speedContainer = document.createElement("div");
-      speedContainer.className = "compact-select-group";
-      const speedView = createPlaybackSpeedPopupView();
-      const speedContent = document.createElement("div");
-      speedView.render(speedContent);
-      speedContent.querySelector("h2")?.remove();
-      // Style the label to be smaller
-      const speedLabel = speedContent.querySelector(".toggle-row span");
-      if (speedLabel)
-        (speedLabel as HTMLElement).classList.add(
-          "quick-settings-select-label",
-        );
-
-      speedContainer.appendChild(speedContent);
-      row.appendChild(speedContainer);
-
-      // Quality
-      const qualityContainer = document.createElement("div");
-      qualityContainer.className = "compact-select-group";
-      const qualityView = createStreamQualityPopupView();
-      const qualityContent = document.createElement("div");
-      qualityView.render(qualityContent);
-      qualityContent.querySelector("h2")?.remove();
-      const qualityLabel = qualityContent.querySelector(".toggle-row span");
-      if (qualityLabel)
-        (qualityLabel as HTMLElement).classList.add(
-          "quick-settings-select-label",
-        );
-
-      qualityContainer.appendChild(qualityContent);
-      row.appendChild(qualityContainer);
+      cleanups.push(renderOpenTabs(tabsCard, tabsList));
+      cleanups.push(
+        renderCompactNowPlaying({ artwork, title, artist, controls }),
+      );
+      renderIntegratedVolume({ numberInput, range, placeholder });
+      renderEmbeddedSelect(createPlaybackSpeedPopupView(), speedSlot);
+      renderEmbeddedSelect(createStreamQualityPopupView(), qualitySlot);
 
       return () => {
         for (const cleanup of cleanups) cleanup();
@@ -105,15 +106,19 @@ export function createQuickSettingsPopupView(): PopupView {
   };
 }
 
-function renderOpenTabs(container: HTMLElement): () => void {
-  const heading = document.createElement("h3");
-  heading.textContent = "Music Source";
-  container.appendChild(heading);
+function renderEmbeddedSelect(view: PopupView, target: HTMLElement): void {
+  const content = document.createElement("div");
+  view.render(content);
+  content.querySelector("h2")?.remove();
 
-  const list = document.createElement("div");
-  list.className = "tab-list-horizontal";
-  container.appendChild(list);
+  const label = content.querySelector(".toggle-row span");
+  if (label)
+    (label as HTMLElement).classList.add("quick-settings-select-label");
 
+  target.appendChild(content);
+}
+
+function renderOpenTabs(card: HTMLElement, list: HTMLElement): () => void {
   const renderTabs = (tabs: YtmTabSummary[]) => {
     list.innerHTML = "";
 
@@ -149,11 +154,11 @@ function renderOpenTabs(container: HTMLElement): () => void {
     chrome.runtime.sendMessage({ type: "get-ytm-tabs" }, (response) => {
       const tabs = (response?.ok ? response.data?.tabs : []) as YtmTabSummary[];
       if (!Array.isArray(tabs) || tabs.length <= 1) {
-        container.classList.add("is-hidden");
+        card.classList.add("is-hidden");
         return;
       }
 
-      container.classList.remove("is-hidden");
+      card.classList.remove("is-hidden");
       renderTabs(tabs);
     });
   };
@@ -172,50 +177,12 @@ function updateSliderBackground(range: HTMLInputElement) {
 }
 
 /** Renders a specifically styled volume control that associates the slider and input */
-function renderIntegratedVolume(container: HTMLElement) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "quick-volume-wrapper";
-  container.appendChild(wrapper);
-
-  const labelRow = document.createElement("div");
-  labelRow.className = "quick-volume-label-row";
-  wrapper.appendChild(labelRow);
-
-  const label = document.createElement("span");
-  label.textContent = "Volume";
-  label.className = "quick-volume-label";
-  labelRow.appendChild(label);
-
-  const inputGroup = document.createElement("div");
-  inputGroup.className = "quick-volume-input-group";
-  labelRow.appendChild(inputGroup);
-
-  const numberInput = document.createElement("input");
-  numberInput.type = "number";
-  numberInput.min = "0";
-  numberInput.max = "100";
-  numberInput.className = "volume-number-input";
+function renderIntegratedVolume(elements: VolumeElements) {
+  const { numberInput, range, placeholder } = elements;
   numberInput.disabled = true;
-  numberInput.value = ""; // Start empty
-  inputGroup.appendChild(numberInput);
-
-  const placeholder = document.createElement("span");
-  placeholder.textContent = "—";
-  placeholder.className = "quick-volume-placeholder";
-  inputGroup.appendChild(placeholder);
-
-  const percent = document.createElement("span");
-  percent.textContent = "%";
-  percent.className = "quick-volume-percent";
-  inputGroup.appendChild(percent);
-
-  const range = document.createElement("input");
-  range.type = "range";
-  range.min = "0";
-  range.max = "100";
-  range.value = "0"; // Start at 0 (empty fill)
+  numberInput.value = "";
   range.disabled = true;
-  wrapper.appendChild(range);
+  range.value = "0";
   updateSliderBackground(range);
 
   chrome.runtime.sendMessage(
@@ -227,7 +194,7 @@ function renderIntegratedVolume(container: HTMLElement) {
         numberInput.value = String(vol);
         range.disabled = false;
         numberInput.disabled = false;
-        placeholder.remove(); // Remove placeholder once loaded
+        placeholder?.remove();
         updateSliderBackground(range);
       }
     },
@@ -252,34 +219,13 @@ function renderIntegratedVolume(container: HTMLElement) {
   });
 }
 
-function renderCompactNowPlaying(container: HTMLElement): () => void {
-  const trackInfo = document.createElement("div");
-  trackInfo.className = "quick-now-playing-track-info";
-  container.appendChild(trackInfo);
+function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
+  const { artwork, title, artist, controls } = elements;
 
-  const artwork = document.createElement("img");
-  artwork.className = "quick-now-playing-artwork is-hidden";
   artwork.onerror = () => {
     artwork.removeAttribute("src");
     artwork.classList.add("is-hidden");
   };
-  trackInfo.appendChild(artwork);
-
-  const meta = document.createElement("div");
-  meta.className = "quick-now-playing-meta";
-  trackInfo.appendChild(meta);
-
-  const title = document.createElement("div");
-  title.className = "quick-now-playing-title";
-  meta.appendChild(title);
-
-  const artist = document.createElement("div");
-  artist.className = "quick-now-playing-artist";
-  meta.appendChild(artist);
-
-  const controls = document.createElement("div");
-  controls.className = "quick-now-playing-controls";
-  meta.appendChild(controls);
 
   const createBtn = (svg: string, action: string, isSmall = true) => {
     const btn = document.createElement("button");

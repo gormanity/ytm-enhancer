@@ -1,0 +1,69 @@
+<h2>Quick Settings</h2>
+
+<div class="settings-card is-hidden" data-role="quick-tabs-card">
+  <h3>Music Source</h3>
+  <div class="tab-list-horizontal" data-role="quick-tabs-list"></div>
+</div>
+
+<div class="settings-card">
+  <div class="quick-now-playing-track-info">
+    <img
+      class="quick-now-playing-artwork is-hidden"
+      data-role="quick-now-playing-artwork"
+      alt=""
+    />
+    <div class="quick-now-playing-meta">
+      <div
+        class="quick-now-playing-title"
+        data-role="quick-now-playing-title"
+      ></div>
+      <div
+        class="quick-now-playing-artist"
+        data-role="quick-now-playing-artist"
+      ></div>
+      <div
+        class="quick-now-playing-controls"
+        data-role="quick-now-playing-controls"
+      ></div>
+    </div>
+  </div>
+</div>
+
+<div class="settings-card">
+  <h3>Audio &amp; Playback</h3>
+
+  <div class="volume-group">
+    <div class="quick-volume-wrapper">
+      <div class="quick-volume-label-row">
+        <span class="quick-volume-label">Volume</span>
+        <div class="quick-volume-input-group">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            class="volume-number-input"
+            data-role="quick-volume-number-input"
+          />
+          <span
+            class="quick-volume-placeholder"
+            data-role="quick-volume-placeholder"
+            >-</span
+          >
+          <span class="quick-volume-percent">%</span>
+        </div>
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        data-role="quick-volume-range"
+      />
+    </div>
+  </div>
+
+  <div class="quick-settings-inline-row">
+    <div class="compact-select-group" data-role="quick-speed-slot"></div>
+    <div class="compact-select-group" data-role="quick-quality-slot"></div>
+  </div>
+</div>
