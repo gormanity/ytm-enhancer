@@ -46,6 +46,12 @@ describe("popup index", () => {
     document.body.innerHTML = `
       <div id="view-container"></div>
       <nav id="nav-list"></nav>
+      <template id="nav-item-template">
+        <div class="nav-item">
+          <span data-role="icon"></span>
+          <span data-role="label"></span>
+        </div>
+      </template>
     `;
   });
 

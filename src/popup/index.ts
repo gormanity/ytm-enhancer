@@ -2,6 +2,9 @@ import { getAllPopupViews } from "@/modules/popup-views";
 
 const container = document.getElementById("view-container");
 const navList = document.getElementById("nav-list");
+const navItemTemplate = document.getElementById(
+  "nav-item-template",
+) as HTMLTemplateElement | null;
 
 const views = getAllPopupViews();
 let activeViewId = localStorage.getItem("active-view-id") || views[0]?.id;
@@ -12,19 +15,57 @@ function renderNav() {
   navList.innerHTML = "";
 
   for (const view of views) {
-    const item = document.createElement("div");
-    item.className = `nav-item ${view.id === activeViewId ? "active" : ""}`;
-    if (view.icon) {
-      const iconWrapper = document.createElement("span");
-      iconWrapper.innerHTML = view.icon;
-      item.appendChild(iconWrapper);
-    }
-    const label = document.createElement("span");
-    label.textContent = view.label;
-    item.appendChild(label);
+    const item = createNavItem(view.id, view.label, view.icon);
+    if (!item) continue;
+    item.classList.toggle("active", view.id === activeViewId);
     item.onclick = () => switchView(view.id);
     navList.appendChild(item);
   }
+}
+
+function createNavItem(
+  id: string,
+  label: string,
+  icon?: string,
+): HTMLDivElement | null {
+  if (!navItemTemplate) {
+    const fallback = document.createElement("div");
+    fallback.className = "nav-item";
+    if (icon) {
+      const iconWrapper = document.createElement("span");
+      iconWrapper.innerHTML = icon;
+      fallback.appendChild(iconWrapper);
+    }
+    const labelElement = document.createElement("span");
+    labelElement.textContent = label;
+    fallback.appendChild(labelElement);
+    fallback.dataset.viewId = id;
+    return fallback;
+  }
+
+  const fragment = navItemTemplate.content.cloneNode(true);
+  const item =
+    fragment.firstElementChild instanceof HTMLDivElement
+      ? fragment.firstElementChild
+      : null;
+  if (!item) return null;
+
+  const labelElement = item.querySelector<HTMLElement>('[data-role="label"]');
+  if (labelElement) {
+    labelElement.textContent = label;
+  }
+
+  const iconElement = item.querySelector<HTMLElement>('[data-role="icon"]');
+  if (iconElement) {
+    if (icon) {
+      iconElement.innerHTML = icon;
+    } else {
+      iconElement.remove();
+    }
+  }
+
+  item.dataset.viewId = id;
+  return item;
 }
 
 function switchView(viewId: string) {
