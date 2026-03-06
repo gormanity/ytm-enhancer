@@ -29,7 +29,7 @@
       "suggested_key": {
         "default": "Alt+Shift+P"
       },
-      "description": "Play or pause the current track"
+      "description": "Play/pause the current track"
     },
     "next-track": {
       "suggested_key": {
