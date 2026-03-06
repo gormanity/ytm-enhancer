@@ -76,7 +76,7 @@ function renderActiveView() {
     if (typeof cleanup === "function") {
       activeViewCleanup = cleanup;
     }
-    container.appendChild(section);
+    container.replaceChildren(section);
   }
 }
 
