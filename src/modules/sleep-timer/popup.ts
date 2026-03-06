@@ -365,12 +365,14 @@ export function createSleepTimerPopupView(): PopupView {
         if (state.active && state.remainingMs > 0) {
           startBtn.textContent = "Restart Timer";
           status.textContent = `Timer active: ${formatRemaining(state.remainingMs)} remaining`;
+          status.classList.remove("is-hidden");
           cancelBtn.disabled = false;
           cancelBtn.classList.remove("is-hidden");
           pausedAt.classList.add("is-hidden");
         } else {
           startBtn.textContent = "Start Timer";
           status.textContent = "Timer is off";
+          status.classList.remove("is-hidden");
           cancelBtn.disabled = true;
           cancelBtn.classList.add("is-hidden");
           activeEndAt = null;
@@ -390,6 +392,7 @@ export function createSleepTimerPopupView(): PopupView {
 
             if (shouldShow) {
               pausedAt.textContent = `Playback paused at ${formatPausedAt(state.lastPausedAt)}`;
+              status.classList.add("is-hidden");
               pausedAt.classList.remove("is-hidden");
             } else {
               pausedAt.classList.add("is-hidden");

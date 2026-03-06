@@ -437,4 +437,40 @@ describe("sleep timer popup view", () => {
     );
     expect(secondPausedHint?.classList.contains("is-hidden")).toBe(true);
   });
+
+  it('should replace "Timer is off" with paused message when shown', () => {
+    const pausedAt = Date.now();
+
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (message.type === "get-sleep-timer-state") {
+          callback?.({
+            ok: true,
+            data: {
+              active: false,
+              remainingMs: 0,
+              endAt: null,
+              lastPausedAt: pausedAt,
+            },
+          });
+          return;
+        }
+        callback?.({ ok: true, data: true });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    const status = container.querySelector<HTMLElement>(
+      '[data-role="sleep-status"]',
+    );
+    const pausedHint = container.querySelector<HTMLElement>(
+      '[data-role="sleep-paused-at"]',
+    );
+
+    expect(status?.classList.contains("is-hidden")).toBe(true);
+    expect(pausedHint?.classList.contains("is-hidden")).toBe(false);
+  });
 });
