@@ -17,6 +17,10 @@ function copyAssets(browser: string): Plugin {
         resolve(__dirname, "src/popup/index.html"),
         resolve(outDir, "popup.html"),
       );
+      copyFileSync(
+        resolve(__dirname, "src/popup/index.css"),
+        resolve(outDir, "index.css"),
+      );
 
       copyFileSync(
         resolve(__dirname, "src/assets/icon48.png"),

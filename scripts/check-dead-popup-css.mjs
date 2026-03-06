@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const POPUP_HTML_PATH = "src/popup/index.html";
+const POPUP_CSS_PATH = "src/popup/index.css";
 const SEARCH_ROOTS = ["src/popup", "src/modules"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".html"]);
 
@@ -24,14 +25,6 @@ function collectFiles(root) {
     }
   }
   return files;
-}
-
-function extractPopupCss(html) {
-  const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-  if (!styleMatch) {
-    throw new Error(`No <style> block found in ${POPUP_HTML_PATH}`);
-  }
-  return styleMatch[1];
 }
 
 function extractSelectorTokens(cssText) {
@@ -135,8 +128,8 @@ function extractUsedTokens(text) {
   return used;
 }
 
-const popupHtml = readFileSync(POPUP_HTML_PATH, "utf8");
-const cssTokens = extractSelectorTokens(extractPopupCss(popupHtml));
+const popupCss = readFileSync(POPUP_CSS_PATH, "utf8");
+const cssTokens = extractSelectorTokens(popupCss);
 
 const files = [
   ...new Set([POPUP_HTML_PATH, ...SEARCH_ROOTS.flatMap(collectFiles)]),
