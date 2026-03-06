@@ -1,7 +1,7 @@
 /* Theme Variables */
 :root {
   --popup-width: 480px;
-  --popup-height: 460px;
+  --popup-height: 480px;
   --bg-color: #030303;
   --sidebar-bg: #0f0f0f;
   --text-color: #ffffff;
@@ -104,7 +104,8 @@ body {
 #nav-list {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  /* Re-enable scrolling here if the module list grows beyond popup height. */
+  overflow-y: hidden;
 }
 
 .version-label {
