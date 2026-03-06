@@ -1,55 +1,23 @@
 import type { PopupView } from "@/core/types";
-
-/** YTM audio quality values mapped to display labels. */
-const QUALITY_OPTIONS = [
-  { value: "1", label: "Low" },
-  { value: "2", label: "Normal" },
-  { value: "3", label: "High" },
-];
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 export function createStreamQualityPopupView(): PopupView {
   return {
     id: "stream-quality-settings",
     label: "Stream Quality",
     render(container: HTMLElement) {
-      container.innerHTML = "";
-
-      const heading = document.createElement("h2");
-      heading.textContent = "Audio Quality";
-      container.appendChild(heading);
-
-      const label = document.createElement("label");
-      label.className = "toggle-row";
-
-      const text = document.createElement("span");
-      text.textContent = "Quality";
-      label.appendChild(text);
-
-      const select = document.createElement("select");
+      renderPopupTemplate(container, templateHtml);
+      const select = container.querySelector<HTMLSelectElement>(
+        '[data-role="stream-quality-select"]',
+      );
+      const hint = container.querySelector<HTMLParagraphElement>(
+        '[data-role="stream-quality-hint"]',
+      );
+      if (!select || !hint) return;
       select.disabled = true;
-
-      // Add a placeholder option
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "—";
-      placeholder.disabled = true;
-      placeholder.selected = true;
-      select.appendChild(placeholder);
-
-      for (const opt of QUALITY_OPTIONS) {
-        const option = document.createElement("option");
-        option.value = opt.value;
-        option.textContent = opt.label;
-        select.appendChild(option);
-      }
-
-      label.appendChild(select);
-      container.appendChild(label);
-
-      const hint = document.createElement("p");
-      hint.className = "status-hint";
-      hint.textContent = "Initial interaction on YTM page required";
-      container.appendChild(hint);
+      const placeholder =
+        select.querySelector<HTMLOptionElement>('option[value=""]');
 
       chrome.runtime.sendMessage(
         { type: "get-stream-quality" },
@@ -66,7 +34,7 @@ export function createStreamQualityPopupView(): PopupView {
             select.disabled = false;
             hint.classList.add("is-hidden");
             // Remove placeholder once we have a value
-            placeholder.remove();
+            placeholder?.remove();
           }
         },
       );

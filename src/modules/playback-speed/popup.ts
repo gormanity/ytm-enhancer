@@ -1,45 +1,20 @@
 import type { PopupView } from "@/core/types";
-
-const SPEED_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 export function createPlaybackSpeedPopupView(): PopupView {
   return {
     id: "playback-speed-settings",
     label: "Playback Speed",
     render(container: HTMLElement) {
-      container.innerHTML = "";
-
-      const heading = document.createElement("h2");
-      heading.textContent = "Playback Speed";
-      container.appendChild(heading);
-
-      const label = document.createElement("label");
-      label.className = "toggle-row";
-
-      const text = document.createElement("span");
-      text.textContent = "Speed";
-      label.appendChild(text);
-
-      const select = document.createElement("select");
+      renderPopupTemplate(container, templateHtml);
+      const select = container.querySelector<HTMLSelectElement>(
+        '[data-role="playback-speed-select"]',
+      );
+      if (!select) return;
       select.disabled = true;
-
-      // Add a placeholder option
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "—";
-      placeholder.disabled = true;
-      placeholder.selected = true;
-      select.appendChild(placeholder);
-
-      for (const speed of SPEED_OPTIONS) {
-        const option = document.createElement("option");
-        option.value = String(speed);
-        option.textContent = `${speed}x`;
-        select.appendChild(option);
-      }
-
-      label.appendChild(select);
-      container.appendChild(label);
+      const placeholder =
+        select.querySelector<HTMLOptionElement>('option[value=""]');
 
       chrome.runtime.sendMessage(
         { type: "get-playback-speed" },
@@ -48,7 +23,7 @@ export function createPlaybackSpeedPopupView(): PopupView {
             select.value = String(response.data ?? 1);
             select.disabled = false;
             // Remove placeholder once we have a value
-            placeholder.remove();
+            placeholder?.remove();
           }
         },
       );
