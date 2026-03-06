@@ -108,7 +108,9 @@ export function createQuickSettingsPopupView(): PopupView {
         return;
       }
 
-      cleanups.push(renderOpenTabs(tabsCard, tabsList, tabItemTemplate));
+      cleanups.push(
+        renderOpenTabs(container, tabsCard, tabsList, tabItemTemplate),
+      );
       cleanups.push(
         renderCompactNowPlaying({
           artwork,
@@ -144,11 +146,13 @@ function renderEmbeddedSelect(view: PopupView, target: HTMLElement): void {
 }
 
 function renderOpenTabs(
+  container: HTMLElement,
   card: HTMLElement,
   list: HTMLElement,
   itemTemplate: HTMLTemplateElement,
 ): () => void {
   let lastRenderedSignature: string | null = null;
+  let currentTabs: YtmTabSummary[] = [];
   let renderEpoch = 0;
   const artworkCache = new Map<number, string>();
   const artworkRequests = new Set<number>();
@@ -257,6 +261,7 @@ function renderOpenTabs(
       const tabs = (response?.ok ? response.data?.tabs : []) as YtmTabSummary[];
       if (!Array.isArray(tabs) || tabs.length <= 1) {
         card.classList.add("is-hidden");
+        currentTabs = [];
         lastRenderedSignature = null;
         return;
       }
@@ -274,13 +279,47 @@ function renderOpenTabs(
       lastRenderedSignature = signature;
 
       card.classList.remove("is-hidden");
+      currentTabs = tabs;
       renderTabs(tabs);
     });
   };
 
+  const cycleSelectedTab = (reverse = false) => {
+    if (currentTabs.length <= 1) return;
+    const selectedIndex = currentTabs.findIndex((tab) => tab.isSelected);
+    const baseIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    const direction = reverse ? -1 : 1;
+    const nextIndex =
+      (baseIndex + direction + currentTabs.length) % currentTabs.length;
+    const nextTab = currentTabs[nextIndex];
+    if (nextTab.id === null) return;
+    chrome.runtime.sendMessage({ type: "set-selected-tab", tabId: nextTab.id });
+    updateTabs();
+  };
+
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key !== "Tab") return;
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      target.matches(
+        "input, select, textarea, button, [contenteditable='true']",
+      )
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    cycleSelectedTab(event.shiftKey);
+  };
+
+  container.addEventListener("keydown", handleKeydown);
   updateTabs();
   const pollId = window.setInterval(updateTabs, 3000);
   return () => {
+    container.removeEventListener("keydown", handleKeydown);
     window.clearInterval(pollId);
   };
 }

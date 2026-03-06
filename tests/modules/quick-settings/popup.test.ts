@@ -263,4 +263,29 @@ describe("quick settings popup view", () => {
 
     cleanup?.();
   });
+
+  it("cycles selected music source tab on Tab key", async () => {
+    const view = createQuickSettingsPopupView();
+    const container = document.createElement("div");
+    const cleanup = view.render(container);
+
+    await vi.waitFor(() => {
+      expect(container.querySelectorAll(".tab-item").length).toBe(2);
+    });
+
+    const tabEvent = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    container.dispatchEvent(tabEvent);
+
+    expect(tabEvent.defaultPrevented).toBe(true);
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-selected-tab",
+      tabId: 2,
+    });
+
+    cleanup?.();
+  });
 });
