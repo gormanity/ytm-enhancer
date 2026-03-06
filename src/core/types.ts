@@ -23,7 +23,7 @@ export interface PopupView {
   id: string;
   label: string;
   icon?: string;
-  render: (container: HTMLElement) => void;
+  render: (container: HTMLElement) => void | (() => void);
 }
 
 /** Interface that all feature modules must implement. */

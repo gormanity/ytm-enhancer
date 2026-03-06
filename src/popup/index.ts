@@ -5,6 +5,7 @@ const navList = document.getElementById("nav-list");
 
 const views = getAllPopupViews();
 let activeViewId = localStorage.getItem("active-view-id") || views[0]?.id;
+let activeViewCleanup: (() => void) | null = null;
 
 function renderNav() {
   if (!navList) return;
@@ -31,12 +32,17 @@ function switchView(viewId: string) {
 
 function renderActiveView() {
   if (!container) return;
+  activeViewCleanup?.();
+  activeViewCleanup = null;
   container.innerHTML = "";
 
   const view = views.find((v) => v.id === activeViewId) || views[0];
   if (view) {
     const section = document.createElement("section");
-    view.render(section);
+    const cleanup = view.render(section);
+    if (typeof cleanup === "function") {
+      activeViewCleanup = cleanup;
+    }
     container.appendChild(section);
   }
 }

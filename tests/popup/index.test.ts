@@ -50,7 +50,7 @@ describe("popup index", () => {
   });
 
   it("runs previous view cleanup when switching views", async () => {
-    await import("../../src/popup/index.ts");
+    await import("../../src/popup/index");
 
     const navItems = document.querySelectorAll(".nav-item");
     expect(navItems).toHaveLength(2);
