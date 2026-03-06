@@ -3,6 +3,8 @@ import { renderPopupTemplate } from "@/popup/template";
 import templateHtml from "./popup.html?raw";
 
 const PRESET_MINUTES = [15, 30, 45, 60];
+const HOURS_STORAGE_KEY = "sleep-timer.duration-hours";
+const MINUTES_STORAGE_KEY = "sleep-timer.duration-minutes";
 
 type TimerMode = "duration" | "absolute";
 
@@ -76,6 +78,61 @@ function formatRelativeDuration(durationMs: number): string {
   if (hours === 0) return `${minutes}m`;
   if (minutes === 0) return `${hours}h`;
   return `${hours}h ${minutes}m`;
+}
+
+function getPopupStorage(): Storage | null {
+  try {
+    const candidate = (globalThis as { localStorage?: unknown }).localStorage;
+    if (
+      candidate &&
+      typeof candidate === "object" &&
+      typeof (candidate as Storage).getItem === "function" &&
+      typeof (candidate as Storage).setItem === "function"
+    ) {
+      return candidate as Storage;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function loadStoredSegment(
+  key: string,
+  min: number,
+  max: number,
+  fallback: string,
+): string {
+  const storage = getPopupStorage();
+  const raw = storage?.getItem(key);
+  if (raw === null) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    return fallback;
+  }
+  return String(parsed).padStart(2, "0");
+}
+
+function persistDurationSegments(
+  hoursValue: string,
+  minutesValue: string,
+): void {
+  const storage = getPopupStorage();
+  if (!storage) return;
+
+  const parsedHours = Number(hoursValue);
+  if (Number.isInteger(parsedHours) && parsedHours >= 0 && parsedHours <= 99) {
+    storage.setItem(HOURS_STORAGE_KEY, String(parsedHours));
+  }
+
+  const parsedMinutes = Number(minutesValue);
+  if (
+    Number.isInteger(parsedMinutes) &&
+    parsedMinutes >= 0 &&
+    parsedMinutes <= 59
+  ) {
+    storage.setItem(MINUTES_STORAGE_KEY, String(parsedMinutes));
+  }
 }
 
 /** Create the sleep timer settings popup view. */
@@ -161,6 +218,8 @@ export function createSleepTimerPopupView(): PopupView {
       // Normalize textContent so tests and behavior don't depend on template whitespace.
       startBtn.textContent = "Start Timer";
       cancelBtn.textContent = "Cancel";
+      hoursInput.value = loadStoredSegment(HOURS_STORAGE_KEY, 0, 99, "00");
+      minutesInput.value = loadStoredSegment(MINUTES_STORAGE_KEY, 0, 59, "30");
 
       const presetButtons = new Map<number, HTMLButtonElement>();
       const presetButtonElements =
@@ -202,6 +261,7 @@ export function createSleepTimerPopupView(): PopupView {
           modeSelect.value = "duration";
           updateModeVisibility();
           refreshPresetStyles();
+          persistDurationSegments(hoursInput.value, minutesInput.value);
           updateStartEnabled();
         });
       }
@@ -399,6 +459,7 @@ export function createSleepTimerPopupView(): PopupView {
         selectedPresetMinutes =
           minutes !== null && PRESET_MINUTES.includes(minutes) ? minutes : null;
         refreshPresetStyles();
+        persistDurationSegments(hoursInput.value, minutesInput.value);
         updateStartEnabled();
       });
       minutesInput.addEventListener("input", () => {
@@ -409,6 +470,7 @@ export function createSleepTimerPopupView(): PopupView {
         selectedPresetMinutes =
           minutes !== null && PRESET_MINUTES.includes(minutes) ? minutes : null;
         refreshPresetStyles();
+        persistDurationSegments(hoursInput.value, minutesInput.value);
         updateStartEnabled();
       });
 
@@ -420,6 +482,12 @@ export function createSleepTimerPopupView(): PopupView {
       );
       minutesInput.addEventListener("blur", () =>
         clampAndPadSegment(minutesInput, 0, 59),
+      );
+      hoursInput.addEventListener("blur", () =>
+        persistDurationSegments(hoursInput.value, minutesInput.value),
+      );
+      minutesInput.addEventListener("blur", () =>
+        persistDurationSegments(hoursInput.value, minutesInput.value),
       );
       hoursInput.addEventListener("keydown", (event) =>
         handleArrowAdjust(event, hoursInput, 0, 99),
