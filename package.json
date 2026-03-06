@@ -16,9 +16,10 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ tests/",
+    "css:dead": "node scripts/check-dead-popup-css.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test"
+    "check": "pnpm run format:check && pnpm run lint && pnpm run css:dead && pnpm run typecheck && pnpm run test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
