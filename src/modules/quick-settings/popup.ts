@@ -13,11 +13,10 @@ interface YtmTabSummary {
   id: number | null;
   title: string;
   artworkUrl: string | null;
-  favIconUrl: string | null;
   isSelected: boolean;
 }
 
-const YTM_FALLBACK_ICON_URL = "preview-artwork.png";
+const YTM_FALLBACK_ICON_URL = "ytm-tab-fallback.svg";
 
 interface VolumeElements {
   numberInput: HTMLInputElement;
@@ -158,11 +157,7 @@ function renderOpenTabs(
     artworkUrl?: string,
   ): string[] => {
     const result: string[] = [];
-    const candidates = [
-      artworkUrl ?? tab.artworkUrl,
-      tab.favIconUrl,
-      YTM_FALLBACK_ICON_URL,
-    ];
+    const candidates = [artworkUrl ?? tab.artworkUrl, YTM_FALLBACK_ICON_URL];
     for (const candidate of candidates) {
       if (typeof candidate !== "string") continue;
       const trimmed = candidate.trim();
@@ -258,7 +253,6 @@ function renderOpenTabs(
           id: tab.id,
           title: tab.title,
           artworkUrl: tab.artworkUrl,
-          favIconUrl: tab.favIconUrl,
           isSelected: tab.isSelected,
         })),
       );

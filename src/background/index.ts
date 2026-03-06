@@ -221,7 +221,6 @@ handler.on("get-ytm-tabs", async () => {
     id: tab.id ?? null,
     title: tab.title ?? "YouTube Music",
     artworkUrl: null,
-    favIconUrl: tab.favIconUrl ?? null,
     isSelected: tab.id === selectedTabId,
   }));
 
