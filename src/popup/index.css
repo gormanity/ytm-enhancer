@@ -339,6 +339,17 @@ h3 {
     transform 0.1s;
 }
 
+.primary-btn--block {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .primary-btn:hover {
   background: #cc0000 !important;
 }
@@ -539,6 +550,21 @@ select:focus {
 /* Shared Utilities */
 .is-hidden {
   display: none !important;
+}
+
+.panel-actions {
+  margin-top: 24px;
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.shortcut-separator {
+  font-size: 10px;
+  color: var(--text-secondary);
 }
 
 /* Home View */

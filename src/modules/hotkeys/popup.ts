@@ -23,20 +23,12 @@ export function createHotkeysPopupView(): PopupView {
       loadShortcuts(list);
 
       const actions = document.createElement("div");
-      actions.style.marginTop = "24px";
+      actions.className = "panel-actions";
       card.appendChild(actions);
 
       const configBtn = document.createElement("button");
       configBtn.textContent = "Configure Shortcuts";
-      configBtn.className = "primary-btn";
-      configBtn.style.width = "100%";
-      configBtn.style.padding = "10px";
-      configBtn.style.background = "var(--accent-color)";
-      configBtn.style.color = "white";
-      configBtn.style.border = "none";
-      configBtn.style.borderRadius = "4px";
-      configBtn.style.cursor = "pointer";
-      configBtn.style.fontWeight = "600";
+      configBtn.className = "primary-btn primary-btn--block";
       configBtn.onclick = () => {
         const url =
           __BROWSER__ === "firefox"
@@ -83,9 +75,7 @@ function loadShortcuts(container: HTMLElement): void {
       label.textContent = cmd.description ?? cmd.name;
 
       const keysContainer = document.createElement("div");
-      keysContainer.style.display = "flex";
-      keysContainer.style.gap = "4px";
-      keysContainer.style.alignItems = "center";
+      keysContainer.className = "shortcut-keys";
 
       if (cmd.shortcut) {
         const parts = cmd.shortcut.split("+");
@@ -103,9 +93,8 @@ function loadShortcuts(container: HTMLElement): void {
 
           if (i < parts.length - 1) {
             const separator = document.createElement("span");
+            separator.className = "shortcut-separator";
             separator.textContent = "+";
-            separator.style.fontSize = "10px";
-            separator.style.color = "var(--text-secondary)";
             keysContainer.appendChild(separator);
           }
         }
