@@ -151,15 +151,7 @@ export function createNotificationsPopupView(): PopupView {
 
       const previewBtn = document.createElement("button");
       previewBtn.textContent = "Preview Notification";
-      previewBtn.className = "primary-btn";
-      previewBtn.style.width = "100%";
-      previewBtn.style.padding = "10px";
-      previewBtn.style.background = "var(--accent-color)";
-      previewBtn.style.color = "white";
-      previewBtn.style.border = "none";
-      previewBtn.style.borderRadius = "4px";
-      previewBtn.style.cursor = "pointer";
-      previewBtn.style.fontWeight = "600";
+      previewBtn.className = "primary-btn primary-btn--block";
       previewBtn.onclick = () => {
         chrome.runtime.sendMessage({ type: "preview-notification" });
       };
