@@ -2,8 +2,8 @@ import type { PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
 import ytmTabFallbackIconUrl from "@/assets/ytm-logo.svg";
-import { createPlaybackSpeedPopupView } from "../playback-speed/popup";
-import { createStreamQualityPopupView } from "../stream-quality/popup";
+import { renderPlaybackSpeedSelectControl } from "../playback-speed/popup";
+import { renderStreamQualitySelectControl } from "../stream-quality/popup";
 import templateHtml from "./popup.html?raw";
 
 const PLAY_SVG =
@@ -126,26 +126,21 @@ export function createQuickSettingsPopupView(): PopupView {
         }),
       );
       renderIntegratedVolume({ numberInput, range, placeholder });
-      renderEmbeddedSelect(createPlaybackSpeedPopupView(), speedSlot);
-      renderEmbeddedSelect(createStreamQualityPopupView(), qualitySlot);
+      renderPlaybackSpeedSelectControl(speedSlot);
+      renderStreamQualitySelectControl(qualitySlot);
+
+      speedSlot
+        .querySelector<HTMLElement>(".toggle-row span")
+        ?.classList.add("quick-settings-select-label");
+      qualitySlot
+        .querySelector<HTMLElement>(".toggle-row span")
+        ?.classList.add("quick-settings-select-label");
 
       return () => {
         for (const cleanup of cleanups) cleanup();
       };
     },
   };
-}
-
-function renderEmbeddedSelect(view: PopupView, target: HTMLElement): void {
-  const content = document.createElement("div");
-  view.render(content);
-  content.querySelector("h2")?.remove();
-
-  const label = content.querySelector(".toggle-row span");
-  if (label)
-    (label as HTMLElement).classList.add("quick-settings-select-label");
-
-  target.appendChild(content);
 }
 
 function renderOpenTabs(
