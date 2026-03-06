@@ -288,4 +288,103 @@ describe("quick settings popup view", () => {
 
     cleanup?.();
   });
+
+  it("persists selected music source tab across popup reopen", async () => {
+    let selectedTabId = 1;
+    sendMessageMock.mockImplementation(
+      (message: RuntimeMessage, callback?: (response: unknown) => void) => {
+        switch (message.type) {
+          case "get-ytm-tabs":
+            callback?.({
+              ok: true,
+              data: {
+                tabs: [
+                  {
+                    id: 1,
+                    title: "Tab 1 - YouTube Music",
+                    artworkUrl: null,
+                    isSelected: selectedTabId === 1,
+                  },
+                  {
+                    id: 2,
+                    title: "Tab 2 - YouTube Music",
+                    artworkUrl: null,
+                    isSelected: selectedTabId === 2,
+                  },
+                ],
+              },
+            });
+            return;
+          case "set-selected-tab":
+            selectedTabId = message.tabId ?? selectedTabId;
+            callback?.({ ok: true });
+            return;
+          case "get-ytm-tab-artwork":
+            callback?.({ ok: true, data: { artworkUrl: null } });
+            return;
+          case "get-playback-state":
+            callback?.({
+              ok: true,
+              data: {
+                title: "Track A",
+                artist: "Artist A",
+                album: null,
+                year: null,
+                artworkUrl: null,
+                isPlaying: false,
+                progress: 0,
+                duration: 0,
+              },
+            });
+            return;
+          case "get-volume":
+            callback?.({ ok: true, data: 50 });
+            return;
+          case "get-playback-speed":
+            callback?.({ ok: true, data: "1" });
+            return;
+          case "get-stream-quality":
+            callback?.({ ok: true, data: { current: "2" } });
+            return;
+          default:
+            callback?.({ ok: true });
+        }
+      },
+    );
+
+    const view = createQuickSettingsPopupView();
+    const firstContainer = document.createElement("div");
+    const firstCleanup = view.render(firstContainer);
+
+    await vi.waitFor(() => {
+      expect(firstContainer.querySelectorAll(".tab-item").length).toBe(2);
+    });
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(selectedTabId).toBe(2);
+    });
+    firstCleanup?.();
+
+    const secondContainer = document.createElement("div");
+    const secondCleanup = view.render(secondContainer);
+
+    await vi.waitFor(() => {
+      expect(secondContainer.querySelectorAll(".tab-item").length).toBe(2);
+    });
+
+    const selectedItem =
+      secondContainer.querySelector<HTMLElement>(".tab-item.selected");
+    expect(selectedItem).not.toBeNull();
+    expect(selectedItem?.title).toBe("Tab 2");
+
+    secondCleanup?.();
+  });
 });
