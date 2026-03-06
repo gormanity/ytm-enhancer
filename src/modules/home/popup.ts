@@ -1,14 +1,12 @@
 import type { PlaybackState } from "@/core/types";
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
-const PREV_SVG =
-  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>';
 const PLAY_SVG =
   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-const NEXT_SVG =
-  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
 
 /** Create the home/now-playing popup view. */
 export function createHomePopupView(): PopupView {
@@ -16,43 +14,30 @@ export function createHomePopupView(): PopupView {
     id: "home",
     label: "Now Playing",
     render(container: HTMLElement) {
-      container.innerHTML = "";
+      renderPopupTemplate(container, templateHtml);
 
-      const heading = document.createElement("h2");
-      heading.textContent = "Now Playing";
-      container.appendChild(heading);
+      const artwork = container.querySelector<HTMLImageElement>(
+        '[data-role="artwork"]',
+      );
+      const title = container.querySelector<HTMLElement>('[data-role="title"]');
+      const artist = container.querySelector<HTMLElement>(
+        '[data-role="artist"]',
+      );
+      const prevBtn = container.querySelector<HTMLButtonElement>(
+        '[data-role="previous"]',
+      );
+      const playBtn = container.querySelector<HTMLButtonElement>(
+        '[data-role="toggle-play"]',
+      );
+      const nextBtn =
+        container.querySelector<HTMLButtonElement>('[data-role="next"]');
+      if (!artwork || !title || !artist || !prevBtn || !playBtn || !nextBtn) {
+        return;
+      }
 
-      const trackInfo = document.createElement("div");
-      trackInfo.className = "home-track-info";
-      container.appendChild(trackInfo);
-
-      const artwork = document.createElement("img");
-      artwork.className = "home-artwork";
-      trackInfo.appendChild(artwork);
-
-      const title = document.createElement("div");
-      title.className = "home-track-title";
-      trackInfo.appendChild(title);
-
-      const artist = document.createElement("div");
-      artist.className = "home-track-artist";
-      trackInfo.appendChild(artist);
-
-      const controls = document.createElement("div");
-      controls.className = "home-controls";
-      container.appendChild(controls);
-
-      const prevBtn = createControlBtn(PREV_SVG);
       prevBtn.onclick = () => sendAction("previous");
-      controls.appendChild(prevBtn);
-
-      const playBtn = createControlBtn(PLAY_SVG, true);
       playBtn.onclick = () => sendAction("togglePlay");
-      controls.appendChild(playBtn);
-
-      const nextBtn = createControlBtn(NEXT_SVG);
       nextBtn.onclick = () => sendAction("next");
-      controls.appendChild(nextBtn);
 
       const update = () => {
         chrome.runtime.sendMessage(
@@ -68,7 +53,6 @@ export function createHomePopupView(): PopupView {
               }
               title.textContent = state.title || "Unknown Track";
               artist.textContent = state.artist || "Unknown Artist";
-
               playBtn.innerHTML = state.isPlaying ? PAUSE_SVG : PLAY_SVG;
             } else {
               title.textContent = "YouTube Music not found";
@@ -87,17 +71,6 @@ export function createHomePopupView(): PopupView {
       };
     },
   };
-}
-
-function createControlBtn(svg: string, large = false): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.innerHTML = svg;
-  btn.className = "home-control-btn";
-  if (large) {
-    btn.classList.add("home-control-btn--primary");
-  }
-
-  return btn;
 }
 
 function sendAction(action: string) {
