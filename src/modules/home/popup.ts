@@ -1,5 +1,4 @@
-import type { PlaybackState } from "@/core/types";
-import type { PopupView } from "@/core/types";
+import type { PlaybackState, PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
 import templateHtml from "./popup.html?raw";
