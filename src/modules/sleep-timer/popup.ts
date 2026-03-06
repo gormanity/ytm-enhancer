@@ -494,18 +494,14 @@ export function createSleepTimerPopupView(): PopupView {
       // Refresh from background periodically to avoid drift in long sessions.
       statePollTimer = window.setInterval(queryState, 15000);
 
-      window.addEventListener(
-        "unload",
-        () => {
-          if (countdownTimer !== null) {
-            clearInterval(countdownTimer);
-          }
-          if (statePollTimer !== null) {
-            clearInterval(statePollTimer);
-          }
-        },
-        { once: true },
-      );
+      return () => {
+        if (countdownTimer !== null) {
+          clearInterval(countdownTimer);
+        }
+        if (statePollTimer !== null) {
+          clearInterval(statePollTimer);
+        }
+      };
     },
   };
 }

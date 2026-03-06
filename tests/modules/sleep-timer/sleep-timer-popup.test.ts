@@ -318,4 +318,32 @@ describe("sleep timer popup view", () => {
       mode: "absolute",
     });
   });
+
+  it("should clear polling timers on cleanup", () => {
+    vi.useFakeTimers();
+    sendMessageMock.mockImplementation(
+      (_message: { type: string }, callback?: (response: unknown) => void) => {
+        callback?.({
+          ok: true,
+          data: {
+            active: false,
+            remainingMs: 0,
+            endAt: null,
+            lastPausedAt: null,
+          },
+        });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const container = document.createElement("div");
+    const cleanup = view.render(container);
+
+    expect(typeof cleanup).toBe("function");
+    expect(vi.getTimerCount()).toBeGreaterThanOrEqual(2);
+
+    (cleanup as () => void)();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
 });
