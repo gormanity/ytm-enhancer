@@ -49,7 +49,6 @@ export function createStreamQualityPopupView(): PopupView {
       const hint = document.createElement("p");
       hint.className = "status-hint";
       hint.textContent = "Initial interaction on YTM page required";
-      hint.style.display = "block";
       container.appendChild(hint);
 
       chrome.runtime.sendMessage(
@@ -65,7 +64,7 @@ export function createStreamQualityPopupView(): PopupView {
               select.value = "2";
             }
             select.disabled = false;
-            hint.style.display = "none";
+            hint.classList.add("is-hidden");
             // Remove placeholder once we have a value
             placeholder.remove();
           }

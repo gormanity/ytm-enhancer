@@ -115,10 +115,9 @@ export function createAudioVisualizerPopupView(): PopupView {
       card.appendChild(colorModeLabel);
 
       const autoModeHint = document.createElement("div");
-      autoModeHint.className = "shortcuts-hint";
+      autoModeHint.className = "shortcuts-hint shortcuts-hint--spaced";
       autoModeHint.innerHTML =
         "<strong>Tip:</strong> <strong>Auto</strong> mode shows the visualizer on the most relevant visible surface: PiP first, then Song Art, then Thumbnail.";
-      autoModeHint.style.marginBottom = "8px";
       container.appendChild(autoModeHint);
 
       const tuningCard = document.createElement("div");

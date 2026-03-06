@@ -332,6 +332,10 @@ h3 {
   border-left: 2px solid var(--accent-color);
 }
 
+.shortcuts-hint--spaced {
+  margin-bottom: 8px;
+}
+
 /* Shared Buttons */
 .primary-btn {
   transition:
