@@ -1,4 +1,5 @@
 import { getAllPopupViews } from "@/modules/popup-views";
+import { parseHtmlFragment } from "./html-fragment";
 
 const container = document.getElementById("view-container");
 const navList = document.getElementById("nav-list");
@@ -45,7 +46,7 @@ function createNavItem(
   const iconElement = item.querySelector<HTMLElement>('[data-role="icon"]');
   if (iconElement) {
     if (icon) {
-      iconElement.innerHTML = icon;
+      iconElement.replaceChildren(parseHtmlFragment(icon));
     } else {
       iconElement.remove();
     }
