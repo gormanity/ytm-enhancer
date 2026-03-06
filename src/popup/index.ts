@@ -14,10 +14,14 @@ function renderNav() {
   for (const view of views) {
     const item = document.createElement("div");
     item.className = `nav-item ${view.id === activeViewId ? "active" : ""}`;
-    item.innerHTML = `
-      ${view.icon || ""}
-      <span>${view.label}</span>
-    `;
+    if (view.icon) {
+      const iconWrapper = document.createElement("span");
+      iconWrapper.innerHTML = view.icon;
+      item.appendChild(iconWrapper);
+    }
+    const label = document.createElement("span");
+    label.textContent = view.label;
+    item.appendChild(label);
     item.onclick = () => switchView(view.id);
     navList.appendChild(item);
   }
