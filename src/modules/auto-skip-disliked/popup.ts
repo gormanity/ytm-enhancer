@@ -1,4 +1,6 @@
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 /** Create the auto-skip disliked songs settings popup view. */
 export function createAutoSkipDislikedPopupView(): PopupView {
@@ -6,29 +8,12 @@ export function createAutoSkipDislikedPopupView(): PopupView {
     id: "auto-skip-disliked-settings",
     label: "Auto-Skip Disliked",
     render(container: HTMLElement) {
-      container.innerHTML = "";
-
-      const heading = document.createElement("h2");
-      heading.textContent = "Auto-Skip Disliked Songs";
-      container.appendChild(heading);
-
-      const card = document.createElement("div");
-      card.className = "settings-card";
-      container.appendChild(card);
-
-      const label = document.createElement("label");
-      label.className = "toggle-row";
-
-      const text = document.createElement("span");
-      text.textContent = "Automatically skip disliked songs";
-      label.appendChild(text);
-
-      const toggle = document.createElement("input");
-      toggle.type = "checkbox";
+      renderPopupTemplate(container, templateHtml);
+      const toggle = container.querySelector<HTMLInputElement>(
+        '[data-role="auto-skip-disliked-toggle"]',
+      );
+      if (!toggle) return;
       toggle.disabled = true;
-      label.appendChild(toggle);
-
-      card.appendChild(label);
 
       // Query current state from the background script.
       chrome.runtime.sendMessage(

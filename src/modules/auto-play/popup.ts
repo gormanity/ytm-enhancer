@@ -1,4 +1,6 @@
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 /** Create the auto-play settings popup view. */
 export function createAutoPlayPopupView(): PopupView {
@@ -6,29 +8,12 @@ export function createAutoPlayPopupView(): PopupView {
     id: "auto-play-settings",
     label: "Auto-Play",
     render(container: HTMLElement) {
-      container.innerHTML = "";
-
-      const heading = document.createElement("h2");
-      heading.textContent = "Auto-Play";
-      container.appendChild(heading);
-
-      const card = document.createElement("div");
-      card.className = "settings-card";
-      container.appendChild(card);
-
-      const label = document.createElement("label");
-      label.className = "toggle-row";
-
-      const text = document.createElement("span");
-      text.textContent = "Auto-play on page load";
-      label.appendChild(text);
-
-      const toggle = document.createElement("input");
-      toggle.type = "checkbox";
+      renderPopupTemplate(container, templateHtml);
+      const toggle = container.querySelector<HTMLInputElement>(
+        '[data-role="auto-play-toggle"]',
+      );
+      if (!toggle) return;
       toggle.disabled = true;
-      label.appendChild(toggle);
-
-      card.appendChild(label);
 
       // Query current state from the background script.
       chrome.runtime.sendMessage(
