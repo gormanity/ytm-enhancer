@@ -45,6 +45,7 @@ const streamQuality = new StreamQualityModule();
 let selectedTabId: number | null = null;
 const pipOpenTabIds = new Set<number>();
 const SLEEP_TIMER_ALARM = "sleep-timer";
+const TAB_ARTWORK_QUERY_TIMEOUT_MS = 150;
 let sleepTimerEndAt: number | null = null;
 let sleepTimerLastPausedAt: number | null = null;
 let sleepTimerNotifyOnEnd = true;
@@ -185,6 +186,28 @@ handler.on("track-changed", async (message) => {
   return { ok: true };
 });
 
+async function queryTabArtworkWithTimeout(
+  tabId: number,
+): Promise<string | null> {
+  try {
+    const responsePromise = chrome.tabs.sendMessage(tabId, {
+      type: "get-playback-state",
+    }) as Promise<{ ok: boolean; data?: PlaybackState }>;
+
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), TAB_ARTWORK_QUERY_TIMEOUT_MS);
+    });
+
+    const response = await Promise.race([responsePromise, timeoutPromise]);
+    if (response && typeof response === "object" && response.ok) {
+      return response.data?.artworkUrl ?? null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 handler.on("get-ytm-tabs", async () => {
   const tabs = await findAllYTMTabs();
   const nextSelectedTabId = resolveSelectedTabId(tabs, selectedTabId);
@@ -194,34 +217,23 @@ handler.on("get-ytm-tabs", async () => {
     void saveModuleStateValue("tabs.selectedTabId", selectedTabId);
   }
 
-  const tabData = await Promise.all(
-    tabs.map(async (tab) => {
-      let artworkUrl: string | null = null;
-
-      if (tab.id !== undefined) {
-        try {
-          const response = (await chrome.tabs.sendMessage(tab.id, {
-            type: "get-playback-state",
-          })) as { ok: boolean; data?: PlaybackState };
-          if (response?.ok) {
-            artworkUrl = response.data?.artworkUrl ?? null;
-          }
-        } catch {
-          // Tab may not have a live content script yet.
-        }
-      }
-
-      return {
-        id: tab.id ?? null,
-        title: tab.title ?? "YouTube Music",
-        artworkUrl,
-        favIconUrl: tab.favIconUrl ?? null,
-        isSelected: tab.id === selectedTabId,
-      };
-    }),
-  );
+  const tabData = tabs.map((tab) => ({
+    id: tab.id ?? null,
+    title: tab.title ?? "YouTube Music",
+    artworkUrl: null,
+    favIconUrl: tab.favIconUrl ?? null,
+    isSelected: tab.id === selectedTabId,
+  }));
 
   return { ok: true, data: { tabs: tabData, selectedTabId } };
+});
+
+handler.on("get-ytm-tab-artwork", async (message) => {
+  const tabId =
+    typeof message.tabId === "number" ? (message.tabId as number) : null;
+  if (tabId === null) return { ok: false, error: "Invalid tab ID" };
+  const artworkUrl = await queryTabArtworkWithTimeout(tabId);
+  return { ok: true, data: { artworkUrl } };
 });
 
 handler.on("set-selected-tab", async (message) => {

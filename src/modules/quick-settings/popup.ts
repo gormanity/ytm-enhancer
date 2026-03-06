@@ -149,13 +149,19 @@ function renderOpenTabs(
   itemTemplate: HTMLTemplateElement,
 ): () => void {
   let lastRenderedSignature: string | null = null;
+  let renderEpoch = 0;
+  const artworkCache = new Map<number, string | null>();
+  const artworkRequests = new Set<number>();
 
-  const pickTabIconCandidates = (tab: YtmTabSummary): string[] => {
+  const pickTabIconCandidates = (
+    tab: YtmTabSummary,
+    artworkUrl?: string,
+  ): string[] => {
     const result: string[] = [];
     const candidates = [
-      tab.artworkUrl,
-      tab.favIconUrl,
+      artworkUrl ?? tab.artworkUrl,
       YTM_FALLBACK_ICON_URL,
+      tab.favIconUrl,
       "icon48.png",
     ];
     for (const candidate of candidates) {
@@ -168,6 +174,8 @@ function renderOpenTabs(
   };
 
   const renderTabs = (tabs: YtmTabSummary[]) => {
+    renderEpoch += 1;
+    const currentEpoch = renderEpoch;
     list.innerHTML = "";
 
     for (const tab of tabs) {
@@ -181,7 +189,9 @@ function renderOpenTabs(
 
       if (tab.isSelected) item.classList.add("selected");
       icon.alt = "";
-      const iconCandidates = pickTabIconCandidates(tab);
+      const cachedArtwork =
+        tab.id === null ? null : (artworkCache.get(tab.id) ?? null);
+      const iconCandidates = pickTabIconCandidates(tab, cachedArtwork);
       let candidateIndex = 0;
       const assignNextCandidate = () => {
         if (candidateIndex >= iconCandidates.length) return;
@@ -206,6 +216,32 @@ function renderOpenTabs(
 
       item.appendChild(icon);
       list.appendChild(item);
+
+      if (tab.id === null) continue;
+      const tabId = tab.id;
+      if (cachedArtwork !== null || artworkRequests.has(tabId)) continue;
+      artworkRequests.add(tabId);
+      chrome.runtime.sendMessage(
+        { type: "get-ytm-tab-artwork", tabId },
+        (response) => {
+          artworkRequests.delete(tabId);
+          const artworkUrl = response?.ok
+            ? (response.data?.artworkUrl as string | null)
+            : null;
+          artworkCache.set(tabId, artworkUrl);
+          if (
+            currentEpoch !== renderEpoch ||
+            !artworkUrl ||
+            !icon.isConnected
+          ) {
+            return;
+          }
+          icon.onerror = () => {
+            icon.src = YTM_FALLBACK_ICON_URL;
+          };
+          icon.src = artworkUrl;
+        },
+      );
     }
   };
 
