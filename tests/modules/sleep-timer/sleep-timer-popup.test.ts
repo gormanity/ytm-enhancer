@@ -4,6 +4,7 @@ import { createSleepTimerPopupView } from "@/modules/sleep-timer/popup";
 describe("sleep timer popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
   const LAST_PAUSED_AT_SEEN_KEY = "sleep-timer.last-paused-at-seen";
+  const ABSOLUTE_TIME_STORAGE_KEY = "sleep-timer.absolute-time";
   let storageData: Record<string, string>;
 
   beforeEach(() => {
@@ -472,5 +473,44 @@ describe("sleep timer popup view", () => {
 
     expect(status?.classList.contains("is-hidden")).toBe(true);
     expect(pausedHint?.classList.contains("is-hidden")).toBe(false);
+  });
+
+  it("should persist pause-at time across popup opens", () => {
+    sendMessageMock.mockImplementation(
+      (_message: { type: string }, callback?: (response: unknown) => void) => {
+        callback?.({
+          ok: true,
+          data: {
+            active: false,
+            remainingMs: 0,
+            endAt: null,
+            lastPausedAt: null,
+          },
+        });
+      },
+    );
+
+    const view = createSleepTimerPopupView();
+    const containerA = document.createElement("div");
+    view.render(containerA);
+
+    const modeSelect = containerA.querySelector<HTMLSelectElement>("select")!;
+    modeSelect.value = "absolute";
+    modeSelect.dispatchEvent(new Event("change"));
+
+    const absoluteInputA = containerA.querySelector<HTMLInputElement>(
+      '[data-role="sleep-absolute-input"]',
+    )!;
+    absoluteInputA.value = "07:45";
+    absoluteInputA.dispatchEvent(new Event("input"));
+
+    expect(localStorage.getItem(ABSOLUTE_TIME_STORAGE_KEY)).toBe("07:45");
+
+    const containerB = document.createElement("div");
+    view.render(containerB);
+    const absoluteInputB = containerB.querySelector<HTMLInputElement>(
+      '[data-role="sleep-absolute-input"]',
+    )!;
+    expect(absoluteInputB.value).toBe("07:45");
   });
 });

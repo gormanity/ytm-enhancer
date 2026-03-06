@@ -5,6 +5,7 @@ import templateHtml from "./popup.html?raw";
 const PRESET_MINUTES = [15, 30, 45, 60];
 const HOURS_STORAGE_KEY = "sleep-timer.duration-hours";
 const MINUTES_STORAGE_KEY = "sleep-timer.duration-minutes";
+const ABSOLUTE_TIME_STORAGE_KEY = "sleep-timer.absolute-time";
 const PAUSED_AT_LAST_SEEN_KEY = "sleep-timer.last-paused-at-seen";
 const PAUSED_AT_EPHEMERAL_MS = 30 * 60 * 1000;
 
@@ -149,6 +150,22 @@ function persistStoredInteger(key: string, value: number): void {
   storage.setItem(key, String(value));
 }
 
+function loadStoredAbsoluteTime(): string {
+  const storage = getPopupStorage();
+  const raw = storage?.getItem(ABSOLUTE_TIME_STORAGE_KEY);
+  if (typeof raw === "string" && /^([01]\d|2[0-3]):([0-5]\d)$/.test(raw)) {
+    return raw;
+  }
+  return "23:00";
+}
+
+function persistAbsoluteTime(value: string): void {
+  if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(value)) return;
+  const storage = getPopupStorage();
+  if (!storage) return;
+  storage.setItem(ABSOLUTE_TIME_STORAGE_KEY, value);
+}
+
 /** Create the sleep timer settings popup view. */
 export function createSleepTimerPopupView(): PopupView {
   return {
@@ -226,6 +243,7 @@ export function createSleepTimerPopupView(): PopupView {
       cancelBtn.textContent = "Cancel";
       hoursInput.value = loadStoredSegment(HOURS_STORAGE_KEY, 0, 99, "00");
       minutesInput.value = loadStoredSegment(MINUTES_STORAGE_KEY, 0, 59, "30");
+      absoluteInput.value = loadStoredAbsoluteTime();
 
       const presetButtons = new Map<number, HTMLButtonElement>();
       const presetButtonElements =
@@ -496,7 +514,10 @@ export function createSleepTimerPopupView(): PopupView {
         updateStartEnabled();
       });
 
-      absoluteInput.addEventListener("input", updateStartEnabled);
+      absoluteInput.addEventListener("input", () => {
+        persistAbsoluteTime(absoluteInput.value);
+        updateStartEnabled();
+      });
 
       hoursInput.addEventListener("blur", () =>
         clampAndPadSegment(hoursInput, 0, 99),
