@@ -50,10 +50,7 @@ function parseHhMmToMinutes(
   return totalMinutes;
 }
 
-function computeAbsoluteDurationMs(
-  timeValue: string,
-  useTomorrow: boolean,
-): number | null {
+function computeAbsoluteDurationMs(timeValue: string): number | null {
   const match = timeValue.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
   if (!match) return null;
 
@@ -64,7 +61,7 @@ function computeAbsoluteDurationMs(
   const now = new Date();
   const target = new Date(now);
   target.setHours(hours, minutes, 0, 0);
-  if (useTomorrow || target.getTime() <= now.getTime()) {
+  if (target.getTime() <= now.getTime()) {
     target.setDate(target.getDate() + 1);
   }
 
@@ -183,12 +180,6 @@ export function createSleepTimerPopupView(): PopupView {
       const absoluteInput = container.querySelector<HTMLInputElement>(
         '[data-role="sleep-absolute-input"]',
       );
-      const tomorrowRow = container.querySelector<HTMLElement>(
-        '[data-role="sleep-tomorrow-row"]',
-      );
-      const tomorrowToggle = container.querySelector<HTMLInputElement>(
-        '[data-role="sleep-tomorrow-toggle"]',
-      );
       const durationHint = container.querySelector<HTMLElement>(
         '[data-role="sleep-duration-hint"]',
       );
@@ -219,8 +210,6 @@ export function createSleepTimerPopupView(): PopupView {
         !minutesInput ||
         !absoluteRow ||
         !absoluteInput ||
-        !tomorrowRow ||
-        !tomorrowToggle ||
         !durationHint ||
         !absolutePreview ||
         !startBtn ||
@@ -322,10 +311,7 @@ export function createSleepTimerPopupView(): PopupView {
           );
           return minutes === null ? null : minutes * 60 * 1000;
         }
-        return computeAbsoluteDurationMs(
-          absoluteInput.value,
-          tomorrowToggle.checked,
-        );
+        return computeAbsoluteDurationMs(absoluteInput.value);
       };
 
       const updateModeVisibility = () => {
@@ -334,7 +320,6 @@ export function createSleepTimerPopupView(): PopupView {
         presetGroup.classList.toggle("is-hidden", !showDuration);
         durationRow.classList.toggle("is-hidden", !showDuration);
         absoluteRow.classList.toggle("is-hidden", showDuration);
-        tomorrowRow.classList.toggle("is-hidden", showDuration);
       };
 
       const updateStartEnabled = () => {
@@ -512,7 +497,6 @@ export function createSleepTimerPopupView(): PopupView {
       });
 
       absoluteInput.addEventListener("input", updateStartEnabled);
-      tomorrowToggle.addEventListener("change", updateStartEnabled);
 
       hoursInput.addEventListener("blur", () =>
         clampAndPadSegment(hoursInput, 0, 99),
