@@ -1,4 +1,6 @@
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 /** Create the mini player settings popup view. */
 export function createMiniPlayerPopupView(): PopupView {
@@ -6,21 +8,18 @@ export function createMiniPlayerPopupView(): PopupView {
     id: "mini-player-settings",
     label: "Mini Player",
     render(container: HTMLElement) {
-      container.innerHTML = "";
-
-      const heading = document.createElement("h2");
-      heading.textContent = "Mini Player";
-      container.appendChild(heading);
-
-      const card = document.createElement("div");
-      card.className = "settings-card";
-      container.appendChild(card);
-
-      const pipToggle = createToggleRow(card, "Enable mini player PiP button");
-      const suppressNotificationsToggle = createToggleRow(
-        card,
-        "Suppress notifications while PiP is open",
+      renderPopupTemplate(container, templateHtml);
+      const pipToggle = container.querySelector<HTMLInputElement>(
+        '[data-role="mini-player-enabled-toggle"]',
       );
+      const suppressNotificationsToggle =
+        container.querySelector<HTMLInputElement>(
+          '[data-role="mini-player-suppress-notifications-toggle"]',
+        );
+      if (!pipToggle || !suppressNotificationsToggle) return;
+
+      pipToggle.disabled = true;
+      suppressNotificationsToggle.disabled = true;
 
       chrome.runtime.sendMessage(
         { type: "get-mini-player-enabled" },
@@ -55,24 +54,4 @@ export function createMiniPlayerPopupView(): PopupView {
       });
     },
   };
-}
-
-function createToggleRow(
-  parent: HTMLElement,
-  textContent: string,
-): HTMLInputElement {
-  const label = document.createElement("label");
-  label.className = "toggle-row";
-
-  const text = document.createElement("span");
-  text.textContent = textContent;
-  label.appendChild(text);
-
-  const toggle = document.createElement("input");
-  toggle.type = "checkbox";
-  toggle.disabled = true;
-  label.appendChild(toggle);
-
-  parent.appendChild(label);
-  return toggle;
 }
