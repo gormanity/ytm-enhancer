@@ -278,7 +278,7 @@ describe("quick settings popup view", () => {
       bubbles: true,
       cancelable: true,
     });
-    container.dispatchEvent(tabEvent);
+    document.dispatchEvent(tabEvent);
 
     expect(tabEvent.defaultPrevented).toBe(true);
     expect(sendMessageMock).toHaveBeenCalledWith({

@@ -302,6 +302,13 @@ function renderOpenTabs(
     if (event.altKey || event.ctrlKey || event.metaKey) return;
 
     const target = event.target;
+    const focusedElement = document.activeElement;
+    const isInQuickSettings =
+      (target instanceof Node && container.contains(target)) ||
+      (focusedElement instanceof Node && container.contains(focusedElement)) ||
+      focusedElement === document.body;
+    if (!isInQuickSettings) return;
+
     if (
       target instanceof HTMLElement &&
       target.matches(
@@ -315,11 +322,11 @@ function renderOpenTabs(
     cycleSelectedTab(event.shiftKey);
   };
 
-  container.addEventListener("keydown", handleKeydown);
+  document.addEventListener("keydown", handleKeydown);
   updateTabs();
   const pollId = window.setInterval(updateTabs, 3000);
   return () => {
-    container.removeEventListener("keydown", handleKeydown);
+    document.removeEventListener("keydown", handleKeydown);
     window.clearInterval(pollId);
   };
 }
