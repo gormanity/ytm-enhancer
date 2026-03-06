@@ -1,4 +1,6 @@
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 const PRESET_MINUTES = [15, 30, 45, 60];
 
@@ -82,120 +84,104 @@ export function createSleepTimerPopupView(): PopupView {
     id: "sleep-timer-settings",
     label: "Sleep Timer",
     render(container: HTMLElement) {
-      container.innerHTML = "";
+      renderPopupTemplate(container, templateHtml);
+      const modeSelect = container.querySelector<HTMLSelectElement>(
+        '[data-role="sleep-mode-select"]',
+      );
+      const presetsLabel = container.querySelector<HTMLElement>(
+        '[data-role="sleep-presets-label"]',
+      );
+      const presetGroup = container.querySelector<HTMLElement>(
+        '[data-role="sleep-preset-group"]',
+      );
+      const durationRow = container.querySelector<HTMLElement>(
+        '[data-role="sleep-duration-row"]',
+      );
+      const hoursInput = container.querySelector<HTMLInputElement>(
+        '[data-role="sleep-hours-input"]',
+      );
+      const minutesInput = container.querySelector<HTMLInputElement>(
+        '[data-role="sleep-minutes-input"]',
+      );
+      const absoluteRow = container.querySelector<HTMLElement>(
+        '[data-role="sleep-absolute-row"]',
+      );
+      const absoluteInput = container.querySelector<HTMLInputElement>(
+        '[data-role="sleep-absolute-input"]',
+      );
+      const tomorrowRow = container.querySelector<HTMLElement>(
+        '[data-role="sleep-tomorrow-row"]',
+      );
+      const tomorrowToggle = container.querySelector<HTMLInputElement>(
+        '[data-role="sleep-tomorrow-toggle"]',
+      );
+      const durationHint = container.querySelector<HTMLElement>(
+        '[data-role="sleep-duration-hint"]',
+      );
+      const absolutePreview = container.querySelector<HTMLElement>(
+        '[data-role="sleep-absolute-preview"]',
+      );
+      const startBtn = container.querySelector<HTMLButtonElement>(
+        '[data-role="sleep-start-btn"]',
+      );
+      const cancelBtn = container.querySelector<HTMLButtonElement>(
+        '[data-role="sleep-cancel-btn"]',
+      );
+      const status = container.querySelector<HTMLElement>(
+        '[data-role="sleep-status"]',
+      );
+      const pausedAt = container.querySelector<HTMLElement>(
+        '[data-role="sleep-paused-at"]',
+      );
+      const notificationToggle = container.querySelector<HTMLInputElement>(
+        '[data-role="sleep-notification-toggle"]',
+      );
+      if (
+        !modeSelect ||
+        !presetsLabel ||
+        !presetGroup ||
+        !durationRow ||
+        !hoursInput ||
+        !minutesInput ||
+        !absoluteRow ||
+        !absoluteInput ||
+        !tomorrowRow ||
+        !tomorrowToggle ||
+        !durationHint ||
+        !absolutePreview ||
+        !startBtn ||
+        !cancelBtn ||
+        !status ||
+        !pausedAt ||
+        !notificationToggle
+      ) {
+        return;
+      }
 
-      const heading = document.createElement("h2");
-      heading.textContent = "Sleep Timer";
-      container.appendChild(heading);
-
-      const card = document.createElement("div");
-      card.className = "settings-card";
-      container.appendChild(card);
-
-      const modeRow = document.createElement("label");
-      modeRow.className = "toggle-row";
-      card.appendChild(modeRow);
-
-      const modeLabel = document.createElement("span");
-      modeLabel.textContent = "Timer mode";
-      modeRow.appendChild(modeLabel);
-
-      const modeSelect = document.createElement("select");
-      const durationOption = document.createElement("option");
-      durationOption.value = "duration";
-      durationOption.textContent = "Duration";
-      modeSelect.appendChild(durationOption);
-      const atTimeOption = document.createElement("option");
-      atTimeOption.value = "absolute";
-      atTimeOption.textContent = "At time";
-      modeSelect.appendChild(atTimeOption);
-      modeRow.appendChild(modeSelect);
-
-      const presetsLabel = document.createElement("div");
-      presetsLabel.className = "sleep-presets-label";
-      presetsLabel.textContent = "Quick durations";
-      card.appendChild(presetsLabel);
-
-      const presetGroup = document.createElement("div");
-      presetGroup.className = "sleep-preset-group";
-      card.appendChild(presetGroup);
+      // Normalize textContent so tests and behavior don't depend on template whitespace.
+      startBtn.textContent = "Start Timer";
+      cancelBtn.textContent = "Cancel";
 
       const presetButtons = new Map<number, HTMLButtonElement>();
+      const presetButtonElements =
+        container.querySelectorAll<HTMLButtonElement>("[data-minutes]");
+      for (const presetBtn of presetButtonElements) {
+        const minutes = Number(presetBtn.dataset.minutes);
+        if (!Number.isFinite(minutes)) continue;
+        presetButtons.set(minutes, presetBtn);
+      }
+
       let selectedPresetMinutes: number | null = 30;
       let mode: TimerMode = "duration";
-
-      const durationRow = document.createElement("label");
-      durationRow.className = "field-row sleep-duration-row";
-      card.appendChild(durationRow);
-
-      const durationLabel = document.createElement("span");
-      durationLabel.textContent = "Duration (HH:MM)";
-      durationRow.appendChild(durationLabel);
-
-      const timeInputGroup = document.createElement("div");
-      timeInputGroup.className = "sleep-time-input-group";
-      durationRow.appendChild(timeInputGroup);
-
-      const hoursInput = document.createElement("input");
-      hoursInput.type = "number";
-      hoursInput.min = "0";
-      hoursInput.max = "99";
-      hoursInput.step = "1";
-      hoursInput.value = "00";
-      hoursInput.placeholder = "HH";
-      hoursInput.setAttribute("aria-label", "Hours");
-      hoursInput.className = "sleep-time-input";
-      timeInputGroup.appendChild(hoursInput);
-
-      const colon = document.createElement("span");
-      colon.className = "sleep-time-colon";
-      colon.textContent = ":";
-      timeInputGroup.appendChild(colon);
-
-      const minutesInput = document.createElement("input");
-      minutesInput.type = "number";
-      minutesInput.min = "0";
-      minutesInput.max = "59";
-      minutesInput.step = "1";
-      minutesInput.value = "30";
-      minutesInput.placeholder = "MM";
-      minutesInput.setAttribute("aria-label", "Minutes");
-      minutesInput.className = "sleep-time-input";
-      timeInputGroup.appendChild(minutesInput);
-
-      const absoluteRow = document.createElement("label");
-      absoluteRow.className = "field-row sleep-absolute-row is-hidden";
-      card.appendChild(absoluteRow);
-
-      const absoluteLabel = document.createElement("span");
-      absoluteLabel.textContent = "Pause at";
-      absoluteRow.appendChild(absoluteLabel);
-
-      const absoluteInput = document.createElement("input");
-      absoluteInput.type = "time";
-      absoluteInput.value = "23:00";
-      absoluteInput.setAttribute("aria-label", "Pause at time");
-      absoluteRow.appendChild(absoluteInput);
-
-      const tomorrowRow = document.createElement("label");
-      tomorrowRow.className = "toggle-row is-hidden";
-      card.appendChild(tomorrowRow);
-
-      const tomorrowText = document.createElement("span");
-      tomorrowText.textContent = "Use tomorrow";
-      tomorrowRow.appendChild(tomorrowText);
-
-      const tomorrowToggle = document.createElement("input");
-      tomorrowToggle.type = "checkbox";
-      tomorrowRow.appendChild(tomorrowToggle);
-
-      const durationHint = document.createElement("p");
-      durationHint.className = "status-hint sleep-hint is-hidden";
-      card.appendChild(durationHint);
-
-      const absolutePreview = document.createElement("p");
-      absolutePreview.className = "status-hint sleep-hint is-hidden";
-      card.appendChild(absolutePreview);
+      const initialMinutes = parseHhMmToMinutes(
+        hoursInput.value,
+        minutesInput.value,
+      );
+      if (initialMinutes !== null && PRESET_MINUTES.includes(initialMinutes)) {
+        selectedPresetMinutes = initialMinutes;
+      } else {
+        selectedPresetMinutes = null;
+      }
 
       const refreshPresetStyles = () => {
         for (const [minutes, button] of presetButtons) {
@@ -205,9 +191,8 @@ export function createSleepTimerPopupView(): PopupView {
       };
 
       for (const minutes of PRESET_MINUTES) {
-        const presetBtn = document.createElement("button");
-        presetBtn.className = "sleep-preset-btn";
-        presetBtn.textContent = `${minutes}m`;
+        const presetBtn = presetButtons.get(minutes);
+        if (!presetBtn) continue;
         presetBtn.addEventListener("click", () => {
           selectedPresetMinutes = minutes;
           const [hh, mm] = formatMinutesAsHhMm(minutes).split(":");
@@ -219,49 +204,7 @@ export function createSleepTimerPopupView(): PopupView {
           refreshPresetStyles();
           updateStartEnabled();
         });
-        presetButtons.set(minutes, presetBtn);
-        presetGroup.appendChild(presetBtn);
       }
-
-      const buttons = document.createElement("div");
-      buttons.className = "sleep-buttons";
-      card.appendChild(buttons);
-
-      const startBtn = document.createElement("button");
-      startBtn.className = "primary-btn sleep-start-btn";
-      startBtn.textContent = "Start Timer";
-      buttons.appendChild(startBtn);
-
-      const cancelBtn = document.createElement("button");
-      cancelBtn.className = "secondary-btn sleep-cancel-btn is-hidden";
-      cancelBtn.textContent = "Cancel";
-      cancelBtn.disabled = true;
-      buttons.appendChild(cancelBtn);
-
-      const status = document.createElement("p");
-      status.className = "status-hint sleep-status";
-      card.appendChild(status);
-
-      const pausedAt = document.createElement("p");
-      pausedAt.className = "status-hint sleep-hint is-hidden";
-      card.appendChild(pausedAt);
-
-      const notificationCard = document.createElement("div");
-      notificationCard.className = "settings-card";
-      container.appendChild(notificationCard);
-
-      const notificationRow = document.createElement("label");
-      notificationRow.className = "toggle-row";
-      notificationCard.appendChild(notificationRow);
-
-      const notificationText = document.createElement("span");
-      notificationText.textContent = "Show notification when timer ends";
-      notificationRow.appendChild(notificationText);
-
-      const notificationToggle = document.createElement("input");
-      notificationToggle.type = "checkbox";
-      notificationToggle.disabled = true;
-      notificationRow.appendChild(notificationToggle);
 
       let activeEndAt: number | null = null;
       let countdownTimer: number | null = null;

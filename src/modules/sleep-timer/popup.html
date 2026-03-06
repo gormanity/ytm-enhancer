@@ -1,0 +1,116 @@
+<h2>Sleep Timer</h2>
+
+<div class="settings-card">
+  <label class="toggle-row">
+    <span>Timer mode</span>
+    <select data-role="sleep-mode-select">
+      <option value="duration">Duration</option>
+      <option value="absolute">At time</option>
+    </select>
+  </label>
+
+  <div class="sleep-presets-label" data-role="sleep-presets-label">
+    Quick durations
+  </div>
+  <div class="sleep-preset-group" data-role="sleep-preset-group">
+    <button type="button" class="sleep-preset-btn" data-minutes="15">
+      15m
+    </button>
+    <button
+      type="button"
+      class="sleep-preset-btn sleep-preset-btn--selected"
+      data-minutes="30"
+    >
+      30m
+    </button>
+    <button type="button" class="sleep-preset-btn" data-minutes="45">
+      45m
+    </button>
+    <button type="button" class="sleep-preset-btn" data-minutes="60">
+      60m
+    </button>
+  </div>
+
+  <label class="field-row sleep-duration-row" data-role="sleep-duration-row">
+    <span>Duration (HH:MM)</span>
+    <div class="sleep-time-input-group">
+      <input
+        type="number"
+        min="0"
+        max="99"
+        step="1"
+        value="00"
+        placeholder="HH"
+        aria-label="Hours"
+        class="sleep-time-input"
+        data-role="sleep-hours-input"
+      />
+      <span class="sleep-time-colon">:</span>
+      <input
+        type="number"
+        min="0"
+        max="59"
+        step="1"
+        value="30"
+        placeholder="MM"
+        aria-label="Minutes"
+        class="sleep-time-input"
+        data-role="sleep-minutes-input"
+      />
+    </div>
+  </label>
+
+  <label
+    class="field-row sleep-absolute-row is-hidden"
+    data-role="sleep-absolute-row"
+  >
+    <span>Pause at</span>
+    <input
+      type="time"
+      value="23:00"
+      aria-label="Pause at time"
+      data-role="sleep-absolute-input"
+    />
+  </label>
+
+  <label class="toggle-row is-hidden" data-role="sleep-tomorrow-row">
+    <span>Use tomorrow</span>
+    <input type="checkbox" data-role="sleep-tomorrow-toggle" />
+  </label>
+
+  <p
+    class="status-hint sleep-hint is-hidden"
+    data-role="sleep-duration-hint"
+  ></p>
+  <p
+    class="status-hint sleep-hint is-hidden"
+    data-role="sleep-absolute-preview"
+  ></p>
+
+  <div class="sleep-buttons">
+    <button
+      type="button"
+      class="primary-btn sleep-start-btn"
+      data-role="sleep-start-btn"
+    >
+      Start Timer
+    </button>
+    <button
+      type="button"
+      class="secondary-btn sleep-cancel-btn is-hidden"
+      data-role="sleep-cancel-btn"
+    >
+      Cancel
+    </button>
+  </div>
+
+  <p class="status-hint sleep-status" data-role="sleep-status"></p>
+  <p class="status-hint sleep-hint is-hidden" data-role="sleep-paused-at"></p>
+</div>
+
+<div class="settings-card">
+  <label class="toggle-row">
+    <span>Show notification when timer ends</span>
+    <input type="checkbox" disabled data-role="sleep-notification-toggle" />
+  </label>
+</div>
