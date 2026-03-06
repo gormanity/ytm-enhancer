@@ -440,7 +440,7 @@ export class PipWindowRenderer {
     this.doc = doc;
     this.onSeekCallback = onSeek ?? null;
     this.lastDuration = state.duration;
-    doc.body.innerHTML = "";
+    doc.body.replaceChildren();
 
     this.docTitleEl =
       doc.head.querySelector("title") ?? doc.createElement("title");
