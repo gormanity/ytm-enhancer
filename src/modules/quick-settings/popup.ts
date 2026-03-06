@@ -1,8 +1,8 @@
 import type { PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
+import ytmTabFallbackIconUrl from "@/assets/ytm-logo.svg";
 import { createPlaybackSpeedPopupView } from "../playback-speed/popup";
 import { createStreamQualityPopupView } from "../stream-quality/popup";
-import ytmTabFallbackIconUrl from "@/assets/ytm-tab-fallback.svg";
 import templateHtml from "./popup.html?raw";
 
 const PLAY_SVG =
