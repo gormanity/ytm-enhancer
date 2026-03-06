@@ -160,9 +160,8 @@ function renderOpenTabs(
     const result: string[] = [];
     const candidates = [
       artworkUrl ?? tab.artworkUrl,
-      YTM_FALLBACK_ICON_URL,
       tab.favIconUrl,
-      "icon48.png",
+      YTM_FALLBACK_ICON_URL,
     ];
     for (const candidate of candidates) {
       if (typeof candidate !== "string") continue;
