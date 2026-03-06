@@ -13,7 +13,7 @@ let activeViewCleanup: (() => void) | null = null;
 
 function renderNav() {
   if (!navList) return;
-  navList.innerHTML = "";
+  navList.replaceChildren();
 
   for (const view of views) {
     const item = createNavItem(view.id, view.label, view.icon);
@@ -67,7 +67,7 @@ function renderActiveView() {
   if (!container) return;
   activeViewCleanup?.();
   activeViewCleanup = null;
-  container.innerHTML = "";
+  container.replaceChildren();
 
   const view = views.find((v) => v.id === activeViewId) || views[0];
   if (view) {
