@@ -148,6 +148,8 @@ function renderOpenTabs(
   list: HTMLElement,
   itemTemplate: HTMLTemplateElement,
 ): () => void {
+  let lastRenderedSignature: string | null = null;
+
   const pickTabIconCandidates = (tab: YtmTabSummary): string[] => {
     const result: string[] = [];
     const candidates = [
@@ -212,8 +214,22 @@ function renderOpenTabs(
       const tabs = (response?.ok ? response.data?.tabs : []) as YtmTabSummary[];
       if (!Array.isArray(tabs) || tabs.length <= 1) {
         card.classList.add("is-hidden");
+        lastRenderedSignature = null;
         return;
       }
+
+      const signature = JSON.stringify(
+        tabs.map((tab) => ({
+          id: tab.id,
+          title: tab.title,
+          artworkUrl: tab.artworkUrl,
+          favIconUrl: tab.favIconUrl,
+          isSelected: tab.isSelected,
+        })),
+      );
+
+      if (signature === lastRenderedSignature) return;
+      lastRenderedSignature = signature;
 
       card.classList.remove("is-hidden");
       renderTabs(tabs);
