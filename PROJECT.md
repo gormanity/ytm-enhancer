@@ -2,373 +2,216 @@
 
 ## Overview
 
-YTM Enhancer is a modular, cross-browser extension that enhances the official
-YouTube Music web experience.
+YTM Enhancer is a modular, cross-browser WebExtension for YouTube Music.
 
-It is a structured enhancement platform designed to support additional features
-over time without architectural rewrites.
+The extension is intentionally scoped as an enhancement layer on top of the
+native YouTube Music web app. It does not replace the app, fork it, or wrap it
+in a custom shell.
 
-The project begins with two committed features:
+The codebase is organized so features can be added, removed, and tested in
+small, self-contained modules.
 
-1. Configurable hotkeys
-2. Playback notifications
+## Scope and Philosophy
 
-The architecture is intentionally modular to allow safe expansion in future
-versions.
+YTM Enhancer is built around a few constraints:
 
----
+- Keep YouTube Music as the primary UI and playback surface.
+- Prefer browser-native APIs and WebExtension-compatible patterns.
+- Keep permissions narrow and avoid remote services when possible.
+- Degrade gracefully when an API is unavailable in a browser.
+- Optimize for maintainability over cleverness.
 
-## Philosophy
+## Current Feature Surface
 
-YTM Enhancer is not a replacement for YouTube Music.
+The project currently includes these user-facing modules:
 
-It does not:
+- Quick Settings (tab source selection, now playing, key controls)
+- Auto Play
+- Auto Skip Disliked
+- Audio Visualizer
+- Hotkeys
+- Mini Player (PiP behavior and controls)
+- Notifications
+- Sleep Timer
+- About
 
-- Repackage YouTube Music inside Electron
-- Reimplement the full UI
-- Attempt to fork or clone the product
+Supporting embedded controls are provided by:
 
-Instead, it enhances the official web client.
+- Playback Speed
+- Stream Quality
+- Precision Volume
 
-We prefer:
+## Runtime Architecture
 
-> Native YouTube Music web app
->
-> - A capable, modular browser extension
+The runtime is split into three cooperating layers.
 
-We may draw inspiration from Electron-based projects (such as plugin systems in
-desktop wrappers), but our approach remains:
+### 1. Background Service Worker (`src/background`)
 
-- Lightweight
-- Browser-native
-- Standards-based
-- Maintainable without owning the full app surface
-
----
-
-## Platform Scope
-
-YTM Enhancer is designed to work across:
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.)
-- Firefox (where APIs allow)
-- Desktop operating systems (macOS, Windows, Linux)
-
-We do not narrowly target a single OS or browser.
-
-Feature availability may vary based on browser APIs. The extension must degrade
-gracefully where capabilities differ.
-
----
-
-## Guiding Principles
-
-- Reliability > cleverness
-- Cross-browser compatibility
-- Minimal permissions
-- No analytics or tracking
-- No remote services (unless explicitly required by a future module)
-- Progressive enhancement
-
-We prefer WebExtension standards and isolate browser differences behind
-capability checks.
-
----
-
-## Current Committed Feature Scope
-
-### 1. Configurable Hotkeys
-
-- User-configurable shortcuts (where supported)
-- Play / Pause
-- Next / Previous
-- Focus YTM tab
-
-Hotkeys remain foundational.
-
-They must be:
-
-- Fast
-- Predictable
-- Compatible across browsers
-- Robust against UI changes
-
-Where true global shortcuts are unavailable, behavior must degrade gracefully.
-
----
-
-### 2. Playback Notifications
-
-- Native browser notifications on track change
-- Artwork, title, artist
-- Toggleable in settings
-
-Requirements:
-
-- Lightweight state monitoring
-- No remote calls
-- Resilient to background lifecycle differences
-- Cross-browser compatibility where supported
-
----
-
-## Architectural Direction
-
-The extension consists of three layers:
-
-### 1. Core
-
-Responsible for:
-
-- Messaging orchestration
-- Tab targeting
-- Feature registration
-- Event bus
-- Centralized action execution
-- Versioned storage
-- Browser capability detection
-
-The core contains no feature-specific logic.
-
----
-
-### 2. YouTube Music Adapter
-
-All DOM interaction is isolated here.
+The background script is the orchestration hub.
 
 Responsibilities:
 
-- Produce structured playback state snapshots
-- Execute playback actions
-- Encapsulate selectors
+- Register and initialize feature modules.
+- Persist and restore module state.
+- Resolve and track the selected YTM tab.
+- Handle cross-module and popup message requests.
+- Relay playback and setting actions to content scripts.
+- Coordinate alarms (for Sleep Timer) and extension lifecycle events.
 
-Feature modules must not directly interact with the DOM.
+The background now also emits lightweight popup refresh events where practical
+(e.g., tab list and sleep timer state changes) to reduce popup polling.
 
-If YouTube Music changes its UI, fixes are made in one place.
+### 2. Content Runtime (`src/content` + `src/adapter`)
 
----
+The content script runs inside `music.youtube.com` and owns DOM interaction.
 
-### 3. Feature Modules
+Responsibilities:
 
-Each feature:
+- Read playback state from the live YTM DOM via the adapter.
+- Execute playback actions in the page context.
+- Observe track/playback/dislike/player state changes.
+- Host feature runtime pieces that must live in-page (visualizer, PiP, etc.).
+- Bridge page-world integrations where needed (audio and quality bridges).
 
-- Is self-contained
-- Registers with the core
-- Can be enabled/disabled
-- Consumes structured playback state
-- May register popup views
+The adapter isolates selectors and page-specific logic so UI breakage fixes are
+localized when YouTube Music changes markup.
 
-Features do not directly depend on one another.
+### 3. Popup Runtime (`src/popup` + module popup views)
 
-New modules must be addable without refactoring existing modules.
+The popup is a modular shell with module-provided views.
 
----
+Responsibilities:
 
-## Popup Architecture (Critical)
+- Render a stable navigation shell.
+- Load module-specific settings/content views.
+- Keep view rendering template-driven.
+- Use message-based communication with background/content.
 
-The popup is a modular container.
+Popup views are now a mix of event-driven updates and targeted polling where a
+live clock-like update is still necessary (for example, countdown display).
 
-It must:
+## Core Abstractions
 
-- Support multiple views/pages
-- Allow feature modules to register popup views
-- Provide centralized navigation
-- Separate:
-  - Global settings
-  - Feature settings
-  - Feature-specific views
+Shared primitives live in `src/core` and are reused across modules:
 
-The popup shell remains stable as modules grow.
+- Extension context and module initialization
+- Message sender/handler helpers
+- Relay and tab-finding helpers
+- Module state load/save utilities
+- Type definitions for actions, playback state, and popup views
 
-Adding a feature should require:
+This layer is intentionally feature-agnostic.
 
-- Registering the module
-- Optionally registering a popup view
-- No restructuring of the popup framework
+## Module Model
 
-Popup scalability is a first-class design requirement.
+Each module implements the `FeatureModule` contract and can provide:
 
----
+- Background behavior and state
+- Content-side behavior
+- Optional popup view(s)
 
-## Potential Future Modules (Exploratory)
+The target workflow for new functionality is:
 
-The following modules are not currently committed, but are viable candidates for
-future exploration. These ideas are inspired in part by plugin systems in
-Electron-based YouTube Music wrappers, while remaining compatible with a
-browser-extension-first approach.
+1. Create a new module directory.
+2. Implement module behavior behind the shared interfaces.
+3. Register the module in background initialization.
+4. Add popup view wiring only if the feature needs UI.
+5. Add or update focused tests.
 
-### 1. SponsorBlock Integration
+## Data Flow (High-Level)
 
-- Skip sponsored segments in music videos (where applicable)
-- Category toggles (sponsor, intro, outro, etc.)
-- Whitelist controls
-- Optional popup configuration view
+Typical flow is message-driven:
 
-Considerations:
+1. Popup sends intent or query to background.
+2. Background resolves policy/state/tab targeting.
+3. Background responds directly, and/or relays to content script.
+4. Content script interacts with YTM DOM through the adapter.
+5. Content/background publish state changes back to popup when needed.
 
-- May require network access to external APIs
-- Must maintain strong privacy stance
-- Must remain optional and modular
+This keeps tab targeting and persistence centralized in one place.
 
----
+## Browser and Platform Support
 
-### 2. Synced Lyrics Module
+Primary target:
 
-- Display synchronized lyrics overlay
-- Support multiple lyrics providers (if feasible)
-- User-selectable display preferences
-- Optional romanization support
-- Popup view for provider/settings configuration
+- Chromium browsers (Chrome-first behavior for advanced APIs)
 
-Considerations:
+Secondary target:
 
-- DOM injection must remain isolated
-- External provider integrations must be optional
-- Must degrade gracefully if lyrics unavailable
+- Firefox with graceful fallback where APIs differ
 
----
+Current notable divergence:
 
-### 3. Visual Tweaks / Theme Module
+- Document PiP is Chromium-specific.
+- Video PiP fallback behavior differs by browser capabilities.
 
-- Optional CSS-based UI enhancements
-- Transparency effects
-- Layout simplifications
-- Minor quality-of-life improvements
+## Build and Validation
 
-Considerations:
+Tooling stack:
 
-- Avoid deep UI rewrites
-- All selector logic isolated in adapter layer
-- Must not destabilize core functionality
-
----
-
-### 4. Command Palette / Quick Actions
-
-- Keyboard-accessible command interface
-- Quick access to common actions
-- Optional overlay or popup-based command surface
-
-Considerations:
-
-- Must not conflict with YouTube Music shortcuts
-- Should align with hotkey-centric philosophy
-
----
-
-### 5. Optional Experimental Modules
-
-These are higher complexity and not prioritized:
-
-- Audio processing (e.g., compression, volume curves)
-- Ad-related behavior modifications
-- Advanced playback automation
-
-These would require careful review due to:
-
-- Browser store policy considerations
-- Increased maintenance complexity
-- Cross-browser inconsistencies
-
----
-
-## Explicit Non-Goals (For Now)
-
-- Replacing YouTube Music with a custom shell
-- Running local servers or background daemons
-- OS-level audio routing control
-- Media downloading
-- Backend services
-- Full UI reimplementation
-
-The extension remains an enhancement layer — not a replacement client.
-
----
-
-## Phase 1 Roadmap
-
-### Phase 1A — Modular Foundation
-
-- Core module system
-- Feature registration system
-- Popup view registration system
-- Structured playback snapshot model
-- Centralized action executor
-- Browser capability abstraction layer
-- Versioned storage
-
-No feature expansion until this foundation is stable.
-
----
-
-### Phase 1B — Configurable Hotkeys
-
-- Modular hotkey implementation
-- Browser capability detection
-- Popup configuration UI
-- Reliable tab targeting
-
----
-
-### Phase 1C — Playback Notifications
-
-- Track change detection
-- Notification rendering
-- Toggleable setting
-- Graceful fallback behavior
-
----
-
-## Success Criteria
-
-- Hotkeys work wherever browser APIs allow
-- Notifications fire reliably across supported browsers
-- Popup scales cleanly as modules are added
-- New modules can be introduced without modifying existing modules
-- Selector changes require updates only in the adapter layer
-
----
-
-## Tech Stack
-
-- **Language:** TypeScript (strict mode)
-- **Package manager:** pnpm
-- **Bundler:** Vite
-- **Test framework:** Vitest
-- **Linting:** ESLint
-- **Formatting:** Prettier
-- **CI:** GitHub Actions
-
----
+- TypeScript (strict)
+- Vite
+- Vitest
+- ESLint
+- Prettier
+- pnpm
+- GitHub Actions
+
+Primary scripts:
+
+- `pnpm run format`
+- `pnpm run format:check`
+- `pnpm run lint`
+- `pnpm run typecheck`
+- `pnpm run test`
+- `pnpm run build:chrome`
+- `pnpm run build:firefox`
+
+## Testing Strategy
+
+The test suite mirrors `src/` layout and emphasizes:
+
+- Unit tests for module and helper behavior
+- Popup interaction tests for UI state and message wiring
+- Integration-style flow tests for regressions in critical behaviors
+
+Recent focus areas include selected-tab persistence, Sleep Timer ephemerality,
+and popup event-driven refresh behavior.
 
 ## Project Structure
 
-```
+```text
 src/
-  core/           # Messaging, registration, event bus, storage
-  adapter/        # YouTube Music DOM interaction layer
-  modules/        # Self-contained feature modules
-  popup/          # Modular popup shell
-  background/     # Service worker / background script
-  content/        # Content script entry point
-  manifests/      # Browser-specific manifest files
-tests/            # Mirrors src/ structure
+  adapter/        # YTM DOM selectors and page action adapter
+  background/     # Service worker orchestration and module wiring
+  content/        # In-page runtime, observers, feature controllers
+  core/           # Shared extension primitives and messaging helpers
+  manifests/      # Chrome and Firefox manifest sources
+  modules/        # Feature modules and popup view implementations
+  popup/          # Popup shell, shared popup helpers, base styles
+  types/          # Global/browser type declarations
+tests/            # Mirrors src/ for module-focused coverage
+scripts/          # Project maintenance scripts (e.g., dead CSS checks)
 dist/
   chrome/         # Chrome build output
   firefox/        # Firefox build output
 ```
 
----
+## Non-Goals
 
-## Versioning
+YTM Enhancer does not aim to provide:
 
-- Minor versions: feature additions
-- Patch versions: reliability and selector fixes
-- Major versions: architectural shifts
+- A replacement YouTube Music client
+- Backend services or telemetry pipelines
+- Media downloading
+- OS-level audio routing or system-level audio processing
+- A full reimplementation of YouTube Music UI
 
-The extension must remain:
+## Direction
 
-- Cross-browser
-- Maintainable
-- Expandable
-- Predictable
+The current direction is incremental quality:
+
+- Keep modules independently evolvable.
+- Prefer narrow, clean commits.
+- Reduce fragile polling where event-driven updates are viable.
+- Continue strengthening tests around behavioral regressions.
