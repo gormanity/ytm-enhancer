@@ -187,7 +187,7 @@ function renderOpenTabs(
   const renderTabs = (tabs: YtmTabSummary[]) => {
     renderEpoch += 1;
     const currentEpoch = renderEpoch;
-    list.innerHTML = "";
+    list.replaceChildren();
 
     for (const tab of tabs) {
       const itemFragment = itemTemplate.content.cloneNode(true);
@@ -224,7 +224,6 @@ function renderOpenTabs(
         chrome.runtime.sendMessage({ type: "focus-ytm-tab", tabId: tab.id });
       };
 
-      item.appendChild(icon);
       list.appendChild(item);
 
       if (tab.id === null) continue;
