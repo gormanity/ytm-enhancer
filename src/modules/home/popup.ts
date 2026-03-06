@@ -1,6 +1,15 @@
 import type { PlaybackState } from "@/core/types";
 import type { PopupView } from "@/core/types";
 
+const PREV_SVG =
+  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>';
+const PLAY_SVG =
+  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const PAUSE_SVG =
+  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+const NEXT_SVG =
+  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
+
 /** Create the home/now-playing popup view. */
 export function createHomePopupView(): PopupView {
   return {
@@ -33,22 +42,15 @@ export function createHomePopupView(): PopupView {
       controls.className = "home-controls";
       container.appendChild(controls);
 
-      const prevBtn = createControlBtn(
-        `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>`,
-      );
+      const prevBtn = createControlBtn(PREV_SVG);
       prevBtn.onclick = () => sendAction("previous");
       controls.appendChild(prevBtn);
 
-      const playBtn = createControlBtn(
-        `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`,
-        true,
-      );
+      const playBtn = createControlBtn(PLAY_SVG, true);
       playBtn.onclick = () => sendAction("togglePlay");
       controls.appendChild(playBtn);
 
-      const nextBtn = createControlBtn(
-        `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`,
-      );
+      const nextBtn = createControlBtn(NEXT_SVG);
       nextBtn.onclick = () => sendAction("next");
       controls.appendChild(nextBtn);
 
@@ -67,16 +69,12 @@ export function createHomePopupView(): PopupView {
               title.textContent = state.title || "Unknown Track";
               artist.textContent = state.artist || "Unknown Artist";
 
-              if (state.isPlaying) {
-                playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
-              } else {
-                playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
-              }
+              playBtn.innerHTML = state.isPlaying ? PAUSE_SVG : PLAY_SVG;
             } else {
               title.textContent = "YouTube Music not found";
               artist.textContent = "Open YTM to see now playing";
               artwork.classList.remove("home-artwork--visible");
-              playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+              playBtn.innerHTML = PLAY_SVG;
             }
           },
         );
