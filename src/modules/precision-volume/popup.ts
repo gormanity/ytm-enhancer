@@ -1,49 +1,22 @@
 import type { PopupView } from "@/core/types";
+import { renderPopupTemplate } from "@/popup/template";
+import templateHtml from "./popup.html?raw";
 
 export function createPrecisionVolumePopupView(): PopupView {
   return {
     id: "precision-volume-settings",
     label: "Precision Volume",
     render(container: HTMLElement) {
-      container.innerHTML = "";
-
-      const heading = document.createElement("h2");
-      heading.textContent = "Precision Volume";
-      container.appendChild(heading);
-
-      const sliderRow = document.createElement("label");
-      sliderRow.className = "toggle-row";
-
-      const sliderLabel = document.createElement("span");
-      sliderLabel.textContent = "Volume";
-      sliderRow.appendChild(sliderLabel);
-
-      const range = document.createElement("input");
-      range.type = "range";
-      range.min = "0";
-      range.max = "100";
-      range.value = "100";
+      renderPopupTemplate(container, templateHtml);
+      const range = container.querySelector<HTMLInputElement>(
+        '[data-role="precision-volume-range"]',
+      );
+      const numberInput = container.querySelector<HTMLInputElement>(
+        '[data-role="precision-volume-number"]',
+      );
+      if (!range || !numberInput) return;
       range.disabled = true;
-      sliderRow.appendChild(range);
-
-      container.appendChild(sliderRow);
-
-      const numberRow = document.createElement("label");
-      numberRow.className = "toggle-row";
-
-      const numberInput = document.createElement("input");
-      numberInput.type = "number";
-      numberInput.min = "0";
-      numberInput.max = "100";
-      numberInput.value = "100";
       numberInput.disabled = true;
-      numberRow.appendChild(numberInput);
-
-      const suffix = document.createElement("span");
-      suffix.textContent = "%";
-      numberRow.appendChild(suffix);
-
-      container.appendChild(numberRow);
 
       chrome.runtime.sendMessage(
         { type: "get-volume" },
