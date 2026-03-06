@@ -148,7 +148,8 @@ function renderOpenTabs(
   list: HTMLElement,
   itemTemplate: HTMLTemplateElement,
 ): () => void {
-  const pickTabIconUrl = (tab: YtmTabSummary): string => {
+  const pickTabIconCandidates = (tab: YtmTabSummary): string[] => {
+    const result: string[] = [];
     const candidates = [
       tab.artworkUrl,
       tab.favIconUrl,
@@ -158,9 +159,10 @@ function renderOpenTabs(
     for (const candidate of candidates) {
       if (typeof candidate !== "string") continue;
       const trimmed = candidate.trim();
-      if (trimmed.length > 0) return trimmed;
+      if (trimmed.length === 0 || result.includes(trimmed)) continue;
+      result.push(trimmed);
     }
-    return "icon48.png";
+    return result;
   };
 
   const renderTabs = (tabs: YtmTabSummary[]) => {
@@ -176,12 +178,18 @@ function renderOpenTabs(
       if (!item || !icon) continue;
 
       if (tab.isSelected) item.classList.add("selected");
-      icon.src = pickTabIconUrl(tab);
       icon.alt = "";
-      icon.onerror = () => {
-        icon.onerror = null;
-        icon.src = "icon48.png";
+      const iconCandidates = pickTabIconCandidates(tab);
+      let candidateIndex = 0;
+      const assignNextCandidate = () => {
+        if (candidateIndex >= iconCandidates.length) return;
+        icon.src = iconCandidates[candidateIndex];
+        candidateIndex += 1;
       };
+      icon.onerror = () => {
+        assignNextCandidate();
+      };
+      assignNextCandidate();
 
       item.title = tab.title.replace(" - YouTube Music", "");
       item.onclick = () => {
