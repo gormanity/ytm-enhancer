@@ -91,6 +91,26 @@ listings are coming soon.
 
 </details>
 
+## Privacy
+
+YTM Enhancer is private by design. It has no analytics, no tracking, and no
+external backend services.
+
+### Why Each Permission Is Required
+
+| Permission                            | Why It Is Needed                                                                                                     |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `activeTab`                           | Lets the popup and hotkeys interact with your currently active YouTube Music tab when you trigger extension actions. |
+| `alarms`                              | Powers time-based automation, including Sleep Timer and background scheduling logic.                                 |
+| `notifications`                       | Shows native desktop notifications for track changes and related playback events.                                    |
+| `scripting`                           | Injects and runs extension scripts on YouTube Music to provide feature behavior in-page.                             |
+| `storage`                             | Saves your module settings locally in the browser so preferences persist.                                            |
+| `https://music.youtube.com/*`         | Limits extension functionality to YouTube Music pages where features are intended to run.                            |
+| `https://lh3.googleusercontent.com/*` | Loads album art assets used for now-playing and notification UI.                                                     |
+
+See [PRIVACY.md](PRIVACY.md) for full details on data handling, permissions, and
+privacy guarantees.
+
 ## Development
 
 YTM Enhancer is actively developed and already includes a broad module set.
