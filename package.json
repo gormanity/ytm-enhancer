@@ -9,9 +9,12 @@
   "scripts": {
     "dev:chrome": "vite build --watch --config vite.config.chrome.ts",
     "dev:firefox": "vite build --watch --config vite.config.firefox.ts",
+    "dev:edge": "vite build --watch --config vite.config.edge.ts",
     "build:chrome": "vite build --config vite.config.chrome.ts",
     "build:firefox": "vite build --config vite.config.firefox.ts",
-    "build": "pnpm run build:chrome && pnpm run build:firefox",
+    "build:edge": "vite build --config vite.config.edge.ts",
+    "build": "pnpm run build:chrome && pnpm run build:firefox && pnpm run build:edge",
+    "package": "pnpm run build && node scripts/package.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
