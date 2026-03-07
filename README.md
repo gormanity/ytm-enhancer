@@ -4,6 +4,20 @@
 
 # YTM Enhancer
 
+<p align="center">
+  <a href="https://github.com/gormanity/ytm-enhancer/actions/workflows/ci.yml">
+    <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gormanity/ytm-enhancer/ci.yml?branch=main&label=CI">
+  </a>
+  <a href="https://github.com/gormanity/ytm-enhancer/releases">
+    <img alt="Latest release" src="https://img.shields.io/github/v/release/gormanity/ytm-enhancer?label=latest%20release">
+  </a>
+  <a href="LICENSE">
+    <img alt="License: MIT" src="https://img.shields.io/github/license/gormanity/ytm-enhancer">
+  </a>
+  <img alt="Browsers: Chrome, Edge, Firefox" src="https://img.shields.io/badge/Browsers-Chrome%20%7C%20Edge%20%7C%20Firefox-4B6BFB">
+  <img alt="Privacy-first: no analytics" src="https://img.shields.io/badge/Privacy-No%20analytics-1F9D55">
+</p>
+
 YTM Enhancer supercharges YouTube Music to make it the best browser-based media
 player.
 
