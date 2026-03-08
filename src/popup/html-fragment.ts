@@ -2,9 +2,14 @@
  * Parse static HTML into a document fragment.
  */
 export function parseHtmlFragment(html: string): DocumentFragment {
-  const template = document.createElement("template");
-  template.innerHTML = html.trim();
-  return template.content.cloneNode(true) as DocumentFragment;
+  const doc = new DOMParser().parseFromString(html.trim(), "text/html");
+  const fragment = document.createDocumentFragment();
+
+  for (const node of Array.from(doc.body.childNodes)) {
+    fragment.appendChild(document.importNode(node, true));
+  }
+
+  return fragment;
 }
 
 /**

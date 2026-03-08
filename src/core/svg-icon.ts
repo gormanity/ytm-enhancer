@@ -4,12 +4,12 @@ function getCachedSvgTemplate(svgMarkup: string): SVGElement | null {
   const cached = SVG_TEMPLATE_CACHE.get(svgMarkup);
   if (cached) return cached;
 
-  const template = document.createElement("template");
-  template.innerHTML = svgMarkup.trim();
+  const doc = new DOMParser().parseFromString(
+    svgMarkup.trim(),
+    "image/svg+xml",
+  );
   const parsed =
-    template.content.firstElementChild instanceof SVGElement
-      ? template.content.firstElementChild
-      : null;
+    doc.documentElement instanceof SVGElement ? doc.documentElement : null;
   if (!parsed) return null;
 
   SVG_TEMPLATE_CACHE.set(svgMarkup, parsed);
