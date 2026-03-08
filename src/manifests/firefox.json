@@ -65,7 +65,10 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "ytm-enhancer@example.com"
+      "id": "ytm-enhancer@gormanity",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   }
 }
