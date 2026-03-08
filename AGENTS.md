@@ -30,6 +30,10 @@ This file covers **how to work**, not what the project is.
 - **Do not push until all feature work is complete.** Keeping intermediate
   changes local preserves the option to revise earlier commits with `jj squash`
   or `jj edit`. Push once the feature is done and all checks pass.
+- **Before every push**, run CI-equivalent checks locally (`pnpm run check` plus
+  browser builds) and only push when they pass.
+- **After every push**, verify the GitHub Actions CI run for that push has
+  completed successfully.
 
 ---
 
