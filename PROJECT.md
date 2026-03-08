@@ -132,12 +132,9 @@ This keeps tab targeting and persistence centralized in one place.
 
 ## Browser and Platform Support
 
-Primary target:
+Primary targets:
 
-- Chromium browsers (Chrome-first behavior for advanced APIs)
-
-Secondary target:
-
+- Chromium browsers (Chrome and Edge)
 - Firefox with graceful fallback where APIs differ
 
 Current notable divergence:
@@ -165,7 +162,10 @@ Primary scripts:
 - `pnpm run typecheck`
 - `pnpm run test`
 - `pnpm run build:chrome`
+- `pnpm run build:edge`
 - `pnpm run build:firefox`
+- `pnpm run validate`
+- `pnpm run package`
 
 ## Testing Strategy
 
@@ -192,8 +192,10 @@ src/
   types/          # Global/browser type declarations
 tests/            # Mirrors src/ for module-focused coverage
 scripts/          # Project maintenance scripts (e.g., dead CSS checks)
+store/            # Version-controlled browser store metadata and assets
 dist/
   chrome/         # Chrome build output
+  edge/           # Edge build output
   firefox/        # Firefox build output
 ```
 
