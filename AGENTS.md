@@ -47,6 +47,21 @@ This file covers **how to work**, not what the project is.
 
 ---
 
+## Release Process
+
+- Before tagging any release, run `pnpm run validate` locally and ensure it
+  passes.
+- Ensure `main` is at the intended release commit before creating a tag.
+- Create a semantic version tag (for example: `v0.1.0`) on the release commit.
+- Push/update the tag on GitHub and verify the `Release` workflow completes
+  successfully.
+- Verify the corresponding `CI` workflow on `main` is green.
+- Write release notes from the end-user perspective:
+  - Focus on what changed for users, what improved, and any known limitations.
+  - Avoid internal implementation details unless they affect user behavior.
+
+---
+
 ## Commands
 
 | Task            | Command                  |
