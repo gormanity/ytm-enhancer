@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280" />
+    <title>YTM Enhancer — Mini Player</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+      }
+      body {
+        font-family: "Roboto", "Arial", sans-serif;
+        background: #1e1e2e;
+        color: #cdd6f4;
+      }
+
+      /* Simulated code editor background */
+      .editor-bg {
+        position: absolute;
+        inset: 0;
+        background: #1e1e2e;
+      }
+
+      /* Editor title bar */
+      .editor-titlebar {
+        height: 40px;
+        background: #181825;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 8px;
+        border-bottom: 1px solid #313244;
+      }
+      .traffic-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .td-red {
+        background: #f38ba8;
+      }
+      .td-yellow {
+        background: #f9e2af;
+      }
+      .td-green {
+        background: #a6e3a1;
+      }
+      .editor-title {
+        flex: 1;
+        text-align: center;
+        font-size: 13px;
+        color: #6c7086;
+      }
+
+      /* Editor tab bar */
+      .editor-tabs {
+        height: 36px;
+        background: #11111b;
+        display: flex;
+        align-items: stretch;
+        border-bottom: 1px solid #313244;
+      }
+      .editor-tab {
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: #6c7086;
+        border-right: 1px solid #313244;
+      }
+      .editor-tab.active {
+        background: #1e1e2e;
+        color: #cdd6f4;
+        border-bottom: 2px solid #89b4fa;
+      }
+
+      /* Editor content */
+      .editor-content {
+        display: flex;
+        height: calc(100% - 76px);
+      }
+      .line-numbers {
+        width: 48px;
+        background: #181825;
+        color: #45475a;
+        padding: 12px 8px;
+        font-size: 13px;
+        line-height: 1.7;
+        text-align: right;
+        font-family: "Fira Code", "Consolas", monospace;
+        user-select: none;
+      }
+      .code-area {
+        flex: 1;
+        padding: 12px 16px;
+        font-family: "Fira Code", "Consolas", monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        color: #cdd6f4;
+      }
+      .code-keyword {
+        color: #cba6f7;
+      }
+      .code-fn {
+        color: #89b4fa;
+      }
+      .code-string {
+        color: #a6e3a1;
+      }
+      .code-comment {
+        color: #6c7086;
+        font-style: italic;
+      }
+      .code-type {
+        color: #f9e2af;
+      }
+      .code-punct {
+        color: #6c7086;
+      }
+      .code-num {
+        color: #fab387;
+      }
+
+      /* ========================================
+     PiP window — matches actual renderer.ts
+     ======================================== */
+      .pip-window {
+        position: absolute;
+        bottom: 40px;
+        right: 40px;
+        width: 380px;
+        height: 170px;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+
+      /* Matches body styling from renderer STYLES */
+      .pip-body {
+        margin: 0;
+        padding: 10px;
+        box-sizing: border-box;
+        background: radial-gradient(circle at 20% -10%, #222 0%, #121212 58%);
+        color: #fff;
+        font-family: "Roboto", sans-serif;
+        height: 100%;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* .banner */
+      .pip-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        height: 100%;
+        border-radius: 11px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.07),
+          rgba(255, 255, 255, 0.03)
+        );
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+        padding: 8px;
+        box-sizing: border-box;
+      }
+
+      /* .artwork-container */
+      .pip-artwork-container {
+        width: 72px;
+        height: 72px;
+        flex-shrink: 1;
+        min-width: 0;
+        min-height: 0;
+        position: relative;
+      }
+      .pip-artwork {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 5px;
+        display: block;
+        /* Simulated album art with gradient */
+        background: linear-gradient(
+          135deg,
+          #c41010 0%,
+          #ff2020 40%,
+          #ff6060 100%
+        );
+      }
+
+      /* .info */
+      .pip-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+      }
+
+      /* .primary-meta */
+      .pip-primary-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .pip-title {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        text-align: left;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+      .pip-artist {
+        font-size: 11px;
+        color: #b7b7b7;
+        text-align: left;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+      .pip-album {
+        font-size: 10px;
+        color: #919191;
+        text-align: left;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+
+      /* .progress-container */
+      .pip-progress-container {
+        width: 100%;
+        margin: 3px 0 0;
+        flex-shrink: 0;
+      }
+      .pip-progress-bar {
+        width: 100%;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.17);
+        border-radius: 999px;
+        position: relative;
+        padding: 4px 0;
+        background-clip: content-box;
+      }
+      .pip-progress-fill {
+        height: 3px;
+        background: #fff;
+        border-radius: 999px;
+        width: 35%;
+        position: absolute;
+        top: 4px;
+        left: 0;
+      }
+      .pip-progress-thumb {
+        width: 7px;
+        height: 7px;
+        background: #fff;
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        left: 35%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+      }
+
+      /* .time-display */
+      .pip-time {
+        font-size: 10px;
+        color: #adadad;
+        text-align: left;
+        margin: 0;
+      }
+
+      /* .control-row */
+      .pip-control-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 1px;
+        min-width: 0;
+      }
+
+      /* .controls */
+      .pip-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .pip-ctrl-btn {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #fff;
+        width: 31px;
+        height: 31px;
+        padding: 0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pip-ctrl-btn svg {
+        fill: currentColor;
+      }
+      .pip-ctrl-primary {
+        width: 36px;
+        height: 36px;
+        background: rgba(255, 255, 255, 0.17);
+        border-color: rgba(255, 255, 255, 0.22);
+      }
+
+      /* .aux-controls */
+      .pip-aux {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 1;
+        min-width: 0;
+      }
+      .pip-aux-btn {
+        border: none;
+        background: transparent;
+        color: #bbb;
+        width: 24px;
+        height: 24px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+      }
+      .pip-aux-btn svg {
+        fill: currentColor;
+      }
+
+      /* .volume-wrap */
+      .pip-volume-wrap {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 1;
+        min-width: 56px;
+      }
+      .pip-volume-wrap svg {
+        color: #aaa;
+        flex-shrink: 0;
+        fill: currentColor;
+      }
+      .pip-volume-slider {
+        width: 100%;
+        accent-color: #fff;
+        margin: 0;
+        min-width: 0;
+        height: 14px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+      }
+      .pip-volume-slider::-webkit-slider-runnable-track {
+        height: 3px;
+        background: rgba(255, 255, 255, 0.17);
+        border-radius: 999px;
+      }
+      .pip-volume-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 10px;
+        height: 10px;
+        background: #fff;
+        border-radius: 50%;
+        margin-top: -3.5px;
+      }
+
+      /* Callout annotation */
+      .callout {
+        position: absolute;
+        background: rgba(255, 0, 0, 0.1);
+        border: 1px solid rgba(255, 0, 0, 0.25);
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        color: #ff8888;
+        font-family: "Roboto", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="editor-bg">
+      <div class="editor-titlebar">
+        <div class="traffic-dot td-red"></div>
+        <div class="traffic-dot td-yellow"></div>
+        <div class="traffic-dot td-green"></div>
+        <div class="editor-title">app.ts -- project</div>
+      </div>
+      <div class="editor-tabs">
+        <div class="editor-tab active">app.ts</div>
+        <div class="editor-tab">config.ts</div>
+        <div class="editor-tab">utils.ts</div>
+      </div>
+      <div class="editor-content">
+        <div class="line-numbers">
+          1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12<br />13<br />14<br />15<br />16<br />17<br />18<br />19<br />20<br />21<br />22<br />23<br />24<br />25<br />26<br />27<br />28<br />29<br />30<br />31<br />32<br />33<br />34<br />35<br />36<br />37<br />38<br />39<br />40<br />41<br />42
+        </div>
+        <div class="code-area">
+          <span class="code-keyword">import</span>
+          <span class="code-punct">{</span>
+          <span class="code-type">createApp</span>
+          <span class="code-punct">}</span>
+          <span class="code-keyword">from</span>
+          <span class="code-string">'./framework'</span
+          ><span class="code-punct">;</span><br />
+          <span class="code-keyword">import</span>
+          <span class="code-punct">{</span>
+          <span class="code-type">Router</span>
+          <span class="code-punct">}</span>
+          <span class="code-keyword">from</span>
+          <span class="code-string">'./router'</span
+          ><span class="code-punct">;</span><br />
+          <span class="code-keyword">import</span>
+          <span class="code-punct">{</span>
+          <span class="code-type">Database</span>
+          <span class="code-punct">}</span>
+          <span class="code-keyword">from</span>
+          <span class="code-string">'./database'</span
+          ><span class="code-punct">;</span><br />
+          <br />
+          <span class="code-comment">// Initialize application</span><br />
+          <span class="code-keyword">const</span>
+          <span class="code-fn">app</span> <span class="code-punct">=</span>
+          <span class="code-fn">createApp</span
+          ><span class="code-punct">({</span><br />
+          &nbsp;&nbsp;<span class="code-fn">port</span
+          ><span class="code-punct">:</span> <span class="code-num">3000</span
+          ><span class="code-punct">,</span><br />
+          &nbsp;&nbsp;<span class="code-fn">env</span
+          ><span class="code-punct">:</span>
+          <span class="code-string">'development'</span
+          ><span class="code-punct">,</span><br />
+          <span class="code-punct">});</span><br />
+          <br />
+          <span class="code-comment">// Set up routes</span><br />
+          <span class="code-keyword">const</span>
+          <span class="code-fn">router</span> <span class="code-punct">=</span>
+          <span class="code-keyword">new</span>
+          <span class="code-type">Router</span
+          ><span class="code-punct">();</span><br />
+          <br />
+          <span class="code-fn">router</span><span class="code-punct">.</span
+          ><span class="code-fn">get</span><span class="code-punct">(</span
+          ><span class="code-string">'/'</span><span class="code-punct">,</span>
+          <span class="code-keyword">async</span>
+          <span class="code-punct">(</span><span class="code-fn">ctx</span
+          ><span class="code-punct">)</span> <span class="code-punct">=></span>
+          <span class="code-punct">{</span><br />
+          &nbsp;&nbsp;<span class="code-keyword">const</span>
+          <span class="code-fn">data</span> <span class="code-punct">=</span>
+          <span class="code-keyword">await</span> <span class="code-fn">db</span
+          ><span class="code-punct">.</span><span class="code-fn">query</span
+          ><span class="code-punct">(</span
+          ><span class="code-string">'SELECT * FROM items'</span
+          ><span class="code-punct">);</span><br />
+          &nbsp;&nbsp;<span class="code-fn">ctx</span
+          ><span class="code-punct">.</span><span class="code-fn">json</span
+          ><span class="code-punct">(</span><span class="code-fn">data</span
+          ><span class="code-punct">);</span><br />
+          <span class="code-punct">});</span><br />
+          <br />
+          <span class="code-fn">router</span><span class="code-punct">.</span
+          ><span class="code-fn">post</span><span class="code-punct">(</span
+          ><span class="code-string">'/items'</span
+          ><span class="code-punct">,</span>
+          <span class="code-keyword">async</span>
+          <span class="code-punct">(</span><span class="code-fn">ctx</span
+          ><span class="code-punct">)</span> <span class="code-punct">=></span>
+          <span class="code-punct">{</span><br />
+          &nbsp;&nbsp;<span class="code-keyword">const</span>
+          <span class="code-fn">body</span> <span class="code-punct">=</span>
+          <span class="code-keyword">await</span>
+          <span class="code-fn">ctx</span><span class="code-punct">.</span
+          ><span class="code-fn">parseBody</span
+          ><span class="code-punct">();</span><br />
+          &nbsp;&nbsp;<span class="code-keyword">const</span>
+          <span class="code-fn">result</span> <span class="code-punct">=</span>
+          <span class="code-keyword">await</span> <span class="code-fn">db</span
+          ><span class="code-punct">.</span><span class="code-fn">insert</span
+          ><span class="code-punct">(</span
+          ><span class="code-string">'items'</span
+          ><span class="code-punct">,</span> <span class="code-fn">body</span
+          ><span class="code-punct">);</span><br />
+          &nbsp;&nbsp;<span class="code-fn">ctx</span
+          ><span class="code-punct">.</span><span class="code-fn">json</span
+          ><span class="code-punct">(</span><span class="code-fn">result</span
+          ><span class="code-punct">,</span> <span class="code-num">201</span
+          ><span class="code-punct">);</span><br />
+          <span class="code-punct">});</span><br />
+          <br />
+          <span class="code-comment">// Connect database</span><br />
+          <span class="code-keyword">const</span>
+          <span class="code-fn">db</span> <span class="code-punct">=</span>
+          <span class="code-keyword">new</span>
+          <span class="code-type">Database</span
+          ><span class="code-punct">({</span><br />
+          &nbsp;&nbsp;<span class="code-fn">host</span
+          ><span class="code-punct">:</span>
+          <span class="code-string">'localhost'</span
+          ><span class="code-punct">,</span><br />
+          &nbsp;&nbsp;<span class="code-fn">port</span
+          ><span class="code-punct">:</span> <span class="code-num">5432</span
+          ><span class="code-punct">,</span><br />
+          &nbsp;&nbsp;<span class="code-fn">name</span
+          ><span class="code-punct">:</span>
+          <span class="code-string">'myapp'</span
+          ><span class="code-punct">,</span><br />
+          <span class="code-punct">});</span><br />
+          <br />
+          <span class="code-comment">// Start server</span><br />
+          <span class="code-fn">app</span><span class="code-punct">.</span
+          ><span class="code-fn">use</span><span class="code-punct">(</span
+          ><span class="code-fn">router</span><span class="code-punct">.</span
+          ><span class="code-fn">routes</span
+          ><span class="code-punct">());</span><br />
+          <span class="code-fn">app</span><span class="code-punct">.</span
+          ><span class="code-fn">listen</span><span class="code-punct">();</span
+          ><br />
+          <br />
+          <span class="code-fn">console</span><span class="code-punct">.</span
+          ><span class="code-fn">log</span><span class="code-punct">(</span
+          ><span class="code-string">`Server running on port 3000`</span
+          ><span class="code-punct">);</span><br />
+        </div>
+      </div>
+    </div>
+
+    <!-- PiP mini player — matches actual renderer.ts -->
+    <div class="pip-window">
+      <div class="pip-body">
+        <div class="pip-banner">
+          <!-- Artwork -->
+          <div class="pip-artwork-container">
+            <div class="pip-artwork"></div>
+          </div>
+
+          <!-- Info panel -->
+          <div class="pip-info">
+            <div class="pip-primary-meta">
+              <div class="pip-title">Starlight Echoes</div>
+              <div class="pip-artist">Crystal Waves</div>
+              <div class="pip-album">Cosmic Drift &middot; 2025</div>
+            </div>
+
+            <!-- Progress -->
+            <div class="pip-progress-container">
+              <div class="pip-progress-bar">
+                <div class="pip-progress-fill"></div>
+                <div class="pip-progress-thumb"></div>
+              </div>
+            </div>
+            <div class="pip-time">1:23 / 3:47</div>
+
+            <!-- Control row -->
+            <div class="pip-control-row">
+              <!-- Primary controls -->
+              <div class="pip-controls">
+                <!-- Previous -->
+                <div class="pip-ctrl-btn">
+                  <svg
+                    width="19"
+                    height="19"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                  </svg>
+                </div>
+                <!-- Pause (primary) -->
+                <div class="pip-ctrl-btn pip-ctrl-primary">
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M6 19h4V5H6zm8-14v14h4V5z" />
+                  </svg>
+                </div>
+                <!-- Next -->
+                <div class="pip-ctrl-btn">
+                  <svg
+                    width="19"
+                    height="19"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Aux controls -->
+              <div class="pip-aux">
+                <!-- Dislike -->
+                <div class="pip-aux-btn">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M15 3H8c-.8 0-1.5.5-1.8 1.2l-3 7c-.1.2-.2.5-.2.8v2c0 1.1.9 2 2 2h6.3l-1 4.6v.3c0 .4.2.8.4 1.1L10 23l6.4-6.4c.4-.4.6-.9.6-1.4V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"
+                    />
+                  </svg>
+                </div>
+                <!-- Like -->
+                <div class="pip-aux-btn">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.3l1-4.6v-.3c0-.4-.2-.8-.4-1.1L14 1 7.6 7.4C7.2 7.8 7 8.3 7 8.8V19c0 1.1.9 2 2 2h7c.8 0 1.5-.5 1.8-1.2l3-7c.1-.2.2-.5.2-.8v-2z"
+                    />
+                  </svg>
+                </div>
+                <!-- Volume -->
+                <div class="pip-volume-wrap">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"
+                    />
+                  </svg>
+                  <input
+                    class="pip-volume-slider"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="72"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Callout -->
+    <div
+      class="callout"
+      style="bottom: 228px; right: 40px; text-align: center; width: 380px"
+    >
+      Picture-in-Picture mini player &mdash; control music while you work
+    </div>
+  </body>
+</html>

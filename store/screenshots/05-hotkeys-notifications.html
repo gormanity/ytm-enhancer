@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280" />
+    <title>YTM Enhancer — Hotkeys &amp; Notifications</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+      }
+      body {
+        font-family: "Roboto", "Arial", sans-serif;
+        background: #0a0a0a;
+        color: #fff;
+      }
+
+      .bg {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 70% 40%,
+          #0a0a1a 0%,
+          #0a0a0a 60%
+        );
+      }
+
+      .hero-text {
+        position: absolute;
+        top: 48px;
+        left: 0;
+        right: 0;
+        text-align: center;
+      }
+      .hero-text h1 {
+        font-size: 48px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .hero-text p {
+        font-size: 20px;
+        color: #888;
+        margin-top: 14px;
+      }
+
+      .panels {
+        position: absolute;
+        top: 170px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 80px;
+        align-items: flex-start;
+      }
+
+      /* Hotkeys panel */
+      .panel {
+        width: 480px;
+        background: #030303;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 255, 255, 0.08);
+        padding: 32px;
+      }
+      .panel-label {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #aaa;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .panel-label svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .panel h2 {
+        font-size: 24px;
+        font-weight: 500;
+        margin-bottom: 24px;
+      }
+
+      /* Notifications panel (transparent, matching dimensions) */
+      .notif-panel {
+        width: 480px;
+        background: transparent;
+        border-radius: 14px;
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 255, 255, 0.08);
+        padding: 32px;
+      }
+      .notif-panel-label {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #aaa;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .notif-panel-label svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .notif-panel h2 {
+        font-size: 24px;
+        font-weight: 500;
+        margin-bottom: 24px;
+      }
+
+      .settings-card {
+        background: #0f0f0f;
+        border: 1px solid #2a2a2a;
+        border-radius: 10px;
+        padding: 16px;
+      }
+
+      .shortcut-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 0;
+      }
+      .shortcut-row + .shortcut-row {
+        border-top: 1px solid #2a2a2a;
+      }
+      .shortcut-label {
+        color: #aaa;
+        font-size: 15px;
+      }
+      .shortcut-keys {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+      .key {
+        background: #333;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid #444;
+        color: #eee;
+        box-shadow: 0 2px 0 #111;
+        min-width: 28px;
+        text-align: center;
+      }
+      .key-sep {
+        font-size: 11px;
+        color: #666;
+      }
+
+      .shortcuts-hint {
+        margin-top: 20px;
+        font-size: 14px;
+        color: #aaa;
+        line-height: 1.6;
+        padding-left: 14px;
+        border-left: 2px solid #ff0000;
+      }
+      .shortcuts-hint strong {
+        color: #fff;
+      }
+
+      /* Notification mockups */
+      .notif-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .notif-card {
+        background: #1e1e1e;
+        border-radius: 14px;
+        padding: 18px 20px;
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        box-shadow:
+          0 8px 30px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(255, 255, 255, 0.06);
+        position: relative;
+      }
+      .notif-icon {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .notif-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+      .notif-body {
+        flex: 1;
+        min-width: 0;
+      }
+      .notif-app {
+        font-size: 12px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .notif-app-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #ff0000;
+      }
+      .notif-title {
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .notif-subtitle {
+        font-size: 15px;
+        color: #aaa;
+        margin-top: 3px;
+      }
+      .notif-artwork {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        flex-shrink: 0;
+      }
+      .notif-art-1 {
+        background: linear-gradient(135deg, #c41010, #ff4040);
+      }
+      .notif-art-2 {
+        background: linear-gradient(135deg, #2a1a4a, #6a3a9a);
+      }
+      .notif-art-3 {
+        background: linear-gradient(135deg, #1a3a2a, #2a6a4a);
+      }
+      .notif-time {
+        position: absolute;
+        top: 18px;
+        right: 92px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg"></div>
+
+    <div class="hero-text">
+      <h1>Control from Anywhere</h1>
+      <p>Global shortcuts and desktop notifications keep you in the loop</p>
+    </div>
+
+    <div class="panels">
+      <!-- Hotkeys Panel -->
+      <div class="panel">
+        <div class="panel-label">
+          <svg viewBox="0 0 24 24">
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="M6 8h.01" />
+            <path d="M10 8h.01" />
+            <path d="M14 8h.01" />
+            <path d="M18 8h.01" />
+            <path d="M8 16h8" />
+          </svg>
+          HOTKEYS
+        </div>
+        <h2>Keyboard Shortcuts</h2>
+
+        <div class="settings-card">
+          <div class="shortcut-row">
+            <span class="shortcut-label">Play / Pause</span>
+            <div class="shortcut-keys">
+              <span class="key">Alt</span>
+              <span class="key-sep">+</span>
+              <span class="key">Shift</span>
+              <span class="key-sep">+</span>
+              <span class="key">P</span>
+            </div>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Next Track</span>
+            <div class="shortcut-keys">
+              <span class="key">Alt</span>
+              <span class="key-sep">+</span>
+              <span class="key">Shift</span>
+              <span class="key-sep">+</span>
+              <span class="key">N</span>
+            </div>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Previous Track</span>
+            <div class="shortcut-keys">
+              <span class="key">Alt</span>
+              <span class="key-sep">+</span>
+              <span class="key">Shift</span>
+              <span class="key-sep">+</span>
+              <span class="key">B</span>
+            </div>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Focus YTM Tab</span>
+            <div class="shortcut-keys">
+              <span class="key">Alt</span>
+              <span class="key-sep">+</span>
+              <span class="key">Shift</span>
+              <span class="key-sep">+</span>
+              <span class="key">Y</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="shortcuts-hint">
+          <strong>Tip:</strong> Shortcuts work globally &mdash; control playback
+          from any tab or window without switching back to YouTube Music.
+        </div>
+      </div>
+
+      <!-- Notifications Panel -->
+      <div class="notif-panel">
+        <div class="notif-panel-label">
+          <svg viewBox="0 0 24 24">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+          DESKTOP NOTIFICATIONS
+        </div>
+        <h2>Track Alerts</h2>
+        <div class="notif-stack">
+          <div class="notif-card">
+            <div class="notif-icon">
+              <svg viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
+                <g stroke-width="1.8" stroke-linecap="round" fill="none">
+                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
+                  <line
+                    x1="80.7"
+                    y1="26.5"
+                    x2="89.2"
+                    y2="7.4"
+                    stroke="#33dbff"
+                  />
+                  <line
+                    x1="94.5"
+                    y1="36.6"
+                    x2="108.6"
+                    y2="23.9"
+                    stroke="#33b6ff"
+                  />
+                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
+                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
+                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
+                  <line
+                    x1="36.6"
+                    y1="33.5"
+                    x2="23.2"
+                    y2="18.7"
+                    stroke="#ff33b6"
+                  />
+                </g>
+                <circle cx="64" cy="64" r="39" fill="#C41010" />
+                <polygon points="54,45 54,83 82,64" fill="#FFFFFF" />
+              </svg>
+            </div>
+            <div class="notif-body">
+              <div class="notif-app">
+                <div class="notif-app-dot"></div>
+                YTM Enhancer
+              </div>
+              <div class="notif-title">Starlight Echoes</div>
+              <div class="notif-subtitle">Crystal Waves</div>
+            </div>
+            <div class="notif-artwork notif-art-1"></div>
+            <div class="notif-time">now</div>
+          </div>
+
+          <div class="notif-card" style="opacity: 0.85">
+            <div class="notif-icon">
+              <svg viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
+                <g stroke-width="1.8" stroke-linecap="round" fill="none">
+                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
+                  <line
+                    x1="80.7"
+                    y1="26.5"
+                    x2="89.2"
+                    y2="7.4"
+                    stroke="#33dbff"
+                  />
+                  <line
+                    x1="94.5"
+                    y1="36.6"
+                    x2="108.6"
+                    y2="23.9"
+                    stroke="#33b6ff"
+                  />
+                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
+                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
+                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
+                  <line
+                    x1="36.6"
+                    y1="33.5"
+                    x2="23.2"
+                    y2="18.7"
+                    stroke="#ff33b6"
+                  />
+                </g>
+                <circle cx="64" cy="64" r="39" fill="#C41010" />
+                <polygon points="54,45 54,83 82,64" fill="#FFFFFF" />
+              </svg>
+            </div>
+            <div class="notif-body">
+              <div class="notif-app">
+                <div class="notif-app-dot"></div>
+                YTM Enhancer
+              </div>
+              <div class="notif-title">Midnight Reverie</div>
+              <div class="notif-subtitle">Velvet Haze</div>
+            </div>
+            <div class="notif-artwork notif-art-2"></div>
+            <div class="notif-time">2m ago</div>
+          </div>
+
+          <div class="notif-card" style="opacity: 0.7">
+            <div class="notif-icon">
+              <svg viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
+                <g stroke-width="1.8" stroke-linecap="round" fill="none">
+                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
+                  <line
+                    x1="80.7"
+                    y1="26.5"
+                    x2="89.2"
+                    y2="7.4"
+                    stroke="#33dbff"
+                  />
+                  <line
+                    x1="94.5"
+                    y1="36.6"
+                    x2="108.6"
+                    y2="23.9"
+                    stroke="#33b6ff"
+                  />
+                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
+                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
+                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
+                  <line
+                    x1="36.6"
+                    y1="33.5"
+                    x2="23.2"
+                    y2="18.7"
+                    stroke="#ff33b6"
+                  />
+                </g>
+                <circle cx="64" cy="64" r="39" fill="#C41010" />
+                <polygon points="54,45 54,83 82,64" fill="#FFFFFF" />
+              </svg>
+            </div>
+            <div class="notif-body">
+              <div class="notif-app">
+                <div class="notif-app-dot"></div>
+                YTM Enhancer
+              </div>
+              <div class="notif-title">Forest Rain</div>
+              <div class="notif-subtitle">Ambient Works</div>
+            </div>
+            <div class="notif-artwork notif-art-3"></div>
+            <div class="notif-time">6m ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

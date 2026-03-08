@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280" />
+    <title>YTM Enhancer — Sleep Timer &amp; Automation</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+      }
+      body {
+        font-family: "Roboto", "Arial", sans-serif;
+        background: #0a0a0a;
+        color: #fff;
+      }
+
+      /* Dark gradient background */
+      .bg {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 30% 50%,
+          #1a0808 0%,
+          #0a0a0a 60%
+        );
+      }
+
+      /* Decorative heading */
+      .hero-text {
+        position: absolute;
+        top: 40px;
+        left: 0;
+        right: 0;
+        text-align: center;
+      }
+      .hero-text h1 {
+        font-size: 42px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .hero-text p {
+        font-size: 18px;
+        color: #888;
+        margin-top: 12px;
+      }
+
+      /* Two popup panels side by side */
+      .panels {
+        position: absolute;
+        top: 130px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 60px;
+      }
+
+      .panel {
+        width: 380px;
+        background: #030303;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 255, 255, 0.08);
+        padding: 24px;
+      }
+
+      .panel-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #aaa;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .panel-label svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .panel h2 {
+        font-size: 20px;
+        font-weight: 500;
+        margin-bottom: 14px;
+      }
+      .panel h3 {
+        font-size: 12px;
+        color: #aaa;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 12px 0 8px;
+      }
+      .panel h3:first-of-type {
+        margin-top: 0;
+      }
+
+      .settings-card {
+        background: #0f0f0f;
+        border: 1px solid #2a2a2a;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+      }
+
+      /* Toggle row */
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 14px;
+      }
+      .toggle-row + .toggle-row {
+        border-top: 1px solid #2a2a2a;
+      }
+      .toggle {
+        width: 32px;
+        height: 18px;
+        border-radius: 9px;
+        position: relative;
+        flex-shrink: 0;
+      }
+      .toggle-on {
+        background: #ff0000;
+      }
+      .toggle-off {
+        background: #3f3f3f;
+      }
+      .toggle::after {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+      }
+      .toggle-on::after {
+        left: 17px;
+      }
+      .toggle-off::after {
+        left: 3px;
+      }
+
+      /* Sleep timer presets */
+      .preset-label {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 12px;
+      }
+      .preset-group {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .preset-btn {
+        padding: 6px 12px;
+        border-radius: 14px;
+        border: 1px solid #2a2a2a;
+        background: #1a1a1a;
+        color: #fff;
+        font-size: 13px;
+      }
+      .preset-btn.selected {
+        background: #ff0000;
+        border-color: #ff0000;
+        font-weight: 500;
+      }
+
+      /* Duration inputs */
+      .duration-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .duration-label {
+        font-size: 13px;
+        color: #aaa;
+      }
+      .time-input {
+        width: 44px;
+        padding: 4px 8px;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 14px;
+        text-align: center;
+      }
+      .time-colon {
+        color: #aaa;
+        font-weight: 600;
+      }
+
+      /* Buttons */
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .btn-primary {
+        flex: 1;
+        padding: 10px;
+        background: #ff0000;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .btn-secondary {
+        flex: 1;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #2a2a2a;
+        background: #0f0f0f;
+        color: #fff;
+        font-size: 14px;
+      }
+
+      /* Active timer status */
+      .timer-status {
+        background: #0f0f0f;
+        border: 1px solid #2a2a2a;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+        text-align: center;
+      }
+      .timer-countdown {
+        font-size: 36px;
+        font-weight: 700;
+        color: #ff0000;
+        font-variant-numeric: tabular-nums;
+      }
+      .timer-label {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 4px;
+      }
+
+      /* Field select */
+      .field-select {
+        width: 100%;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 13px;
+        outline: none;
+      }
+      .field-label {
+        font-size: 12px;
+        color: #aaa;
+        margin-bottom: 6px;
+      }
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 10px;
+      }
+      .field-group:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Status text */
+      .status-text {
+        font-size: 14px;
+        color: #ff4444;
+        font-weight: 500;
+        margin-top: 10px;
+      }
+      .status-text-secondary {
+        font-size: 12px;
+        color: #888;
+        margin-top: 4px;
+      }
+
+      /* Checkbox row */
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        font-size: 13px;
+      }
+      .checkbox-row + .checkbox-row {
+        border-top: 1px solid #2a2a2a;
+      }
+      .checkbox {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid #555;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .checkbox-on {
+        background: #ff0000;
+        border-color: #ff0000;
+      }
+      .checkbox-on::after {
+        content: "";
+        display: block;
+        width: 4px;
+        height: 7px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+        margin-top: -1px;
+      }
+
+      /* Preview button */
+      .btn-outline {
+        padding: 8px 14px;
+        border-radius: 6px;
+        border: 1px solid #2a2a2a;
+        background: #0f0f0f;
+        color: #fff;
+        font-size: 13px;
+        text-align: center;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg"></div>
+
+    <div class="hero-text">
+      <h1>Set It and Forget It</h1>
+      <p>Automation and timers that work while you listen</p>
+    </div>
+
+    <div class="panels">
+      <!-- Sleep Timer Panel -->
+      <div class="panel">
+        <div class="panel-label">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="13" r="8" />
+            <path d="M12 9v4l2 2" />
+            <path d="M5 3 2 6" />
+            <path d="m22 6-3-3" />
+          </svg>
+          SLEEP TIMER
+        </div>
+        <h2>Sleep Timer</h2>
+
+        <!-- Mode selector -->
+        <div class="settings-card">
+          <div class="field-group">
+            <select class="field-select">
+              <option selected>Duration</option>
+              <option>At time</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Quick durations -->
+        <div class="preset-label">Quick durations</div>
+        <div class="preset-group">
+          <div class="preset-btn">15m</div>
+          <div class="preset-btn selected">30m</div>
+          <div class="preset-btn">45m</div>
+          <div class="preset-btn">60m</div>
+        </div>
+
+        <!-- Duration HH:MM input -->
+        <div class="field-label" style="margin-top: 12px">Duration (HH:MM)</div>
+        <div class="duration-row">
+          <input class="time-input" type="text" value="00" readonly />
+          <span class="time-colon">:</span>
+          <input class="time-input" type="text" value="30" readonly />
+        </div>
+
+        <!-- Status -->
+        <div class="status-text">Timer active: 27:14 remaining</div>
+
+        <!-- Buttons -->
+        <div class="btn-row">
+          <div class="btn-primary" style="text-align: center">
+            Restart Timer
+          </div>
+          <div class="btn-secondary" style="text-align: center">Cancel</div>
+        </div>
+
+        <!-- Notification setting -->
+        <div class="settings-card" style="margin-top: 12px">
+          <div class="toggle-row" style="padding: 0">
+            <span style="font-size: 13px"
+              >Show notification when timer ends</span
+            >
+            <div class="toggle toggle-on"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Automation Panel -->
+      <div class="panel">
+        <div class="panel-label">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path d="m10 8 6 4-6 4V8z" />
+          </svg>
+          AUTOMATION
+        </div>
+        <h2>Smart Playback</h2>
+
+        <h3>Auto Play</h3>
+        <div class="settings-card">
+          <div class="toggle-row" style="padding: 0">
+            <span>Auto-play on page load</span>
+            <div class="toggle toggle-on"></div>
+          </div>
+        </div>
+
+        <h3>Auto Skip</h3>
+        <div class="settings-card">
+          <div class="toggle-row" style="padding: 0">
+            <span>Automatically skip disliked songs</span>
+            <div class="toggle toggle-on"></div>
+          </div>
+        </div>
+
+        <h3>Notifications</h3>
+        <div class="settings-card">
+          <div class="toggle-row">
+            <span>Show on track change</span>
+            <div class="toggle toggle-on"></div>
+          </div>
+          <div class="toggle-row">
+            <span>Show on resume playback</span>
+            <div class="toggle toggle-off"></div>
+          </div>
+        </div>
+
+        <h3>Display Fields</h3>
+        <div class="settings-card">
+          <div class="checkbox-row">
+            <div class="checkbox checkbox-on"></div>
+            <span>Title</span>
+          </div>
+          <div class="checkbox-row">
+            <div class="checkbox checkbox-on"></div>
+            <span>Artist</span>
+          </div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div>
+            <span>Album</span>
+          </div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div>
+            <span>Year</span>
+          </div>
+          <div class="checkbox-row">
+            <div class="checkbox checkbox-on"></div>
+            <span>Artwork</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

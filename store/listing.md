@@ -1,9 +1,10 @@
 # Store Listing
 
-Canonical store listing content for Chrome Web Store, Edge Add-ons, and Firefox Add-ons.
+Canonical store listing content for Chrome Web Store, Edge Add-ons, and Firefox
+Add-ons.
 
-This document is the default source for store copy and submission metadata.
-Use the shared sections unless a browser-specific requirement forces different copy.
+This document is the default source for store copy and submission metadata. Use
+the shared sections unless a browser-specific requirement forces different copy.
 
 ## Shared Listing Copy
 
@@ -18,7 +19,8 @@ experience, this extension is for you.
 
 ### Key Features
 
-- Quick Settings: one panel for playback control, tab switching, and now playing details
+- Quick Settings: one panel for playback control, tab switching, and now playing
+  details
 - Autoplay: optionally start playback automatically when YouTube Music loads
 - Auto Skip Disliked: automatically skip disliked tracks when they appear
 - Audio Visualizer: configurable visualizer overlays
@@ -35,8 +37,7 @@ YTM Enhancer is open source and private by design:
 - no tracking
 - no external backend services
 
-Repository:
-`https://github.com/gormanity/ytm-enhancer`
+Repository: `https://github.com/gormanity/ytm-enhancer`
 
 ---
 
@@ -52,11 +53,9 @@ Repository:
 
 ### Privacy Policy
 
-Source of truth:
-`../PRIVACY.md`
+Source of truth: `../PRIVACY.md`
 
-Public URL:
-`https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md`
+Public URL: `https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md`
 
 ---
 
@@ -100,6 +99,12 @@ the browser listening experience.
 - Appearance
 - Tabs
 
+### Tags
+
+- youtube
+- music
+- streaming
+
 ### Source Code Requirement
 
 Firefox Add-ons may require source code when the uploaded package contains
@@ -139,10 +144,23 @@ YouTube Music web app in-page.
 - Some features are browser-dependent by design.
 - In Firefox, Chromium-only Picture-in-Picture capabilities are not available,
   and the extension degrades gracefully.
-- The add-on does not use remote code, external services, analytics, or tracking.
-- No extension-specific accounts, authentication, or test credentials are required.
+- The add-on does not use remote code, external services, analytics, or
+  tracking.
+- No extension-specific accounts, authentication, or test credentials are
+  required.
 
 Reviewers can test using their own normal YouTube Music session.
+
+### Firefox AMO Developer Comments
+
+Bug reports and feature requests:
+https://github.com/gormanity/ytm-enhancer/issues
+
+Known limitations:
+
+- This add-on works only on https://music.youtube.com/*
+- Some Picture-in-Picture behavior differs in Firefox because certain
+  Chromium-only APIs are not available
 
 ---
 

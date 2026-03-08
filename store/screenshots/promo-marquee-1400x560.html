@@ -1,0 +1,1181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1400" />
+    <title>YTM Enhancer — Marquee Promo</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1400px;
+        height: 560px;
+        overflow: hidden;
+      }
+      body {
+        font-family: "Roboto", "Arial", sans-serif;
+        background: #030303;
+        color: #fff;
+        position: relative;
+      }
+
+      /* Subtle background gradient */
+      .bg-gradient {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            ellipse at 20% 50%,
+            rgba(51, 255, 255, 0.04) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            ellipse at 80% 40%,
+            rgba(255, 0, 0, 0.03) 0%,
+            transparent 40%
+          ),
+          #030303;
+      }
+
+      /* Left section: branding */
+      .brand-section {
+        position: absolute;
+        left: 80px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        z-index: 2;
+      }
+      .brand-icon {
+        width: 96px;
+        height: 96px;
+        margin-bottom: 24px;
+      }
+      .brand-icon svg {
+        width: 100%;
+        height: 100%;
+      }
+      .brand-title {
+        font-size: 44px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+      .brand-tagline {
+        font-size: 18px;
+        color: #aaa;
+        margin-top: 8px;
+        max-width: 380px;
+        line-height: 1.5;
+      }
+      .brand-features {
+        display: flex;
+        gap: 20px;
+        margin-top: 32px;
+        flex-wrap: wrap;
+      }
+      .brand-feature {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #ccc;
+        padding: 6px 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+      }
+      .brand-feature svg {
+        width: 16px;
+        height: 16px;
+        stroke: #ff4444;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* Right section: overlapping popup screenshots */
+      .screenshots {
+        position: absolute;
+        right: 40px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 720px;
+        height: 480px;
+      }
+
+      .screenshot {
+        position: absolute;
+        width: 320px;
+        height: 420px;
+        background: #0a0a0a;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 16px 48px rgba(0, 0, 0, 0.6),
+          0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+
+      /* Screenshot 1 (back left) - Hotkeys */
+      .ss-1 {
+        left: 0;
+        top: 50px;
+        z-index: 1;
+        opacity: 0.7;
+      }
+      /* Screenshot 2 (center, front) - Quick Settings */
+      .ss-2 {
+        left: 190px;
+        top: 20px;
+        z-index: 3;
+      }
+      /* Screenshot 3 (back right) - Sleep Timer */
+      .ss-3 {
+        left: 390px;
+        top: 50px;
+        z-index: 2;
+        opacity: 0.7;
+      }
+
+      /* Mini popup content inside screenshots */
+      .ss-sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 120px;
+        background: #0f0f0f;
+        border-right: 1px solid #2a2a2a;
+        padding-top: 10px;
+      }
+      .ss-nav-item {
+        padding: 5px 10px;
+        font-size: 8px;
+        color: #888;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .ss-nav-item.active {
+        color: #fff;
+        background: #3f3f3f;
+        border-radius: 0 14px 14px 0;
+        margin-right: 6px;
+      }
+      .ss-nav-item svg {
+        width: 12px;
+        height: 12px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex-shrink: 0;
+      }
+      .ss-header-item {
+        padding: 0 10px 8px;
+        margin-bottom: 6px;
+        border-bottom: 1px solid #2a2a2a;
+      }
+      .ss-header-item h1 {
+        font-size: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .ss-logo {
+        width: 14px;
+        height: 14px;
+      }
+
+      .ss-main {
+        position: absolute;
+        left: 120px;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        padding: 14px;
+        overflow: hidden;
+      }
+      .ss-main h2 {
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
+      .ss-main h3 {
+        font-size: 8px;
+        color: #aaa;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 8px 0 6px;
+      }
+
+      .ss-card {
+        background: #0f0f0f;
+        border: 1px solid #2a2a2a;
+        border-radius: 6px;
+        padding: 6px 8px;
+        margin-bottom: 6px;
+      }
+      .ss-toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        font-size: 9px;
+      }
+      .ss-toggle-row + .ss-toggle-row {
+        border-top: 1px solid #2a2a2a;
+      }
+      .ss-toggle {
+        width: 22px;
+        height: 12px;
+        border-radius: 6px;
+        position: relative;
+      }
+      .ss-toggle-on {
+        background: #ff0000;
+      }
+      .ss-toggle-off {
+        background: #3f3f3f;
+      }
+      .ss-toggle::after {
+        content: "";
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: #fff;
+        border-radius: 50%;
+        top: 2px;
+      }
+      .ss-toggle-on::after {
+        left: 12px;
+      }
+      .ss-toggle-off::after {
+        left: 2px;
+      }
+
+      /* Now playing mini card */
+      .ss-np-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .ss-np-art {
+        width: 36px;
+        height: 36px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #c41010, #ff4040);
+        flex-shrink: 0;
+      }
+      .ss-np-meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .ss-np-title {
+        font-size: 10px;
+        font-weight: 600;
+      }
+      .ss-np-artist {
+        font-size: 8px;
+        color: #aaa;
+        margin-top: 1px;
+      }
+      .ss-np-controls {
+        display: flex;
+        gap: 4px;
+        margin-top: 3px;
+        align-items: center;
+      }
+      .ss-np-btn {
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .ss-np-btn svg {
+        width: 10px;
+        height: 10px;
+        stroke: #fff;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .ss-np-btn-play {
+        width: 22px;
+        height: 22px;
+        background: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .ss-np-btn-play svg {
+        stroke: #000;
+        width: 10px;
+        height: 10px;
+      }
+
+      /* Volume bar */
+      .ss-vol-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 8px;
+      }
+      .ss-vol-label {
+        color: #aaa;
+      }
+      .ss-vol-val {
+        font-weight: 600;
+      }
+      .ss-vol-bar {
+        width: 100%;
+        height: 4px;
+        background: #3f3f3f;
+        border-radius: 2px;
+        margin-top: 4px;
+        position: relative;
+      }
+      .ss-vol-fill {
+        width: 72%;
+        height: 100%;
+        background: #ff0000;
+        border-radius: 2px;
+      }
+      .ss-vol-thumb {
+        position: absolute;
+        top: -3px;
+        left: calc(72% - 5px);
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      /* Shortcut row */
+      .ss-shortcut-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        font-size: 8px;
+      }
+      .ss-shortcut-row + .ss-shortcut-row {
+        border-top: 1px solid #2a2a2a;
+      }
+      .ss-shortcut-label {
+        color: #aaa;
+      }
+      .ss-key {
+        background: #333;
+        padding: 1px 3px;
+        border-radius: 2px;
+        font-size: 7px;
+        border: 1px solid #444;
+        color: #eee;
+        box-shadow: 0 1px 0 #111;
+      }
+      .ss-keys {
+        display: flex;
+        gap: 2px;
+        align-items: center;
+      }
+      .ss-key-sep {
+        font-size: 6px;
+        color: #666;
+      }
+
+      /* Sleep timer */
+      .ss-field-select {
+        width: 100%;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #fff;
+        padding: 3px 6px;
+        border-radius: 3px;
+        font-size: 8px;
+        outline: none;
+      }
+      .ss-preset-group {
+        display: flex;
+        gap: 3px;
+        margin-top: 5px;
+        flex-wrap: wrap;
+      }
+      .ss-preset-btn {
+        padding: 2px 7px;
+        border-radius: 10px;
+        border: 1px solid #2a2a2a;
+        background: #1a1a1a;
+        color: #fff;
+        font-size: 8px;
+      }
+      .ss-preset-btn.selected {
+        background: #ff0000;
+        border-color: #ff0000;
+      }
+      .ss-duration-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 5px;
+      }
+      .ss-time-input {
+        width: 28px;
+        padding: 2px 4px;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 3px;
+        color: #fff;
+        font-size: 9px;
+        text-align: center;
+      }
+      .ss-time-colon {
+        color: #aaa;
+        font-weight: 600;
+        font-size: 9px;
+      }
+      .ss-status-text {
+        font-size: 9px;
+        color: #ff4444;
+        font-weight: 500;
+        margin-top: 6px;
+      }
+      .ss-btn-row {
+        display: flex;
+        gap: 4px;
+        margin-top: 6px;
+      }
+      .ss-btn-primary {
+        flex: 1;
+        padding: 5px;
+        background: #ff0000;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 8px;
+        text-align: center;
+      }
+      .ss-btn-secondary {
+        flex: 1;
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #2a2a2a;
+        background: #0f0f0f;
+        color: #fff;
+        font-size: 8px;
+        text-align: center;
+      }
+
+      /* Mini select for quick settings */
+      .ss-inline-row {
+        display: flex;
+        gap: 6px;
+      }
+      .ss-compact-select {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .ss-compact-label {
+        font-size: 7px;
+        color: #aaa;
+      }
+      .ss-compact-dropdown {
+        width: 100%;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #fff;
+        padding: 3px 5px;
+        border-radius: 3px;
+        font-size: 8px;
+        outline: none;
+      }
+
+      /* Bottom accent */
+      .accent-line {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          #ff0000 20%,
+          #ff0000 80%,
+          transparent 100%
+        );
+        opacity: 0.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-gradient"></div>
+
+    <!-- Left: branding -->
+    <div class="brand-section">
+      <div class="brand-icon">
+        <svg viewBox="0 0 128 128">
+          <defs>
+            <linearGradient
+              id="disc"
+              x1="32"
+              y1="32"
+              x2="96"
+              y2="96"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0%" stop-color="#F03030" />
+              <stop offset="100%" stop-color="#C41010" />
+            </linearGradient>
+            <clipPath id="boundary"><circle cx="64" cy="64" r="63" /></clipPath>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur
+                in="SourceGraphic"
+                stdDeviation="2"
+                result="blur"
+              />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx="64" cy="64" r="63" fill="#0A0A16" />
+          <g
+            stroke-width="1.8"
+            stroke-linecap="round"
+            fill="none"
+            clip-path="url(#boundary)"
+            filter="url(#glow)"
+          >
+            <line x1="64.0" y1="23.0" x2="64.0" y2="12.0" stroke="#33ffff" />
+            <line x1="72.5" y1="23.9" x2="76.1" y2="7.3" stroke="#33edff" />
+            <line x1="80.7" y1="26.5" x2="89.2" y2="7.4" stroke="#33dbff" />
+            <line x1="88.1" y1="30.8" x2="96.9" y2="18.7" stroke="#33c9ff" />
+            <line x1="94.5" y1="36.6" x2="108.6" y2="23.9" stroke="#33b6ff" />
+            <line x1="99.5" y1="43.5" x2="110.8" y2="37.0" stroke="#33a4ff" />
+            <line x1="103.0" y1="51.3" x2="110.6" y2="48.9" stroke="#3392ff" />
+            <line x1="105.0" y1="64.0" x2="125.0" y2="64.0" stroke="#3377ff" />
+            <line x1="104.1" y1="72.5" x2="117.8" y2="75.4" stroke="#3365ff" />
+            <line x1="101.5" y1="80.7" x2="107.9" y2="83.5" stroke="#3353ff" />
+            <line x1="91.4" y1="94.5" x2="97.5" y2="101.2" stroke="#3833ff" />
+            <line x1="84.5" y1="99.5" x2="87.5" y2="104.7" stroke="#4a33ff" />
+            <line x1="76.7" y1="103.0" x2="80.1" y2="113.5" stroke="#5c33ff" />
+            <line x1="64.0" y1="105.0" x2="64.0" y2="122.0" stroke="#7733ff" />
+            <line x1="55.5" y1="104.1" x2="52.8" y2="116.8" stroke="#8933ff" />
+            <line x1="47.3" y1="101.5" x2="44.5" y2="107.9" stroke="#9b33ff" />
+            <line x1="39.9" y1="97.2" x2="34.0" y2="105.3" stroke="#ad33ff" />
+            <line x1="33.5" y1="91.4" x2="29.1" y2="95.4" stroke="#c033ff" />
+            <line x1="25.0" y1="76.7" x2="16.4" y2="79.5" stroke="#e433ff" />
+            <line x1="23.0" y1="64.0" x2="2.0" y2="64.0" stroke="#ff33ff" />
+            <line x1="23.9" y1="55.5" x2="6.3" y2="51.7" stroke="#ff33ed" />
+            <line x1="26.5" y1="47.3" x2="5.5" y2="38.0" stroke="#ff33db" />
+            <line x1="36.6" y1="33.5" x2="23.2" y2="18.7" stroke="#ff33b6" />
+            <line x1="43.5" y1="28.5" x2="35.0" y2="13.8" stroke="#ff33a4" />
+            <line x1="51.3" y1="25.0" x2="46.4" y2="9.8" stroke="#ff3392" />
+            <line x1="59.7" y1="23.2" x2="57.7" y2="4.3" stroke="#ff3380" />
+          </g>
+          <circle
+            cx="64"
+            cy="64"
+            r="41"
+            fill="none"
+            stroke="#FFFFFF"
+            stroke-opacity="0.12"
+            stroke-width="1"
+          />
+          <circle cx="64" cy="64" r="39" fill="url(#disc)" />
+          <polygon points="54,45 54,83 82,64" fill="#FFFFFF" />
+        </svg>
+      </div>
+      <div class="brand-title">YTM Enhancer</div>
+      <div class="brand-tagline">
+        Smarter controls, automation, notifications, and visual upgrades for
+        YouTube Music
+      </div>
+      <div class="brand-features">
+        <div class="brand-feature">
+          <svg viewBox="0 0 24 24">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M21 15V5a2 2 0 0 0-2-2H9" />
+            <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
+          </svg>
+          Mini Player
+        </div>
+        <div class="brand-feature">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 20v-8" />
+            <path d="M18 20V10" />
+            <path d="M6 20V4" />
+          </svg>
+          Visualizer
+        </div>
+        <div class="brand-feature">
+          <svg viewBox="0 0 24 24">
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="M6 8h.01" />
+            <path d="M10 8h.01" />
+            <path d="M14 8h.01" />
+            <path d="M18 8h.01" />
+            <path d="M8 16h8" />
+          </svg>
+          Hotkeys
+        </div>
+        <div class="brand-feature">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="13" r="8" />
+            <path d="M12 9v4l2 2" />
+            <path d="M5 3 2 6" />
+            <path d="m22 6-3-3" />
+          </svg>
+          Sleep Timer
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: fanned screenshots -->
+    <div class="screenshots">
+      <!-- Screenshot 1: Hotkeys (back left) -->
+      <div class="screenshot ss-1">
+        <div class="ss-sidebar">
+          <div class="ss-header-item">
+            <h1>
+              <svg class="ss-logo" viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
+                <g stroke-width="1.8" stroke-linecap="round" fill="none">
+                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
+                  <line
+                    x1="80.7"
+                    y1="26.5"
+                    x2="89.2"
+                    y2="7.4"
+                    stroke="#33dbff"
+                  />
+                  <line
+                    x1="94.5"
+                    y1="36.6"
+                    x2="108.6"
+                    y2="23.9"
+                    stroke="#33b6ff"
+                  />
+                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
+                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
+                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
+                  <line
+                    x1="36.6"
+                    y1="33.5"
+                    x2="23.2"
+                    y2="18.7"
+                    stroke="#ff33b6"
+                  />
+                </g>
+                <circle cx="64" cy="64" r="39" fill="#C41010" />
+                <polygon points="54,45 54,83 82,64" fill="#FFF" />
+              </svg>
+              YTM Enhancer
+            </h1>
+          </div>
+          <!-- Quick Settings -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+              />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Quick Settings
+          </div>
+          <!-- Auto Play -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <path d="m10 8 6 4-6 4V8z" />
+            </svg>
+            Auto Play
+          </div>
+          <!-- Auto Skip -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="m3 5 9 7-9 7V5Z" />
+              <path d="m12 5 9 7-9 7V5Z" />
+            </svg>
+            Auto Skip
+          </div>
+          <!-- Visualizer -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 20v-8" />
+              <path d="M18 20V10" />
+              <path d="M6 20V4" />
+            </svg>
+            Visualizer
+          </div>
+          <!-- Hotkeys (active) -->
+          <div class="ss-nav-item active">
+            <svg viewBox="0 0 24 24">
+              <rect width="20" height="16" x="2" y="4" rx="2" />
+              <path d="M6 8h.01" />
+              <path d="M10 8h.01" />
+              <path d="M14 8h.01" />
+              <path d="M18 8h.01" />
+              <path d="M6 12h.01" />
+              <path d="M18 12h.01" />
+              <path d="M10 12h.01" />
+              <path d="M14 12h.01" />
+              <path d="M8 16h8" />
+            </svg>
+            Hotkeys
+          </div>
+          <!-- Mini Player -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M21 15V5a2 2 0 0 0-2-2H9" />
+              <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
+            </svg>
+            Mini Player
+          </div>
+          <!-- Notifications -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+            Notifications
+          </div>
+          <!-- Sleep Timer -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="13" r="8" />
+              <path d="M12 9v4l2 2" />
+              <path d="M5 3 2 6" />
+              <path d="m22 6-3-3" />
+              <path d="M6.38 18.7 4 21" />
+              <path d="M17.64 18.67 20 21" />
+            </svg>
+            Sleep Timer
+          </div>
+        </div>
+        <div class="ss-main">
+          <h2>Hotkeys</h2>
+          <div class="ss-card">
+            <div class="ss-shortcut-row">
+              <span class="ss-shortcut-label">Play / Pause</span>
+              <div class="ss-keys">
+                <span class="ss-key">Alt</span><span class="ss-key-sep">+</span
+                ><span class="ss-key">Shift</span
+                ><span class="ss-key-sep">+</span><span class="ss-key">P</span>
+              </div>
+            </div>
+            <div class="ss-shortcut-row">
+              <span class="ss-shortcut-label">Next Track</span>
+              <div class="ss-keys">
+                <span class="ss-key">Alt</span><span class="ss-key-sep">+</span
+                ><span class="ss-key">Shift</span
+                ><span class="ss-key-sep">+</span><span class="ss-key">N</span>
+              </div>
+            </div>
+            <div class="ss-shortcut-row">
+              <span class="ss-shortcut-label">Previous</span>
+              <div class="ss-keys">
+                <span class="ss-key">Alt</span><span class="ss-key-sep">+</span
+                ><span class="ss-key">Shift</span
+                ><span class="ss-key-sep">+</span><span class="ss-key">B</span>
+              </div>
+            </div>
+            <div class="ss-shortcut-row">
+              <span class="ss-shortcut-label">Focus Tab</span>
+              <div class="ss-keys">
+                <span class="ss-key">Alt</span><span class="ss-key-sep">+</span
+                ><span class="ss-key">Shift</span
+                ><span class="ss-key-sep">+</span><span class="ss-key">Y</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screenshot 2: Quick Settings (center, front) -->
+      <div class="screenshot ss-2">
+        <div class="ss-sidebar">
+          <div class="ss-header-item">
+            <h1>
+              <svg class="ss-logo" viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
+                <g stroke-width="1.8" stroke-linecap="round" fill="none">
+                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
+                  <line
+                    x1="80.7"
+                    y1="26.5"
+                    x2="89.2"
+                    y2="7.4"
+                    stroke="#33dbff"
+                  />
+                  <line
+                    x1="94.5"
+                    y1="36.6"
+                    x2="108.6"
+                    y2="23.9"
+                    stroke="#33b6ff"
+                  />
+                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
+                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
+                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
+                  <line
+                    x1="36.6"
+                    y1="33.5"
+                    x2="23.2"
+                    y2="18.7"
+                    stroke="#ff33b6"
+                  />
+                </g>
+                <circle cx="64" cy="64" r="39" fill="#C41010" />
+                <polygon points="54,45 54,83 82,64" fill="#FFF" />
+              </svg>
+              YTM Enhancer
+            </h1>
+          </div>
+          <!-- Quick Settings (active) -->
+          <div class="ss-nav-item active">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+              />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Quick Settings
+          </div>
+          <!-- Auto Play -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <path d="m10 8 6 4-6 4V8z" />
+            </svg>
+            Auto Play
+          </div>
+          <!-- Auto Skip -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="m3 5 9 7-9 7V5Z" />
+              <path d="m12 5 9 7-9 7V5Z" />
+            </svg>
+            Auto Skip
+          </div>
+          <!-- Visualizer -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 20v-8" />
+              <path d="M18 20V10" />
+              <path d="M6 20V4" />
+            </svg>
+            Visualizer
+          </div>
+          <!-- Hotkeys -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <rect width="20" height="16" x="2" y="4" rx="2" />
+              <path d="M6 8h.01" />
+              <path d="M10 8h.01" />
+              <path d="M14 8h.01" />
+              <path d="M18 8h.01" />
+              <path d="M6 12h.01" />
+              <path d="M18 12h.01" />
+              <path d="M10 12h.01" />
+              <path d="M14 12h.01" />
+              <path d="M8 16h8" />
+            </svg>
+            Hotkeys
+          </div>
+          <!-- Mini Player -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M21 15V5a2 2 0 0 0-2-2H9" />
+              <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
+            </svg>
+            Mini Player
+          </div>
+          <!-- Notifications -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+            Notifications
+          </div>
+          <!-- Sleep Timer -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="13" r="8" />
+              <path d="M12 9v4l2 2" />
+              <path d="M5 3 2 6" />
+              <path d="m22 6-3-3" />
+              <path d="M6.38 18.7 4 21" />
+              <path d="M17.64 18.67 20 21" />
+            </svg>
+            Sleep Timer
+          </div>
+        </div>
+        <div class="ss-main">
+          <h2>Quick Settings</h2>
+          <div class="ss-card">
+            <div class="ss-np-row">
+              <div class="ss-np-art"></div>
+              <div class="ss-np-meta">
+                <div class="ss-np-title">Starlight Echoes</div>
+                <div class="ss-np-artist">Crystal Waves</div>
+                <div class="ss-np-controls">
+                  <div class="ss-np-btn">
+                    <svg viewBox="0 0 24 24">
+                      <path d="m12 5 9 7-9 7V5Z" />
+                      <path
+                        d="m3 5 9 7-9 7V5Z"
+                        transform="scale(-1,1) translate(-24,0)"
+                      />
+                    </svg>
+                  </div>
+                  <div class="ss-np-btn-play">
+                    <svg viewBox="0 0 24 24">
+                      <rect
+                        x="6"
+                        y="5"
+                        width="4"
+                        height="14"
+                        rx="1"
+                        fill="currentColor"
+                        stroke="none"
+                      />
+                      <rect
+                        x="14"
+                        y="5"
+                        width="4"
+                        height="14"
+                        rx="1"
+                        fill="currentColor"
+                        stroke="none"
+                      />
+                    </svg>
+                  </div>
+                  <div class="ss-np-btn">
+                    <svg viewBox="0 0 24 24">
+                      <path d="m3 5 9 7-9 7V5Z" />
+                      <path d="m12 5 9 7-9 7V5Z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <h3>Volume</h3>
+          <div class="ss-card">
+            <div class="ss-vol-row">
+              <span class="ss-vol-label">Volume</span>
+              <span class="ss-vol-val">72%</span>
+            </div>
+            <div class="ss-vol-bar">
+              <div class="ss-vol-fill"></div>
+              <div class="ss-vol-thumb"></div>
+            </div>
+          </div>
+          <h3>Audio &amp; Playback</h3>
+          <div class="ss-card">
+            <div class="ss-inline-row">
+              <div class="ss-compact-select">
+                <span class="ss-compact-label">Playback Speed</span>
+                <select class="ss-compact-dropdown">
+                  <option selected>1x (Normal)</option>
+                </select>
+              </div>
+              <div class="ss-compact-select">
+                <span class="ss-compact-label">Stream Quality</span>
+                <select class="ss-compact-dropdown">
+                  <option selected>High (256 kbps)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screenshot 3: Sleep Timer (back right) -->
+      <div class="screenshot ss-3">
+        <div class="ss-sidebar">
+          <div class="ss-header-item">
+            <h1>
+              <svg class="ss-logo" viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
+                <g stroke-width="1.8" stroke-linecap="round" fill="none">
+                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
+                  <line
+                    x1="80.7"
+                    y1="26.5"
+                    x2="89.2"
+                    y2="7.4"
+                    stroke="#33dbff"
+                  />
+                  <line
+                    x1="94.5"
+                    y1="36.6"
+                    x2="108.6"
+                    y2="23.9"
+                    stroke="#33b6ff"
+                  />
+                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
+                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
+                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
+                  <line
+                    x1="36.6"
+                    y1="33.5"
+                    x2="23.2"
+                    y2="18.7"
+                    stroke="#ff33b6"
+                  />
+                </g>
+                <circle cx="64" cy="64" r="39" fill="#C41010" />
+                <polygon points="54,45 54,83 82,64" fill="#FFF" />
+              </svg>
+              YTM Enhancer
+            </h1>
+          </div>
+          <!-- Quick Settings -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+              />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Quick Settings
+          </div>
+          <!-- Auto Play -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <path d="m10 8 6 4-6 4V8z" />
+            </svg>
+            Auto Play
+          </div>
+          <!-- Auto Skip -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="m3 5 9 7-9 7V5Z" />
+              <path d="m12 5 9 7-9 7V5Z" />
+            </svg>
+            Auto Skip
+          </div>
+          <!-- Visualizer -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 20v-8" />
+              <path d="M18 20V10" />
+              <path d="M6 20V4" />
+            </svg>
+            Visualizer
+          </div>
+          <!-- Hotkeys -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <rect width="20" height="16" x="2" y="4" rx="2" />
+              <path d="M6 8h.01" />
+              <path d="M10 8h.01" />
+              <path d="M14 8h.01" />
+              <path d="M18 8h.01" />
+              <path d="M6 12h.01" />
+              <path d="M18 12h.01" />
+              <path d="M10 12h.01" />
+              <path d="M14 12h.01" />
+              <path d="M8 16h8" />
+            </svg>
+            Hotkeys
+          </div>
+          <!-- Mini Player -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M21 15V5a2 2 0 0 0-2-2H9" />
+              <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
+            </svg>
+            Mini Player
+          </div>
+          <!-- Notifications -->
+          <div class="ss-nav-item">
+            <svg viewBox="0 0 24 24">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+            Notifications
+          </div>
+          <!-- Sleep Timer (active) -->
+          <div class="ss-nav-item active">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="13" r="8" />
+              <path d="M12 9v4l2 2" />
+              <path d="M5 3 2 6" />
+              <path d="m22 6-3-3" />
+              <path d="M6.38 18.7 4 21" />
+              <path d="M17.64 18.67 20 21" />
+            </svg>
+            Sleep Timer
+          </div>
+        </div>
+        <div class="ss-main">
+          <h2>Sleep Timer</h2>
+          <div class="ss-card">
+            <select class="ss-field-select">
+              <option selected>Duration</option>
+              <option>At time</option>
+            </select>
+          </div>
+          <div class="ss-preset-group">
+            <div class="ss-preset-btn">15m</div>
+            <div class="ss-preset-btn selected">30m</div>
+            <div class="ss-preset-btn">45m</div>
+            <div class="ss-preset-btn">60m</div>
+          </div>
+          <div style="font-size: 8px; color: #aaa; margin-top: 5px">
+            Duration (HH:MM)
+          </div>
+          <div class="ss-duration-row">
+            <input class="ss-time-input" type="text" value="00" readonly />
+            <span class="ss-time-colon">:</span>
+            <input class="ss-time-input" type="text" value="30" readonly />
+          </div>
+          <div class="ss-status-text">Timer active: 27:14 remaining</div>
+          <div class="ss-btn-row">
+            <div class="ss-btn-primary">Restart Timer</div>
+            <div class="ss-btn-secondary">Cancel</div>
+          </div>
+          <div class="ss-card" style="margin-top: 6px">
+            <div class="ss-toggle-row" style="padding: 0">
+              <span style="font-size: 8px"
+                >Show notification when timer ends</span
+              >
+              <div class="ss-toggle ss-toggle-on"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="accent-line"></div>
+  </body>
+</html>

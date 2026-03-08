@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280" />
+    <title>YTM Enhancer — Audio Visualizer</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+      }
+      body {
+        font-family: "Roboto", "Arial", sans-serif;
+        background: #0a0a0a;
+        color: #fff;
+      }
+
+      /* Full-page simulated YTM song page */
+      .ytm-page {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, #1a0808 0%, #0a0a0a 40%);
+      }
+
+      /* Top bar */
+      .ytm-topbar {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        gap: 16px;
+        background: rgba(0, 0, 0, 0.3);
+      }
+      .ytm-logo-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .ytm-logo-circle {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #ff0000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .ytm-logo-circle svg {
+        width: 14px;
+        height: 14px;
+        fill: #fff;
+      }
+      .search-bar {
+        flex: 1;
+        max-width: 500px;
+        margin-left: 40px;
+        height: 36px;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        color: #666;
+        font-size: 14px;
+      }
+
+      /* Song art panel (center) */
+      .song-panel {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+      }
+      .song-artwork-wrap {
+        position: relative;
+        width: 380px;
+        height: 380px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      }
+      .song-artwork {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          #c41010 0%,
+          #ff2020 40%,
+          #ff6060 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .song-artwork-icon {
+        width: 80px;
+        height: 80px;
+        opacity: 0.15;
+      }
+
+      /* Visualizer overlay on artwork */
+      .viz-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 120px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 3px;
+        padding: 0 20px 16px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.4));
+      }
+      .viz-bar {
+        width: 6px;
+        border-radius: 3px 3px 0 0;
+        animation: vizPulse 0.8s ease-in-out infinite alternate;
+      }
+      @keyframes vizPulse {
+        0% {
+          transform: scaleY(0.3);
+        }
+        100% {
+          transform: scaleY(1);
+        }
+      }
+
+      .song-title {
+        font-size: 28px;
+        font-weight: 700;
+        text-align: center;
+      }
+      .song-artist {
+        font-size: 16px;
+        color: #aaa;
+        text-align: center;
+      }
+
+      /* Player bar */
+      .player-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 80px;
+        background: #181818;
+        border-top: 1px solid #333;
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        gap: 16px;
+      }
+      .pb-thumb-wrap {
+        position: relative;
+        width: 56px;
+        height: 56px;
+        border-radius: 6px;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      .pb-thumb {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #c41010, #ff4040);
+      }
+      /* Visualizer overlay on thumbnail */
+      .pb-viz {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 24px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 2px;
+        padding: 0 4px 2px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+      }
+      .pb-viz-bar {
+        width: 3px;
+        border-radius: 1.5px 1.5px 0 0;
+        animation: vizPulse 0.6s ease-in-out infinite alternate;
+      }
+      .pb-meta {
+        flex: 0 0 200px;
+      }
+      .pb-title {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .pb-artist {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 2px;
+      }
+      .pb-center {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .pb-controls {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+      .pb-ctrl {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        opacity: 0.7;
+      }
+      .pb-ctrl svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .pb-ctrl-play {
+        width: 40px;
+        height: 40px;
+        background: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pb-ctrl-play svg {
+        stroke: #000;
+        width: 20px;
+        height: 20px;
+      }
+      .pb-progress {
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: #888;
+      }
+      .pb-progress-track {
+        flex: 1;
+        height: 4px;
+        background: #333;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .pb-progress-fill {
+        width: 35%;
+        height: 100%;
+        background: #ff0000;
+        border-radius: 2px;
+      }
+      .pb-right {
+        flex: 0 0 200px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 16px;
+        align-items: center;
+      }
+      .pb-vol {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pb-vol-track {
+        width: 80px;
+        height: 4px;
+        background: #333;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .pb-vol-fill {
+        width: 70%;
+        height: 100%;
+        background: #fff;
+        border-radius: 2px;
+      }
+
+      /* Progress bar above player */
+      .pb-top-progress {
+        position: absolute;
+        bottom: 80px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #333;
+      }
+      .pb-top-fill {
+        width: 35%;
+        height: 100%;
+        background: #ff0000;
+      }
+
+      /* Popup showing visualizer settings */
+      .ext-popup {
+        position: absolute;
+        top: 60px;
+        right: 60px;
+        width: 320px;
+        background: #030303;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.8),
+          0 0 0 1px rgba(255, 255, 255, 0.08);
+        padding: 20px;
+      }
+      .popup-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #aaa;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .popup-label svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .popup-h2 {
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 16px;
+      }
+
+      .settings-card {
+        background: #0f0f0f;
+        border: 1px solid #2a2a2a;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 14px;
+      }
+      .toggle-row + .toggle-row {
+        border-top: 1px solid #2a2a2a;
+      }
+      .toggle {
+        width: 32px;
+        height: 18px;
+        border-radius: 9px;
+        position: relative;
+      }
+      .toggle-on {
+        background: #ff0000;
+      }
+      .toggle::after {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+      }
+      .toggle-on::after {
+        left: 17px;
+      }
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 0;
+      }
+      .field-group + .field-group {
+        border-top: 1px solid #2a2a2a;
+      }
+      .field-group:first-child {
+        padding-top: 0;
+      }
+      .field-group:last-child {
+        padding-bottom: 0;
+      }
+      .field-label {
+        font-size: 12px;
+        color: #aaa;
+      }
+      .field-select {
+        width: 100%;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 13px;
+        outline: none;
+      }
+      .range-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        font-size: 13px;
+      }
+      .range-row + .range-row {
+        border-top: 1px solid #2a2a2a;
+      }
+      .range-value {
+        font-size: 12px;
+        color: #aaa;
+        min-width: 36px;
+        text-align: right;
+      }
+      .range-track {
+        width: 80px;
+        height: 6px;
+        background: #3f3f3f;
+        border-radius: 3px;
+        position: relative;
+      }
+      .range-fill {
+        height: 100%;
+        background: #ff0000;
+        border-radius: 3px;
+      }
+      .range-thumb {
+        position: absolute;
+        top: -3px;
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-radius: 50%;
+      }
+      .section-label {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .help-text {
+        font-size: 11px;
+        color: #666;
+        line-height: 1.4;
+        margin-top: 4px;
+      }
+
+      .callout {
+        position: absolute;
+        background: rgba(255, 0, 0, 0.1);
+        border: 1px solid rgba(255, 0, 0, 0.25);
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        color: #ff8888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ytm-page">
+      <div class="ytm-topbar">
+        <div class="ytm-logo-row">
+          <div class="ytm-logo-circle">
+            <svg viewBox="0 0 24 24"><polygon points="9,6 9,18 18,12" /></svg>
+          </div>
+          Music
+        </div>
+        <div class="search-bar">Search songs, albums, artists...</div>
+      </div>
+
+      <div class="song-panel">
+        <div class="song-artwork-wrap">
+          <div class="song-artwork"></div>
+          <div class="viz-overlay" id="vizBars"></div>
+        </div>
+        <div class="song-title">Starlight Echoes</div>
+        <div class="song-artist">Crystal Waves</div>
+      </div>
+
+      <div class="pb-top-progress"><div class="pb-top-fill"></div></div>
+      <div class="player-bar">
+        <div class="pb-thumb-wrap">
+          <div class="pb-thumb"></div>
+          <div class="pb-viz" id="pbVizBars"></div>
+        </div>
+        <div class="pb-meta">
+          <div class="pb-title">Starlight Echoes</div>
+          <div class="pb-artist">Crystal Waves</div>
+        </div>
+        <div class="pb-center">
+          <div class="pb-controls">
+            <div class="pb-ctrl">
+              <svg viewBox="0 0 24 24">
+                <path d="m12 5 9 7-9 7V5Z" />
+                <path
+                  d="m3 5 9 7-9 7V5Z"
+                  transform="scale(-1,1) translate(-24,0)"
+                />
+              </svg>
+            </div>
+            <div class="pb-ctrl-play">
+              <svg viewBox="0 0 24 24">
+                <rect
+                  x="6"
+                  y="5"
+                  width="4"
+                  height="14"
+                  rx="1"
+                  fill="#000"
+                  stroke="none"
+                />
+                <rect
+                  x="14"
+                  y="5"
+                  width="4"
+                  height="14"
+                  rx="1"
+                  fill="#000"
+                  stroke="none"
+                />
+              </svg>
+            </div>
+            <div class="pb-ctrl">
+              <svg viewBox="0 0 24 24">
+                <path d="m3 5 9 7-9 7V5Z" />
+                <path d="m12 5 9 7-9 7V5Z" />
+              </svg>
+            </div>
+          </div>
+          <div class="pb-progress">
+            <span>1:23</span>
+            <div class="pb-progress-track">
+              <div class="pb-progress-fill"></div>
+            </div>
+            <span>3:47</span>
+          </div>
+        </div>
+        <div class="pb-right">
+          <div class="pb-vol">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#888"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+            </svg>
+            <div class="pb-vol-track"><div class="pb-vol-fill"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visualizer settings popup -->
+    <div class="ext-popup">
+      <div class="popup-label">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 20v-8" />
+          <path d="M18 20V10" />
+          <path d="M6 20V4" />
+        </svg>
+        AUDIO VISUALIZER
+      </div>
+      <div class="popup-h2">Visualizer</div>
+
+      <!-- Enable toggle -->
+      <div class="settings-card">
+        <div class="toggle-row">
+          <span>Enable audio visualizer</span>
+          <div class="toggle toggle-on"></div>
+        </div>
+      </div>
+
+      <!-- Display Settings -->
+      <div class="section-label">Display Settings</div>
+      <div class="settings-card" style="margin-top: 8px">
+        <div class="field-group">
+          <span class="field-label">Visualization style</span>
+          <select class="field-select">
+            <option selected>Frequency Bars</option>
+            <option>Waveform</option>
+            <option>Circular</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <span class="field-label">Display surface</span>
+          <select class="field-select">
+            <option selected>Auto</option>
+            <option>All Surfaces</option>
+            <option>PiP Only</option>
+            <option>Song Art Only</option>
+            <option>Thumbnail Only</option>
+          </select>
+          <div class="help-text">
+            Auto shows the visualizer on the most relevant visible surface
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Style Tuning -->
+      <div class="section-label">Current Style Tuning</div>
+      <div class="settings-card" style="margin-top: 8px">
+        <div class="field-group" style="padding-bottom: 4px">
+          <span class="field-label">Color mode</span>
+          <select class="field-select">
+            <option selected>White</option>
+            <option>Artwork Adaptive</option>
+            <option>Monochrome Dim</option>
+          </select>
+        </div>
+        <div class="range-row">
+          <span>Intensity</span>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div class="range-track">
+              <div class="range-fill" style="width: 43%"></div>
+              <div class="range-thumb" style="left: calc(43% - 6px)"></div>
+            </div>
+            <span class="range-value">100%</span>
+          </div>
+        </div>
+        <div class="range-row">
+          <span>Thickness</span>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div class="range-track">
+              <div class="range-fill" style="width: 25%"></div>
+              <div class="range-thumb" style="left: calc(25% - 6px)"></div>
+            </div>
+            <span class="range-value">100%</span>
+          </div>
+        </div>
+        <div class="range-row">
+          <span>Opacity</span>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div class="range-track">
+              <div class="range-fill" style="width: 100%"></div>
+              <div class="range-thumb" style="left: calc(100% - 12px)"></div>
+            </div>
+            <span class="range-value">100%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Generate visualizer bars for artwork overlay
+      const vizContainer = document.getElementById("vizBars");
+      const barCount = 48;
+      const colors = [];
+      for (let i = 0; i < barCount; i++) {
+        const t = i / barCount;
+        const h = 180 - t * 200; // cyan to violet
+        colors.push(`hsl(${h}, 100%, 65%)`);
+      }
+      for (let i = 0; i < barCount; i++) {
+        const bar = document.createElement("div");
+        bar.className = "viz-bar";
+        const h = 20 + Math.random() * 80;
+        bar.style.height = h + "px";
+        bar.style.background = colors[i];
+        bar.style.animationDelay = Math.random() * 0.8 + "s";
+        bar.style.animationDuration = 0.4 + Math.random() * 0.6 + "s";
+        bar.style.opacity = "0.85";
+        vizContainer.appendChild(bar);
+      }
+
+      // Generate visualizer bars for player thumbnail
+      const pbViz = document.getElementById("pbVizBars");
+      for (let i = 0; i < 12; i++) {
+        const bar = document.createElement("div");
+        bar.className = "pb-viz-bar";
+        const h = 4 + Math.random() * 16;
+        bar.style.height = h + "px";
+        const t = i / 12;
+        const hue = 180 - t * 200;
+        bar.style.background = `hsl(${hue}, 100%, 65%)`;
+        bar.style.animationDelay = Math.random() * 0.6 + "s";
+        bar.style.animationDuration = 0.3 + Math.random() * 0.5 + "s";
+        bar.style.opacity = "0.9";
+        pbViz.appendChild(bar);
+      }
+    </script>
+  </body>
+</html>

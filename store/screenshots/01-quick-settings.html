@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280" />
+    <title>YTM Enhancer — Quick Settings</title>
+    <style>
+      /* Reset */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+      }
+      body {
+        font-family: "Roboto", "Arial", sans-serif;
+        background: #0a0a0a;
+        color: #fff;
+      }
+
+      /* Simulated YTM background */
+      .ytm-bg {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          #1a0000 0%,
+          #0a0a0a 40%,
+          #0a0a16 100%
+        );
+        display: flex;
+        align-items: flex-end;
+      }
+
+      /* Simulated player bar */
+      .ytm-player-bar {
+        width: 100%;
+        height: 72px;
+        background: #212121;
+        border-top: 1px solid #333;
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        gap: 16px;
+      }
+      .player-thumb {
+        width: 48px;
+        height: 48px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #c41010, #ff4040);
+      }
+      .player-meta {
+        flex: 1;
+      }
+      .player-title {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .player-artist {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 2px;
+      }
+      .player-controls {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+      .player-ctrl-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .player-ctrl-circle svg {
+        width: 18px;
+        height: 18px;
+        stroke: #fff;
+        fill: none;
+        stroke-width: 2;
+      }
+      .player-progress {
+        position: absolute;
+        bottom: 72px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #333;
+      }
+      .player-progress-fill {
+        width: 35%;
+        height: 100%;
+        background: #ff0000;
+      }
+
+      /* Simulated sidebar nav */
+      .ytm-nav {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 72px;
+        width: 220px;
+        background: #0f0f0f;
+        border-right: 1px solid #2a2a2a;
+        padding: 24px 0;
+      }
+      .ytm-nav-item {
+        padding: 12px 24px;
+        font-size: 14px;
+        color: #aaa;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .ytm-nav-item.active {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .ytm-nav-logo {
+        padding: 0 24px 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+        border-bottom: 1px solid #2a2a2a;
+        margin-bottom: 12px;
+      }
+      .ytm-logo-circle {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #ff0000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .ytm-logo-circle svg {
+        width: 14px;
+        height: 14px;
+        fill: #fff;
+        stroke: none;
+      }
+
+      /* Content area placeholder */
+      .ytm-content {
+        position: absolute;
+        left: 220px;
+        top: 0;
+        right: 0;
+        bottom: 75px;
+        display: flex;
+        flex-direction: column;
+        padding: 40px;
+      }
+      .ytm-content-header {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 24px;
+      }
+      .ytm-album-grid {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .ytm-album-card {
+        width: 160px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .ytm-album-art {
+        width: 160px;
+        height: 160px;
+        border-radius: 8px;
+      }
+      .ytm-album-art-1 {
+        background: linear-gradient(135deg, #2a1a4a, #4a2a6a);
+      }
+      .ytm-album-art-2 {
+        background: linear-gradient(135deg, #1a3a2a, #2a5a4a);
+      }
+      .ytm-album-art-3 {
+        background: linear-gradient(135deg, #3a2a1a, #5a4a2a);
+      }
+      .ytm-album-art-4 {
+        background: linear-gradient(135deg, #1a2a3a, #2a4a6a);
+      }
+      .ytm-album-art-5 {
+        background: linear-gradient(135deg, #3a1a1a, #5a2a2a);
+      }
+      .ytm-album-title {
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .ytm-album-sub {
+        font-size: 12px;
+        color: #aaa;
+      }
+
+      /* Dimmed overlay */
+      .dim-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(2px);
+      }
+
+      /* Extension popup */
+      .ext-popup {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 480px;
+        height: 540px;
+        background: #030303;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 24px 80px rgba(0, 0, 0, 0.8),
+          0 0 0 1px rgba(255, 255, 255, 0.08);
+        display: grid;
+        grid-template-columns: 160px 1fr;
+      }
+
+      /* Popup sidebar */
+      .popup-sidebar {
+        background: #0f0f0f;
+        border-right: 1px solid #2a2a2a;
+        padding-top: 12px;
+        display: flex;
+        flex-direction: column;
+      }
+      .popup-sidebar-header {
+        padding: 0 16px 16px;
+        border-bottom: 1px solid #2a2a2a;
+        margin-bottom: 12px;
+      }
+      .popup-sidebar-header h1 {
+        font-size: 14px;
+        margin: 0;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .popup-icon-small {
+        width: 24px;
+        height: 24px;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        color: #aaa;
+        gap: 12px;
+        border-radius: 0 20px 20px 0;
+        margin-right: 8px;
+        font-size: 13px;
+      }
+      .nav-item.active {
+        background: #3f3f3f;
+        color: #fff;
+        font-weight: 500;
+      }
+      .nav-item svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* Popup main content */
+      .popup-main {
+        padding: 24px;
+        overflow-y: auto;
+      }
+      .popup-main h2 {
+        font-size: 20px;
+        font-weight: 500;
+        margin-bottom: 20px;
+      }
+      .popup-main h3 {
+        font-size: 12px;
+        color: #aaa;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 20px 0 12px;
+      }
+      .popup-main h3:first-of-type {
+        margin-top: 0;
+      }
+
+      .settings-card {
+        background: #0f0f0f;
+        border: 1px solid #2a2a2a;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      /* Now playing card */
+      .now-playing-row {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      .np-artwork {
+        width: 64px;
+        height: 64px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #c41010, #ff4040);
+        flex-shrink: 0;
+      }
+      .np-meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .np-title {
+        font-size: 15px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .np-artist {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 2px;
+      }
+      .np-controls {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+        align-items: center;
+      }
+      .np-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: none;
+        border: none;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .np-btn svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .np-btn-primary {
+        width: 36px;
+        height: 36px;
+        background: #fff;
+        color: #000;
+      }
+      .np-btn-primary svg {
+        stroke: #000;
+      }
+
+      /* Volume */
+      .volume-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .volume-label {
+        font-size: 12px;
+        color: #aaa;
+      }
+      .volume-value {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .volume-slider {
+        width: 100%;
+        height: 6px;
+        background: #3f3f3f;
+        border-radius: 3px;
+        margin-top: 8px;
+        position: relative;
+        overflow: hidden;
+      }
+      .volume-fill {
+        width: 72%;
+        height: 100%;
+        background: #ff0000;
+        border-radius: 3px;
+      }
+      .volume-thumb {
+        position: absolute;
+        top: -4px;
+        left: calc(72% - 7px);
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      /* Toggle */
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        font-size: 14px;
+      }
+      .toggle-row + .toggle-row {
+        border-top: 1px solid #2a2a2a;
+      }
+      .toggle {
+        width: 32px;
+        height: 18px;
+        border-radius: 9px;
+        position: relative;
+      }
+      .toggle-on {
+        background: #ff0000;
+      }
+      .toggle-off {
+        background: #3f3f3f;
+      }
+      .toggle::after {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-radius: 50%;
+        top: 3px;
+      }
+      .toggle-on::after {
+        left: 17px;
+      }
+      .toggle-off::after {
+        left: 3px;
+      }
+
+      /* Tab selector pills */
+      .tab-pills {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .tab-pill {
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        border: 2px solid transparent;
+        overflow: hidden;
+      }
+      .tab-pill.selected {
+        border-color: #ff0000;
+      }
+      .tab-pill-inner {
+        width: 100%;
+        height: 100%;
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .tab-pill-inner svg {
+        width: 20px;
+        height: 20px;
+        fill: #ff0000;
+      }
+
+      /* Music Source tabs */
+      .music-source-card {
+        margin-bottom: 12px;
+      }
+      .music-source-label {
+        font-size: 12px;
+        color: #aaa;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+      .tab-list-horizontal {
+        display: flex;
+        gap: 8px;
+      }
+      .tab-item {
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        border: 2px solid transparent;
+        overflow: hidden;
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .tab-item.selected {
+        border-color: #ff0000;
+      }
+      .tab-item-art {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .tab-art-1 {
+        background: linear-gradient(135deg, #c41010, #ff4040);
+      }
+      .tab-art-2 {
+        background: linear-gradient(135deg, #2a1a4a, #4a2a6a);
+      }
+
+      /* Annotation callout */
+      .callout {
+        position: absolute;
+        background: rgba(255, 0, 0, 0.12);
+        border: 1px solid rgba(255, 0, 0, 0.3);
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        color: #ff6666;
+        backdrop-filter: blur(4px);
+      }
+      .callout strong {
+        color: #ff9999;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Simulated YTM page -->
+    <div class="ytm-bg">
+      <div class="ytm-nav">
+        <div class="ytm-nav-logo">
+          <div class="ytm-logo-circle">
+            <svg viewBox="0 0 24 24"><polygon points="9,6 9,18 18,12" /></svg>
+          </div>
+          Music
+        </div>
+        <div class="ytm-nav-item active">Home</div>
+        <div class="ytm-nav-item">Explore</div>
+        <div class="ytm-nav-item">Library</div>
+      </div>
+
+      <div class="ytm-content">
+        <div class="ytm-content-header">Listen Again</div>
+        <div class="ytm-album-grid">
+          <div class="ytm-album-card">
+            <div class="ytm-album-art ytm-album-art-1"></div>
+            <div class="ytm-album-title">Midnight Drive</div>
+            <div class="ytm-album-sub">Neon Pulse</div>
+          </div>
+          <div class="ytm-album-card">
+            <div class="ytm-album-art ytm-album-art-2"></div>
+            <div class="ytm-album-title">Forest Rain</div>
+            <div class="ytm-album-sub">Ambient Works</div>
+          </div>
+          <div class="ytm-album-card">
+            <div class="ytm-album-art ytm-album-art-3"></div>
+            <div class="ytm-album-title">Golden Hour</div>
+            <div class="ytm-album-sub">Solar Flare</div>
+          </div>
+          <div class="ytm-album-card">
+            <div class="ytm-album-art ytm-album-art-4"></div>
+            <div class="ytm-album-title">Deep Blue</div>
+            <div class="ytm-album-sub">Ocean Sound</div>
+          </div>
+          <div class="ytm-album-card">
+            <div class="ytm-album-art ytm-album-art-5"></div>
+            <div class="ytm-album-title">Ruby Sessions</div>
+            <div class="ytm-album-sub">Late Night</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-progress">
+        <div class="player-progress-fill"></div>
+      </div>
+      <div class="ytm-player-bar">
+        <div class="player-thumb"></div>
+        <div class="player-meta">
+          <div class="player-title">Starlight Echoes</div>
+          <div class="player-artist">Crystal Waves</div>
+        </div>
+        <div class="player-controls">
+          <div class="player-ctrl-circle">
+            <svg
+              viewBox="0 0 24 24"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m12 5 9 7-9 7V5Z" />
+              <path
+                d="m3 5 9 7-9 7V5Z"
+                transform="scale(-1,1) translate(-24,0)"
+              />
+            </svg>
+          </div>
+          <div
+            class="player-ctrl-circle"
+            style="
+              width: 42px;
+              height: 42px;
+              background: rgba(255, 255, 255, 0.15);
+            "
+          >
+            <svg
+              viewBox="0 0 24 24"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="width: 22px; height: 22px"
+            >
+              <rect
+                x="6"
+                y="5"
+                width="4"
+                height="14"
+                rx="1"
+                fill="#fff"
+                stroke="none"
+              />
+              <rect
+                x="14"
+                y="5"
+                width="4"
+                height="14"
+                rx="1"
+                fill="#fff"
+                stroke="none"
+              />
+            </svg>
+          </div>
+          <div class="player-ctrl-circle">
+            <svg
+              viewBox="0 0 24 24"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m3 5 9 7-9 7V5Z" />
+              <path d="m12 5 9 7-9 7V5Z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dim overlay -->
+    <div class="dim-overlay"></div>
+
+    <!-- Extension popup -->
+    <div class="ext-popup" style="position: relative">
+      <!-- Sidebar -->
+      <div class="popup-sidebar">
+        <div class="popup-sidebar-header">
+          <h1>
+            <svg class="popup-icon-small" viewBox="0 0 128 128">
+              <circle cx="64" cy="64" r="63" fill="#0A0A16" />
+              <g stroke-width="1.8" stroke-linecap="round" fill="none">
+                <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
+                <line x1="80.7" y1="26.5" x2="89.2" y2="7.4" stroke="#33dbff" />
+                <line
+                  x1="94.5"
+                  y1="36.6"
+                  x2="108.6"
+                  y2="23.9"
+                  stroke="#33b6ff"
+                />
+                <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
+                <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
+                <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
+                <line
+                  x1="36.6"
+                  y1="33.5"
+                  x2="23.2"
+                  y2="18.7"
+                  stroke="#ff33b6"
+                />
+              </g>
+              <circle cx="64" cy="64" r="39" fill="#C41010" />
+              <polygon points="54,45 54,83 82,64" fill="#FFFFFF" />
+            </svg>
+            YTM Enhancer
+          </h1>
+        </div>
+        <div class="nav-item active">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+            />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          Quick Settings
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path d="m10 8 6 4-6 4V8z" />
+          </svg>
+          Auto Play
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24">
+            <path d="m3 5 9 7-9 7V5Z" />
+            <path d="m12 5 9 7-9 7V5Z" />
+          </svg>
+          Auto Skip
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 20v-8" />
+            <path d="M18 20V10" />
+            <path d="M6 20V4" />
+          </svg>
+          Visualizer
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24">
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="M6 8h.01" />
+            <path d="M10 8h.01" />
+            <path d="M14 8h.01" />
+            <path d="M18 8h.01" />
+            <path d="M8 16h8" />
+          </svg>
+          Hotkeys
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M21 15V5a2 2 0 0 0-2-2H9" />
+            <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
+          </svg>
+          Mini Player
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+          Notifications
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="13" r="8" />
+            <path d="M12 9v4l2 2" />
+            <path d="M5 3 2 6" />
+            <path d="m22 6-3-3" />
+          </svg>
+          Sleep Timer
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <div class="popup-main">
+        <h2>Quick Settings</h2>
+
+        <div class="settings-card music-source-card">
+          <div class="music-source-label">Music Source</div>
+          <div class="tab-list-horizontal">
+            <div class="tab-item selected">
+              <div class="tab-item-art tab-art-1"></div>
+            </div>
+            <div class="tab-item">
+              <div class="tab-item-art tab-art-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Now Playing</h3>
+        <div class="settings-card">
+          <div class="now-playing-row">
+            <div class="np-artwork"></div>
+            <div class="np-meta">
+              <div class="np-title">Starlight Echoes</div>
+              <div class="np-artist">Crystal Waves</div>
+              <div class="np-controls">
+                <div class="np-btn">
+                  <svg viewBox="0 0 24 24">
+                    <path d="m12 5 9 7-9 7V5Z" />
+                    <path
+                      d="m3 5 9 7-9 7V5Z"
+                      transform="scale(-1,1) translate(-24,0)"
+                    />
+                  </svg>
+                </div>
+                <div class="np-btn np-btn-primary">
+                  <svg viewBox="0 0 24 24">
+                    <rect
+                      x="6"
+                      y="5"
+                      width="4"
+                      height="14"
+                      rx="1"
+                      fill="currentColor"
+                      stroke="none"
+                    />
+                    <rect
+                      x="14"
+                      y="5"
+                      width="4"
+                      height="14"
+                      rx="1"
+                      fill="currentColor"
+                      stroke="none"
+                    />
+                  </svg>
+                </div>
+                <div class="np-btn">
+                  <svg viewBox="0 0 24 24">
+                    <path d="m3 5 9 7-9 7V5Z" />
+                    <path d="m12 5 9 7-9 7V5Z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Volume</h3>
+        <div class="settings-card">
+          <div class="volume-row">
+            <span class="volume-label">Volume</span>
+            <span class="volume-value">72%</span>
+          </div>
+          <div class="volume-slider" style="position: relative">
+            <div class="volume-fill"></div>
+            <div class="volume-thumb"></div>
+          </div>
+        </div>
+
+        <h3>Audio &amp; Playback</h3>
+        <div class="settings-card" style="display: flex; gap: 12px">
+          <div
+            style="
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 8px;
+            "
+          >
+            <span style="font-size: 12px; color: #aaa">Playback Speed</span>
+            <select
+              style="
+                width: 100%;
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                color: #fff;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 13px;
+                outline: none;
+              "
+            >
+              <option>0.5x</option>
+              <option>0.75x</option>
+              <option selected>1x (Normal)</option>
+              <option>1.25x</option>
+              <option>1.5x</option>
+              <option>2x</option>
+            </select>
+          </div>
+          <div
+            style="
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 8px;
+            "
+          >
+            <span style="font-size: 12px; color: #aaa">Stream Quality</span>
+            <select
+              style="
+                width: 100%;
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                color: #fff;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 13px;
+                outline: none;
+              "
+            >
+              <option>Low (48 kbps)</option>
+              <option>Normal (128 kbps)</option>
+              <option selected>High (256 kbps)</option>
+              <option>Always High</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
