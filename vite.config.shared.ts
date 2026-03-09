@@ -3,12 +3,19 @@ import { readFileSync, copyFileSync, writeFileSync } from "fs";
 import sharp from "sharp";
 import { build, Plugin, InlineConfig } from "vite";
 
-const ICON_SIZES = [16, 48, 128];
+const DEFAULT_ICON_SIZES = [16, 48, 128];
+const STORE_ICON_SIZES: Partial<Record<string, number[]>> = {
+  edge: [300],
+};
 
-async function generateIcons(outDir: string): Promise<void> {
+async function generateIcons(browser: string, outDir: string): Promise<void> {
   const svgBuffer = readFileSync(resolve(__dirname, "src/assets/icon.svg"));
+  const iconSizes = [
+    ...DEFAULT_ICON_SIZES,
+    ...(STORE_ICON_SIZES[browser] ?? []),
+  ];
   await Promise.all(
-    ICON_SIZES.map((size) =>
+    iconSizes.map((size) =>
       sharp(svgBuffer)
         .resize(size, size)
         .png()
@@ -50,7 +57,7 @@ function copyAssets(browser: string): Plugin {
         bundleCss(resolve(__dirname, "src/popup/index.css")),
       );
 
-      await generateIcons(outDir);
+      await generateIcons(browser, outDir);
 
       copyFileSync(
         resolve(__dirname, "src/assets/preview-artwork.png"),
