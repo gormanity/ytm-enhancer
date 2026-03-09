@@ -1,6 +1,6 @@
 {
   "name": "ytm-enhancer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "A modular, cross-browser extension that enhances the YouTube Music web experience",
