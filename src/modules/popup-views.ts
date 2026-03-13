@@ -1,5 +1,5 @@
 import type { PopupView } from "@/core/types";
-import { createQuickSettingsPopupView } from "./quick-settings/popup";
+import { createPlaybackControlsPopupView } from "./playback-controls/popup";
 import { createAutoPlayPopupView } from "./auto-play/popup";
 import { createAutoSkipDislikedPopupView } from "./auto-skip-disliked/popup";
 import { createAudioVisualizerPopupView } from "./audio-visualizer/popup";
@@ -8,7 +8,7 @@ import { createMiniPlayerPopupView } from "./mini-player/popup";
 import { createNotificationsPopupView } from "./notifications/popup";
 import { createSleepTimerPopupView } from "./sleep-timer/popup";
 import { createAboutPopupView } from "./about/popup";
-import quickSettingsIcon from "@/assets/module-icons/quick-settings.svg?raw";
+import playbackControlsIcon from "@/assets/module-icons/playback-controls.svg?raw";
 import autoPlayIcon from "@/assets/module-icons/auto-play.svg?raw";
 import autoSkipIcon from "@/assets/module-icons/auto-skip.svg?raw";
 import visualizerIcon from "@/assets/module-icons/visualizer.svg?raw";
@@ -19,7 +19,7 @@ import sleepTimerIcon from "@/assets/module-icons/sleep-timer.svg?raw";
 import aboutIcon from "@/assets/module-icons/about.svg?raw";
 
 const ICONS = {
-  quickSettings: quickSettingsIcon,
+  playbackControls: playbackControlsIcon,
   autoPlay: autoPlayIcon,
   autoSkip: autoSkipIcon,
   visualizer: visualizerIcon,
@@ -38,7 +38,7 @@ const ICONS = {
  */
 export function getAllPopupViews(): PopupView[] {
   return [
-    { ...createQuickSettingsPopupView(), icon: ICONS.quickSettings },
+    { ...createPlaybackControlsPopupView(), icon: ICONS.playbackControls },
     { ...createAutoPlayPopupView(), icon: ICONS.autoPlay },
     { ...createAutoSkipDislikedPopupView(), icon: ICONS.autoSkip },
     { ...createAudioVisualizerPopupView(), icon: ICONS.visualizer },

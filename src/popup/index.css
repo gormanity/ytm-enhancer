@@ -572,108 +572,14 @@ select:focus {
   color: var(--text-secondary);
 }
 
-/* Home View */
-.home-track-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 0;
-}
-
-.home-artwork {
-  width: 180px;
-  height: 180px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: #1a1a1a;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
-  margin-bottom: 24px;
-  display: none;
-}
-
-.home-artwork--visible {
-  display: block;
-}
-
-.home-track-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  text-align: center;
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-track-artist {
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.home-controls {
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-  margin-top: 32px;
-  align-items: center;
-}
-
-.home-control-btn {
-  width: 40px;
-  height: 40px;
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition:
-    background 0.2s,
-    transform 0.1s;
-}
-
-.home-control-btn svg {
-  width: 24px;
-  height: 24px;
-}
-
-.home-control-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.home-control-btn:active {
-  transform: scale(0.95);
-}
-
-.home-control-btn--primary {
-  width: 48px;
-  height: 48px;
-  background: #fff;
-  color: #000;
-}
-
-.home-control-btn--primary svg {
-  width: 28px;
-  height: 28px;
-}
-
-.home-control-btn--primary:hover {
-  background: #eee;
-}
-
-/* Quick Settings View */
-.quick-settings-inline-row {
+/* Playback Controls View */
+.playback-controls-inline-row {
   display: flex;
   gap: 12px;
   margin-top: 16px;
 }
 
-.quick-settings-select-label {
+.playback-controls-select-label {
   font-size: 12px !important;
 }
 
@@ -756,6 +662,66 @@ select:focus {
 
 .quick-now-playing-btn-padded {
   padding: 6px;
+}
+
+.quick-now-playing-progress {
+  margin-top: 8px;
+}
+
+.quick-now-playing-progress-bar {
+  position: relative;
+  height: 3px;
+  background: #3f3f3f;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 4px 0;
+  background-clip: content-box;
+}
+
+.quick-now-playing-progress-fill {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: 3px;
+  background: var(--accent-color);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s linear;
+  pointer-events: none;
+}
+
+.quick-now-playing-progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 10px;
+  height: 10px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    left 0.3s linear;
+  pointer-events: none;
+}
+
+.quick-now-playing-progress:hover .quick-now-playing-progress-thumb,
+.quick-now-playing-progress-bar.is-dragging .quick-now-playing-progress-thumb {
+  opacity: 1;
+}
+
+.quick-now-playing-progress-bar.is-dragging .quick-now-playing-progress-fill,
+.quick-now-playing-progress-bar.is-dragging .quick-now-playing-progress-thumb {
+  transition: none;
+}
+
+.quick-now-playing-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 4px;
 }
 
 /* Sleep Timer View */

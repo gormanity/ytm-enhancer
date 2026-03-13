@@ -1,4 +1,4 @@
-<h2>Quick Settings</h2>
+<h2>Playback Controls</h2>
 
 <div class="settings-card is-hidden" data-role="quick-tabs-card">
   <h3>Music Source</h3>
@@ -58,12 +58,34 @@
           </svg>
         </button>
       </div>
+      <div
+        class="quick-now-playing-progress is-hidden"
+        data-role="quick-now-playing-progress"
+      >
+        <div
+          class="quick-now-playing-progress-bar"
+          data-role="quick-now-playing-progress-bar"
+        >
+          <div
+            class="quick-now-playing-progress-fill"
+            data-role="quick-now-playing-progress-fill"
+          ></div>
+          <div
+            class="quick-now-playing-progress-thumb"
+            data-role="quick-now-playing-progress-thumb"
+          ></div>
+        </div>
+        <div class="quick-now-playing-time">
+          <span data-role="quick-now-playing-elapsed">0:00</span>
+          <span data-role="quick-now-playing-duration">0:00</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="settings-card">
-  <h3>Audio &amp; Playback</h3>
+  <h3>Quick Settings</h3>
 
   <div class="volume-group">
     <div class="quick-volume-wrapper">
@@ -95,7 +117,7 @@
     </div>
   </div>
 
-  <div class="quick-settings-inline-row">
+  <div class="playback-controls-inline-row">
     <div class="compact-select-group" data-role="quick-speed-slot"></div>
     <div class="compact-select-group" data-role="quick-quality-slot"></div>
   </div>

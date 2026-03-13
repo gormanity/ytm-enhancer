@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { StreamQualityModule } from "@/modules/stream-quality";
+import { PlaybackControlsModule } from "@/modules/playback-controls";
 
-describe("StreamQualityModule", () => {
-  let module: StreamQualityModule;
+describe("PlaybackControlsModule", () => {
+  let module: PlaybackControlsModule;
 
   beforeEach(() => {
     vi.stubGlobal("chrome", {
@@ -18,12 +18,12 @@ describe("StreamQualityModule", () => {
       },
     });
 
-    module = new StreamQualityModule();
+    module = new PlaybackControlsModule();
   });
 
   it("should have the correct module metadata", () => {
-    expect(module.id).toBe("stream-quality");
-    expect(module.name).toBe("Stream Quality");
+    expect(module.id).toBe("playback-controls");
+    expect(module.name).toBe("Playback Controls");
   });
 
   it("should be enabled by default", () => {
@@ -41,7 +41,7 @@ describe("StreamQualityModule", () => {
   it("should provide popup views", () => {
     const views = module.getPopupViews();
     expect(views).toHaveLength(1);
-    expect(views[0].id).toBe("stream-quality-settings");
+    expect(views[0].id).toBe("playback-controls");
   });
 
   it("should init and destroy without errors", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createStreamQualityPopupView } from "@/modules/stream-quality/popup";
+import { createStreamQualityPopupView } from "@/modules/playback-controls/stream-quality/popup";
 
 describe("stream quality popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;

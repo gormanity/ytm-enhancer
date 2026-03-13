@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createPlaybackSpeedPopupView } from "@/modules/playback-speed/popup";
+import { createPlaybackSpeedPopupView } from "@/modules/playback-controls/playback-speed/popup";
 
 describe("playback speed popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;

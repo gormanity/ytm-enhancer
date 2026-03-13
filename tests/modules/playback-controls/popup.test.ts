@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createQuickSettingsPopupView } from "@/modules/quick-settings/popup";
+import { createPlaybackControlsPopupView } from "@/modules/playback-controls/popup";
 
 interface RuntimeMessage {
   type: string;
@@ -24,7 +24,7 @@ class MockImage {
   }
 }
 
-describe("quick settings popup view", () => {
+describe("playback controls popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
   let onMessageAddListenerMock: ReturnType<typeof vi.fn>;
   let onMessageRemoveListenerMock: ReturnType<typeof vi.fn>;
@@ -108,7 +108,7 @@ describe("quick settings popup view", () => {
   });
 
   it("renders music source chips with bundled YTM logo fallback", async () => {
-    const view = createQuickSettingsPopupView();
+    const view = createPlaybackControlsPopupView();
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -182,7 +182,7 @@ describe("quick settings popup view", () => {
       },
     );
 
-    const view = createQuickSettingsPopupView();
+    const view = createPlaybackControlsPopupView();
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -256,7 +256,7 @@ describe("quick settings popup view", () => {
       },
     );
 
-    const view = createQuickSettingsPopupView();
+    const view = createPlaybackControlsPopupView();
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -273,7 +273,7 @@ describe("quick settings popup view", () => {
   });
 
   it("cycles selected music source tab on Tab key", async () => {
-    const view = createQuickSettingsPopupView();
+    const view = createPlaybackControlsPopupView();
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -360,7 +360,7 @@ describe("quick settings popup view", () => {
       },
     );
 
-    const view = createQuickSettingsPopupView();
+    const view = createPlaybackControlsPopupView();
     const firstContainer = document.createElement("div");
     const firstCleanup = view.render(firstContainer);
 

@@ -25,10 +25,8 @@ import { HotkeysModule } from "@/modules/hotkeys";
 import { MiniPlayerModule } from "@/modules/mini-player";
 import { NotificationsModule } from "@/modules/notifications";
 import type { NotificationFields } from "@/modules/notifications";
-import { PlaybackSpeedModule } from "@/modules/playback-speed";
-import { PrecisionVolumeModule } from "@/modules/precision-volume";
+import { PlaybackControlsModule } from "@/modules/playback-controls";
 import { SleepTimerModule } from "@/modules/sleep-timer";
-import { StreamQualityModule } from "@/modules/stream-quality";
 
 const context = createExtensionContext();
 const send = createMessageSender();
@@ -38,10 +36,8 @@ const audioVisualizer = new AudioVisualizerModule();
 const hotkeys = new HotkeysModule(send);
 const miniPlayer = new MiniPlayerModule();
 const notifications = new NotificationsModule();
-const playbackSpeed = new PlaybackSpeedModule();
-const precisionVolume = new PrecisionVolumeModule();
+const playbackControls = new PlaybackControlsModule();
 const sleepTimer = new SleepTimerModule();
-const streamQuality = new StreamQualityModule();
 let selectedTabId: number | null = null;
 const pipOpenTabIds = new Set<number>();
 const SLEEP_TIMER_ALARM = "sleep-timer";
@@ -709,10 +705,8 @@ const modules: FeatureModule[] = [
   hotkeys,
   miniPlayer,
   notifications,
-  playbackSpeed,
-  precisionVolume,
+  playbackControls,
   sleepTimer,
-  streamQuality,
 ];
 
 Promise.all([restoreModuleState(), initializeModules(context, modules)]).catch(
