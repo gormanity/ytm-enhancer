@@ -1,5 +1,6 @@
 import type { PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
+import { bindToggle } from "@/popup/bind-toggle";
 import {
   type VisualizerColorMode,
   DEFAULT_VISUALIZER_STYLE_TUNING,
@@ -18,9 +19,11 @@ export function createAudioVisualizerPopupView(): PopupView {
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
 
-      const toggle = container.querySelector<HTMLInputElement>(
-        '[data-role="audio-visualizer-enabled-toggle"]',
-      );
+      bindToggle(container, "audio-visualizer-enabled-toggle", {
+        getType: "get-audio-visualizer-enabled",
+        setType: "set-audio-visualizer-enabled",
+      });
+
       const select = container.querySelector<HTMLSelectElement>(
         '[data-role="audio-visualizer-style-select"]',
       );
@@ -49,7 +52,6 @@ export function createAudioVisualizerPopupView(): PopupView {
         '[data-role="audio-visualizer-opacity-value"]',
       );
       if (
-        !toggle ||
         !select ||
         !targetSelect ||
         !colorModeSelect ||
@@ -63,7 +65,6 @@ export function createAudioVisualizerPopupView(): PopupView {
         return;
       }
 
-      toggle.disabled = true;
       select.disabled = true;
       targetSelect.disabled = true;
       colorModeSelect.disabled = true;
@@ -128,16 +129,6 @@ export function createAudioVisualizerPopupView(): PopupView {
       };
 
       chrome.runtime.sendMessage(
-        { type: "get-audio-visualizer-enabled" },
-        (response: { ok: boolean; data?: boolean }) => {
-          if (response?.ok) {
-            toggle.checked = response.data === true;
-            toggle.disabled = false;
-          }
-        },
-      );
-
-      chrome.runtime.sendMessage(
         { type: "get-audio-visualizer-style" },
         (response: { ok: boolean; data?: string }) => {
           if (response?.ok && response.data) {
@@ -177,13 +168,6 @@ export function createAudioVisualizerPopupView(): PopupView {
           }
         },
       );
-
-      toggle.addEventListener("change", () => {
-        chrome.runtime.sendMessage({
-          type: "set-audio-visualizer-enabled",
-          enabled: toggle.checked,
-        });
-      });
 
       select.addEventListener("change", () => {
         chrome.runtime.sendMessage({

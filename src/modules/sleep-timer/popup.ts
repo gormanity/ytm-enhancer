@@ -1,5 +1,6 @@
 import type { PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
+import { bindToggle } from "@/popup/bind-toggle";
 import templateHtml from "./popup.html?raw";
 
 const PRESET_MINUTES = [15, 30, 45, 60];
@@ -216,9 +217,6 @@ export function createSleepTimerPopupView(): PopupView {
       const pausedAt = container.querySelector<HTMLElement>(
         '[data-role="sleep-paused-at"]',
       );
-      const notificationToggle = container.querySelector<HTMLInputElement>(
-        '[data-role="sleep-notification-toggle"]',
-      );
       if (
         !modeSelect ||
         !presetsLabel ||
@@ -233,8 +231,7 @@ export function createSleepTimerPopupView(): PopupView {
         !startBtn ||
         !cancelBtn ||
         !status ||
-        !pausedAt ||
-        !notificationToggle
+        !pausedAt
       ) {
         return;
       }
@@ -456,14 +453,10 @@ export function createSleepTimerPopupView(): PopupView {
         });
       });
 
-      chrome.runtime.sendMessage(
-        { type: "get-sleep-timer-notify-enabled" },
-        (response: { ok: boolean; data?: boolean } | null) => {
-          if (!response?.ok) return;
-          notificationToggle.checked = response.data === true;
-          notificationToggle.disabled = false;
-        },
-      );
+      bindToggle(container, "sleep-notification-toggle", {
+        getType: "get-sleep-timer-notify-enabled",
+        setType: "set-sleep-timer-notify-enabled",
+      });
 
       chrome.runtime.sendMessage(
         { type: "get-sleep-timer-mode" },
@@ -475,13 +468,6 @@ export function createSleepTimerPopupView(): PopupView {
           updateStartEnabled();
         },
       );
-
-      notificationToggle.addEventListener("change", () => {
-        chrome.runtime.sendMessage({
-          type: "set-sleep-timer-notify-enabled",
-          enabled: notificationToggle.checked,
-        });
-      });
 
       modeSelect.addEventListener("change", () => {
         mode = modeSelect.value === "absolute" ? "absolute" : "duration";

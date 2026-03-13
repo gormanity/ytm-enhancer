@@ -1,6 +1,7 @@
 import type { NotificationFields } from "./index";
 import type { PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
+import { bindToggle } from "@/popup/bind-toggle";
 import templateHtml from "./popup.html?raw";
 
 const FIELD_KEYS: Array<keyof NotificationFields> = [
@@ -19,54 +20,19 @@ export function createNotificationsPopupView(): PopupView {
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
 
-      const toggle = container.querySelector<HTMLInputElement>(
-        '[data-role="notifications-toggle"]',
-      );
-      const unpauseToggle = container.querySelector<HTMLInputElement>(
-        '[data-role="notifications-unpause-toggle"]',
-      );
+      bindToggle(container, "notifications-toggle", {
+        getType: "get-notifications-enabled",
+        setType: "set-notifications-enabled",
+      });
+      bindToggle(container, "notifications-unpause-toggle", {
+        getType: "get-notify-on-unpause",
+        setType: "set-notify-on-unpause",
+      });
+
       const previewBtn = container.querySelector<HTMLButtonElement>(
         '[data-role="notifications-preview-btn"]',
       );
-      if (!toggle || !unpauseToggle || !previewBtn) return;
-
-      toggle.disabled = true;
-
-      // Query current state from the background script.
-      chrome.runtime.sendMessage(
-        { type: "get-notifications-enabled" },
-        (response: { ok: boolean; data?: boolean }) => {
-          if (response?.ok) {
-            toggle.checked = response.data === true;
-            toggle.disabled = false;
-          }
-        },
-      );
-
-      toggle.addEventListener("change", () => {
-        chrome.runtime.sendMessage({
-          type: "set-notifications-enabled",
-          enabled: toggle.checked,
-        });
-      });
-      unpauseToggle.disabled = true;
-
-      chrome.runtime.sendMessage(
-        { type: "get-notify-on-unpause" },
-        (response: { ok: boolean; data?: boolean }) => {
-          if (response?.ok) {
-            unpauseToggle.checked = response.data === true;
-            unpauseToggle.disabled = false;
-          }
-        },
-      );
-
-      unpauseToggle.addEventListener("change", () => {
-        chrome.runtime.sendMessage({
-          type: "set-notify-on-unpause",
-          enabled: unpauseToggle.checked,
-        });
-      });
+      if (!previewBtn) return;
 
       // Display fields section
       const fieldCheckboxes: {
