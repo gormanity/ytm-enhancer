@@ -1,36 +1,16 @@
 import type { PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
+import { bindSelect } from "@/popup/bind-select";
 import templateHtml from "./popup.html?raw";
 import selectControlTemplateHtml from "./select-control.html?raw";
 
 function initializePlaybackSpeedControl(container: HTMLElement): void {
-  const select = container.querySelector<HTMLSelectElement>(
-    '[data-role="playback-speed-select"]',
-  );
-  if (!select) return;
-  select.disabled = true;
-  const placeholder =
-    select.querySelector<HTMLOptionElement>('option[value=""]');
-
-  chrome.runtime.sendMessage(
-    { type: "get-playback-speed" },
-    (response: { ok: boolean; data?: number } | null) => {
-      if (response?.ok) {
-        select.value = String(response.data ?? 1);
-        select.disabled = false;
-        // Remove placeholder once we have a value
-        placeholder?.remove();
-      }
-    },
-  );
-
-  select.addEventListener("change", () => {
-    if (select.value) {
-      chrome.runtime.sendMessage({
-        type: "set-playback-speed",
-        rate: Number(select.value),
-      });
-    }
+  bindSelect(container, "playback-speed-select", {
+    getType: "get-playback-speed",
+    setType: "set-playback-speed",
+    parseData: (data) => String(data ?? 1),
+    setKey: "rate",
+    transformValue: (v) => Number(v),
   });
 }
 
