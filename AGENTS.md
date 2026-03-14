@@ -98,16 +98,25 @@ the extension can be optested.
 
 ---
 
-## Popup Binding Helpers
+## Shared UI Library
 
-Use shared helpers in `src/popup/` for standard popup controls:
+### Popup Binding Helpers (`src/popup/`)
+
+Use shared helpers for standard popup controls:
 
 - `bindToggle` — checkbox get/set wiring
 - `bindSelect` — select dropdown get/set wiring
 - `bindRange` — range slider get/set wiring (with optional number input sync and
   filled track)
 
-See [docs/popup-helpers.md](docs/popup-helpers.md) for full API reference.
+### UI Components (`src/ui/`)
+
+Standalone components for any DOM context (popup, PiP, content script):
+
+- `ProgressBarController` + `progress-bar.css` — seekable progress bar with
+  drag-to-seek, CSS custom property theming
+
+See [docs/shared-ui.md](docs/shared-ui.md) for full API reference.
 
 ---
 
@@ -117,6 +126,6 @@ See [docs/popup-helpers.md](docs/popup-helpers.md) for full API reference.
 2. Implement the `FeatureModule` interface.
 3. Register the module in `src/background/index.ts`.
 4. Optionally register a popup view in `src/modules/popup-views.ts`.
-5. Use shared popup binding helpers for standard controls.
+5. Use shared popup binding helpers and UI components for standard controls.
 6. Write tests in `tests/modules/<module-name>/`.
 7. No changes to existing modules should be required.

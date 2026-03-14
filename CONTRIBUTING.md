@@ -123,22 +123,33 @@ If using browser-specific APIs:
 - Gate behavior behind capability checks or graceful fallbacks.
 - Verify Chrome, Edge, and Firefox builds succeed.
 
-## Popup Binding Helpers
+## Shared UI Library
 
-Shared helpers in `src/popup/` wire HTML template elements to background
-messaging. Use these instead of writing manual `sendMessage` get/set boilerplate
-in popup views.
+Reusable UI primitives are split across two directories:
+
+### Popup Binding Helpers (`src/popup/`)
+
+Wire HTML template elements to background messaging. Use these instead of
+writing manual `sendMessage` get/set boilerplate in popup views.
 
 - `bindToggle` — checkboxes
 - `bindSelect` — select dropdowns
 - `bindRange` — range sliders (with optional number input sync and filled track)
 
-See [docs/popup-helpers.md](docs/popup-helpers.md) for API reference, usage
-examples, and guidelines on when manual wiring is still appropriate.
+### UI Components (`src/ui/`)
+
+Standalone components that work in any DOM context (popup, PiP window, content
+script). No dependency on `chrome.runtime`.
+
+- `ProgressBarController` + `progress-bar.css` — seekable progress bar with
+  drag-to-seek, themeable via CSS custom properties
+
+See [docs/shared-ui.md](docs/shared-ui.md) for full API reference, usage
+examples, and guidelines.
 
 All `data-role` values must be unique across module templates and prefixed with
 the module name (e.g., `notifications-toggle`, not `toggle`). A test enforces
-this — see [docs/popup-helpers.md](docs/popup-helpers.md) for details.
+this — see [docs/shared-ui.md](docs/shared-ui.md) for details.
 
 ## Coding Guidelines
 
@@ -147,7 +158,7 @@ this — see [docs/popup-helpers.md](docs/popup-helpers.md) for details.
 - Isolate YouTube Music DOM interactions to adapter/content runtime.
 - Prefer event-driven updates over polling where practical.
 - Keep popup rendering template-driven.
-- Use shared popup binding helpers for standard controls.
+- Use shared popup binding helpers and UI components for standard controls.
 - Avoid introducing dead code or unused exports.
 
 ## Testing Expectations

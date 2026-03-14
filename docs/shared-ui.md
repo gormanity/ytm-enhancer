@@ -1,3 +1,14 @@
+# Shared UI Library
+
+Reusable UI primitives live in two places:
+
+- **`src/popup/`** — binding helpers that wire HTML elements to
+  `chrome.runtime.sendMessage` get/set patterns.
+- **`src/ui/`** — standalone UI components (CSS + TypeScript) that work in any
+  DOM context (popup, PiP window, content script).
+
+---
+
 # Popup Binding Helpers
 
 Shared helpers in `src/popup/` wire HTML template elements to
@@ -235,3 +246,141 @@ When adding a new shared helper:
 4. Document the helper in this file.
 5. Migrate one module first as a proof of concept, then migrate remaining
    modules in separate, atomic changes.
+
+---
+
+# UI Components
+
+Standalone components in `src/ui/` provide consistent visuals and behavior
+across all DOM contexts — popup, PiP window, or content script. They have no
+dependency on `chrome.runtime` or popup infrastructure.
+
+---
+
+## Progress Bar
+
+**Files:** `src/ui/progress-bar.css`, `src/ui/progress-bar.ts`
+
+A seekable progress bar with fill, thumb, drag-to-seek, and time formatting.
+Used by the Playback Controls popup and the PiP mini player.
+
+### CSS
+
+Import the shared stylesheet, then set CSS custom properties on a wrapper
+element to theme the bar for your context.
+
+#### Popup (CSS import)
+
+```css
+@import "../ui/progress-bar.css";
+
+.my-progress-wrapper {
+  --progress-fill-color: var(--accent-color);
+  --progress-thumb-color: var(--accent-color);
+  --progress-thumb-opacity: 0;
+  --progress-transition: 0.3s linear;
+}
+```
+
+#### PiP / injected context (raw string)
+
+```typescript
+import progressBarCss from "@/ui/progress-bar.css?raw";
+
+style.textContent = progressBarCss + myOtherStyles;
+```
+
+#### CSS custom properties
+
+| Property                   | Default          | Description           |
+| -------------------------- | ---------------- | --------------------- |
+| `--progress-bar-bg`        | `#3f3f3f`        | Track background      |
+| `--progress-fill-color`    | `currentColor`   | Filled portion color  |
+| `--progress-thumb-size`    | `10px`           | Thumb diameter        |
+| `--progress-thumb-color`   | `currentColor`   | Thumb color           |
+| `--progress-thumb-shadow`  | `none`           | Thumb box-shadow      |
+| `--progress-thumb-opacity` | `1`              | Thumb resting opacity |
+| `--progress-transition`    | `140ms ease-out` | Fill/thumb transition |
+| `--progress-time-color`    | `#aaa`           | Time label color      |
+
+#### Shared class names
+
+Use these classes in your HTML or DOM construction:
+
+- `.progress-bar` — the clickable track (receives mousedown)
+- `.progress-fill` — the filled portion
+- `.progress-thumb` — the draggable indicator
+- `.progress-time` — elapsed/duration label container
+- `.is-dragging` — added automatically during drag (disables transitions)
+
+### HTML
+
+```html
+<div class="my-progress-wrapper">
+  <div class="progress-bar">
+    <div class="progress-fill"></div>
+    <div class="progress-thumb"></div>
+  </div>
+  <div class="progress-time">
+    <span>0:00</span>
+    <span>0:00</span>
+  </div>
+</div>
+```
+
+### TypeScript
+
+```typescript
+import {
+  ProgressBarController,
+  formatTimestamp,
+  progressPercent,
+} from "@/ui/progress-bar";
+
+const ctrl = new ProgressBarController(
+  { bar, fill, thumb },
+  {
+    onSeek: (time) => {
+      /* seek to time in seconds */
+    },
+    onDrag: (ratio) => {
+      /* update elapsed display during drag */
+    },
+    doc: pipDocument, // optional: for PiP windows
+  },
+);
+
+// Poll or event-driven update:
+ctrl.setProgress(currentTime, duration);
+
+// Clean up:
+ctrl.destroy();
+```
+
+#### `ProgressBarController` options
+
+| Option          | Type                      | Default         | Description                           |
+| --------------- | ------------------------- | --------------- | ------------------------------------- |
+| `onSeek`        | `(time: number) => void`  | —               | Called on click/drag with seek time   |
+| `onDrag`        | `(ratio: number) => void` | —               | Called during drag with position 0–1  |
+| `draggingClass` | `string`                  | `"is-dragging"` | CSS class added to bar during drag    |
+| `doc`           | `Document`                | `document`      | Document for mousemove/mouseup events |
+
+#### Utility functions
+
+- `formatTimestamp(seconds)` — returns `m:ss` or `h:mm:ss`
+- `progressPercent(progress, duration)` — returns 0–100, rounded
+
+---
+
+## Adding new UI components
+
+When adding a new shared UI component:
+
+1. Create `src/ui/<component>.css` for styles (use CSS custom properties for
+   theming).
+2. Create `src/ui/<component>.ts` for behavior.
+3. Add tests in `tests/ui/<component>.test.ts`.
+4. Document the component in this file.
+5. Ensure the dead CSS checker scans `src/ui` (already configured).
+6. Migrate one consumer first, then remaining consumers in separate changes.
