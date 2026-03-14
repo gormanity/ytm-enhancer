@@ -173,8 +173,9 @@ describe("PipWindowRenderer", () => {
   it("should render time display text", () => {
     renderer.build(doc, makeState({ progress: 83, duration: 225 }), onAction);
 
-    const timeDisplay = doc.querySelector(".time-display");
-    expect(timeDisplay?.textContent).toBe("1:23 / 3:45");
+    const spans = doc.querySelectorAll(".progress-time span");
+    expect(spans[0]?.textContent).toBe("1:23");
+    expect(spans[1]?.textContent).toBe("3:45");
   });
 
   it("should format time display with hours for long tracks", () => {
@@ -184,8 +185,9 @@ describe("PipWindowRenderer", () => {
       onAction,
     );
 
-    const timeDisplay = doc.querySelector(".time-display");
-    expect(timeDisplay?.textContent).toBe("1:02:30 / 1:15:00");
+    const spans = doc.querySelectorAll(".progress-time span");
+    expect(spans[0]?.textContent).toBe("1:02:30");
+    expect(spans[1]?.textContent).toBe("1:15:00");
   });
 
   it("should update progress bar on state change", () => {
@@ -202,8 +204,9 @@ describe("PipWindowRenderer", () => {
 
     renderer.update(makeState({ progress: 83, duration: 225 }));
 
-    const timeDisplay = doc.querySelector(".time-display");
-    expect(timeDisplay?.textContent).toBe("1:23 / 3:45");
+    const spans = doc.querySelectorAll(".progress-time span");
+    expect(spans[0]?.textContent).toBe("1:23");
+    expect(spans[1]?.textContent).toBe("3:45");
   });
 
   it("should show 0% progress when duration is 0", () => {

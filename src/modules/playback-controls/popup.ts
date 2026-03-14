@@ -2,7 +2,7 @@ import type { PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
 import { bindRange } from "@/popup/bind-range";
-import { ProgressBarController, formatTimestamp } from "@/ui/progress-bar";
+import { createProgressBar } from "@/ui/progress-bar";
 import ytmTabFallbackIconUrl from "@/assets/ytm-logo.svg";
 import { renderPlaybackSpeedSelectControl } from "./playback-speed/popup";
 import { renderStreamQualitySelectControl } from "./stream-quality/popup";
@@ -48,12 +48,7 @@ interface NowPlayingElements {
   prevButton: HTMLButtonElement;
   playButton: HTMLButtonElement;
   nextButton: HTMLButtonElement;
-  progressContainer: HTMLElement;
-  progressBar: HTMLElement;
-  progressFill: HTMLElement;
-  progressThumb: HTMLElement;
-  elapsed: HTMLElement;
-  duration: HTMLElement;
+  progressSlot: HTMLElement;
 }
 
 /** Create the combined Playback Controls popup view. */
@@ -95,23 +90,8 @@ export function createPlaybackControlsPopupView(): PopupView {
       const nextButton = container.querySelector<HTMLButtonElement>(
         '[data-role="quick-now-playing-next"]',
       );
-      const progressContainer = container.querySelector<HTMLElement>(
+      const progressSlot = container.querySelector<HTMLElement>(
         '[data-role="quick-now-playing-progress"]',
-      );
-      const progressBar = container.querySelector<HTMLElement>(
-        '[data-role="quick-now-playing-progress-bar"]',
-      );
-      const progressFill = container.querySelector<HTMLElement>(
-        '[data-role="quick-now-playing-progress-fill"]',
-      );
-      const progressThumb = container.querySelector<HTMLElement>(
-        '[data-role="quick-now-playing-progress-thumb"]',
-      );
-      const elapsed = container.querySelector<HTMLElement>(
-        '[data-role="quick-now-playing-elapsed"]',
-      );
-      const duration = container.querySelector<HTMLElement>(
-        '[data-role="quick-now-playing-duration"]',
       );
       const speedSlot = container.querySelector<HTMLElement>(
         '[data-role="quick-speed-slot"]',
@@ -130,12 +110,7 @@ export function createPlaybackControlsPopupView(): PopupView {
         !prevButton ||
         !playButton ||
         !nextButton ||
-        !progressContainer ||
-        !progressBar ||
-        !progressFill ||
-        !progressThumb ||
-        !elapsed ||
-        !duration ||
+        !progressSlot ||
         !speedSlot ||
         !qualitySlot
       ) {
@@ -154,12 +129,7 @@ export function createPlaybackControlsPopupView(): PopupView {
           prevButton,
           playButton,
           nextButton,
-          progressContainer,
-          progressBar,
-          progressFill,
-          progressThumb,
-          elapsed,
-          duration,
+          progressSlot,
         }),
       );
       const volumePlaceholder = container.querySelector<HTMLElement>(
@@ -393,12 +363,7 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
     prevButton,
     playButton,
     nextButton,
-    progressContainer,
-    progressBar,
-    progressFill,
-    progressThumb,
-    elapsed,
-    duration,
+    progressSlot,
   } = elements;
 
   artwork.onerror = () => {
@@ -416,23 +381,16 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
   nextButton.onclick = () =>
     chrome.runtime.sendMessage({ type: "playback-action", action: "next" });
 
-  const progressCtrl = new ProgressBarController(
-    { bar: progressBar, fill: progressFill, thumb: progressThumb },
-    {
-      onSeek: (time) => {
-        chrome.runtime.sendMessage({
-          type: "playback-action",
-          action: "seekTo",
-          time,
-        });
-      },
-      onDrag: (ratio) => {
-        elapsed.textContent = formatTimestamp(ratio * lastDuration);
-      },
+  const progressBar = createProgressBar({
+    onSeek: (time) => {
+      chrome.runtime.sendMessage({
+        type: "playback-action",
+        action: "seekTo",
+        time,
+      });
     },
-  );
-
-  let lastDuration = 0;
+  });
+  progressSlot.replaceChildren(progressBar.element);
 
   const update = () => {
     chrome.runtime.sendMessage(
@@ -455,16 +413,11 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
           artist.textContent = state.artist || "Start playback to see details";
           controls.classList.toggle("is-hidden", !hasTrack);
 
-          lastDuration = state.duration;
           if (hasTrack && state.duration > 0) {
-            progressCtrl.setProgress(state.progress, state.duration);
-            if (!progressCtrl.dragging) {
-              elapsed.textContent = formatTimestamp(state.progress);
-            }
-            duration.textContent = formatTimestamp(state.duration);
-            progressContainer.classList.remove("is-hidden");
+            progressBar.setProgress(state.progress, state.duration);
+            progressSlot.classList.remove("is-hidden");
           } else {
-            progressContainer.classList.add("is-hidden");
+            progressSlot.classList.add("is-hidden");
           }
 
           setButtonSvgIcon(
@@ -474,7 +427,7 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
         } else {
           artwork.classList.add("is-hidden");
           controls.classList.add("is-hidden");
-          progressContainer.classList.add("is-hidden");
+          progressSlot.classList.add("is-hidden");
           if (response?.error === "No YTM tab") {
             title.textContent = "YouTube Music not found";
             artist.textContent = "Open YTM to get started";
@@ -490,7 +443,7 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
   update();
   const pollId = window.setInterval(update, PLAYBACK_STATE_POLL_INTERVAL_MS);
   return () => {
-    progressCtrl.destroy();
+    progressBar.destroy();
     window.clearInterval(pollId);
   };
 }

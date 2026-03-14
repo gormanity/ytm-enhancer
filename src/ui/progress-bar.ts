@@ -6,6 +6,8 @@
  * PiP mini player.
  */
 
+import templateHtml from "./progress-bar.html?raw";
+
 export interface ProgressBarElements {
   /** The clickable bar area (receives mousedown). */
   bar: HTMLElement;
@@ -113,6 +115,90 @@ export class ProgressBarController {
     this.doc.addEventListener("mousemove", onMove);
     this.doc.addEventListener("mouseup", onUp);
   }
+}
+
+/** A fully encapsulated progress bar component. */
+export interface ProgressBarComponent {
+  /** Root element — append this to the DOM. */
+  element: HTMLElement;
+  /** Update bar position and time labels from external state. */
+  setProgress(current: number, duration: number): void;
+  /** Whether the user is currently dragging. */
+  readonly dragging: boolean;
+  /** Remove all event listeners. */
+  destroy(): void;
+}
+
+export interface CreateProgressBarOptions {
+  /** Called when the user seeks to a position (time in seconds). */
+  onSeek: (time: number) => void;
+  /**
+   * Document to create elements in and attach drag listeners to.
+   * Default: `document`. Set to the PiP document when used inside
+   * a Document PiP window.
+   */
+  doc?: Document;
+}
+
+/**
+ * Create a self-contained progress bar from the shared HTML
+ * template with fill, thumb, time labels, and drag-to-seek.
+ *
+ * Just append `element` to the DOM and call `setProgress()`.
+ */
+export function createProgressBar(
+  options: CreateProgressBarOptions,
+): ProgressBarComponent {
+  const doc = options.doc ?? document;
+
+  const parsed = new DOMParser().parseFromString(
+    templateHtml.trim(),
+    "text/html",
+  );
+  const wrapper = doc.importNode(
+    parsed.body.firstElementChild!,
+    true,
+  ) as HTMLElement;
+
+  const bar = wrapper.querySelector<HTMLElement>(".progress-bar")!;
+  const fill = wrapper.querySelector<HTMLElement>(".progress-fill")!;
+  const thumb = wrapper.querySelector<HTMLElement>(".progress-thumb")!;
+  const elapsedEl = wrapper.querySelector<HTMLElement>(".progress-elapsed")!;
+  const durationEl = wrapper.querySelector<HTMLElement>(".progress-duration")!;
+
+  let lastDuration = 0;
+
+  const ctrl = new ProgressBarController(
+    { bar, fill, thumb },
+    {
+      onSeek: options.onSeek,
+      onDrag: (ratio) => {
+        elapsedEl.textContent = formatTimestamp(ratio * lastDuration);
+      },
+      doc,
+    },
+  );
+
+  return {
+    element: wrapper,
+
+    setProgress(current: number, duration: number): void {
+      lastDuration = duration;
+      ctrl.setProgress(current, duration);
+      if (!ctrl.dragging) {
+        elapsedEl.textContent = formatTimestamp(current);
+      }
+      durationEl.textContent = formatTimestamp(duration);
+    },
+
+    get dragging(): boolean {
+      return ctrl.dragging;
+    },
+
+    destroy(): void {
+      ctrl.destroy();
+    },
+  };
 }
 
 /**

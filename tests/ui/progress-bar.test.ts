@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   ProgressBarController,
+  createProgressBar,
   formatTimestamp,
   progressPercent,
 } from "@/ui/progress-bar";
@@ -253,6 +254,177 @@ describe("ProgressBarController", () => {
     ctrl.destroy();
 
     elements.bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 200 }));
+    expect(onSeek).not.toHaveBeenCalled();
+  });
+});
+
+describe("createProgressBar", () => {
+  it("should create element with correct DOM structure", () => {
+    const onSeek = vi.fn<(time: number) => void>();
+    const pb = createProgressBar({ onSeek });
+
+    expect(pb.element.className).toBe("progress-container");
+    expect(pb.element.querySelector(".progress-bar")).toBeTruthy();
+    expect(pb.element.querySelector(".progress-fill")).toBeTruthy();
+    expect(pb.element.querySelector(".progress-thumb")).toBeTruthy();
+    expect(pb.element.querySelector(".progress-time")).toBeTruthy();
+    expect(pb.element.querySelectorAll(".progress-time span")).toHaveLength(2);
+  });
+
+  it("should show initial time as 0:00", () => {
+    const pb = createProgressBar({ onSeek: vi.fn() });
+    const spans = pb.element.querySelectorAll(".progress-time span");
+
+    expect(spans[0].textContent).toBe("0:00");
+    expect(spans[1].textContent).toBe("0:00");
+  });
+
+  it("should update time labels on setProgress", () => {
+    const pb = createProgressBar({ onSeek: vi.fn() });
+    pb.setProgress(65, 200);
+
+    const spans = pb.element.querySelectorAll(".progress-time span");
+    expect(spans[0].textContent).toBe("1:05");
+    expect(spans[1].textContent).toBe("3:20");
+  });
+
+  it("should update fill and thumb on setProgress", () => {
+    const pb = createProgressBar({ onSeek: vi.fn() });
+    pb.setProgress(50, 200);
+
+    const fill = pb.element.querySelector<HTMLElement>(".progress-fill")!;
+    const thumb = pb.element.querySelector<HTMLElement>(".progress-thumb")!;
+    expect(fill.style.width).toBe("25%");
+    expect(thumb.style.left).toBe("25%");
+  });
+
+  it("should call onSeek on click", () => {
+    const onSeek = vi.fn<(time: number) => void>();
+    const pb = createProgressBar({ onSeek });
+
+    const bar = pb.element.querySelector<HTMLElement>(".progress-bar")!;
+    vi.spyOn(bar, "getBoundingClientRect").mockReturnValue({
+      left: 100,
+      right: 300,
+      width: 200,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 100,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    pb.setProgress(0, 200);
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 200 }));
+    expect(onSeek).toHaveBeenCalledWith(100);
+  });
+
+  it("should update elapsed during drag", () => {
+    const onSeek = vi.fn<(time: number) => void>();
+    const pb = createProgressBar({ onSeek });
+
+    const bar = pb.element.querySelector<HTMLElement>(".progress-bar")!;
+    vi.spyOn(bar, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      right: 100,
+      width: 100,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    pb.setProgress(0, 300);
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 50 }));
+
+    const elapsed = pb.element.querySelectorAll(".progress-time span")[0];
+    expect(elapsed.textContent).toBe("2:30"); // 50% of 300s
+  });
+
+  it("should suppress elapsed updates during drag", () => {
+    const onSeek = vi.fn<(time: number) => void>();
+    const pb = createProgressBar({ onSeek });
+
+    const bar = pb.element.querySelector<HTMLElement>(".progress-bar")!;
+    vi.spyOn(bar, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      right: 100,
+      width: 100,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    pb.setProgress(0, 200);
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 50 }));
+
+    // Drag shows 50% of 200 = 100s
+    const elapsed = pb.element.querySelectorAll(".progress-time span")[0];
+    expect(elapsed.textContent).toBe("1:40");
+
+    // Polling update should not overwrite elapsed
+    pb.setProgress(10, 200);
+    expect(elapsed.textContent).toBe("1:40");
+
+    // But duration should still update
+    const duration = pb.element.querySelectorAll(".progress-time span")[1];
+    expect(duration.textContent).toBe("3:20");
+  });
+
+  it("should report dragging state", () => {
+    const onSeek = vi.fn<(time: number) => void>();
+    const pb = createProgressBar({ onSeek });
+
+    const bar = pb.element.querySelector<HTMLElement>(".progress-bar")!;
+    vi.spyOn(bar, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      right: 100,
+      width: 100,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    pb.setProgress(0, 200);
+    expect(pb.dragging).toBe(false);
+
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 50 }));
+    expect(pb.dragging).toBe(true);
+
+    document.dispatchEvent(new MouseEvent("mouseup"));
+    expect(pb.dragging).toBe(false);
+  });
+
+  it("should clean up on destroy", () => {
+    const onSeek = vi.fn<(time: number) => void>();
+    const pb = createProgressBar({ onSeek });
+
+    const bar = pb.element.querySelector<HTMLElement>(".progress-bar")!;
+    vi.spyOn(bar, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      right: 100,
+      width: 100,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    pb.setProgress(0, 200);
+    pb.destroy();
+
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 50 }));
     expect(onSeek).not.toHaveBeenCalled();
   });
 });

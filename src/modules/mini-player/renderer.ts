@@ -1,10 +1,7 @@
 import type { PlaybackAction, PlaybackState } from "@/core/types";
 import { setElementSvgIcon } from "@/core/svg-icon";
-import {
-  ProgressBarController,
-  formatTimestamp,
-  progressPercent,
-} from "@/ui/progress-bar";
+import type { ProgressBarComponent } from "@/ui/progress-bar";
+import { createProgressBar } from "@/ui/progress-bar";
 import progressBarCss from "@/ui/progress-bar.css?raw";
 
 const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
@@ -131,13 +128,6 @@ const STYLES = `
     --progress-time-color: #adadad;
     width: 100%;
     margin: 3px 0 0;
-    flex-shrink: 0;
-  }
-  .time-display {
-    font-size: 10px;
-    color: #adadad;
-    text-align: left;
-    margin: 0;
     flex-shrink: 0;
   }
   .controls {
@@ -400,8 +390,7 @@ export class PipWindowRenderer {
   private artistEl: HTMLElement | null = null;
   private albumEl: HTMLElement | null = null;
   private playPauseBtn: HTMLButtonElement | null = null;
-  private progressCtrl: ProgressBarController | null = null;
-  private timeDisplayEl: HTMLElement | null = null;
+  private progressBar: ProgressBarComponent | null = null;
   private likeBtn: HTMLButtonElement | null = null;
   private dislikeBtn: HTMLButtonElement | null = null;
   private volumeRange: HTMLInputElement | null = null;
@@ -469,39 +458,12 @@ export class PipWindowRenderer {
     this.albumEl = albumLine;
     info.appendChild(albumLine);
 
-    const progressContainer = doc.createElement("div");
-    progressContainer.className = "progress-container";
-    const progressBar = doc.createElement("div");
-    progressBar.className = "progress-bar";
-
-    const progressFill = doc.createElement("div");
-    progressFill.className = "progress-fill";
-    const pct = progressPercent(state.progress, state.duration);
-    progressFill.style.width = pct + "%";
-
-    const progressThumb = doc.createElement("div");
-    progressThumb.className = "progress-thumb";
-    progressThumb.style.left = pct + "%";
-
-    progressBar.appendChild(progressFill);
-    progressBar.appendChild(progressThumb);
-    progressContainer.appendChild(progressBar);
-    info.appendChild(progressContainer);
-
-    this.progressCtrl = new ProgressBarController(
-      { bar: progressBar, fill: progressFill, thumb: progressThumb },
-      {
-        onSeek: (time) => onSeek?.(time),
-        doc,
-      },
-    );
-    this.progressCtrl.setProgress(state.progress, state.duration);
-
-    const timeDisplay = doc.createElement("div");
-    timeDisplay.className = "time-display";
-    timeDisplay.textContent = this.formatTimeDisplay(state);
-    this.timeDisplayEl = timeDisplay;
-    info.appendChild(timeDisplay);
+    this.progressBar = createProgressBar({
+      onSeek: (time) => onSeek?.(time),
+      doc,
+    });
+    this.progressBar.setProgress(state.progress, state.duration);
+    info.appendChild(this.progressBar.element);
 
     const controlRow = doc.createElement("div");
     controlRow.className = "control-row";
@@ -595,10 +557,7 @@ export class PipWindowRenderer {
     if (this.albumEl) {
       this.albumEl.textContent = this.formatAlbumLine(state);
     }
-    this.progressCtrl?.setProgress(state.progress, state.duration);
-    if (this.timeDisplayEl) {
-      this.timeDisplayEl.textContent = this.formatTimeDisplay(state);
-    }
+    this.progressBar?.setProgress(state.progress, state.duration);
     if (this.playPauseBtn) {
       setElementSvgIcon(
         this.playPauseBtn,
@@ -646,10 +605,6 @@ export class PipWindowRenderer {
     if (state.album) parts.push(state.album);
     if (state.year) parts.push(String(state.year));
     return parts.join(" \u00B7 ");
-  }
-
-  private formatTimeDisplay(state: PlaybackState): string {
-    return `${formatTimestamp(state.progress)} / ${formatTimestamp(state.duration)}`;
   }
 
   private createControlButton(
