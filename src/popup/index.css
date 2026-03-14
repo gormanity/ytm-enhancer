@@ -1,4 +1,5 @@
 @import "../ui/progress-bar.css";
+@import "../ui/range-slider.css";
 
 /* Theme Variables */
 :root {
@@ -421,42 +422,7 @@ input[type="checkbox"]:disabled {
   cursor: not-allowed;
 }
 
-input[type="range"] {
-  accent-color: var(--accent-color);
-  width: 100%;
-  margin: 12px 0;
-  cursor: pointer;
-  height: 6px;
-  background: #3f3f3f;
-  border-radius: 3px;
-  appearance: none;
-  outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  background: var(--text-color);
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-}
-
-input[type="range"]:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-input[type="range"]:disabled::-webkit-slider-thumb {
-  width: 0;
-  height: 0;
-}
-
-input[type="range"]:disabled::-moz-range-thumb {
-  width: 0;
-  height: 0;
-}
+/* Range slider base styles provided by the shared UI import above */
 
 input[type="number"] {
   background: #1a1a1a;

@@ -142,7 +142,6 @@ export function createPlaybackControlsPopupView(): PopupView {
         parseData: (data) => Math.round(((data as number) ?? 1) * 100),
         transformValue: (v) => v / 100,
         numberInputRole: "quick-volume-number-input",
-        fillTrack: true,
         onLoaded: () => volumePlaceholder?.remove(),
       });
       renderPlaybackSpeedSelectControl(speedSlot);

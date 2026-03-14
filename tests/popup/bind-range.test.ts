@@ -13,19 +13,17 @@ describe("bindRange", () => {
 
   function createContainer(opts?: {
     dataRole?: string;
-    min?: string;
-    max?: string;
+    min?: number;
+    max?: number;
     numberInputRole?: string;
     displayRole?: string;
   }): HTMLElement {
     const container = document.createElement("div");
-    const range = document.createElement("input");
-    range.type = "range";
-    range.min = opts?.min ?? "0";
-    range.max = opts?.max ?? "100";
-    range.value = "0";
-    range.setAttribute("data-role", opts?.dataRole ?? "my-range");
-    container.appendChild(range);
+    const slot = document.createElement("div");
+    slot.setAttribute("data-role", opts?.dataRole ?? "my-range");
+    if (opts?.min != null) slot.dataset.min = String(opts.min);
+    if (opts?.max != null) slot.dataset.max = String(opts.max);
+    container.appendChild(slot);
 
     if (opts?.numberInputRole) {
       const numInput = document.createElement("input");
@@ -43,24 +41,23 @@ describe("bindRange", () => {
     return container;
   }
 
-  function getRange(container: HTMLElement, dataRole: string) {
-    return container.querySelector<HTMLInputElement>(
-      `[data-role="${dataRole}"]`,
-    )!;
+  function getRange(container: HTMLElement): HTMLInputElement {
+    return container.querySelector<HTMLInputElement>("input.range-slider")!;
   }
 
   function getElement(container: HTMLElement, dataRole: string) {
     return container.querySelector<HTMLElement>(`[data-role="${dataRole}"]`)!;
   }
 
-  it("should disable range initially and send get message", () => {
+  it("should inject a range slider and disable it initially", () => {
     const container = createContainer();
     bindRange(container, "my-range", {
       getType: "get-my-value",
       setType: "set-my-value",
     });
 
-    const range = getRange(container, "my-range");
+    const range = getRange(container);
+    expect(range).not.toBeNull();
     expect(range.disabled).toBe(true);
     expect(sendMessageMock).toHaveBeenCalledWith(
       { type: "get-my-value" },
@@ -84,7 +81,7 @@ describe("bindRange", () => {
       setType: "set-my-value",
     });
 
-    const range = getRange(container, "my-range");
+    const range = getRange(container);
     expect(range.disabled).toBe(false);
     expect(range.value).toBe("75");
   });
@@ -105,7 +102,7 @@ describe("bindRange", () => {
       setType: "set-my-value",
     });
 
-    expect(getRange(container, "my-range").disabled).toBe(true);
+    expect(getRange(container).disabled).toBe(true);
   });
 
   it("should send set message with default key on input", () => {
@@ -124,7 +121,7 @@ describe("bindRange", () => {
       setType: "set-my-value",
     });
 
-    const range = getRange(container, "my-range");
+    const range = getRange(container);
     range.value = "80";
     range.dispatchEvent(new Event("input"));
 
@@ -152,7 +149,7 @@ describe("bindRange", () => {
       transformValue: (v) => v / 100,
     });
 
-    const range = getRange(container, "my-range");
+    const range = getRange(container);
     range.value = "60";
     range.dispatchEvent(new Event("input"));
 
@@ -179,7 +176,7 @@ describe("bindRange", () => {
       parseData: (data) => Math.round((data as number) * 100),
     });
 
-    expect(getRange(container, "my-range").value).toBe("75");
+    expect(getRange(container).value).toBe("75");
   });
 
   it("should sync paired number input on load", () => {
@@ -199,7 +196,9 @@ describe("bindRange", () => {
       numberInputRole: "my-num",
     });
 
-    const numInput = getRange(container, "my-num");
+    const numInput = container.querySelector<HTMLInputElement>(
+      '[data-role="my-num"]',
+    )!;
     expect(numInput.disabled).toBe(false);
     expect(numInput.value).toBe("42");
   });
@@ -221,11 +220,14 @@ describe("bindRange", () => {
       numberInputRole: "my-num",
     });
 
-    const range = getRange(container, "my-range");
+    const range = getRange(container);
     range.value = "70";
     range.dispatchEvent(new Event("input"));
 
-    expect(getRange(container, "my-num").value).toBe("70");
+    const numInput = container.querySelector<HTMLInputElement>(
+      '[data-role="my-num"]',
+    )!;
+    expect(numInput.value).toBe("70");
   });
 
   it("should sync range from number input change and clamp", () => {
@@ -245,13 +247,15 @@ describe("bindRange", () => {
       numberInputRole: "my-num",
     });
 
-    const numInput = getRange(container, "my-num");
+    const numInput = container.querySelector<HTMLInputElement>(
+      '[data-role="my-num"]',
+    )!;
     numInput.value = "150";
     numInput.dispatchEvent(new Event("change"));
 
     // Clamped to max of 100
     expect(numInput.value).toBe("100");
-    expect(getRange(container, "my-range").value).toBe("100");
+    expect(getRange(container).value).toBe("100");
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-val",
       value: 100,
@@ -279,14 +283,14 @@ describe("bindRange", () => {
     const display = getElement(container, "my-display");
     expect(display.textContent).toBe("50%");
 
-    const range = getRange(container, "my-range");
+    const range = getRange(container);
     range.value = "80";
     range.dispatchEvent(new Event("input"));
 
     expect(display.textContent).toBe("80%");
   });
 
-  it("should apply filled-track gradient when fillTrack is true", () => {
+  it("should always apply filled-track gradient", () => {
     sendMessageMock.mockImplementation(
       (message: unknown, callback?: (response: unknown) => void) => {
         const msg = message as { type: string };
@@ -300,10 +304,9 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-val",
       setType: "set-val",
-      fillTrack: true,
     });
 
-    const range = getRange(container, "my-range");
+    const range = getRange(container);
     expect(range.style.background).toContain("linear-gradient");
     expect(range.style.background).toContain("50%");
   });
@@ -326,7 +329,7 @@ describe("bindRange", () => {
       onLoaded,
     });
 
-    expect(onLoaded).toHaveBeenCalledWith(getRange(container, "my-range"));
+    expect(onLoaded).toHaveBeenCalledWith(getRange(container));
   });
 
   it("should disable number input initially", () => {
@@ -337,7 +340,10 @@ describe("bindRange", () => {
       numberInputRole: "my-num",
     });
 
-    expect(getRange(container, "my-num").disabled).toBe(true);
+    const numInput = container.querySelector<HTMLInputElement>(
+      '[data-role="my-num"]',
+    )!;
+    expect(numInput.disabled).toBe(true);
   });
 
   it("should do nothing if data-role element is missing", () => {
@@ -348,5 +354,26 @@ describe("bindRange", () => {
     });
 
     expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("should read min/max from slot data attributes", () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        const msg = message as { type: string };
+        if (msg.type === "get-val") {
+          callback?.({ ok: true, data: 75 });
+        }
+      },
+    );
+
+    const container = createContainer({ min: 50, max: 150 });
+    bindRange(container, "my-range", {
+      getType: "get-val",
+      setType: "set-val",
+    });
+
+    const range = getRange(container);
+    expect(range.min).toBe("50");
+    expect(range.max).toBe("150");
   });
 });

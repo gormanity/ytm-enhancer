@@ -134,15 +134,17 @@ writing manual `sendMessage` get/set boilerplate in popup views.
 
 - `bindToggle` — checkboxes
 - `bindSelect` — select dropdowns
-- `bindRange` — range sliders (with optional number input sync and filled track)
+- `bindRange` — range sliders (creates a `RangeSliderComponent` in a slot)
 
 ### UI Components (`src/ui/`)
 
 Standalone components that work in any DOM context (popup, PiP window, content
 script). No dependency on `chrome.runtime`.
 
-- `ProgressBarController` + `progress-bar.css` — seekable progress bar with
+- `createProgressBar` + `progress-bar.css` — seekable progress bar with
   drag-to-seek, themeable via CSS custom properties
+- `createRangeSlider` + `range-slider.css` — themed range input with
+  auto-updating filled-track gradient
 
 See [docs/shared-ui.md](docs/shared-ui.md) for full API reference, usage
 examples, and guidelines.
