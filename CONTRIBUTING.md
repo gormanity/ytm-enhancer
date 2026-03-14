@@ -122,6 +122,18 @@ If using browser-specific APIs:
 - Gate behavior behind capability checks or graceful fallbacks.
 - Verify Chrome, Edge, and Firefox builds succeed.
 
+## Popup Binding Helpers
+
+Shared helpers in `src/popup/` wire HTML template elements to background
+messaging. Use these instead of writing manual `sendMessage` get/set boilerplate
+in popup views.
+
+- `bindToggle` — checkboxes
+- `bindSelect` — select dropdowns
+
+See [docs/popup-helpers.md](docs/popup-helpers.md) for API reference, usage
+examples, and guidelines on when manual wiring is still appropriate.
+
 ## Coding Guidelines
 
 - TypeScript strict mode only.
@@ -129,6 +141,7 @@ If using browser-specific APIs:
 - Isolate YouTube Music DOM interactions to adapter/content runtime.
 - Prefer event-driven updates over polling where practical.
 - Keep popup rendering template-driven.
+- Use shared popup binding helpers for standard controls.
 - Avoid introducing dead code or unused exports.
 
 ## Testing Expectations

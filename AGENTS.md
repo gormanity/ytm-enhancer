@@ -98,11 +98,23 @@ the extension can be optested.
 
 ---
 
+## Popup Binding Helpers
+
+Use shared helpers in `src/popup/` for standard popup controls:
+
+- `bindToggle` — checkbox get/set wiring
+- `bindSelect` — select dropdown get/set wiring
+
+See [docs/popup-helpers.md](docs/popup-helpers.md) for full API reference.
+
+---
+
 ## Adding a New Module
 
 1. Create `src/modules/<module-name>/`.
 2. Implement the `FeatureModule` interface.
 3. Register the module in `src/background/index.ts`.
 4. Optionally register a popup view in `src/modules/popup-views.ts`.
-5. Write tests in `tests/modules/<module-name>/`.
-6. No changes to existing modules should be required.
+5. Use shared popup binding helpers for standard controls.
+6. Write tests in `tests/modules/<module-name>/`.
+7. No changes to existing modules should be required.

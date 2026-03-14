@@ -1,0 +1,155 @@
+# Popup Binding Helpers
+
+Shared helpers in `src/popup/` wire HTML template elements to
+`chrome.runtime.sendMessage` get/set patterns. They eliminate repetitive
+boilerplate and enforce a consistent UX across popup views.
+
+## Design
+
+Popup views use HTML templates (loaded via Vite `?raw` imports and rendered with
+`renderPopupTemplate`) for layout and structure. Behavioral wiring — disabling
+controls until state loads, syncing with the background — is handled by these
+TypeScript helpers.
+
+Each helper follows the same lifecycle:
+
+1. Find the element by `data-role` attribute.
+2. Disable it.
+3. Send a GET message to the background to fetch initial state.
+4. On success, apply the state and enable the element.
+5. On user interaction, send a SET message to the background.
+
+If the target element is missing, the helper returns silently. This makes
+helpers safe to call unconditionally.
+
+---
+
+## `bindToggle`
+
+**File:** `src/popup/bind-toggle.ts`
+
+Wire a checkbox `<input>` to a boolean get/set message pair.
+
+### Usage
+
+```typescript
+import { bindToggle } from "@/popup/bind-toggle";
+
+bindToggle(container, "my-feature-toggle", {
+  getType: "get-my-feature-enabled",
+  setType: "set-my-feature-enabled",
+});
+```
+
+### HTML
+
+```html
+<input type="checkbox" data-role="my-feature-toggle" />
+```
+
+### Parameters
+
+| Parameter         | Type          | Description                     |
+| ----------------- | ------------- | ------------------------------- |
+| `container`       | `HTMLElement` | Parent element to search within |
+| `dataRole`        | `string`      | `data-role` attribute value     |
+| `options.getType` | `string`      | Message type for fetching state |
+| `options.setType` | `string`      | Message type for setting state  |
+
+### Expected message protocol
+
+**GET request:** `{ type: getType }` **GET response:**
+`{ ok: boolean; data?: boolean }` **SET request:**
+`{ type: setType, enabled: boolean }`
+
+---
+
+## `bindSelect`
+
+**File:** `src/popup/bind-select.ts`
+
+Wire a `<select>` element to a get/set message pair. Supports custom response
+parsing, payload keys, and value transforms.
+
+### Usage (simple)
+
+```typescript
+import { bindSelect } from "@/popup/bind-select";
+
+bindSelect(container, "my-select", {
+  getType: "get-my-value",
+  setType: "set-my-value",
+});
+```
+
+### Usage (with options)
+
+```typescript
+bindSelect(container, "playback-speed-select", {
+  getType: "get-playback-speed",
+  setType: "set-playback-speed",
+  parseData: (data) => String(data ?? 1),
+  setKey: "rate",
+  transformValue: (v) => Number(v),
+});
+```
+
+### HTML
+
+```html
+<select data-role="my-select">
+  <option value="">Select…</option>
+  <option value="a">Option A</option>
+  <option value="b">Option B</option>
+</select>
+```
+
+Placeholder options (`value=""`) are automatically removed on successful load.
+
+### Parameters
+
+| Parameter                | Type                                  | Default   | Description                                         |
+| ------------------------ | ------------------------------------- | --------- | --------------------------------------------------- |
+| `container`              | `HTMLElement`                         | —         | Parent element to search within                     |
+| `dataRole`               | `string`                              | —         | `data-role` attribute value                         |
+| `options.getType`        | `string`                              | —         | Message type for fetching state                     |
+| `options.setType`        | `string`                              | —         | Message type for setting state                      |
+| `options.setKey`         | `string`                              | `"value"` | Key name for the value in the SET message           |
+| `options.parseData`      | `(data: unknown) => string`           | `String`  | Extract the select value from `response.data`       |
+| `options.transformValue` | `(value: string) => unknown`          | identity  | Transform `select.value` for the SET payload        |
+| `options.onLoaded`       | `(select: HTMLSelectElement) => void` | —         | Called after GET succeeds and the select is enabled |
+
+### Expected message protocol
+
+**GET request:** `{ type: getType }` **GET response:**
+`{ ok: boolean; data?: unknown }` **SET request:**
+`{ type: setType, [setKey]: transformValue(select.value) }`
+
+The SET message is only sent when `select.value` is non-empty.
+
+---
+
+## When not to use these helpers
+
+These helpers cover the common "fetch initial state, sync on change" pattern.
+Use manual wiring when:
+
+- The control has side effects beyond sending a single message (e.g., disabling
+  the toggle during SET and re-enabling on callback).
+- Multiple controls share coupled state (e.g., audio visualizer tuning sliders
+  that update per-style).
+- The response shape requires updating multiple elements (e.g., notification
+  field checkboxes).
+
+---
+
+## Adding new helpers
+
+When adding a new shared helper:
+
+1. Create `src/popup/bind-<element>.ts`.
+2. Follow the same lifecycle pattern (find, disable, GET, enable, SET).
+3. Add tests in `tests/popup/bind-<element>.test.ts`.
+4. Document the helper in this file.
+5. Migrate one module first as a proof of concept, then migrate remaining
+   modules in separate, atomic changes.
