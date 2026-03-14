@@ -104,6 +104,8 @@ Use shared helpers in `src/popup/` for standard popup controls:
 
 - `bindToggle` — checkbox get/set wiring
 - `bindSelect` — select dropdown get/set wiring
+- `bindRange` — range slider get/set wiring (with optional number input sync and
+  filled track)
 
 See [docs/popup-helpers.md](docs/popup-helpers.md) for full API reference.
 

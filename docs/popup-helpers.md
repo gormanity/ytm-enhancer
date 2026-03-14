@@ -129,6 +129,70 @@ The SET message is only sent when `select.value` is non-empty.
 
 ---
 
+## `bindRange`
+
+**File:** `src/popup/bind-range.ts`
+
+Wire an `<input type="range">` to a get/set message pair. Optionally syncs a
+paired number input, a display element, and/or a filled-track gradient.
+
+### Usage (simple)
+
+```typescript
+import { bindRange } from "@/popup/bind-range";
+
+bindRange(container, "my-range", {
+  getType: "get-my-value",
+  setType: "set-my-value",
+});
+```
+
+### Usage (with options)
+
+```typescript
+bindRange(container, "quick-volume-range", {
+  getType: "get-volume",
+  setType: "set-volume",
+  setKey: "volume",
+  parseData: (data) => Math.round(((data as number) ?? 1) * 100),
+  transformValue: (v) => v / 100,
+  numberInputRole: "quick-volume-number-input",
+  fillTrack: true,
+  onLoaded: () => placeholder?.remove(),
+});
+```
+
+### HTML
+
+```html
+<input type="range" min="0" max="100" value="0" data-role="my-range" />
+```
+
+### Parameters
+
+| Parameter                 | Type                                | Default   | Description                                                                               |
+| ------------------------- | ----------------------------------- | --------- | ----------------------------------------------------------------------------------------- |
+| `container`               | `HTMLElement`                       | —         | Parent element to search within                                                           |
+| `dataRole`                | `string`                            | —         | `data-role` attribute value                                                               |
+| `options.getType`         | `string`                            | —         | Message type for fetching state                                                           |
+| `options.setType`         | `string`                            | —         | Message type for setting state                                                            |
+| `options.setKey`          | `string`                            | `"value"` | Key name for the value in the SET message                                                 |
+| `options.parseData`       | `(data: unknown) => number`         | `Number`  | Extract the range value from `response.data`                                              |
+| `options.transformValue`  | `(value: number) => unknown`        | identity  | Transform the range value for the SET payload                                             |
+| `options.numberInputRole` | `string`                            | —         | `data-role` for a paired `<input type="number">` (bidirectional sync, clamped to min/max) |
+| `options.displayRole`     | `string`                            | —         | `data-role` for a display element updated with `formatDisplay(value)`                     |
+| `options.formatDisplay`   | `(value: number) => string`         | `String`  | Format the value for the display element                                                  |
+| `options.fillTrack`       | `boolean`                           | `false`   | Render a filled-track gradient using `--accent-color`                                     |
+| `options.onLoaded`        | `(range: HTMLInputElement) => void` | —         | Called after GET succeeds and the range is enabled                                        |
+
+### Expected message protocol
+
+**GET request:** `{ type: getType }` **GET response:**
+`{ ok: boolean; data?: unknown }` **SET request:**
+`{ type: setType, [setKey]: transformValue(numericValue) }`
+
+---
+
 ## When not to use these helpers
 
 These helpers cover the common "fetch initial state, sync on change" pattern.

@@ -130,6 +130,7 @@ in popup views.
 
 - `bindToggle` — checkboxes
 - `bindSelect` — select dropdowns
+- `bindRange` — range sliders (with optional number input sync and filled track)
 
 See [docs/popup-helpers.md](docs/popup-helpers.md) for API reference, usage
 examples, and guidelines on when manual wiring is still appropriate.

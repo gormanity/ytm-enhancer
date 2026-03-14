@@ -1,6 +1,7 @@
 import type { PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
+import { bindRange } from "@/popup/bind-range";
 import ytmTabFallbackIconUrl from "@/assets/ytm-logo.svg";
 import { renderPlaybackSpeedSelectControl } from "./playback-speed/popup";
 import { renderStreamQualitySelectControl } from "./stream-quality/popup";
@@ -37,12 +38,6 @@ interface YtmTabSummary {
 }
 
 const YTM_FALLBACK_ICON_URL = ytmTabFallbackIconUrl;
-
-interface VolumeElements {
-  numberInput: HTMLInputElement;
-  range: HTMLInputElement;
-  placeholder: HTMLElement | null;
-}
 
 interface NowPlayingElements {
   artwork: HTMLImageElement;
@@ -117,15 +112,6 @@ export function createPlaybackControlsPopupView(): PopupView {
       const duration = container.querySelector<HTMLElement>(
         '[data-role="quick-now-playing-duration"]',
       );
-      const numberInput = container.querySelector<HTMLInputElement>(
-        '[data-role="quick-volume-number-input"]',
-      );
-      const range = container.querySelector<HTMLInputElement>(
-        '[data-role="quick-volume-range"]',
-      );
-      const placeholder = container.querySelector<HTMLElement>(
-        '[data-role="quick-volume-placeholder"]',
-      );
       const speedSlot = container.querySelector<HTMLElement>(
         '[data-role="quick-speed-slot"]',
       );
@@ -149,8 +135,6 @@ export function createPlaybackControlsPopupView(): PopupView {
         !progressThumb ||
         !elapsed ||
         !duration ||
-        !numberInput ||
-        !range ||
         !speedSlot ||
         !qualitySlot
       ) {
@@ -177,7 +161,19 @@ export function createPlaybackControlsPopupView(): PopupView {
           duration,
         }),
       );
-      renderIntegratedVolume({ numberInput, range, placeholder });
+      const volumePlaceholder = container.querySelector<HTMLElement>(
+        '[data-role="quick-volume-placeholder"]',
+      );
+      bindRange(container, "quick-volume-range", {
+        getType: "get-volume",
+        setType: "set-volume",
+        setKey: "volume",
+        parseData: (data) => Math.round(((data as number) ?? 1) * 100),
+        transformValue: (v) => v / 100,
+        numberInputRole: "quick-volume-number-input",
+        fillTrack: true,
+        onLoaded: () => volumePlaceholder?.remove(),
+      });
       renderPlaybackSpeedSelectControl(speedSlot);
       renderStreamQualitySelectControl(qualitySlot);
 
@@ -385,55 +381,6 @@ function renderOpenTabs(
     chrome.runtime.onMessage.removeListener(runtimeMessageListener);
     document.removeEventListener("keydown", handleKeydown);
   };
-}
-
-/** Helper to update the red foreground fill on range inputs */
-function updateSliderBackground(range: HTMLInputElement) {
-  const percent = Number(range.value);
-  range.style.background = `linear-gradient(to right, var(--accent-color) 0%, var(--accent-color) ${percent}%, #3f3f3f ${percent}%, #3f3f3f 100%)`;
-}
-
-/** Renders a specifically styled volume control that associates the slider and input */
-function renderIntegratedVolume(elements: VolumeElements) {
-  const { numberInput, range, placeholder } = elements;
-  numberInput.disabled = true;
-  numberInput.value = "";
-  range.disabled = true;
-  range.value = "0";
-  updateSliderBackground(range);
-
-  chrome.runtime.sendMessage(
-    { type: "get-volume" },
-    (response: { ok: boolean; data?: number } | null) => {
-      if (response?.ok) {
-        const vol = Math.round((response.data ?? 1) * 100);
-        range.value = String(vol);
-        numberInput.value = String(vol);
-        range.disabled = false;
-        numberInput.disabled = false;
-        placeholder?.remove();
-        updateSliderBackground(range);
-      }
-    },
-  );
-
-  const updateVol = (val: number) => {
-    chrome.runtime.sendMessage({ type: "set-volume", volume: val / 100 });
-  };
-
-  range.addEventListener("input", () => {
-    numberInput.value = range.value;
-    updateVol(Number(range.value));
-    updateSliderBackground(range);
-  });
-
-  numberInput.addEventListener("change", () => {
-    const val = Math.max(0, Math.min(100, Number(numberInput.value)));
-    numberInput.value = String(val);
-    range.value = String(val);
-    updateVol(val);
-    updateSliderBackground(range);
-  });
 }
 
 function formatTimestamp(seconds: number): string {
