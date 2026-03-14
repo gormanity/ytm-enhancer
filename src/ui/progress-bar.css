@@ -1,0 +1,66 @@
+/*
+ * Shared progress-bar styles.
+ *
+ * Consumers set these custom properties before importing:
+ *
+ *   --progress-bar-bg          Track background          (default: #3f3f3f)
+ *   --progress-fill-color      Filled portion color      (default: currentColor)
+ *   --progress-thumb-size      Thumb diameter             (default: 10px)
+ *   --progress-thumb-color     Thumb color                (default: currentColor)
+ *   --progress-thumb-shadow    Thumb box-shadow           (default: none)
+ *   --progress-thumb-opacity   Thumb resting opacity      (default: 1)
+ *   --progress-transition      Fill/thumb transition      (default: 140ms ease-out)
+ *   --progress-time-color      Time label color           (default: #aaa)
+ */
+
+.progress-bar {
+  position: relative;
+  height: 3px;
+  background: var(--progress-bar-bg, #3f3f3f);
+  border-radius: 999px;
+  cursor: pointer;
+  padding: 4px 0;
+  background-clip: content-box;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: 3px;
+  background: var(--progress-fill-color, currentColor);
+  border-radius: 999px;
+  width: 0%;
+  transition: width var(--progress-transition, 140ms ease-out);
+  pointer-events: none;
+}
+
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: var(--progress-thumb-size, 10px);
+  height: var(--progress-thumb-size, 10px);
+  background: var(--progress-thumb-color, currentColor);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: var(--progress-thumb-opacity, 1);
+  transition:
+    opacity 0.15s,
+    left var(--progress-transition, 140ms ease-out);
+  pointer-events: none;
+  box-shadow: var(--progress-thumb-shadow, none);
+}
+
+.progress-bar.is-dragging .progress-fill,
+.progress-bar.is-dragging .progress-thumb {
+  transition: none;
+}
+
+.progress-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--progress-time-color, #aaa);
+  margin-top: 4px;
+}

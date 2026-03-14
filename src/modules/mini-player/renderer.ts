@@ -5,6 +5,7 @@ import {
   formatTimestamp,
   progressPercent,
 } from "@/ui/progress-bar";
+import progressBarCss from "@/ui/progress-bar.css?raw";
 
 const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 const PAUSE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>`;
@@ -122,41 +123,15 @@ const STYLES = `
     flex-shrink: 0;
   }
   .progress-container {
+    --progress-bar-bg: rgba(255, 255, 255, 0.17);
+    --progress-fill-color: #fff;
+    --progress-thumb-size: 7px;
+    --progress-thumb-color: #fff;
+    --progress-thumb-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+    --progress-time-color: #adadad;
     width: 100%;
     margin: 3px 0 0;
     flex-shrink: 0;
-  }
-  .progress-bar {
-    width: 100%;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.17);
-    border-radius: 999px;
-    position: relative;
-    cursor: pointer;
-    padding: 4px 0;
-    background-clip: content-box;
-  }
-  .progress-fill {
-    height: 3px;
-    background: #fff;
-    border-radius: 999px;
-    transition: width 140ms ease-out;
-    pointer-events: none;
-    position: absolute;
-    top: 4px;
-    left: 0;
-  }
-  .progress-thumb {
-    width: 7px;
-    height: 7px;
-    background: #fff;
-    border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    transition: left 140ms ease-out;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
   }
   .time-display {
     font-size: 10px;
@@ -448,7 +423,7 @@ export class PipWindowRenderer {
     }
 
     const style = doc.createElement("style");
-    style.textContent = STYLES;
+    style.textContent = progressBarCss + STYLES;
     doc.head.appendChild(style);
 
     const banner = doc.createElement("div");

@@ -1,3 +1,5 @@
+@import "../ui/progress-bar.css";
+
 /* Theme Variables */
 :root {
   --popup-width: 480px;
@@ -665,63 +667,18 @@ select:focus {
 }
 
 .quick-now-playing-progress {
+  --progress-bar-bg: #3f3f3f;
+  --progress-fill-color: var(--accent-color);
+  --progress-thumb-color: var(--accent-color);
+  --progress-thumb-opacity: 0;
+  --progress-transition: 0.3s linear;
+  --progress-time-color: var(--text-secondary);
   margin-top: 8px;
 }
 
-.quick-now-playing-progress-bar {
-  position: relative;
-  height: 3px;
-  background: #3f3f3f;
-  border-radius: 2px;
-  cursor: pointer;
-  padding: 4px 0;
-  background-clip: content-box;
-}
-
-.quick-now-playing-progress-fill {
-  position: absolute;
-  top: 4px;
-  left: 0;
-  height: 3px;
-  background: var(--accent-color);
-  border-radius: 2px;
-  width: 0%;
-  transition: width 0.3s linear;
-  pointer-events: none;
-}
-
-.quick-now-playing-progress-thumb {
-  position: absolute;
-  top: 50%;
-  left: 0%;
-  width: 10px;
-  height: 10px;
-  background: var(--accent-color);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-  transition:
-    opacity 0.15s,
-    left 0.3s linear;
-  pointer-events: none;
-}
-
-.quick-now-playing-progress:hover .quick-now-playing-progress-thumb,
-.quick-now-playing-progress-bar.is-dragging .quick-now-playing-progress-thumb {
+.quick-now-playing-progress:hover .progress-thumb,
+.quick-now-playing-progress .progress-bar.is-dragging .progress-thumb {
   opacity: 1;
-}
-
-.quick-now-playing-progress-bar.is-dragging .quick-now-playing-progress-fill,
-.quick-now-playing-progress-bar.is-dragging .quick-now-playing-progress-thumb {
-  transition: none;
-}
-
-.quick-now-playing-time {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: var(--text-secondary);
-  margin-top: 4px;
 }
 
 /* Sleep Timer View */
