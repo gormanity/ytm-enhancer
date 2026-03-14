@@ -3,12 +3,13 @@ import { join } from "node:path";
 
 const POPUP_HTML_PATH = "src/popup/index.html";
 const POPUP_CSS_PATH = "src/popup/index.css";
-const SEARCH_ROOTS = ["src/popup", "src/modules"];
+const SEARCH_ROOTS = ["src/popup", "src/modules", "src/ui"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".html"]);
 
 const SAFELIST = new Set([
-  // Add selector names here if they are truly dynamic and intentionally not
-  // discoverable by the static scans below.
+  // ProgressBarController uses this as a default draggingClass option, applied
+  // via a variable (this.draggingClass) so the static scan cannot detect it.
+  ".is-dragging",
 ]);
 
 function collectFiles(root) {

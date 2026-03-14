@@ -1,5 +1,10 @@
 import type { PlaybackAction, PlaybackState } from "@/core/types";
 import { setElementSvgIcon } from "@/core/svg-icon";
+import {
+  ProgressBarController,
+  formatTimestamp,
+  progressPercent,
+} from "@/ui/progress-bar";
 
 const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 const PAUSE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>`;
@@ -420,15 +425,11 @@ export class PipWindowRenderer {
   private artistEl: HTMLElement | null = null;
   private albumEl: HTMLElement | null = null;
   private playPauseBtn: HTMLButtonElement | null = null;
-  private progressFill: HTMLElement | null = null;
-  private progressThumb: HTMLElement | null = null;
-  private progressBarEl: HTMLElement | null = null;
+  private progressCtrl: ProgressBarController | null = null;
   private timeDisplayEl: HTMLElement | null = null;
   private likeBtn: HTMLButtonElement | null = null;
   private dislikeBtn: HTMLButtonElement | null = null;
   private volumeRange: HTMLInputElement | null = null;
-  private onSeekCallback: ((time: number) => void) | null = null;
-  private lastDuration = 0;
 
   build(
     doc: Document,
@@ -438,8 +439,6 @@ export class PipWindowRenderer {
     aux?: AuxHandlers,
   ): void {
     this.doc = doc;
-    this.onSeekCallback = onSeek ?? null;
-    this.lastDuration = state.duration;
     doc.body.replaceChildren();
 
     this.docTitleEl =
@@ -499,25 +498,29 @@ export class PipWindowRenderer {
     progressContainer.className = "progress-container";
     const progressBar = doc.createElement("div");
     progressBar.className = "progress-bar";
-    this.progressBarEl = progressBar;
 
     const progressFill = doc.createElement("div");
     progressFill.className = "progress-fill";
-    const pct = this.progressPercent(state);
+    const pct = progressPercent(state.progress, state.duration);
     progressFill.style.width = pct + "%";
-    this.progressFill = progressFill;
 
     const progressThumb = doc.createElement("div");
     progressThumb.className = "progress-thumb";
     progressThumb.style.left = pct + "%";
-    this.progressThumb = progressThumb;
 
     progressBar.appendChild(progressFill);
     progressBar.appendChild(progressThumb);
     progressContainer.appendChild(progressBar);
     info.appendChild(progressContainer);
 
-    this.attachSeekListeners(doc, progressBar);
+    this.progressCtrl = new ProgressBarController(
+      { bar: progressBar, fill: progressFill, thumb: progressThumb },
+      {
+        onSeek: (time) => onSeek?.(time),
+        doc,
+      },
+    );
+    this.progressCtrl.setProgress(state.progress, state.duration);
 
     const timeDisplay = doc.createElement("div");
     timeDisplay.className = "time-display";
@@ -617,14 +620,7 @@ export class PipWindowRenderer {
     if (this.albumEl) {
       this.albumEl.textContent = this.formatAlbumLine(state);
     }
-    this.lastDuration = state.duration;
-    if (this.progressFill) {
-      const pct = this.progressPercent(state) + "%";
-      this.progressFill.style.width = pct;
-      if (this.progressThumb) {
-        this.progressThumb.style.left = pct;
-      }
-    }
+    this.progressCtrl?.setProgress(state.progress, state.duration);
     if (this.timeDisplayEl) {
       this.timeDisplayEl.textContent = this.formatTimeDisplay(state);
     }
@@ -677,49 +673,8 @@ export class PipWindowRenderer {
     return parts.join(" \u00B7 ");
   }
 
-  private attachSeekListeners(doc: Document, bar: HTMLElement): void {
-    const seek = (e: MouseEvent) => {
-      if (!this.onSeekCallback || this.lastDuration <= 0) return;
-      const rect = bar.getBoundingClientRect();
-      const ratio = Math.max(
-        0,
-        Math.min(1, (e.clientX - rect.left) / rect.width),
-      );
-      this.onSeekCallback(ratio * this.lastDuration);
-    };
-
-    bar.addEventListener("mousedown", (e: MouseEvent) => {
-      seek(e);
-
-      const onMove = (moveEvent: MouseEvent) => seek(moveEvent);
-      const onUp = () => {
-        doc.removeEventListener("mousemove", onMove);
-        doc.removeEventListener("mouseup", onUp);
-      };
-      doc.addEventListener("mousemove", onMove);
-      doc.addEventListener("mouseup", onUp);
-    });
-  }
-
-  private progressPercent(state: PlaybackState): number {
-    if (state.duration <= 0) return 0;
-    return Math.round((state.progress / state.duration) * 100);
-  }
-
   private formatTimeDisplay(state: PlaybackState): string {
-    return `${this.formatTimestamp(state.progress)} / ${this.formatTimestamp(state.duration)}`;
-  }
-
-  private formatTimestamp(totalSeconds: number): string {
-    const rounded = Math.floor(totalSeconds);
-    const h = Math.floor(rounded / 3600);
-    const m = Math.floor((rounded % 3600) / 60);
-    const s = rounded % 60;
-
-    if (h > 0) {
-      return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    }
-    return `${m}:${String(s).padStart(2, "0")}`;
+    return `${formatTimestamp(state.progress)} / ${formatTimestamp(state.duration)}`;
   }
 
   private createControlButton(

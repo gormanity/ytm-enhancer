@@ -2,6 +2,7 @@ import type { PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
 import { bindRange } from "@/popup/bind-range";
+import { ProgressBarController, formatTimestamp } from "@/ui/progress-bar";
 import ytmTabFallbackIconUrl from "@/assets/ytm-logo.svg";
 import { renderPlaybackSpeedSelectControl } from "./playback-speed/popup";
 import { renderStreamQualitySelectControl } from "./stream-quality/popup";
@@ -383,13 +384,6 @@ function renderOpenTabs(
   };
 }
 
-function formatTimestamp(seconds: number): string {
-  const totalSeconds = Math.max(0, Math.floor(seconds));
-  const minutes = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${minutes}:${String(secs).padStart(2, "0")}`;
-}
-
 function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
   const {
     artwork,
@@ -407,9 +401,6 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
     duration,
   } = elements;
 
-  let lastDuration = 0;
-  let isDragging = false;
-
   artwork.onerror = () => {
     artwork.removeAttribute("src");
     artwork.classList.add("is-hidden");
@@ -425,44 +416,23 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
   nextButton.onclick = () =>
     chrome.runtime.sendMessage({ type: "playback-action", action: "next" });
 
-  const setProgress = (pct: number) => {
-    const clamped = Math.max(0, Math.min(100, pct));
-    progressFill.style.width = clamped + "%";
-    progressThumb.style.left = clamped + "%";
-  };
+  const progressCtrl = new ProgressBarController(
+    { bar: progressBar, fill: progressFill, thumb: progressThumb },
+    {
+      onSeek: (time) => {
+        chrome.runtime.sendMessage({
+          type: "playback-action",
+          action: "seekTo",
+          time,
+        });
+      },
+      onDrag: (ratio) => {
+        elapsed.textContent = formatTimestamp(ratio * lastDuration);
+      },
+    },
+  );
 
-  const seekFromEvent = (e: MouseEvent) => {
-    if (lastDuration <= 0) return;
-    const rect = progressBar.getBoundingClientRect();
-    const ratio = Math.max(
-      0,
-      Math.min(1, (e.clientX - rect.left) / rect.width),
-    );
-    setProgress(ratio * 100);
-    elapsed.textContent = formatTimestamp(ratio * lastDuration);
-    chrome.runtime.sendMessage({
-      type: "playback-action",
-      action: "seekTo",
-      time: ratio * lastDuration,
-    });
-  };
-
-  progressBar.addEventListener("mousedown", (e) => {
-    if (lastDuration <= 0) return;
-    isDragging = true;
-    progressBar.classList.add("is-dragging");
-    seekFromEvent(e);
-
-    const onMove = (moveEvent: MouseEvent) => seekFromEvent(moveEvent);
-    const onUp = () => {
-      isDragging = false;
-      progressBar.classList.remove("is-dragging");
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  });
+  let lastDuration = 0;
 
   const update = () => {
     chrome.runtime.sendMessage(
@@ -487,9 +457,8 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
 
           lastDuration = state.duration;
           if (hasTrack && state.duration > 0) {
-            if (!isDragging) {
-              const pct = Math.round((state.progress / state.duration) * 100);
-              setProgress(pct);
+            progressCtrl.setProgress(state.progress, state.duration);
+            if (!progressCtrl.dragging) {
               elapsed.textContent = formatTimestamp(state.progress);
             }
             duration.textContent = formatTimestamp(state.duration);
@@ -521,6 +490,7 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
   update();
   const pollId = window.setInterval(update, PLAYBACK_STATE_POLL_INTERVAL_MS);
   return () => {
+    progressCtrl.destroy();
     window.clearInterval(pollId);
   };
 }
