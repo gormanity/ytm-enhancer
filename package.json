@@ -20,9 +20,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ tests/",
     "css:dead": "node scripts/check-dead-popup-css.mjs",
+    "data-role:check": "node scripts/check-data-role-uniqueness.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run css:dead && pnpm run typecheck && pnpm run test",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run css:dead && pnpm run data-role:check && pnpm run typecheck && pnpm run test",
     "validate": "pnpm run format && pnpm run check && pnpm run build"
   },
   "devDependencies": {

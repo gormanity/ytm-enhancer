@@ -22,6 +22,24 @@ Each helper follows the same lifecycle:
 If the target element is missing, the helper returns silently. This makes
 helpers safe to call unconditionally.
 
+## `data-role` naming convention
+
+Every `data-role` value **must be unique** across all module HTML templates.
+Since multiple module views can coexist in the popup DOM, collisions cause
+helpers to bind to the wrong element.
+
+**Rules:**
+
+1. Prefix every `data-role` with the module name or a module-specific namespace
+   (e.g., `notifications-toggle`, `sleep-start-btn`,
+   `audio-visualizer-style-select`).
+2. Use lowercase kebab-case.
+3. Never use bare generic names like `toggle`, `select`, or `range` — always
+   include the prefix.
+
+The `pnpm run data-role:check` script (run as part of `pnpm run check`) enforces
+both uniqueness and the prefix convention across all module templates.
+
 ---
 
 ## `bindToggle`

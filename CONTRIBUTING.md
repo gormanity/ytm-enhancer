@@ -26,12 +26,13 @@ modules.
 - Typecheck: `pnpm run typecheck`
 - Tests: `pnpm run test`
 - Dead popup CSS check: `pnpm run css:dead`
+- Data-role uniqueness check: `pnpm run data-role:check`
 - Build Chrome: `pnpm run build:chrome`
 - Build Edge: `pnpm run build:edge`
 - Build Firefox: `pnpm run build:firefox`
 - Full validation: `pnpm run validate`
-  - Runs format, format check, lint, dead CSS check, typecheck, tests, and all
-    browser builds (Chrome, Firefox, Edge).
+  - Runs format, format check, lint, dead CSS check, data-role uniqueness check,
+    typecheck, tests, and all browser builds (Chrome, Firefox, Edge).
 
 ## Browser Store Build Policy
 
@@ -134,6 +135,10 @@ in popup views.
 
 See [docs/popup-helpers.md](docs/popup-helpers.md) for API reference, usage
 examples, and guidelines on when manual wiring is still appropriate.
+
+All `data-role` values must be unique across module templates and prefixed with
+the module name (e.g., `notifications-toggle`, not `toggle`). A test enforces
+this — see [docs/popup-helpers.md](docs/popup-helpers.md) for details.
 
 ## Coding Guidelines
 
