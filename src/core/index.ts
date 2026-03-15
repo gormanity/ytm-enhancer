@@ -5,6 +5,8 @@ export type { StorageArea, VersionedStorageOptions } from "./storage";
 export { detectCapabilities } from "./capabilities";
 export { createMessageSender, createMessageHandler } from "./messaging";
 export { ActionExecutor } from "./actions";
+export { HotkeyRegistry } from "./hotkey-registry";
+export type { CommandHandler } from "./hotkey-registry";
 export { PopupRegistry } from "./popup-registry";
 export { createExtensionContext, initializeModules } from "./extension";
 export { findYTMTab } from "./tab-finder";

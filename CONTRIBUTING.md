@@ -116,7 +116,13 @@ Cover:
 - Popup behavior (if applicable)
 - Message handler behavior
 
-### 6. Validate Cross-Browser Behavior
+### 6. Register Hotkeys (If Needed)
+
+If the module needs keyboard shortcuts, register them on the shared
+`HotkeyRegistry` in `src/background/index.ts`. See
+[docs/hotkeys.md](docs/hotkeys.md) for the full process and API reference.
+
+### 7. Validate Cross-Browser Behavior
 
 If using browser-specific APIs:
 

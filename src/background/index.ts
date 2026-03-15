@@ -1,15 +1,19 @@
 import {
+  ActionExecutor,
   createExtensionContext,
   createMessageHandler,
   createMessageSender,
+  HotkeyRegistry,
   initializeModules,
   relayToYTMTab,
   findYTMTab,
   type FeatureModule,
+  type PlaybackAction,
 } from "@/core";
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import type { PlaybackState } from "@/core/types";
+
 import { parseSelectedTabId, resolveSelectedTabId } from "./selected-tab";
 import { AutoPlayModule } from "@/modules/auto-play";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
@@ -30,10 +34,12 @@ import { SleepTimerModule } from "@/modules/sleep-timer";
 
 const context = createExtensionContext();
 const send = createMessageSender();
+const executor = new ActionExecutor(send);
+const hotkeyRegistry = new HotkeyRegistry();
 const autoPlay = new AutoPlayModule();
 const autoSkipDisliked = new AutoSkipDislikedModule();
 const audioVisualizer = new AudioVisualizerModule();
-const hotkeys = new HotkeysModule(send);
+const hotkeys = new HotkeysModule();
 const miniPlayer = new MiniPlayerModule();
 const notifications = new NotificationsModule();
 const playbackControls = new PlaybackControlsModule();
@@ -146,11 +152,38 @@ function getSleepTimerState(): {
   };
 }
 
+const COMMAND_ACTION_MAP: Record<string, PlaybackAction> = {
+  "play-pause": "togglePlay",
+  "next-track": "next",
+  "previous-track": "previous",
+};
+
+for (const [cmd, action] of Object.entries(COMMAND_ACTION_MAP)) {
+  hotkeyRegistry.register(cmd, async () => {
+    const tab = await findYTMTab(selectedTabId);
+    if (!tab?.id) return;
+    try {
+      await executor.execute(action, tab.id);
+    } catch (err) {
+      console.error("[YTM Enhancer] Hotkey action failed:", err);
+    }
+  });
+}
+
+hotkeyRegistry.register("focus-ytm-tab", async () => {
+  const tab = await findYTMTab(selectedTabId);
+  if (!tab?.id) return;
+  await chrome.tabs.update(tab.id, { active: true });
+  if (tab.windowId != null) {
+    await chrome.windows.update(tab.windowId, { focused: true });
+  }
+});
+
 // Chrome MV3 service workers require event listeners to be registered
 // synchronously at the top level of the script, during the first turn
 // of the event loop. Registering inside an async init() is too late.
 chrome.commands.onCommand.addListener((command: string) => {
-  void hotkeys.handleCommand(command);
+  void hotkeyRegistry.dispatch(command);
 });
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -229,7 +262,6 @@ handler.on("get-ytm-tabs", async () => {
   const nextSelectedTabId = resolveSelectedTabId(tabs, selectedTabId);
   if (nextSelectedTabId !== selectedTabId) {
     selectedTabId = nextSelectedTabId;
-    hotkeys.setSelectedTabId(selectedTabId);
     void saveModuleStateValue("tabs.selectedTabId", selectedTabId);
     notifyYtmTabsChanged();
   }
@@ -256,7 +288,6 @@ handler.on("set-selected-tab", async (message) => {
   const tabId =
     typeof message.tabId === "number" ? (message.tabId as number) : null;
   selectedTabId = tabId;
-  hotkeys.setSelectedTabId(selectedTabId);
   await saveModuleStateValue("tabs.selectedTabId", selectedTabId);
   notifyYtmTabsChanged();
   return { ok: true };
@@ -676,7 +707,6 @@ async function restoreModuleState(): Promise<void> {
     bool("mini-player.suppressNotificationsWhilePipOpen", false),
   );
   selectedTabId = parseSelectedTabId(state["tabs.selectedTabId"]);
-  hotkeys.setSelectedTabId(selectedTabId);
 
   const restoredSleepTimerEndAt = num("sleep-timer.endAt");
   sleepTimerLastPausedAt = num("sleep-timer.lastPausedAt");

@@ -1,14 +1,5 @@
-import type { FeatureModule, PlaybackAction, PopupView } from "@/core/types";
-import type { MessageSender } from "@/core/actions";
-import { ActionExecutor } from "@/core/actions";
-import { findYTMTab } from "@/core/tab-finder";
+import type { FeatureModule, PopupView } from "@/core/types";
 import { createHotkeysPopupView } from "./popup";
-
-const COMMAND_MAP: Record<string, PlaybackAction> = {
-  "play-pause": "togglePlay",
-  "next-track": "next",
-  "previous-track": "previous",
-};
 
 export class HotkeysModule implements FeatureModule {
   readonly id = "hotkeys";
@@ -16,21 +7,9 @@ export class HotkeysModule implements FeatureModule {
   readonly description = "Configurable keyboard shortcuts for YouTube Music";
 
   private enabled = true;
-  private executor: ActionExecutor;
-  private selectedTabId: number | null = null;
 
-  constructor(send: MessageSender) {
-    this.executor = new ActionExecutor(send);
-  }
-
-  async init(): Promise<void> {
-    // Command listener is registered at the top level of the background
-    // script to satisfy Chrome MV3 service worker requirements.
-  }
-
-  destroy(): void {
-    // Listener lifecycle is managed by the background script.
-  }
+  init(): void {}
+  destroy(): void {}
 
   isEnabled(): boolean {
     return this.enabled;
@@ -40,40 +19,7 @@ export class HotkeysModule implements FeatureModule {
     this.enabled = enabled;
   }
 
-  setSelectedTabId(tabId: number | null): void {
-    this.selectedTabId = tabId;
-  }
-
   getPopupViews(): PopupView[] {
     return [createHotkeysPopupView()];
-  }
-
-  async handleCommand(command: string): Promise<void> {
-    if (command === "focus-ytm-tab") {
-      await this.focusYTMTab();
-      return;
-    }
-
-    const action = COMMAND_MAP[command];
-    if (!action) return;
-
-    const tab = await findYTMTab(this.selectedTabId);
-    if (!tab?.id) return;
-
-    try {
-      await this.executor.execute(action, tab.id);
-    } catch (err) {
-      console.error("[YTM Enhancer] Hotkey action failed:", err);
-    }
-  }
-
-  private async focusYTMTab(): Promise<void> {
-    const tab = await findYTMTab(this.selectedTabId);
-    if (!tab?.id) return;
-
-    await chrome.tabs.update(tab.id, { active: true });
-    if (tab.windowId != null) {
-      await chrome.windows.update(tab.windowId, { focused: true });
-    }
   }
 }
