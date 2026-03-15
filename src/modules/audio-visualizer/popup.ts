@@ -1,10 +1,7 @@
 import type { PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { bindToggle } from "@/popup/bind-toggle";
-import {
-  createRangeSlider,
-  type RangeSliderComponent,
-} from "@/ui/range-slider";
+import { createRangeSlider } from "@/ui/range-slider";
 import {
   type VisualizerColorMode,
   DEFAULT_VISUALIZER_STYLE_TUNING,
@@ -28,7 +25,7 @@ export function createAudioVisualizerPopupView(): PopupView {
         setType: "set-audio-visualizer-enabled",
       });
 
-      const select = container.querySelector<HTMLSelectElement>(
+      const styleSelect = container.querySelector<HTMLSelectElement>(
         '[data-role="audio-visualizer-style-select"]',
       );
       const targetSelect = container.querySelector<HTMLSelectElement>(
@@ -37,59 +34,39 @@ export function createAudioVisualizerPopupView(): PopupView {
       const colorModeSelect = container.querySelector<HTMLSelectElement>(
         '[data-role="audio-visualizer-color-mode-select"]',
       );
-      const intensitySlot = container.querySelector<HTMLElement>(
-        '[data-role="audio-visualizer-intensity-range"]',
+      const tuningGrid = container.querySelector<HTMLElement>(
+        '[data-role="audio-visualizer-tuning-sliders"]',
       );
-      const intensityValue = container.querySelector<HTMLElement>(
-        '[data-role="audio-visualizer-intensity-value"]',
-      );
-      const thicknessSlot = container.querySelector<HTMLElement>(
-        '[data-role="audio-visualizer-thickness-range"]',
-      );
-      const thicknessValue = container.querySelector<HTMLElement>(
-        '[data-role="audio-visualizer-thickness-value"]',
-      );
-      const opacitySlot = container.querySelector<HTMLElement>(
-        '[data-role="audio-visualizer-opacity-range"]',
-      );
-      const opacityValue = container.querySelector<HTMLElement>(
-        '[data-role="audio-visualizer-opacity-value"]',
-      );
-      if (
-        !select ||
-        !targetSelect ||
-        !colorModeSelect ||
-        !intensitySlot ||
-        !intensityValue ||
-        !thicknessSlot ||
-        !thicknessValue ||
-        !opacitySlot ||
-        !opacityValue
-      ) {
+      if (!styleSelect || !targetSelect || !colorModeSelect || !tuningGrid) {
         return;
       }
 
-      const styleSelect = select;
       styleSelect.disabled = true;
       targetSelect.disabled = true;
       colorModeSelect.disabled = true;
 
       const intensitySlider = createRangeSlider({
+        label: "Intensity",
         min: 25,
         max: 200,
         value: 100,
+        unit: "%",
         onInput: onTuningInput,
       });
       const thicknessSlider = createRangeSlider({
+        label: "Thickness",
         min: 50,
         max: 250,
         value: 100,
+        unit: "%",
         onInput: onTuningInput,
       });
       const opacitySlider = createRangeSlider({
+        label: "Opacity",
         min: 10,
         max: 100,
         value: 100,
+        unit: "%",
         onInput: onTuningInput,
       });
 
@@ -97,27 +74,9 @@ export function createAudioVisualizerPopupView(): PopupView {
       thicknessSlider.setEnabled(false);
       opacitySlider.setEnabled(false);
 
-      intensitySlot.replaceChildren(intensitySlider.element);
-      thicknessSlot.replaceChildren(thicknessSlider.element);
-      opacitySlot.replaceChildren(opacitySlider.element);
-
-      interface TuningControl {
-        slider: RangeSliderComponent;
-        display: HTMLElement;
-      }
-
-      const intensityControl: TuningControl = {
-        slider: intensitySlider,
-        display: intensityValue,
-      };
-      const thicknessControl: TuningControl = {
-        slider: thicknessSlider,
-        display: thicknessValue,
-      };
-      const opacityControl: TuningControl = {
-        slider: opacitySlider,
-        display: opacityValue,
-      };
+      tuningGrid.appendChild(intensitySlider.element);
+      tuningGrid.appendChild(thicknessSlider.element);
+      tuningGrid.appendChild(opacitySlider.element);
 
       let styleTunings: VisualizerStyleTunings = {
         bars: { ...DEFAULT_VISUALIZER_STYLE_TUNINGS.bars },
@@ -151,34 +110,28 @@ export function createAudioVisualizerPopupView(): PopupView {
       const refreshTuningControls = () => {
         const currentStyle = styleSelect.value as VisualizerStyle;
         const tuning = styleTunings[currentStyle];
-        intensityControl.slider.setValue(Math.round(tuning.intensity * 100));
-        thicknessControl.slider.setValue(Math.round(tuning.thickness * 100));
-        opacityControl.slider.setValue(Math.round(tuning.opacity * 100));
+        intensitySlider.setValue(Math.round(tuning.intensity * 100));
+        thicknessSlider.setValue(Math.round(tuning.thickness * 100));
+        opacitySlider.setValue(Math.round(tuning.opacity * 100));
         colorModeSelect.value = tuning.colorMode;
-        intensityControl.display.textContent = `${intensityControl.slider.getValue()}%`;
-        thicknessControl.display.textContent = `${thicknessControl.slider.getValue()}%`;
-        opacityControl.display.textContent = `${opacityControl.slider.getValue()}%`;
       };
 
       const setTuningControlsEnabled = (enabled: boolean) => {
         colorModeSelect.disabled = !enabled;
-        intensityControl.slider.setEnabled(enabled);
-        thicknessControl.slider.setEnabled(enabled);
-        opacityControl.slider.setEnabled(enabled);
+        intensitySlider.setEnabled(enabled);
+        thicknessSlider.setEnabled(enabled);
+        opacitySlider.setEnabled(enabled);
       };
 
       function onTuningInput() {
-        const style = styleSelect.value as VisualizerStyle;
+        const style = styleSelect!.value as VisualizerStyle;
         const tuning: VisualizerStyleTuning = {
-          intensity: intensityControl.slider.getValue() / 100,
-          thickness: thicknessControl.slider.getValue() / 100,
-          opacity: opacityControl.slider.getValue() / 100,
+          intensity: intensitySlider.getValue() / 100,
+          thickness: thicknessSlider.getValue() / 100,
+          opacity: opacitySlider.getValue() / 100,
           colorMode: styleTunings[style].colorMode,
         };
         styleTunings[style] = tuning;
-        intensityControl.display.textContent = `${intensityControl.slider.getValue()}%`;
-        thicknessControl.display.textContent = `${thicknessControl.slider.getValue()}%`;
-        opacityControl.display.textContent = `${opacityControl.slider.getValue()}%`;
         chrome.runtime.sendMessage({
           type: "set-audio-visualizer-style-tuning",
           style,

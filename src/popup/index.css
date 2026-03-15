@@ -163,21 +163,6 @@ h3 {
 }
 
 /* Quick Settings UI */
-.volume-group {
-  margin-top: 8px;
-}
-
-.volume-number-input {
-  background: transparent !important;
-  border: none !important;
-  color: var(--text-color) !important;
-  font-size: 14px !important;
-  font-weight: 600;
-  text-align: right;
-  padding: 0 !important;
-  width: 38px !important;
-  outline: none;
-}
 
 .compact-select-group .toggle-row {
   flex-direction: column;
@@ -551,39 +536,7 @@ select:focus {
   font-size: 12px !important;
 }
 
-.quick-volume-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.quick-volume-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.quick-volume-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.quick-volume-input-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.quick-volume-placeholder {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-.quick-volume-percent {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
+/* Volume slider styles provided by the range-slider component */
 
 .quick-now-playing-track-info {
   display: flex;

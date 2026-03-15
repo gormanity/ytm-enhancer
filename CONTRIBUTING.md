@@ -134,7 +134,7 @@ writing manual `sendMessage` get/set boilerplate in popup views.
 
 - `bindToggle` — checkboxes
 - `bindSelect` — select dropdowns
-- `bindRange` — range sliders (creates a `RangeSliderComponent` in a slot)
+- `bindRange` — range sliders (inline label, slider, number input)
 
 ### UI Components (`src/ui/`)
 
@@ -143,8 +143,8 @@ script). No dependency on `chrome.runtime`.
 
 - `createProgressBar` + `progress-bar.css` — seekable progress bar with
   drag-to-seek, themeable via CSS custom properties
-- `createRangeSlider` + `range-slider.css` — themed range input with
-  auto-updating filled-track gradient
+- `createRangeSlider` + `range-slider.css` — inline range slider row with label,
+  filled-track gradient, and number input
 
 See [docs/shared-ui.md](docs/shared-ui.md) for full API reference, usage
 examples, and guidelines.

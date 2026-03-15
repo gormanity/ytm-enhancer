@@ -15,29 +15,14 @@ describe("bindRange", () => {
     dataRole?: string;
     min?: number;
     max?: number;
-    numberInputRole?: string;
-    displayRole?: string;
   }): HTMLElement {
     const container = document.createElement("div");
     const slot = document.createElement("div");
+    slot.classList.add("range-slider-grid");
     slot.setAttribute("data-role", opts?.dataRole ?? "my-range");
     if (opts?.min != null) slot.dataset.min = String(opts.min);
     if (opts?.max != null) slot.dataset.max = String(opts.max);
     container.appendChild(slot);
-
-    if (opts?.numberInputRole) {
-      const numInput = document.createElement("input");
-      numInput.type = "number";
-      numInput.setAttribute("data-role", opts.numberInputRole);
-      container.appendChild(numInput);
-    }
-
-    if (opts?.displayRole) {
-      const span = document.createElement("span");
-      span.setAttribute("data-role", opts.displayRole);
-      container.appendChild(span);
-    }
-
     return container;
   }
 
@@ -45,8 +30,10 @@ describe("bindRange", () => {
     return container.querySelector<HTMLInputElement>("input.range-slider")!;
   }
 
-  function getElement(container: HTMLElement, dataRole: string) {
-    return container.querySelector<HTMLElement>(`[data-role="${dataRole}"]`)!;
+  function getNumberInput(container: HTMLElement): HTMLInputElement {
+    return container.querySelector<HTMLInputElement>(
+      "input.range-slider-number",
+    )!;
   }
 
   it("should inject a range slider and disable it initially", () => {
@@ -54,6 +41,7 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-my-value",
       setType: "set-my-value",
+      label: "Test",
     });
 
     const range = getRange(container);
@@ -63,6 +51,18 @@ describe("bindRange", () => {
       { type: "get-my-value" },
       expect.any(Function),
     );
+  });
+
+  it("should render a label", () => {
+    const container = createContainer();
+    bindRange(container, "my-range", {
+      getType: "get-val",
+      setType: "set-val",
+      label: "Volume",
+    });
+
+    const label = container.querySelector(".range-slider-label");
+    expect(label?.textContent).toBe("Volume");
   });
 
   it("should enable range and set value on successful response", () => {
@@ -79,11 +79,13 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-my-value",
       setType: "set-my-value",
+      label: "Test",
     });
 
     const range = getRange(container);
     expect(range.disabled).toBe(false);
     expect(range.value).toBe("75");
+    expect(getNumberInput(container).value).toBe("75");
   });
 
   it("should stay disabled when response is not ok", () => {
@@ -100,6 +102,7 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-my-value",
       setType: "set-my-value",
+      label: "Test",
     });
 
     expect(getRange(container).disabled).toBe(true);
@@ -119,6 +122,7 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-my-value",
       setType: "set-my-value",
+      label: "Test",
     });
 
     const range = getRange(container);
@@ -145,6 +149,7 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-vol",
       setType: "set-vol",
+      label: "Volume",
       setKey: "volume",
       transformValue: (v) => v / 100,
     });
@@ -173,121 +178,11 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-vol",
       setType: "set-vol",
+      label: "Volume",
       parseData: (data) => Math.round((data as number) * 100),
     });
 
     expect(getRange(container).value).toBe("75");
-  });
-
-  it("should sync paired number input on load", () => {
-    sendMessageMock.mockImplementation(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        const msg = message as { type: string };
-        if (msg.type === "get-val") {
-          callback?.({ ok: true, data: 42 });
-        }
-      },
-    );
-
-    const container = createContainer({ numberInputRole: "my-num" });
-    bindRange(container, "my-range", {
-      getType: "get-val",
-      setType: "set-val",
-      numberInputRole: "my-num",
-    });
-
-    const numInput = container.querySelector<HTMLInputElement>(
-      '[data-role="my-num"]',
-    )!;
-    expect(numInput.disabled).toBe(false);
-    expect(numInput.value).toBe("42");
-  });
-
-  it("should sync number input on range input", () => {
-    sendMessageMock.mockImplementation(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        const msg = message as { type: string };
-        if (msg.type === "get-val") {
-          callback?.({ ok: true, data: 50 });
-        }
-      },
-    );
-
-    const container = createContainer({ numberInputRole: "my-num" });
-    bindRange(container, "my-range", {
-      getType: "get-val",
-      setType: "set-val",
-      numberInputRole: "my-num",
-    });
-
-    const range = getRange(container);
-    range.value = "70";
-    range.dispatchEvent(new Event("input"));
-
-    const numInput = container.querySelector<HTMLInputElement>(
-      '[data-role="my-num"]',
-    )!;
-    expect(numInput.value).toBe("70");
-  });
-
-  it("should sync range from number input change and clamp", () => {
-    sendMessageMock.mockImplementation(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        const msg = message as { type: string };
-        if (msg.type === "get-val") {
-          callback?.({ ok: true, data: 50 });
-        }
-      },
-    );
-
-    const container = createContainer({ numberInputRole: "my-num" });
-    bindRange(container, "my-range", {
-      getType: "get-val",
-      setType: "set-val",
-      numberInputRole: "my-num",
-    });
-
-    const numInput = container.querySelector<HTMLInputElement>(
-      '[data-role="my-num"]',
-    )!;
-    numInput.value = "150";
-    numInput.dispatchEvent(new Event("change"));
-
-    // Clamped to max of 100
-    expect(numInput.value).toBe("100");
-    expect(getRange(container).value).toBe("100");
-    expect(sendMessageMock).toHaveBeenCalledWith({
-      type: "set-val",
-      value: 100,
-    });
-  });
-
-  it("should update display element on load and input", () => {
-    sendMessageMock.mockImplementation(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        const msg = message as { type: string };
-        if (msg.type === "get-val") {
-          callback?.({ ok: true, data: 50 });
-        }
-      },
-    );
-
-    const container = createContainer({ displayRole: "my-display" });
-    bindRange(container, "my-range", {
-      getType: "get-val",
-      setType: "set-val",
-      displayRole: "my-display",
-      formatDisplay: (v) => `${v}%`,
-    });
-
-    const display = getElement(container, "my-display");
-    expect(display.textContent).toBe("50%");
-
-    const range = getRange(container);
-    range.value = "80";
-    range.dispatchEvent(new Event("input"));
-
-    expect(display.textContent).toBe("80%");
   });
 
   it("should always apply filled-track gradient", () => {
@@ -304,6 +199,7 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-val",
       setType: "set-val",
+      label: "Test",
     });
 
     const range = getRange(container);
@@ -326,24 +222,11 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-val",
       setType: "set-val",
+      label: "Test",
       onLoaded,
     });
 
     expect(onLoaded).toHaveBeenCalledWith(getRange(container));
-  });
-
-  it("should disable number input initially", () => {
-    const container = createContainer({ numberInputRole: "my-num" });
-    bindRange(container, "my-range", {
-      getType: "get-val",
-      setType: "set-val",
-      numberInputRole: "my-num",
-    });
-
-    const numInput = container.querySelector<HTMLInputElement>(
-      '[data-role="my-num"]',
-    )!;
-    expect(numInput.disabled).toBe(true);
   });
 
   it("should do nothing if data-role element is missing", () => {
@@ -351,6 +234,7 @@ describe("bindRange", () => {
     bindRange(container, "nonexistent", {
       getType: "get-val",
       setType: "set-val",
+      label: "Test",
     });
 
     expect(sendMessageMock).not.toHaveBeenCalled();
@@ -370,10 +254,24 @@ describe("bindRange", () => {
     bindRange(container, "my-range", {
       getType: "get-val",
       setType: "set-val",
+      label: "Test",
     });
 
     const range = getRange(container);
     expect(range.min).toBe("50");
     expect(range.max).toBe("150");
+  });
+
+  it("should display unit suffix", () => {
+    const container = createContainer();
+    bindRange(container, "my-range", {
+      getType: "get-val",
+      setType: "set-val",
+      label: "Volume",
+      unit: "%",
+    });
+
+    const unit = container.querySelector(".range-slider-unit");
+    expect(unit?.textContent).toBe("%");
   });
 });

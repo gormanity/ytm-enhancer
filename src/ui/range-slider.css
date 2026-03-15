@@ -1,28 +1,81 @@
-.range-slider {
-  width: 100%;
-  height: var(--range-height, 6px);
-  margin: var(--range-margin, 12px 0);
-  background: var(--range-bg, #3f3f3f);
-  border-radius: var(--range-radius, 3px);
-  appearance: none;
-  outline: none;
+/* Each row: label (20%) | slider (70%) | value (10%) — all inline.
+   Matches .toggle-row styling for visual consistency in settings cards. */
+.range-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color, #2a2a2a);
   cursor: pointer;
 }
 
+.range-slider-row:last-child {
+  border-bottom: none;
+}
+
+.settings-card > .range-slider-row:first-child {
+  padding-top: 0;
+}
+
+.settings-card > .range-slider-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* Label */
+.range-slider-label {
+  width: 28%;
+  flex-shrink: 0;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Slider input */
+.range-slider {
+  width: 58%;
+  flex-shrink: 1;
+  min-width: 0;
+  height: var(--range-height, 6px);
+  background: var(--range-bg, #3f3f3f);
+  border-radius: var(--range-radius, 3px);
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Make the track transparent so the input background (fill gradient) shows */
+.range-slider::-webkit-slider-runnable-track {
+  background: transparent;
+  height: var(--range-height, 6px);
+  border-radius: var(--range-radius, 3px);
+}
+
+.range-slider::-moz-range-track {
+  background: transparent;
+  height: var(--range-height, 6px);
+  border-radius: var(--range-radius, 3px);
+}
+
 .range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
   appearance: none;
   width: var(--range-thumb-size, 14px);
   height: var(--range-thumb-size, 14px);
-  background: var(--range-thumb-color, currentColor);
+  background: var(--range-thumb-color, #fff);
   border-radius: 50%;
   cursor: pointer;
   border: none;
+  margin-top: calc(
+    (var(--range-height, 6px) - var(--range-thumb-size, 14px)) / 2
+  );
 }
 
 .range-slider::-moz-range-thumb {
   width: var(--range-thumb-size, 14px);
   height: var(--range-thumb-size, 14px);
-  background: var(--range-thumb-color, currentColor);
+  background: var(--range-thumb-color, #fff);
   border-radius: 50%;
   cursor: pointer;
   border: none;
@@ -41,4 +94,45 @@
 .range-slider:disabled::-moz-range-thumb {
   width: 0;
   height: 0;
+}
+
+/* Value display (14%) */
+.range-slider-value {
+  width: 14%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  justify-content: flex-end;
+}
+
+/* Number input — .range-slider-row prefix for specificity over
+   popup's input[type="number"] rule. */
+.range-slider-row input.range-slider-number {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  text-align: right;
+  padding: 0;
+  width: 28px;
+  outline: none;
+  border-radius: 0;
+  -moz-appearance: textfield;
+}
+
+.range-slider-row input.range-slider-number:disabled {
+  opacity: 0.5;
+}
+
+.range-slider-row input.range-slider-number::-webkit-outer-spin-button,
+.range-slider-row input.range-slider-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.range-slider-unit {
+  font-size: 12px;
+  color: var(--range-unit-color, #aaa);
 }

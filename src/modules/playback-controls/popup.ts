@@ -132,17 +132,14 @@ export function createPlaybackControlsPopupView(): PopupView {
           progressSlot,
         }),
       );
-      const volumePlaceholder = container.querySelector<HTMLElement>(
-        '[data-role="quick-volume-placeholder"]',
-      );
       bindRange(container, "quick-volume-range", {
         getType: "get-volume",
         setType: "set-volume",
+        label: "Volume",
         setKey: "volume",
         parseData: (data) => Math.round(((data as number) ?? 1) * 100),
         transformValue: (v) => v / 100,
-        numberInputRole: "quick-volume-number-input",
-        onLoaded: () => volumePlaceholder?.remove(),
+        unit: "%",
       });
       renderPlaybackSpeedSelectControl(speedSlot);
       renderStreamQualitySelectControl(qualitySlot);

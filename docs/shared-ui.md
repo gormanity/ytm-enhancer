@@ -164,8 +164,8 @@ The SET message is only sent when `select.value` is non-empty.
 
 Wire a range slider to a get/set message pair. Internally creates a
 `RangeSliderComponent` from the shared UI library (see below), injects it into a
-slot element, and manages the full lifecycle. The filled-track gradient is
-always active.
+slot element, and manages the full lifecycle. The component includes label,
+slider with filled-track gradient, and number input — all built in.
 
 ### Usage (simple)
 
@@ -175,6 +175,7 @@ import { bindRange } from "@/popup/bind-range";
 bindRange(container, "my-range", {
   getType: "get-my-value",
   setType: "set-my-value",
+  label: "My Value",
 });
 ```
 
@@ -184,11 +185,11 @@ bindRange(container, "my-range", {
 bindRange(container, "quick-volume-range", {
   getType: "get-volume",
   setType: "set-volume",
+  label: "Volume",
+  unit: "%",
   setKey: "volume",
   parseData: (data) => Math.round(((data as number) ?? 1) * 100),
   transformValue: (v) => v / 100,
-  numberInputRole: "quick-volume-number-input",
-  onLoaded: () => placeholder?.remove(),
 });
 ```
 
@@ -199,26 +200,26 @@ bindRange(container, "quick-volume-range", {
 ```
 
 The `data-role` element is a **slot** — `bindRange` creates the range slider
-component and injects it. Use `data-min` and `data-max` attributes or pass
-`min`/`max` in options.
+component and injects it as a `.range-slider-row`. The row renders like a
+`.toggle-row` with border separators and matching padding. Use `data-min` and
+`data-max` attributes or pass `min`/`max` in options.
 
 ### Parameters
 
-| Parameter                 | Type                                | Default   | Description                                                                               |
-| ------------------------- | ----------------------------------- | --------- | ----------------------------------------------------------------------------------------- |
-| `container`               | `HTMLElement`                       | —         | Parent element to search within                                                           |
-| `dataRole`                | `string`                            | —         | `data-role` attribute value of the slot                                                   |
-| `options.getType`         | `string`                            | —         | Message type for fetching state                                                           |
-| `options.setType`         | `string`                            | —         | Message type for setting state                                                            |
-| `options.setKey`          | `string`                            | `"value"` | Key name for the value in the SET message                                                 |
-| `options.min`             | `number`                            | `0`       | Minimum value (overrides `data-min`)                                                      |
-| `options.max`             | `number`                            | `100`     | Maximum value (overrides `data-max`)                                                      |
-| `options.parseData`       | `(data: unknown) => number`         | `Number`  | Extract the range value from `response.data`                                              |
-| `options.transformValue`  | `(value: number) => unknown`        | identity  | Transform the range value for the SET payload                                             |
-| `options.numberInputRole` | `string`                            | —         | `data-role` for a paired `<input type="number">` (bidirectional sync, clamped to min/max) |
-| `options.displayRole`     | `string`                            | —         | `data-role` for a display element updated with `formatDisplay(value)`                     |
-| `options.formatDisplay`   | `(value: number) => string`         | `String`  | Format the value for the display element                                                  |
-| `options.onLoaded`        | `(range: HTMLInputElement) => void` | —         | Called after GET succeeds and the slider is enabled                                       |
+| Parameter                | Type                                | Default   | Description                                  |
+| ------------------------ | ----------------------------------- | --------- | -------------------------------------------- |
+| `container`              | `HTMLElement`                       | —         | Parent element to search within              |
+| `dataRole`               | `string`                            | —         | `data-role` attribute value of the slot      |
+| `options.getType`        | `string`                            | —         | Message type for fetching state              |
+| `options.setType`        | `string`                            | —         | Message type for setting state               |
+| `options.label`          | `string`                            | —         | Label text displayed beside the slider       |
+| `options.unit`           | `string`                            | —         | Unit suffix (e.g., `"%"`) after number input |
+| `options.setKey`         | `string`                            | `"value"` | Key name for the value in the SET message    |
+| `options.min`            | `number`                            | `0`       | Minimum value (overrides `data-min`)         |
+| `options.max`            | `number`                            | `100`     | Maximum value (overrides `data-max`)         |
+| `options.parseData`      | `(data: unknown) => number`         | `Number`  | Extract the range value from `response.data` |
+| `options.transformValue` | `(value: number) => unknown`        | identity  | Transform the range value for SET payload    |
+| `options.onLoaded`       | `(range: HTMLInputElement) => void` | —         | Called after GET succeeds and slider enabled |
 
 ### Expected message protocol
 
@@ -380,9 +381,12 @@ ctrl.destroy();
 **Files:** `src/ui/range-slider.css`, `src/ui/range-slider.ts`,
 `src/ui/range-slider.html`
 
-A themed `<input type="range">` with an auto-updating filled-track gradient.
-Used by the Playback Controls volume slider and the Audio Visualizer tuning
-sliders.
+An inline range slider component with three sub-elements at fixed percentage
+widths: label (28%), adjustable slider with filled-track gradient (58%), and
+numeric value input with optional unit suffix (14%). Each slider renders as a
+standalone row matching `.toggle-row` styling (padding, border-bottom
+separators). Used by the Playback Controls volume slider and the Audio
+Visualizer tuning sliders.
 
 ### CSS
 
@@ -399,6 +403,13 @@ on a parent element.
 }
 ```
 
+#### Layout
+
+Each `.range-slider-row` is a standalone flex row with fixed-percentage column
+widths. Sibling sliders automatically align because they share the same
+proportions. No wrapper container is required — sliders can be placed directly
+inside a `.settings-card` alongside `.toggle-row` elements.
+
 #### CSS custom properties
 
 | Property              | Default               | Description          |
@@ -407,19 +418,29 @@ on a parent element.
 | `--range-bg`          | `#3f3f3f`             | Track background     |
 | `--range-height`      | `6px`                 | Track height         |
 | `--range-radius`      | `3px`                 | Track border radius  |
-| `--range-margin`      | `12px 0`              | Outer margin         |
 | `--range-thumb-size`  | `14px`                | Thumb diameter       |
-| `--range-thumb-color` | `currentColor`        | Thumb color          |
+| `--range-thumb-color` | `#fff`                | Thumb color          |
+| `--range-unit-color`  | `#aaa`                | Unit suffix color    |
+| `--border-color`      | `#2a2a2a`             | Row separator color  |
 
 ### HTML template
 
 The component creates elements from `src/ui/range-slider.html`:
 
 ```html
-<input type="range" class="range-slider" min="0" max="100" value="0" />
+<label class="range-slider-row">
+  <span class="range-slider-label"></span>
+  <input type="range" class="range-slider" />
+  <span class="range-slider-value">
+    <input type="number" class="range-slider-number" />
+    <span class="range-slider-unit"></span>
+  </span>
+</label>
 ```
 
-Module templates provide a **slot** `<div>` where the component is injected.
+Module templates provide a **slot** element (`<div data-role="...">`) where the
+component row is injected. For multiple sliders, append each row to the same
+container.
 
 ### TypeScript
 
@@ -427,24 +448,26 @@ Module templates provide a **slot** `<div>` where the component is injected.
 import { createRangeSlider } from "@/ui/range-slider";
 
 const slider = createRangeSlider({
+  label: "Volume",
   min: 0,
   max: 100,
   value: 50,
+  unit: "%",
   onInput: (value) => {
     console.log("User moved to:", value);
   },
 });
 
-// Append to DOM
-slot.replaceChildren(slider.element);
+// Append to DOM (renders as a row like .toggle-row)
+container.appendChild(slider.element);
 
-// Programmatic update (fill stays in sync automatically):
+// Programmatic update (fill and number input stay in sync):
 slider.setValue(75);
 
 // Read current value:
 console.log(slider.getValue()); // 75
 
-// Enable/disable:
+// Enable/disable (affects both range and number inputs):
 slider.setEnabled(false);
 
 // Clean up:
@@ -455,21 +478,23 @@ slider.destroy();
 
 | Option    | Type                      | Default | Description                            |
 | --------- | ------------------------- | ------- | -------------------------------------- |
+| `label`   | `string`                  | —       | **Required.** Label text               |
 | `min`     | `number`                  | `0`     | Minimum value                          |
 | `max`     | `number`                  | `100`   | Maximum value                          |
 | `value`   | `number`                  | `0`     | Initial value                          |
 | `step`    | `number`                  | —       | Step size (browser default if omitted) |
+| `unit`    | `string`                  | —       | Unit suffix (e.g., `"%"`)              |
 | `onInput` | `(value: number) => void` | —       | Called on user input events            |
 
 #### `RangeSliderComponent`
 
-| Member         | Type                         | Description                        |
-| -------------- | ---------------------------- | ---------------------------------- |
-| `element`      | `HTMLInputElement`           | The `<input>` — append to the DOM  |
-| `getValue()`   | `() => number`               | Current numeric value              |
-| `setValue(v)`  | `(value: number) => void`    | Set value and update fill gradient |
-| `setEnabled()` | `(enabled: boolean) => void` | Enable or disable the input        |
-| `destroy()`    | `() => void`                 | Remove event listeners             |
+| Member         | Type                         | Description                             |
+| -------------- | ---------------------------- | --------------------------------------- |
+| `element`      | `HTMLElement`                | The row element — append to the DOM     |
+| `getValue()`   | `() => number`               | Current numeric value                   |
+| `setValue(v)`  | `(value: number) => void`    | Set value, fill gradient, and number    |
+| `setEnabled()` | `(enabled: boolean) => void` | Enable or disable both range and number |
+| `destroy()`    | `() => void`                 | Remove event listeners                  |
 
 ---
 

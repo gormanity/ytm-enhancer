@@ -1,32 +1,37 @@
 /**
  * Shared range slider component.
  *
- * Creates a themed `<input type="range">` from the shared HTML
- * template with an auto-updating filled-track gradient. Themed
- * via CSS custom properties (`--range-fill`, `--range-bg`, etc.).
+ * Creates a three-part inline control from the shared HTML
+ * template: label | adjustable slider with thumb | numeric
+ * value with unit. The filled-track gradient updates
+ * automatically on user interaction and programmatic changes.
  *
- * Usage mirrors `createProgressBar`: call the factory, append
- * the returned `element` to the DOM, and use `setValue()` to
- * update programmatically.
+ * Place multiple range sliders inside a `.range-slider-grid`
+ * container so their columns align via CSS subgrid.
+ *
+ * Themed via CSS custom properties (`--range-fill`, `--range-bg`,
+ * `--range-thumb-color`, etc.).
  */
 
 import templateHtml from "./range-slider.html?raw";
 
 /** A fully encapsulated range slider component. */
 export interface RangeSliderComponent {
-  /** The `<input type="range">` element — append this to the DOM. */
-  element: HTMLInputElement;
+  /** The row element — append this to the DOM. */
+  element: HTMLElement;
   /** Get the current numeric value. */
   getValue(): number;
   /** Set the value and update the filled-track gradient. */
   setValue(value: number): void;
-  /** Enable or disable the input. */
+  /** Enable or disable the slider and number input. */
   setEnabled(enabled: boolean): void;
   /** Remove event listeners. */
   destroy(): void;
 }
 
 export interface CreateRangeSliderOptions {
+  /** Text label displayed before the slider. */
+  label: string;
   /** Minimum value. Default: `0`. */
   min?: number;
   /** Maximum value. Default: `100`. */
@@ -35,61 +40,99 @@ export interface CreateRangeSliderOptions {
   value?: number;
   /** Step size. When omitted, uses the browser default (`1`). */
   step?: number;
-  /** Called on every user `input` event with the current value. */
+  /** Unit suffix displayed after the number (e.g., `"%"`). Default: none. */
+  unit?: string;
+  /** Called on every user input event (slider drag or number edit). */
   onInput?: (value: number) => void;
 }
 
 /**
  * Create a range slider from the shared HTML template.
  *
- * The returned element has a filled-track gradient that
- * automatically stays in sync with the current value —
- * both on user interaction and programmatic `setValue()`.
+ * The returned element contains a label, a range input with
+ * auto-updating filled-track gradient, and a number input
+ * with optional unit suffix. Slider and number input stay
+ * in bidirectional sync.
  */
 export function createRangeSlider(
-  options?: CreateRangeSliderOptions,
+  options: CreateRangeSliderOptions,
 ): RangeSliderComponent {
   const parsed = new DOMParser().parseFromString(
     templateHtml.trim(),
     "text/html",
   );
-  const input = parsed.body.firstElementChild!.cloneNode(
-    true,
-  ) as HTMLInputElement;
+  const row = parsed.body.firstElementChild!.cloneNode(true) as HTMLElement;
 
-  if (options?.min != null) input.min = String(options.min);
-  if (options?.max != null) input.max = String(options.max);
-  if (options?.step != null) input.step = String(options.step);
-  if (options?.value != null) input.value = String(options.value);
+  const labelEl = row.querySelector<HTMLElement>(".range-slider-label")!;
+  const range = row.querySelector<HTMLInputElement>(".range-slider")!;
+  const numberInput = row.querySelector<HTMLInputElement>(
+    ".range-slider-number",
+  )!;
+  const unitEl = row.querySelector<HTMLElement>(".range-slider-unit")!;
+
+  const min = options.min ?? 0;
+  const max = options.max ?? 100;
+
+  labelEl.textContent = options.label;
+  range.min = String(min);
+  range.max = String(max);
+  numberInput.min = String(min);
+  numberInput.max = String(max);
+  if (options.step != null) {
+    range.step = String(options.step);
+    numberInput.step = String(options.step);
+  }
+  if (options.value != null) {
+    range.value = String(options.value);
+    numberInput.value = String(options.value);
+  }
+  if (options.unit) {
+    unitEl.textContent = options.unit;
+  }
 
   const updateFill = () => {
-    const min = Number(input.min) || 0;
-    const max = Number(input.max) || 100;
-    const val = Number(input.value);
+    const val = Number(range.value);
     const pct = ((val - min) / (max - min)) * 100;
-    input.style.background = `linear-gradient(to right, var(--range-fill, var(--accent-color)) 0%, var(--range-fill, var(--accent-color)) ${pct}%, var(--range-bg, #3f3f3f) ${pct}%, var(--range-bg, #3f3f3f) 100%)`;
+    range.style.background = `linear-gradient(to right, var(--range-fill, var(--accent-color)) 0%, var(--range-fill, var(--accent-color)) ${pct}%, var(--range-bg, #3f3f3f) ${pct}%, var(--range-bg, #3f3f3f) 100%)`;
   };
 
-  const onInputHandler = () => {
+  const syncNumberFromRange = () => {
+    numberInput.value = range.value;
     updateFill();
-    options?.onInput?.(Number(input.value));
   };
 
-  input.addEventListener("input", onInputHandler);
+  const onRangeInput = () => {
+    syncNumberFromRange();
+    options.onInput?.(Number(range.value));
+  };
+
+  const onNumberChange = () => {
+    const val = Math.max(min, Math.min(max, Number(numberInput.value)));
+    numberInput.value = String(val);
+    range.value = String(val);
+    updateFill();
+    options.onInput?.(val);
+  };
+
+  range.addEventListener("input", onRangeInput);
+  numberInput.addEventListener("change", onNumberChange);
   updateFill();
 
   return {
-    element: input,
-    getValue: () => Number(input.value),
+    element: row,
+    getValue: () => Number(range.value),
     setValue(value: number) {
-      input.value = String(value);
+      range.value = String(value);
+      numberInput.value = String(value);
       updateFill();
     },
     setEnabled(enabled: boolean) {
-      input.disabled = !enabled;
+      range.disabled = !enabled;
+      numberInput.disabled = !enabled;
     },
     destroy() {
-      input.removeEventListener("input", onInputHandler);
+      range.removeEventListener("input", onRangeInput);
+      numberInput.removeEventListener("change", onNumberChange);
     },
   };
 }

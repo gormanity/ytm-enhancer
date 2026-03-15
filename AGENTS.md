@@ -106,8 +106,7 @@ Use shared helpers for standard popup controls:
 
 - `bindToggle` — checkbox get/set wiring
 - `bindSelect` — select dropdown get/set wiring
-- `bindRange` — range slider get/set wiring (creates a `RangeSliderComponent` in
-  a slot element)
+- `bindRange` — range slider get/set wiring (inline label, slider, number input)
 
 ### UI Components (`src/ui/`)
 
@@ -115,8 +114,8 @@ Standalone components for any DOM context (popup, PiP, content script):
 
 - `createProgressBar` + `progress-bar.css` — seekable progress bar with
   drag-to-seek, CSS custom property theming
-- `createRangeSlider` + `range-slider.css` — themed range input with
-  auto-updating filled-track gradient
+- `createRangeSlider` + `range-slider.css` — inline range slider row with label,
+  filled-track gradient, and number input
 
 See [docs/shared-ui.md](docs/shared-ui.md) for full API reference.
 
