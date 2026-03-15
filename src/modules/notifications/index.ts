@@ -79,6 +79,12 @@ export class NotificationsModule implements FeatureModule {
     return [createNotificationsPopupView()];
   }
 
+  /** Show a reminder notification unconditionally (ignores enabled/dedup). */
+  showReminder(state: PlaybackState): void {
+    if (!state.title || !state.artist) return;
+    this.showNotification(state);
+  }
+
   handleTrackChange(state: PlaybackState): void {
     if (!this.enabled) return;
     if (!state.title || !state.artist) return;

@@ -48,6 +48,9 @@
         "default": "Alt+Shift+Y"
       },
       "description": "Focus the YouTube Music tab"
+    },
+    "remind-me": {
+      "description": "Show a notification with the current track"
     }
   },
   "icons": {

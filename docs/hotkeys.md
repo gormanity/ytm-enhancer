@@ -109,11 +109,12 @@ type CommandHandler = (command: string) => void | Promise<void>;
 
 ## Existing Commands
 
-| Command          | Action                      |
-| ---------------- | --------------------------- |
-| `play-pause`     | Toggle playback             |
-| `next-track`     | Skip to next track          |
-| `previous-track` | Go to previous track        |
-| `focus-ytm-tab`  | Focus the YouTube Music tab |
+| Command          | Action                                   |
+| ---------------- | ---------------------------------------- |
+| `play-pause`     | Toggle playback                          |
+| `next-track`     | Skip to next track                       |
+| `previous-track` | Go to previous track                     |
+| `focus-ytm-tab`  | Focus the YouTube Music tab              |
+| `remind-me`      | Show notification with the current track |
 
 All handlers are registered in `src/background/index.ts`.

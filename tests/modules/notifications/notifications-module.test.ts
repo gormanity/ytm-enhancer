@@ -429,4 +429,60 @@ describe("NotificationsModule", () => {
       );
     });
   });
+
+  describe("showReminder", () => {
+    it("should show a notification regardless of enabled state", () => {
+      module.setEnabled(false);
+
+      module.showReminder(makeState());
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({ title: "Song Title" }),
+        expect.any(Function),
+      );
+    });
+
+    it("should show a notification for the same track repeatedly", () => {
+      const state = makeState();
+
+      module.showReminder(state);
+      createMock.mockClear();
+      module.showReminder(state);
+
+      expect(createMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("should respect field settings", () => {
+      module.setFields({
+        title: true,
+        artist: true,
+        album: true,
+        year: false,
+        artwork: true,
+      });
+
+      module.showReminder(makeState({ album: "My Album" }));
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.stringContaining(ID_PREFIX),
+        expect.objectContaining({
+          message: "Artist Name \u2014 My Album",
+        }),
+        expect.any(Function),
+      );
+    });
+
+    it("should not show a notification when title is null", () => {
+      module.showReminder(makeState({ title: null }));
+
+      expect(createMock).not.toHaveBeenCalled();
+    });
+
+    it("should not show a notification when artist is null", () => {
+      module.showReminder(makeState({ artist: null }));
+
+      expect(createMock).not.toHaveBeenCalled();
+    });
+  });
 });

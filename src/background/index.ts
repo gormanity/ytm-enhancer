@@ -179,6 +179,21 @@ hotkeyRegistry.register("focus-ytm-tab", async () => {
   }
 });
 
+hotkeyRegistry.register("remind-me", async () => {
+  const tab = await findYTMTab(selectedTabId);
+  if (tab?.id === undefined) return;
+  try {
+    const response = (await chrome.tabs.sendMessage(tab.id, {
+      type: "get-playback-state",
+    })) as { ok: boolean; data?: PlaybackState };
+    if (response?.ok && response.data) {
+      notifications.showReminder(response.data);
+    }
+  } catch {
+    // Tab may not have the content script loaded.
+  }
+});
+
 // Chrome MV3 service workers require event listeners to be registered
 // synchronously at the top level of the script, during the first turn
 // of the event loop. Registering inside an async init() is too late.
