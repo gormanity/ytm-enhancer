@@ -300,18 +300,13 @@ describe("YTMAdapter", () => {
   });
 
   describe("getVolume", () => {
-    it("should return volume from video element", () => {
-      document.body.innerHTML = `<video class="html5-main-video"></video>`;
-      const video = document.querySelector("video") as HTMLVideoElement;
-      Object.defineProperty(video, "volume", {
-        value: 0.75,
-        writable: true,
-      });
+    it("should return volume from volume slider", () => {
+      document.body.innerHTML = `<div id="volume-slider" value="75"></div>`;
 
       expect(adapter.getVolume()).toBe(0.75);
     });
 
-    it("should return 1 when video element is missing", () => {
+    it("should return 1 when volume slider is missing", () => {
       document.body.innerHTML = "";
 
       expect(adapter.getVolume()).toBe(1);
@@ -319,16 +314,16 @@ describe("YTMAdapter", () => {
   });
 
   describe("setVolume", () => {
-    it("should set volume on video element", () => {
-      document.body.innerHTML = `<video class="html5-main-video"></video>`;
-      const video = document.querySelector("video") as HTMLVideoElement;
+    it("should set value attribute on volume slider", () => {
+      document.body.innerHTML = `<div id="volume-slider" value="100"></div>`;
+      const slider = document.querySelector("#volume-slider")!;
 
       adapter.setVolume(0.5);
 
-      expect(video.volume).toBe(0.5);
+      expect(slider.getAttribute("value")).toBe("50");
     });
 
-    it("should do nothing when video element is missing", () => {
+    it("should do nothing when volume slider is missing", () => {
       document.body.innerHTML = "";
 
       expect(() => adapter.setVolume(0.5)).not.toThrow();

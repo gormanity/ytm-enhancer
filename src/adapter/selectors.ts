@@ -22,5 +22,8 @@ export const SELECTORS = {
   playerBarThumbnail: ".thumbnail-image-wrapper.style-scope.ytmusic-player-bar",
   likeButton: 'button[aria-label="Like"]',
   dislikeButton: 'button[aria-label="Dislike"]',
+  shuffleButton: ".shuffle",
+  repeatButton: ".repeat",
   shelfRenderer: "ytmusic-shelf-renderer",
+  volumeSlider: "#volume-slider",
 } as const;

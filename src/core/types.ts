@@ -8,6 +8,8 @@ export interface PlaybackState {
   isPlaying: boolean;
   progress: number;
   duration: number;
+  isShuffling?: boolean;
+  repeatMode?: "off" | "all" | "one";
 }
 
 /** Actions that can be executed on the YouTube Music player. */
@@ -16,7 +18,9 @@ export type PlaybackAction =
   | "pause"
   | "next"
   | "previous"
-  | "togglePlay";
+  | "togglePlay"
+  | "shuffle"
+  | "repeat";
 
 /** A popup view registered by a feature module. */
 export interface PopupView {

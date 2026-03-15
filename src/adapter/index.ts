@@ -41,6 +41,16 @@ export class YTMAdapter {
 
     const { album, year } = this.parseSubtitle();
 
+    const shuffleEl = document.querySelector(SELECTORS.shuffleButton);
+    const repeatEl = document.querySelector(SELECTORS.repeatButton);
+
+    const isShuffling = this.isToggleActiveByColor(shuffleEl);
+    const repeatTitle = repeatEl?.getAttribute("title")?.toLowerCase() ?? "";
+
+    let repeatMode: "off" | "all" | "one" = "off";
+    if (repeatTitle.includes("one")) repeatMode = "one";
+    else if (repeatTitle.includes("all")) repeatMode = "all";
+
     return {
       title: titleEl?.textContent?.trim() ?? null,
       artist: artistEl?.textContent?.trim() ?? null,
@@ -50,6 +60,8 @@ export class YTMAdapter {
       isPlaying,
       progress,
       duration,
+      isShuffling,
+      repeatMode,
     };
   }
 
@@ -68,17 +80,17 @@ export class YTMAdapter {
   }
 
   getVolume(): number {
-    const video = document.querySelector<HTMLVideoElement>(
-      SELECTORS.videoElement,
-    );
-    return video?.volume ?? 1;
+    const slider = document.querySelector<HTMLElement>(SELECTORS.volumeSlider);
+    const value = Number(slider?.getAttribute("value") ?? 100);
+    return value / 100;
   }
 
   setVolume(volume: number): void {
-    const video = document.querySelector<HTMLVideoElement>(
-      SELECTORS.videoElement,
-    );
-    if (video) video.volume = volume;
+    const slider = document.querySelector<HTMLElement>(SELECTORS.volumeSlider);
+    if (!slider) return;
+    const value = Math.round(volume * 100);
+    slider.setAttribute("value", String(value));
+    slider.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   isCurrentTrackDisliked(): boolean {
@@ -124,6 +136,14 @@ export class YTMAdapter {
 
       case "previous":
         this.clickButton(SELECTORS.previousButton);
+        break;
+
+      case "shuffle":
+        this.clickButton(SELECTORS.shuffleButton);
+        break;
+
+      case "repeat":
+        this.clickButton(SELECTORS.repeatButton);
         break;
     }
   }
@@ -193,6 +213,17 @@ export class YTMAdapter {
 
   toggleDislike(): void {
     this.clickButton(SELECTORS.dislikeButton);
+  }
+
+  /**
+   * Detect whether a YTM toggle button is active by its computed
+   * text color.  YTM renders active toggles as white (#fff /
+   * rgb(255,255,255)) and inactive ones as gray.
+   */
+  private isToggleActiveByColor(el: Element | null): boolean {
+    if (!el) return false;
+    const color = window.getComputedStyle(el as HTMLElement).color;
+    return color === "rgb(255, 255, 255)";
   }
 
   private isElementVisible(el: HTMLElement): boolean {
