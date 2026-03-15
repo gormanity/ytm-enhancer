@@ -1,5 +1,5 @@
-import { resolve } from "path";
-import { readFileSync, copyFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { readFileSync, copyFileSync, writeFileSync } from "fs";
 import sharp from "sharp";
 import { build, Plugin, InlineConfig } from "vite";
 
@@ -14,6 +14,19 @@ async function generateIcons(outDir: string): Promise<void> {
         .png()
         .toFile(resolve(outDir, `icon${size}.png`)),
     ),
+  );
+}
+
+/** Inline CSS `@import` statements by replacing them with file contents. */
+function bundleCss(filePath: string): string {
+  const dir = dirname(filePath);
+  const css = readFileSync(filePath, "utf-8");
+  return css.replace(
+    /@import\s+["']([^"']+)["']\s*;/g,
+    (_match, importPath: string) => {
+      const resolved = resolve(dir, importPath);
+      return readFileSync(resolved, "utf-8");
+    },
   );
 }
 
@@ -32,9 +45,9 @@ function copyAssets(browser: string): Plugin {
         resolve(__dirname, "src/popup/index.html"),
         resolve(outDir, "popup.html"),
       );
-      copyFileSync(
-        resolve(__dirname, "src/popup/index.css"),
+      writeFileSync(
         resolve(outDir, "index.css"),
+        bundleCss(resolve(__dirname, "src/popup/index.css")),
       );
 
       await generateIcons(outDir);
