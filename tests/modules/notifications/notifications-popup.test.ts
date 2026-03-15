@@ -82,7 +82,7 @@ describe("notifications popup view", () => {
 
     view.render(container);
 
-    const labels = container.querySelectorAll("label.toggle-row");
+    const labels = container.querySelectorAll("label.card-row");
     expect(labels).toHaveLength(2);
     expect(labels[1].querySelector("span")?.textContent).toBe(
       "Show on resume playback",

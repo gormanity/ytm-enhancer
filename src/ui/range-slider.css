@@ -1,5 +1,5 @@
 /* Each row: label (20%) | slider (70%) | value (10%) — all inline.
-   Matches .toggle-row styling for visual consistency in settings cards. */
+   Matches .card-row styling for visual consistency in settings cards. */
 .range-slider-row {
   display: flex;
   align-items: center;

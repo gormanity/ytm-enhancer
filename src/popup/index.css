@@ -164,7 +164,7 @@ h3 {
 
 /* Quick Settings UI */
 
-.compact-select-group .toggle-row {
+.compact-select-group .card-row {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
@@ -222,7 +222,7 @@ h3 {
 }
 
 /* Generic Module Rows */
-.toggle-row {
+.card-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -231,24 +231,24 @@ h3 {
   border-bottom: 1px solid var(--border-color);
 }
 
-.settings-card > .toggle-row:first-child,
+.settings-card > .card-row:first-child,
 .settings-card > .field-row:first-child,
 .settings-card > .shortcut-row:first-child {
   padding-top: 0;
 }
 
-.settings-card > .toggle-row:last-child,
+.settings-card > .card-row:last-child,
 .settings-card > .field-row:last-child,
 .settings-card > .shortcut-row:last-child {
   padding-bottom: 0;
   border-bottom: none;
 }
 
-.toggle-row:last-child {
+.card-row:last-child {
   border-bottom: none;
 }
 
-.toggle-row span {
+.card-row span {
   font-size: 14px;
 }
 

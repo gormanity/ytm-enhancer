@@ -235,8 +235,7 @@ describe("sleep timer popup view", () => {
     const container = document.createElement("div");
     view.render(container);
 
-    const rows =
-      container.querySelectorAll<HTMLLabelElement>("label.toggle-row");
+    const rows = container.querySelectorAll<HTMLLabelElement>("label.card-row");
     const notificationRow = Array.from(rows).find(
       (row) =>
         row.querySelector("span")?.textContent ===

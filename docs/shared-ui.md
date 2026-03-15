@@ -201,7 +201,7 @@ bindRange(container, "quick-volume-range", {
 
 The `data-role` element is a **slot** — `bindRange` creates the range slider
 component and injects it as a `.range-slider-row`. The row renders like a
-`.toggle-row` with border separators and matching padding. Use `data-min` and
+`.card-row` with border separators and matching padding. Use `data-min` and
 `data-max` attributes or pass `min`/`max` in options.
 
 ### Parameters
@@ -384,9 +384,9 @@ ctrl.destroy();
 An inline range slider component with three sub-elements at fixed percentage
 widths: label (28%), adjustable slider with filled-track gradient (58%), and
 numeric value input with optional unit suffix (14%). Each slider renders as a
-standalone row matching `.toggle-row` styling (padding, border-bottom
-separators). Used by the Playback Controls volume slider and the Audio
-Visualizer tuning sliders.
+standalone row matching `.card-row` styling (padding, border-bottom separators).
+Used by the Playback Controls volume slider and the Audio Visualizer tuning
+sliders.
 
 ### CSS
 
@@ -408,7 +408,7 @@ on a parent element.
 Each `.range-slider-row` is a standalone flex row with fixed-percentage column
 widths. Sibling sliders automatically align because they share the same
 proportions. No wrapper container is required — sliders can be placed directly
-inside a `.settings-card` alongside `.toggle-row` elements.
+inside a `.settings-card` alongside `.card-row` elements.
 
 #### CSS custom properties
 
@@ -458,7 +458,7 @@ const slider = createRangeSlider({
   },
 });
 
-// Append to DOM (renders as a row like .toggle-row)
+// Append to DOM (renders as a row like .card-row)
 container.appendChild(slider.element);
 
 // Programmatic update (fill and number input stay in sync):

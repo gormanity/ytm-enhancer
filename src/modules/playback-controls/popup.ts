@@ -145,10 +145,10 @@ export function createPlaybackControlsPopupView(): PopupView {
       renderStreamQualitySelectControl(qualitySlot);
 
       speedSlot
-        .querySelector<HTMLElement>(".toggle-row span")
+        .querySelector<HTMLElement>(".card-row span")
         ?.classList.add("playback-controls-select-label");
       qualitySlot
-        .querySelector<HTMLElement>(".toggle-row span")
+        .querySelector<HTMLElement>(".card-row span")
         ?.classList.add("playback-controls-select-label");
 
       return () => {
