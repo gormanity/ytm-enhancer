@@ -7,8 +7,8 @@ import { PipWindowRenderer } from "./renderer";
 import { VideoPipFallback } from "./video-fallback";
 
 const POLL_INTERVAL_MS = 1000;
-const DOCUMENT_PIP_WIDTH = 380;
-const DOCUMENT_PIP_HEIGHT = 170;
+const DOCUMENT_PIP_WIDTH = 480;
+const DOCUMENT_PIP_HEIGHT = 180;
 
 export class MiniPlayerController {
   private adapter = new YTMAdapter();

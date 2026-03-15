@@ -8,9 +8,13 @@ const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"
 const PAUSE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>`;
 const PREV_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>`;
 const NEXT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z"/></svg>`;
-const THUMBS_UP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.3l1-4.6v-.3c0-.4-.2-.8-.4-1.1L14 1 7.6 7.4C7.2 7.8 7 8.3 7 8.8V19c0 1.1.9 2 2 2h7c.8 0 1.5-.5 1.8-1.2l3-7c.1-.2.2-.5.2-.8v-2z"/></svg>`;
+const SHUFFLE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.45 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>`;
+const REPEAT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>`;
+const REPEAT_ONE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>`;
+const THUMBS_UP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.3l1-4.6v-.3c0-.4-.2-.8-.4-1.1L14 1 7.6 7.4C7.2 7.8 7 8.3 7 8.8V19c0 1.1.9 2 2 2h7c.8 0 1.5-.5 1.8-1.2l3-7.1c.1-.2.2-.5.2-.8v-2z"/></svg>`;
 const THUMBS_DOWN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H8c-.8 0-1.5.5-1.8 1.2l-3 7c-.1.2-.2.5-.2.8v2c0 1.1.9 2 2 2h6.3l-1 4.6v.3c0 .4.2.8.4 1.1L10 23l6.4-6.4c.4-.4.6-.9.6-1.4V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>`;
-const VOLUME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+const VOLUME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71z"/></svg>`;
+const VOLUME_MUTED_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
 interface AuxHandlers {
   onLike?: () => void;
   onDislike?: () => void;
@@ -21,362 +25,272 @@ interface AuxHandlers {
 }
 
 const STYLES = `
-  body {
+  html, body {
     margin: 0;
-    padding: clamp(6px, 2.2vw, 10px);
-    box-sizing: border-box;
-    background: radial-gradient(circle at 20% -10%, #222 0%, #121212 58%);
+    padding: 0;
+    background: #000;
     color: #fff;
-    font-family: "Roboto", sans-serif;
+    font-family: "Roboto", "YouTube Noto", sans-serif;
     height: 100%;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }
-  .banner {
+  .pip {
     display: flex;
-    align-items: center;
-    gap: clamp(6px, 2.2vw, 10px);
-    width: 100%;
+    flex-direction: row;
     height: 100%;
-    border-radius: 11px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.07),
-      rgba(255, 255, 255, 0.03)
-    );
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
-    padding: clamp(5px, 1.8vw, 8px);
+    padding: 0 8px 0 0;
     box-sizing: border-box;
-    transition: background-color 140ms ease, border-color 140ms ease;
+    gap: clamp(6px, 3vw, 16px);
+    position: relative;
+    align-items: stretch;
   }
   .artwork-container {
-    width: clamp(18px, 22vw, 72px);
-    height: clamp(18px, 22vw, 72px);
-    flex-shrink: 1;
-    min-width: 0;
-    min-height: 0;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 50%;
+    flex-shrink: 0;
     position: relative;
+    overflow: hidden;
   }
   .artwork {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 5px;
     display: block;
   }
   .visualizer-canvas {
     position: absolute;
     inset: 0;
-    border-radius: 4px;
     pointer-events: none;
   }
-  .info {
+  .content {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 2px;
+    gap: clamp(4px, 3vh, 12px);
+    padding: clamp(4px, 3vh, 14px) 0;
   }
-  .primary-meta {
+  .meta {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-width: 0;
+    gap: clamp(1px, 1vh, 4px);
+    margin-right: 20px;
   }
   .title {
-    font-size: clamp(12px, 3.2vw, 13px);
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    text-align: left;
+    font-size: clamp(12px, 7vh, 22px);
+    font-weight: 700;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
-    flex-shrink: 0;
+    color: #fff;
+    line-height: 1.3;
   }
   .artist {
-    font-size: clamp(10px, 2.7vw, 11px);
-    color: #b7b7b7;
-    text-align: left;
+    font-size: clamp(10px, 5.5vh, 17px);
+    color: #aaa;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
-    flex-shrink: 0;
+    line-height: 1.3;
   }
   .album {
-    font-size: clamp(9px, 2.2vw, 10px);
-    color: #919191;
-    text-align: left;
+    font-size: clamp(9px, 4.5vh, 15px);
+    color: #717171;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
-    flex-shrink: 0;
+    line-height: 1.3;
   }
   .progress-container {
-    --progress-bar-bg: rgba(255, 255, 255, 0.17);
-    --progress-fill-color: #fff;
-    --progress-thumb-size: 7px;
-    --progress-thumb-color: #fff;
-    --progress-thumb-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
-    --progress-time-color: #adadad;
-    width: 100%;
-    margin: 3px 0 0;
+    --progress-bar-bg: #333;
+    --progress-fill-color: #f00;
+    --progress-thumb-size: 0px;
+    --progress-thumb-color: #f00;
+    --progress-thumb-opacity: 0;
+    --progress-transition: 0s;
     flex-shrink: 0;
+    width: 100%;
+    margin: 0;
+  }
+  .progress-container:hover {
+    --progress-thumb-size: 10px;
+    --progress-thumb-opacity: 1;
+  }
+  .progress-container .progress-time {
+    display: none;
   }
   .controls {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 0;
+    justify-content: center;
+    gap: clamp(6px, 3vw, 16px);
     flex-shrink: 0;
+  }
+  .controls button {
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    width: clamp(22px, 14vh, 40px);
+    height: clamp(22px, 14vh, 40px);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 150ms ease, color 150ms ease, transform 100ms ease;
+    opacity: 0.85;
+  }
+  .controls button svg {
+    width: 75%;
+    height: 75%;
+  }
+  .controls button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 1;
+  }
+  .controls button:active {
+    transform: scale(0.9);
+  }
+  .controls button.active {
+    color: #fff;
+  }
+  .controls .shuffle-btn,
+  .controls .repeat-btn {
+    color: #aaa;
+    opacity: 1;
+  }
+  .controls .shuffle-btn.active,
+  .controls .repeat-btn.active {
+    color: #fff;
+  }
+  .controls .shuffle-btn:hover,
+  .controls .repeat-btn:hover {
+    color: #fff;
+  }
+  .controls .primary-control {
+    width: clamp(28px, 18vh, 50px);
+    height: clamp(28px, 18vh, 50px);
   }
   .control-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 1px;
-    min-width: 0;
-  }
-  .controls button {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #fff;
-    cursor: pointer;
-    width: 31px;
-    height: 31px;
-    padding: 0;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 120ms ease, transform 120ms ease,
-      border-color 120ms ease;
-  }
-  .controls button:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.16);
-  }
-  .controls button:active {
-    transform: scale(0.96);
-  }
-  .controls .primary-control {
-    width: 36px;
-    height: 36px;
-    background: rgba(255, 255, 255, 0.17);
-    border-color: rgba(255, 255, 255, 0.22);
+    gap: 12px;
+    width: 100%;
   }
   .aux-controls {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-shrink: 1;
-    min-width: 0;
+    flex-shrink: 0;
   }
   .aux-controls button {
     border: none;
     background: transparent;
-    color: #bbb;
-    width: clamp(18px, 8vw, 24px);
-    height: clamp(18px, 8vw, 24px);
-    border-radius: 12px;
+    color: #aaa;
+    width: clamp(18px, 10vh, 30px);
+    height: clamp(18px, 10vh, 30px);
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
-    transition: background-color 120ms ease, color 120ms ease,
-      transform 120ms ease;
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .aux-controls button svg {
+    width: 75%;
+    height: 75%;
   }
   .aux-controls button:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.2);
     color: #fff;
-  }
-  .aux-controls button:active {
-    transform: scale(0.96);
   }
   .aux-controls button.active {
     color: #fff;
-    background: rgba(255, 255, 255, 0.14);
   }
   .volume-wrap {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    position: relative;
     flex: 1;
-    min-width: clamp(34px, 14vw, 56px);
+    min-width: 0;
   }
-  .volume-wrap svg {
+  .volume-btn {
+    border: none;
+    background: transparent;
     color: #aaa;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+    width: clamp(18px, 10vh, 30px);
+    height: clamp(18px, 10vh, 30px);
+    border-radius: 50%;
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .volume-btn svg {
+    width: 75%;
+    height: 75%;
+  }
+  .volume-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+  .volume-slider-wrap {
+    overflow: hidden;
+    max-width: 0;
+    opacity: 0;
+    transition: max-width 200ms ease, opacity 200ms ease;
+    position: relative;
+  }
+  .volume-wrap:hover .volume-slider-wrap {
+    max-width: 90px;
+    opacity: 1;
   }
   .volume {
-    width: 100%;
+    width: 80px;
+    margin-right: 10px;
     accent-color: #fff;
-    margin: 0;
-    min-width: 0;
-    height: 14px;
   }
-  button:focus-visible,
-  input:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 1px;
+  .volume-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #212121;
+    color: #fff;
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+    margin-bottom: 6px;
+  }
+  .volume-slider-wrap:hover .volume-tooltip {
+    opacity: 1;
   }
 
-  @media (max-width: 360px), (max-height: 160px) {
-    .banner {
-      gap: 8px;
-      padding: 7px;
-    }
-    .artwork-container {
-      width: clamp(30px, 24vw, 62px);
-      height: clamp(30px, 24vw, 62px);
-    }
-    .title {
-      font-size: 12px;
-    }
-    .artist {
-      font-size: 10px;
-    }
-    .album {
-      font-size: 9px;
-    }
-    .controls button {
-      width: 28px;
-      height: 28px;
-    }
-    .controls .primary-control {
-      width: 32px;
-      height: 32px;
-    }
-    .aux-controls button {
-      width: 18px;
-      height: 18px;
-    }
-    .volume-wrap {
-      min-width: 36px;
+  @media (max-height: 140px) {
+    .control-row {
+      display: none;
     }
   }
 
-  @media (max-width: 320px), (max-height: 145px) {
-    body {
-      padding: 8px;
-    }
-    .banner {
-      gap: 7px;
-      padding: 6px;
-    }
-    .artwork-container {
-      width: clamp(24px, 25vw, 54px);
-      height: clamp(24px, 25vw, 54px);
-    }
+  @media (max-height: 110px) {
     .album {
       display: none;
-    }
-    .progress-container {
-      margin-top: 0;
-    }
-    .time-display {
-      display: none;
-    }
-    .controls {
-      margin-top: 0;
-      gap: 4px;
-    }
-    .controls button {
-      width: 26px;
-      height: 26px;
-    }
-    .controls .primary-control {
-      width: 29px;
-      height: 29px;
-    }
-    .aux-controls {
-      gap: 4px;
-    }
-    .aux-controls button {
-      width: 16px;
-      height: 16px;
-    }
-    .volume-wrap {
-      min-width: 30px;
-    }
-    .volume-wrap svg {
-      display: none;
-    }
-  }
-
-  @media (max-width: 285px), (max-height: 124px) {
-    .volume-wrap {
-      display: none;
-    }
-  }
-
-  @media (max-height: 112px) {
-    .banner {
-      gap: 5px;
-      padding: 4px;
-    }
-    .artwork-container {
-      width: clamp(18px, 22vw, 42px);
-      height: clamp(18px, 22vw, 42px);
-    }
-    .primary-meta {
-      flex-direction: row;
-      align-items: baseline;
-      gap: 5px;
-    }
-    .title {
-      flex: 1;
-      min-width: 0;
-      font-size: 11px;
-    }
-    .artist {
-      flex: 0 1 44%;
-      font-size: 10px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .album,
-    .progress-container,
-    .time-display {
-      display: none;
-    }
-  }
-
-  @media (min-width: 460px) {
-    .banner {
-      gap: 12px;
-      padding: 10px;
-    }
-    .artwork-container {
-      width: clamp(42px, 18vw, 84px);
-      height: clamp(42px, 18vw, 84px);
-    }
-    .title {
-      font-size: 14px;
-    }
-    .artist {
-      font-size: 12px;
-    }
-    .album {
-      font-size: 11px;
-    }
-    .controls button {
-      width: 32px;
-      height: 32px;
-    }
-    .controls .primary-control {
-      width: 38px;
-      height: 38px;
     }
   }
 `;
@@ -389,11 +303,15 @@ export class PipWindowRenderer {
   private titleEl: HTMLElement | null = null;
   private artistEl: HTMLElement | null = null;
   private albumEl: HTMLElement | null = null;
+  private shuffleBtn: HTMLButtonElement | null = null;
+  private repeatBtn: HTMLButtonElement | null = null;
   private playPauseBtn: HTMLButtonElement | null = null;
   private progressBar: ProgressBarComponent | null = null;
   private likeBtn: HTMLButtonElement | null = null;
   private dislikeBtn: HTMLButtonElement | null = null;
+  private volumeBtn: HTMLButtonElement | null = null;
   private volumeRange: HTMLInputElement | null = null;
+  private preMuteVolume = 1;
 
   build(
     doc: Document,
@@ -415,10 +333,11 @@ export class PipWindowRenderer {
     style.textContent = progressBarCss + STYLES;
     doc.head.appendChild(style);
 
-    const banner = doc.createElement("div");
-    banner.className = "banner";
-    doc.body.appendChild(banner);
+    const pip = doc.createElement("div");
+    pip.className = "pip";
+    doc.body.appendChild(pip);
 
+    // Artwork (left side)
     const artworkContainer = doc.createElement("div");
     artworkContainer.className = "artwork-container";
     this.artworkContainerEl = artworkContainer;
@@ -430,46 +349,56 @@ export class PipWindowRenderer {
     this.artworkEl = artwork;
 
     artworkContainer.appendChild(artwork);
-    banner.appendChild(artworkContainer);
+    pip.appendChild(artworkContainer);
 
-    const info = doc.createElement("div");
-    info.className = "info";
-    banner.appendChild(info);
+    // Content (right side: meta + progress + controls)
+    const content = doc.createElement("div");
+    content.className = "content";
+    pip.appendChild(content);
 
-    const primaryMeta = doc.createElement("div");
-    primaryMeta.className = "primary-meta";
-    info.appendChild(primaryMeta);
+    const meta = doc.createElement("div");
+    meta.className = "meta";
+    content.appendChild(meta);
 
     const title = doc.createElement("div");
     title.className = "title";
     title.textContent = state.title ?? "";
     this.titleEl = title;
-    primaryMeta.appendChild(title);
+    meta.appendChild(title);
 
     const artist = doc.createElement("div");
     artist.className = "artist";
     artist.textContent = state.artist ?? "";
     this.artistEl = artist;
-    primaryMeta.appendChild(artist);
+    meta.appendChild(artist);
 
     const albumLine = doc.createElement("div");
     albumLine.className = "album";
     albumLine.textContent = this.formatAlbumLine(state);
     this.albumEl = albumLine;
-    info.appendChild(albumLine);
+    meta.appendChild(albumLine);
 
+    // Progress bar
     this.progressBar = createProgressBar({
       onSeek: (time) => onSeek?.(time),
       doc,
     });
     this.progressBar.setProgress(state.progress, state.duration);
-    info.appendChild(this.progressBar.element);
+    content.appendChild(this.progressBar.element);
 
-    const controlRow = doc.createElement("div");
-    controlRow.className = "control-row";
-
+    // Playback controls
     const controls = doc.createElement("div");
     controls.className = "controls";
+
+    const shuffleBtn = this.createControlButton(
+      doc,
+      "shuffle",
+      SHUFFLE_SVG,
+      "Shuffle",
+      onAction,
+    );
+    shuffleBtn.classList.add("shuffle-btn");
+    this.shuffleBtn = shuffleBtn;
 
     const prevBtn = this.createControlButton(
       doc,
@@ -486,6 +415,8 @@ export class PipWindowRenderer {
       onAction,
     );
     playPauseBtn.classList.add("primary-control");
+    this.playPauseBtn = playPauseBtn;
+
     const nextBtn = this.createControlButton(
       doc,
       "next",
@@ -494,11 +425,26 @@ export class PipWindowRenderer {
       onAction,
     );
 
-    this.playPauseBtn = playPauseBtn;
+    const repeatBtn = this.createControlButton(
+      doc,
+      "repeat",
+      this.getRepeatSvg(state.repeatMode),
+      "Repeat",
+      onAction,
+    );
+    repeatBtn.classList.add("repeat-btn");
+    this.repeatBtn = repeatBtn;
+
+    controls.appendChild(shuffleBtn);
     controls.appendChild(prevBtn);
     controls.appendChild(playPauseBtn);
     controls.appendChild(nextBtn);
-    controlRow.appendChild(controls);
+    controls.appendChild(repeatBtn);
+    content.appendChild(controls);
+
+    // Aux controls row (like/dislike + volume)
+    const controlRow = doc.createElement("div");
+    controlRow.className = "control-row";
 
     const auxControls = doc.createElement("div");
     auxControls.className = "aux-controls";
@@ -517,29 +463,62 @@ export class PipWindowRenderer {
     this.likeBtn = likeBtn;
     auxControls.appendChild(likeBtn);
 
+    controlRow.appendChild(auxControls);
+
     const volumeWrap = doc.createElement("div");
     volumeWrap.className = "volume-wrap";
-    setElementSvgIcon(volumeWrap, VOLUME_SVG, doc);
+
+    const volumeBtn = doc.createElement("button");
+    volumeBtn.className = "volume-btn";
+    volumeBtn.setAttribute("aria-label", "Mute");
+    const initialVol = aux?.volume ?? 1;
+    setElementSvgIcon(
+      volumeBtn,
+      initialVol === 0 ? VOLUME_MUTED_SVG : VOLUME_SVG,
+      doc,
+    );
+    this.preMuteVolume = initialVol > 0 ? initialVol : 1;
+    volumeBtn.addEventListener("click", () => {
+      const current = Number(this.volumeRange?.value ?? 0) / 100;
+      if (current > 0) {
+        this.preMuteVolume = current;
+        aux?.onVolumeChange?.(0);
+      } else {
+        aux?.onVolumeChange?.(this.preMuteVolume);
+      }
+    });
+    this.volumeBtn = volumeBtn;
+    volumeWrap.appendChild(volumeBtn);
+
+    const sliderWrap = doc.createElement("div");
+    sliderWrap.className = "volume-slider-wrap";
+    const volumeTooltip = doc.createElement("div");
+    volumeTooltip.className = "volume-tooltip";
+    volumeTooltip.textContent = Math.round(initialVol * 100) + "%";
+    sliderWrap.appendChild(volumeTooltip);
     const volumeRange = doc.createElement("input");
     volumeRange.className = "volume";
     volumeRange.type = "range";
     volumeRange.min = "0";
     volumeRange.max = "100";
-    volumeRange.value = String(Math.round((aux?.volume ?? 1) * 100));
+    volumeRange.value = String(Math.round(initialVol * 100));
     volumeRange.addEventListener("input", () => {
-      aux?.onVolumeChange?.(Number(volumeRange.value) / 100);
+      const val = Number(volumeRange.value);
+      volumeTooltip.textContent = val + "%";
+      aux?.onVolumeChange?.(val / 100);
     });
     this.volumeRange = volumeRange;
-    volumeWrap.appendChild(volumeRange);
-    auxControls.appendChild(volumeWrap);
-    controlRow.appendChild(auxControls);
-    info.appendChild(controlRow);
+    sliderWrap.appendChild(volumeRange);
+    volumeWrap.appendChild(sliderWrap);
+    controlRow.appendChild(volumeWrap);
+    content.appendChild(controlRow);
 
     this.updateAuxState(
       aux?.volume ?? 1,
       aux?.isLiked === true,
       aux?.isDisliked === true,
     );
+    this.updateControlStates(state);
 
     this.updateDocTitle(state);
   }
@@ -558,24 +537,22 @@ export class PipWindowRenderer {
       this.albumEl.textContent = this.formatAlbumLine(state);
     }
     this.progressBar?.setProgress(state.progress, state.duration);
-    if (this.playPauseBtn) {
-      setElementSvgIcon(
-        this.playPauseBtn,
-        state.isPlaying ? PAUSE_SVG : PLAY_SVG,
-        this.doc ?? document,
-      );
-      this.playPauseBtn.setAttribute(
-        "aria-label",
-        state.isPlaying ? "Pause" : "Play",
-      );
-    }
+    this.updateControlStates(state);
     this.updateDocTitle(state);
   }
 
   updateAuxState(volume: number, isLiked: boolean, isDisliked: boolean): void {
+    const doc = this.doc ?? document;
     if (this.volumeRange) {
       const clamped = Math.max(0, Math.min(100, Math.round(volume * 100)));
       this.volumeRange.value = String(clamped);
+    }
+    if (this.volumeBtn) {
+      setElementSvgIcon(
+        this.volumeBtn,
+        volume === 0 ? VOLUME_MUTED_SVG : VOLUME_SVG,
+        doc,
+      );
     }
     if (this.likeBtn) {
       this.likeBtn.classList.toggle("active", isLiked);
@@ -583,6 +560,39 @@ export class PipWindowRenderer {
     if (this.dislikeBtn) {
       this.dislikeBtn.classList.toggle("active", isDisliked);
     }
+  }
+
+  private updateControlStates(state: PlaybackState): void {
+    const doc = this.doc ?? document;
+    if (this.playPauseBtn) {
+      setElementSvgIcon(
+        this.playPauseBtn,
+        state.isPlaying ? PAUSE_SVG : PLAY_SVG,
+        doc,
+      );
+      this.playPauseBtn.setAttribute(
+        "aria-label",
+        state.isPlaying ? "Pause" : "Play",
+      );
+    }
+
+    if (this.shuffleBtn) {
+      this.shuffleBtn.classList.toggle("active", state.isShuffling);
+    }
+
+    if (this.repeatBtn) {
+      setElementSvgIcon(
+        this.repeatBtn,
+        this.getRepeatSvg(state.repeatMode),
+        doc,
+      );
+      this.repeatBtn.classList.toggle("active", state.repeatMode !== "off");
+    }
+  }
+
+  private getRepeatSvg(mode?: "off" | "all" | "one"): string {
+    if (mode === "one") return REPEAT_ONE_SVG;
+    return REPEAT_SVG;
   }
 
   getArtworkContainer(): HTMLElement | null {

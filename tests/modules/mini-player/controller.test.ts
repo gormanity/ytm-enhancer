@@ -185,8 +185,8 @@ describe("MiniPlayerController", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(requestWindow).toHaveBeenCalledWith({
-      width: 380,
-      height: 170,
+      width: 480,
+      height: 180,
     });
   });
 
