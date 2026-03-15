@@ -163,6 +163,9 @@ export function createProgressBar(
   const bar = wrapper.querySelector<HTMLElement>(".progress-bar")!;
   const fill = wrapper.querySelector<HTMLElement>(".progress-fill")!;
   const thumb = wrapper.querySelector<HTMLElement>(".progress-thumb")!;
+  const tooltip = wrapper.querySelector<HTMLElement>(
+    ".progress-hover-tooltip",
+  )!;
   const elapsedEl = wrapper.querySelector<HTMLElement>(".progress-elapsed")!;
   const durationEl = wrapper.querySelector<HTMLElement>(".progress-duration")!;
 
@@ -178,6 +181,17 @@ export function createProgressBar(
       doc,
     },
   );
+
+  bar.addEventListener("mousemove", (e: MouseEvent) => {
+    if (lastDuration <= 0) return;
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / rect.width),
+    );
+    tooltip.textContent = formatTimestamp(ratio * lastDuration);
+    tooltip.style.left = ratio * 100 + "%";
+  });
 
   return {
     element: wrapper,
