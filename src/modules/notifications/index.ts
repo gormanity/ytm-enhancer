@@ -1,7 +1,7 @@
 import type { FeatureModule, PlaybackState, PopupView } from "@/core/types";
 import { createNotificationsPopupView } from "./popup";
 
-const NOTIFICATION_ID_PREFIX = "ytm-enhancer-now-playing-";
+const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 const FALLBACK_ICON = "icon48.png";
 const PREVIEW_ARTWORK = "preview-artwork.png";
 
@@ -38,8 +38,6 @@ export class NotificationsModule implements FeatureModule {
   private notifyOnUnpause = false;
   private fields: NotificationFields = { ...DEFAULT_FIELDS };
   private lastTrackKey: string | null = null;
-  private lastNotificationId: string | null = null;
-  private notificationCounter = 0;
 
   init(): void {
     // No background-side setup needed; track changes are pushed
@@ -48,7 +46,6 @@ export class NotificationsModule implements FeatureModule {
 
   destroy(): void {
     this.lastTrackKey = null;
-    this.lastNotificationId = null;
   }
 
   isEnabled(): boolean {
@@ -133,7 +130,6 @@ export class NotificationsModule implements FeatureModule {
         ? getNotificationArtworkUrl(state.artworkUrl)
         : chrome.runtime.getURL(FALLBACK_ICON);
 
-    const notificationId = `${NOTIFICATION_ID_PREFIX}${++this.notificationCounter}`;
     const options: chrome.notifications.NotificationCreateOptions = {
       type: "basic",
       title: notificationTitle,
@@ -141,26 +137,22 @@ export class NotificationsModule implements FeatureModule {
       iconUrl,
     };
 
-    const display = () => {
-      this.lastNotificationId = notificationId;
-      chrome.notifications.create(notificationId, options, (id) => {
-        if (chrome.runtime.lastError) {
-          console.error(
-            "[YTM Enhancer Notifications] create failed:",
-            chrome.runtime.lastError.message,
-          );
-        } else {
-          console.log("[YTM Enhancer Notifications] created:", id);
-        }
-      });
-    };
-
-    if (this.lastNotificationId) {
-      chrome.notifications.clear(this.lastNotificationId, () => {
-        display();
-      });
-    } else {
-      display();
-    }
+    // Clear then re-create after a short delay so macOS has time to
+    // process the removal before the new toast arrives. Without the
+    // gap, the window server throttles back-to-back notifications.
+    chrome.notifications.clear(NOTIFICATION_ID, () => {
+      setTimeout(() => {
+        chrome.notifications.create(NOTIFICATION_ID, options, (id) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[YTM Enhancer Notifications] create failed:",
+              chrome.runtime.lastError.message,
+            );
+          } else {
+            console.log("[YTM Enhancer Notifications] created:", id);
+          }
+        });
+      }, 150);
+    });
   }
 }

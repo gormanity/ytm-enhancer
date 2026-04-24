@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NotificationsModule } from "@/modules/notifications";
 import type { PlaybackState } from "@/core/types";
 
-const ID_PREFIX = "ytm-enhancer-now-playing-";
+const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 
 function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
   return {
@@ -18,14 +18,19 @@ function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
   };
 }
 
+/** Flush the 150ms delay between clear and create. */
+function flushNotificationDelay(): void {
+  vi.advanceTimersByTime(150);
+}
+
 describe("NotificationsModule", () => {
   let module: NotificationsModule;
   let createMock: ReturnType<typeof vi.fn>;
   let clearMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     createMock = vi.fn();
-    // Invoke the callback synchronously so create() fires in tests
     clearMock = vi.fn((_id: string, cb?: () => void) => cb?.());
 
     vi.stubGlobal("chrome", {
@@ -48,6 +53,10 @@ describe("NotificationsModule", () => {
     module = new NotificationsModule();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("should have the correct module metadata", () => {
     expect(module.id).toBe("notifications");
     expect(module.name).toBe("Notifications");
@@ -61,9 +70,10 @@ describe("NotificationsModule", () => {
     const state = makeState();
 
     module.handleTrackChange(state);
+    flushNotificationDelay();
 
     expect(createMock).toHaveBeenCalledWith(
-      expect.stringContaining(ID_PREFIX),
+      NOTIFICATION_ID,
       {
         type: "basic",
         title: "Song Title",
@@ -78,18 +88,21 @@ describe("NotificationsModule", () => {
     module.setEnabled(false);
 
     module.handleTrackChange(makeState());
+    flushNotificationDelay();
 
     expect(createMock).not.toHaveBeenCalled();
   });
 
   it("should not show a notification when title is null", () => {
     module.handleTrackChange(makeState({ title: null }));
+    flushNotificationDelay();
 
     expect(createMock).not.toHaveBeenCalled();
   });
 
   it("should not show a notification when artist is null", () => {
     module.handleTrackChange(makeState({ artist: null }));
+    flushNotificationDelay();
 
     expect(createMock).not.toHaveBeenCalled();
   });
@@ -98,8 +111,10 @@ describe("NotificationsModule", () => {
     const state = makeState();
 
     module.handleTrackChange(state);
+    flushNotificationDelay();
     createMock.mockClear();
     module.handleTrackChange(state);
+    flushNotificationDelay();
 
     expect(createMock).not.toHaveBeenCalled();
   });
@@ -109,8 +124,10 @@ describe("NotificationsModule", () => {
 
     module.setNotifyOnUnpause(true);
     module.handleTrackChange(state);
+    flushNotificationDelay();
     createMock.mockClear();
     module.handleTrackChange(state);
+    flushNotificationDelay();
 
     expect(createMock).toHaveBeenCalledTimes(1);
   });
@@ -120,8 +137,10 @@ describe("NotificationsModule", () => {
 
     module.setNotifyOnUnpause(false);
     module.handleTrackChange(state);
+    flushNotificationDelay();
     createMock.mockClear();
     module.handleTrackChange(state);
+    flushNotificationDelay();
 
     expect(createMock).not.toHaveBeenCalled();
   });
@@ -130,43 +149,46 @@ describe("NotificationsModule", () => {
     expect(module.isNotifyOnUnpauseEnabled()).toBe(false);
   });
 
-  it("should clear previous notification before showing new one", () => {
-    const state1 = makeState({ title: "Song A" });
-    const state2 = makeState({ title: "Song B" });
-
-    module.handleTrackChange(state1);
-    const firstId = createMock.mock.calls[0][0] as string;
-    clearMock.mockClear();
-    createMock.mockClear();
-
-    module.handleTrackChange(state2);
-
-    // Previous notification is cleared before creating the new one
-    expect(clearMock).toHaveBeenCalledWith(firstId, expect.any(Function));
-    expect(createMock).toHaveBeenCalledWith(
-      expect.stringContaining(ID_PREFIX),
-      expect.objectContaining({ title: "Song B" }),
-      expect.any(Function),
-    );
-  });
-
-  it("should use unique notification IDs", () => {
+  it("should reuse the same static notification ID across tracks", () => {
     module.handleTrackChange(makeState({ title: "Song A" }));
+    flushNotificationDelay();
     module.handleTrackChange(makeState({ title: "Song B" }));
+    flushNotificationDelay();
 
     const id1 = createMock.mock.calls[0][0] as string;
     const id2 = createMock.mock.calls[1][0] as string;
 
-    expect(id1).toContain(ID_PREFIX);
-    expect(id2).toContain(ID_PREFIX);
-    expect(id1).not.toBe(id2);
+    expect(id1).toBe(NOTIFICATION_ID);
+    expect(id2).toBe(NOTIFICATION_ID);
+  });
+
+  it("should clear the static ID then create after a delay to force a fresh toast", () => {
+    module.handleTrackChange(makeState({ title: "Song A" }));
+
+    // Clear fires immediately
+    expect(clearMock).toHaveBeenCalledWith(
+      NOTIFICATION_ID,
+      expect.any(Function),
+    );
+    // Create has not fired yet (waiting on 150ms delay)
+    expect(createMock).not.toHaveBeenCalled();
+
+    flushNotificationDelay();
+
+    // Now create fires
+    expect(createMock).toHaveBeenCalledWith(
+      NOTIFICATION_ID,
+      expect.objectContaining({ title: "Song A" }),
+      expect.any(Function),
+    );
   });
 
   it("should use fallback icon when artworkUrl is null", () => {
     module.handleTrackChange(makeState({ artworkUrl: null }));
+    flushNotificationDelay();
 
     expect(createMock).toHaveBeenCalledWith(
-      expect.stringContaining(ID_PREFIX),
+      NOTIFICATION_ID,
       expect.objectContaining({
         iconUrl: "chrome-extension://fake-id/icon48.png",
       }),
@@ -180,9 +202,10 @@ describe("NotificationsModule", () => {
         artworkUrl: "https://lh3.googleusercontent.com/abc=w60-h60-l90-rj",
       }),
     );
+    flushNotificationDelay();
 
     expect(createMock).toHaveBeenCalledWith(
-      expect.stringContaining(ID_PREFIX),
+      NOTIFICATION_ID,
       expect.objectContaining({
         iconUrl: "https://lh3.googleusercontent.com/abc=w256-h256-l90-rj",
       }),
@@ -199,9 +222,10 @@ describe("NotificationsModule", () => {
 
   it("should use dedicated preview artwork for test notifications", () => {
     module.triggerPreview();
+    flushNotificationDelay();
 
     expect(createMock).toHaveBeenCalledWith(
-      expect.stringContaining(ID_PREFIX),
+      NOTIFICATION_ID,
       expect.objectContaining({
         title: "Test Track",
         iconUrl: "chrome-extension://fake-id/preview-artwork.png",
@@ -220,9 +244,10 @@ describe("NotificationsModule", () => {
     });
 
     module.triggerPreview();
+    flushNotificationDelay();
 
     expect(createMock).toHaveBeenCalledWith(
-      expect.stringContaining(ID_PREFIX),
+      NOTIFICATION_ID,
       expect.objectContaining({
         iconUrl: "chrome-extension://fake-id/icon48.png",
       }),
@@ -269,9 +294,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState());
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({ title: "Now Playing" }),
         expect.any(Function),
       );
@@ -287,9 +313,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState());
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({ message: "Artist Name" }),
         expect.any(Function),
       );
@@ -305,9 +332,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState({ album: "My Album", year: 2024 }));
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({
           message: "Artist Name \u2014 My Album \u2014 2024",
         }),
@@ -325,9 +353,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState({ album: "My Album" }));
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({ message: "My Album" }),
         expect.any(Function),
       );
@@ -343,9 +372,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState({ year: 2024 }));
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({ message: "2024" }),
         expect.any(Function),
       );
@@ -361,9 +391,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState());
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({
           message: "Previewing notification settings",
         }),
@@ -381,9 +412,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState());
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({
           iconUrl: "chrome-extension://fake-id/icon48.png",
         }),
@@ -401,9 +433,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState({ album: null }));
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({ message: "Artist Name" }),
         expect.any(Function),
       );
@@ -419,9 +452,10 @@ describe("NotificationsModule", () => {
       });
 
       module.handleTrackChange(makeState({ year: null }));
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({
           message: "Previewing notification settings",
         }),
@@ -435,9 +469,10 @@ describe("NotificationsModule", () => {
       module.setEnabled(false);
 
       module.showReminder(makeState());
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({ title: "Song Title" }),
         expect.any(Function),
       );
@@ -447,8 +482,10 @@ describe("NotificationsModule", () => {
       const state = makeState();
 
       module.showReminder(state);
+      flushNotificationDelay();
       createMock.mockClear();
       module.showReminder(state);
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledTimes(1);
     });
@@ -463,9 +500,10 @@ describe("NotificationsModule", () => {
       });
 
       module.showReminder(makeState({ album: "My Album" }));
+      flushNotificationDelay();
 
       expect(createMock).toHaveBeenCalledWith(
-        expect.stringContaining(ID_PREFIX),
+        NOTIFICATION_ID,
         expect.objectContaining({
           message: "Artist Name \u2014 My Album",
         }),
@@ -475,12 +513,14 @@ describe("NotificationsModule", () => {
 
     it("should not show a notification when title is null", () => {
       module.showReminder(makeState({ title: null }));
+      flushNotificationDelay();
 
       expect(createMock).not.toHaveBeenCalled();
     });
 
     it("should not show a notification when artist is null", () => {
       module.showReminder(makeState({ artist: null }));
+      flushNotificationDelay();
 
       expect(createMock).not.toHaveBeenCalled();
     });
