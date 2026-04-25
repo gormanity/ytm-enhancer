@@ -3,6 +3,10 @@ import { readFileSync, copyFileSync, writeFileSync } from "fs";
 import sharp from "sharp";
 import { build, Plugin, InlineConfig } from "vite";
 
+const pkg = JSON.parse(
+  readFileSync(resolve(__dirname, "package.json"), "utf-8"),
+);
+
 const DEFAULT_ICON_SIZES = [16, 48, 128];
 const STORE_ICON_SIZES: Partial<Record<string, number[]>> = {
   edge: [300],
@@ -53,6 +57,7 @@ function copyAssets(browser: string, isDev: boolean): Plugin {
           "utf-8",
         ),
       );
+      manifest.version = pkg.version;
       if (isDev) {
         manifest.name += " (dev)";
       }
