@@ -6,12 +6,12 @@ async function flush(): Promise<void> {
   await vi.waitFor(() => {}, { timeout: 50 });
 }
 
-function createDislikeButton(pressed: string): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.setAttribute("aria-label", "Dislike");
-  btn.setAttribute("aria-pressed", pressed);
-  document.body.appendChild(btn);
-  return btn;
+function createRenderer(likeStatus: string): HTMLElement {
+  const renderer = document.createElement("ytmusic-like-button-renderer");
+  renderer.id = "like-button-renderer";
+  renderer.setAttribute("like-status", likeStatus);
+  document.body.appendChild(renderer);
+  return renderer;
 }
 
 describe("DislikeObserver", () => {
@@ -28,58 +28,56 @@ describe("DislikeObserver", () => {
     document.body.innerHTML = "";
   });
 
-  it("should fire callback when aria-pressed changes to true", async () => {
-    const btn = createDislikeButton("false");
+  it("should fire callback when like-status changes to DISLIKE", async () => {
+    const renderer = createRenderer("INDIFFERENT");
 
     observer.start();
-    btn.setAttribute("aria-pressed", "true");
+    renderer.setAttribute("like-status", "DISLIKE");
     await flush();
 
     expect(onDislikeChange).toHaveBeenCalledWith(true);
   });
 
-  it("should fire callback when aria-pressed changes to false", async () => {
-    const btn = createDislikeButton("true");
+  it("should fire callback when like-status changes to INDIFFERENT", async () => {
+    const renderer = createRenderer("DISLIKE");
 
     observer.start();
-    btn.setAttribute("aria-pressed", "false");
+    renderer.setAttribute("like-status", "INDIFFERENT");
     await flush();
 
     expect(onDislikeChange).toHaveBeenCalledWith(false);
   });
 
   it("should not fire callback when other attributes change", async () => {
-    const btn = createDislikeButton("false");
+    const renderer = createRenderer("INDIFFERENT");
 
     observer.start();
-    btn.setAttribute("data-test", "value");
+    renderer.setAttribute("data-test", "value");
     await flush();
 
     expect(onDislikeChange).not.toHaveBeenCalled();
   });
 
-  it("should discover button added after start()", async () => {
+  it("should discover renderer added after start()", async () => {
     observer.start();
     await flush();
 
-    // Button doesn't exist yet — add it
-    const btn = createDislikeButton("false");
+    const renderer = createRenderer("INDIFFERENT");
     await flush();
 
-    // Now mutate the attribute
-    btn.setAttribute("aria-pressed", "true");
+    renderer.setAttribute("like-status", "DISLIKE");
     await flush();
 
     expect(onDislikeChange).toHaveBeenCalledWith(true);
   });
 
   it("should stop observing when stop() is called", async () => {
-    const btn = createDislikeButton("false");
+    const renderer = createRenderer("INDIFFERENT");
 
     observer.start();
     observer.stop();
 
-    btn.setAttribute("aria-pressed", "true");
+    renderer.setAttribute("like-status", "DISLIKE");
     await flush();
 
     expect(onDislikeChange).not.toHaveBeenCalled();
@@ -89,44 +87,51 @@ describe("DislikeObserver", () => {
     observer.start();
     observer.stop();
 
-    const btn = createDislikeButton("false");
+    const renderer = createRenderer("INDIFFERENT");
     await flush();
 
-    btn.setAttribute("aria-pressed", "true");
+    renderer.setAttribute("like-status", "DISLIKE");
     await flush();
 
     expect(onDislikeChange).not.toHaveBeenCalled();
   });
 
-  it("should re-observe button on reobserve()", async () => {
-    const btn = createDislikeButton("false");
+  it("should re-observe renderer on reobserve()", async () => {
+    const renderer = createRenderer("INDIFFERENT");
     observer.start();
 
-    // Remove old button, add new one (simulates track change)
-    btn.remove();
-    const newBtn = createDislikeButton("false");
-
     observer.reobserve();
-    newBtn.setAttribute("aria-pressed", "true");
+    renderer.setAttribute("like-status", "DISLIKE");
     await flush();
 
     expect(onDislikeChange).toHaveBeenCalledWith(true);
   });
 
-  it("should not fire callback immediately on reobserve()", async () => {
-    createDislikeButton("false");
+  it("should check initial state on reobserve()", async () => {
+    createRenderer("INDIFFERENT");
     observer.start();
 
-    // Replace with a button that is already disliked
+    // Replace with a renderer that is already disliked (simulates
+    // navigating to a previously disliked track)
     document.body.innerHTML = "";
-    createDislikeButton("true");
+    createRenderer("DISLIKE");
 
     observer.reobserve();
     await flush();
 
-    // Should NOT fire for the current state — only for future changes.
-    // Firing immediately causes a runaway skip loop when the previous
-    // track's dislike state hasn't cleared yet.
-    expect(onDislikeChange).not.toHaveBeenCalled();
+    expect(onDislikeChange).toHaveBeenCalledWith(true);
+  });
+
+  it("should report not-disliked on reobserve() for INDIFFERENT track", async () => {
+    createRenderer("DISLIKE");
+    observer.start();
+
+    document.body.innerHTML = "";
+    createRenderer("INDIFFERENT");
+
+    observer.reobserve();
+    await flush();
+
+    expect(onDislikeChange).toHaveBeenCalledWith(false);
   });
 });

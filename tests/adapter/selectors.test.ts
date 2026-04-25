@@ -45,4 +45,9 @@ describe("SELECTORS", () => {
     expect(SELECTORS.videoElement).toBeDefined();
     expect(typeof SELECTORS.videoElement).toBe("string");
   });
+
+  it("should define a selector for the like button renderer", () => {
+    expect(SELECTORS.likeButtonRenderer).toBeDefined();
+    expect(typeof SELECTORS.likeButtonRenderer).toBe("string");
+  });
 });

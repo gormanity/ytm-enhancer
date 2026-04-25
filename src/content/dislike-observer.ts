@@ -1,7 +1,7 @@
 import { SELECTORS } from "@/adapter/selectors";
 
 export class DislikeObserver {
-  private buttonObserver: MutationObserver | null = null;
+  private rendererObserver: MutationObserver | null = null;
   private discoveryObserver: MutationObserver | null = null;
   private onDislikeChange: (isDisliked: boolean) => void;
 
@@ -10,50 +10,53 @@ export class DislikeObserver {
   }
 
   start(): void {
-    const btn = document.querySelector(SELECTORS.dislikeButton);
-    if (btn) {
-      this.observeButton(btn);
+    const renderer = document.querySelector(SELECTORS.likeButtonRenderer);
+    if (renderer) {
+      this.observeRenderer(renderer);
     } else {
-      this.waitForButton();
+      this.waitForRenderer();
     }
   }
 
   stop(): void {
-    this.buttonObserver?.disconnect();
-    this.buttonObserver = null;
+    this.rendererObserver?.disconnect();
+    this.rendererObserver = null;
     this.discoveryObserver?.disconnect();
     this.discoveryObserver = null;
   }
 
   reobserve(): void {
-    this.buttonObserver?.disconnect();
-    this.buttonObserver = null;
+    this.rendererObserver?.disconnect();
+    this.rendererObserver = null;
 
-    const btn = document.querySelector(SELECTORS.dislikeButton);
-    if (btn) {
-      this.observeButton(btn);
+    const renderer = document.querySelector(SELECTORS.likeButtonRenderer);
+    if (renderer) {
+      this.observeRenderer(renderer);
+      // Check initial state for the new track
+      const isDisliked = renderer.getAttribute("like-status") === "DISLIKE";
+      this.onDislikeChange(isDisliked);
     }
   }
 
-  private observeButton(btn: Element): void {
-    this.buttonObserver = new MutationObserver(() => {
-      const pressed = btn.getAttribute("aria-pressed") === "true";
-      this.onDislikeChange(pressed);
+  private observeRenderer(renderer: Element): void {
+    this.rendererObserver = new MutationObserver(() => {
+      const isDisliked = renderer.getAttribute("like-status") === "DISLIKE";
+      this.onDislikeChange(isDisliked);
     });
 
-    this.buttonObserver.observe(btn, {
+    this.rendererObserver.observe(renderer, {
       attributes: true,
-      attributeFilter: ["aria-pressed"],
+      attributeFilter: ["like-status"],
     });
   }
 
-  private waitForButton(): void {
+  private waitForRenderer(): void {
     this.discoveryObserver = new MutationObserver(() => {
-      const btn = document.querySelector(SELECTORS.dislikeButton);
-      if (btn) {
+      const renderer = document.querySelector(SELECTORS.likeButtonRenderer);
+      if (renderer) {
         this.discoveryObserver?.disconnect();
         this.discoveryObserver = null;
-        this.observeButton(btn);
+        this.observeRenderer(renderer);
       }
     });
 

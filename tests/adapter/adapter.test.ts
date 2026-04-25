@@ -331,26 +331,58 @@ describe("YTMAdapter", () => {
   });
 
   describe("isCurrentTrackDisliked", () => {
-    it("should return true when dislike button is pressed", () => {
+    it("should return true when like-status is DISLIKE", () => {
       document.body.innerHTML = `
-        <button aria-label="Dislike" aria-pressed="true"></button>
+        <ytmusic-like-button-renderer id="like-button-renderer" like-status="DISLIKE"></ytmusic-like-button-renderer>
       `;
 
       expect(adapter.isCurrentTrackDisliked()).toBe(true);
     });
 
-    it("should return false when dislike button is not pressed", () => {
+    it("should return false when like-status is INDIFFERENT", () => {
       document.body.innerHTML = `
-        <button aria-label="Dislike" aria-pressed="false"></button>
+        <ytmusic-like-button-renderer id="like-button-renderer" like-status="INDIFFERENT"></ytmusic-like-button-renderer>
       `;
 
       expect(adapter.isCurrentTrackDisliked()).toBe(false);
     });
 
-    it("should return false when dislike button is missing", () => {
+    it("should return false when like-status is LIKE", () => {
+      document.body.innerHTML = `
+        <ytmusic-like-button-renderer id="like-button-renderer" like-status="LIKE"></ytmusic-like-button-renderer>
+      `;
+
+      expect(adapter.isCurrentTrackDisliked()).toBe(false);
+    });
+
+    it("should return false when renderer is missing", () => {
       document.body.innerHTML = "";
 
       expect(adapter.isCurrentTrackDisliked()).toBe(false);
+    });
+  });
+
+  describe("isCurrentTrackLiked", () => {
+    it("should return true when like-status is LIKE", () => {
+      document.body.innerHTML = `
+        <ytmusic-like-button-renderer id="like-button-renderer" like-status="LIKE"></ytmusic-like-button-renderer>
+      `;
+
+      expect(adapter.isCurrentTrackLiked()).toBe(true);
+    });
+
+    it("should return false when like-status is INDIFFERENT", () => {
+      document.body.innerHTML = `
+        <ytmusic-like-button-renderer id="like-button-renderer" like-status="INDIFFERENT"></ytmusic-like-button-renderer>
+      `;
+
+      expect(adapter.isCurrentTrackLiked()).toBe(false);
+    });
+
+    it("should return false when renderer is missing", () => {
+      document.body.innerHTML = "";
+
+      expect(adapter.isCurrentTrackLiked()).toBe(false);
     });
   });
 

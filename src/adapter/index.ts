@@ -98,13 +98,13 @@ export class YTMAdapter {
   }
 
   isCurrentTrackDisliked(): boolean {
-    const btn = document.querySelector(SELECTORS.dislikeButton);
-    return btn?.getAttribute("aria-pressed") === "true";
+    const renderer = document.querySelector(SELECTORS.likeButtonRenderer);
+    return renderer?.getAttribute("like-status") === "DISLIKE";
   }
 
   isCurrentTrackLiked(): boolean {
-    const btn = document.querySelector(SELECTORS.likeButton);
-    return btn?.getAttribute("aria-pressed") === "true";
+    const renderer = document.querySelector(SELECTORS.likeButtonRenderer);
+    return renderer?.getAttribute("like-status") === "LIKE";
   }
 
   seekTo(time: number): void {
