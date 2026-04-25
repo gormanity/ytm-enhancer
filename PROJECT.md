@@ -21,6 +21,37 @@ YTM Enhancer is built around a few constraints:
 - Degrade gracefully when an API is unavailable in a browser.
 - Optimize for maintainability over cleverness.
 
+## Design Principles
+
+### Mini Player (PiP)
+
+The PiP mini player should feel like a native extension of YouTube Music, not a
+custom widget.
+
+- **Match YTM styling.** White for active toggle states, gray for inactive.
+  Circular hover glow on buttons. No colored accents except the red progress bar
+  fill.
+- **Scale fluidly.** Use `clamp()` with viewport-relative units (`vh`/`vw`) for
+  font sizes, icon dimensions, gaps, and padding so everything stays
+  proportional as the window is resized.
+- **Edge-to-edge artwork.** Album art fills the full left side with no padding
+  or border-radius.
+- **Progressive disclosure.** Volume slider appears on hover; tooltips appear on
+  interactive elements. Keep the default view clean.
+- **Vertical-first responsive.** PiP windows are typically wider than tall, so
+  vertical space is the primary constraint. Hide elements as height shrinks (aux
+  controls first, then album line).
+
+### Adapter
+
+The adapter layer centralizes all YTM DOM interaction so that markup changes
+only require updates in one place.
+
+YTM uses custom web components (`yt-icon-button`, `tp-yt-paper-icon-button`)
+that do not follow standard ARIA patterns. When adding new state detection,
+always verify attributes against the live YTM DOM first — do not assume
+`aria-pressed` or `aria-label` will exist.
+
 ## Current Feature Surface
 
 The project currently includes these user-facing modules:

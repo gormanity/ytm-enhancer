@@ -44,6 +44,8 @@ export class YTMAdapter {
     const shuffleEl = document.querySelector(SELECTORS.shuffleButton);
     const repeatEl = document.querySelector(SELECTORS.repeatButton);
 
+    // Shuffle has no aria-pressed or state attribute; detect via computed color.
+    // Repeat uses title ("Repeat off" / "Repeat all" / "Repeat one").
     const isShuffling = this.isToggleActiveByColor(shuffleEl);
     const repeatTitle = repeatEl?.getAttribute("title")?.toLowerCase() ?? "";
 
@@ -79,6 +81,8 @@ export class YTMAdapter {
     if (video) video.playbackRate = rate;
   }
 
+  // Read from the volume slider element, not video.volume —
+  // video.volume doesn't reflect YTM's UI-level volume.
   getVolume(): number {
     const slider = document.querySelector<HTMLElement>(SELECTORS.volumeSlider);
     const value = Number(slider?.getAttribute("value") ?? 100);
