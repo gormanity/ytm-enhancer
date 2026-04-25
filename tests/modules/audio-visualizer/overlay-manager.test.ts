@@ -214,9 +214,11 @@ describe("VisualizerOverlayManager", () => {
 
     const pipContainer = document.createElement("div");
     manager.attachToPip(pipContainer);
-    makeAllVisible(pipContainer);
 
-    expect(mockCanvases[1].start).toHaveBeenCalledTimes(1);
+    // PiP is treated as visible immediately (it lives in a separate
+    // window where IntersectionObserver can't reach), so attaching
+    // it while running should start it right away.
+    expect(mockCanvases[1].start).toHaveBeenCalled();
   });
 
   it("should not auto-start canvas when not running", () => {

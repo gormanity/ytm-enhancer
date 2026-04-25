@@ -219,7 +219,9 @@ export class VisualizerOverlayManager {
       case "player-bar-only":
         return { playerBar: true, songArt: false, pip: false };
       case "auto": {
-        if (this.pipCanvas && this.pipVisible)
+        // PiP lives in a separate window so IntersectionObserver can't
+        // track it — treat it as visible whenever the canvas exists.
+        if (this.pipCanvas)
           return { playerBar: false, songArt: false, pip: true };
         if (this.songArtCanvas && this.songArtVisible)
           return { playerBar: false, songArt: true, pip: false };
