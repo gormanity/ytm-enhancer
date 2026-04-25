@@ -13,6 +13,7 @@ import {
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import type { PlaybackState } from "@/core/types";
+import { error } from "@/core/logger";
 
 import { parseSelectedTabId, resolveSelectedTabId } from "./selected-tab";
 import { AutoPlayModule } from "@/modules/auto-play";
@@ -165,7 +166,7 @@ for (const [cmd, action] of Object.entries(COMMAND_ACTION_MAP)) {
     try {
       await executor.execute(action, tab.id);
     } catch (err) {
-      console.error("[YTM Enhancer] Hotkey action failed:", err);
+      error("Hotkey action failed:", err);
     }
   });
 }
@@ -756,6 +757,6 @@ const modules: FeatureModule[] = [
 
 Promise.all([restoreModuleState(), initializeModules(context, modules)]).catch(
   (err) => {
-    console.error("[YTM Enhancer] Failed to initialize modules:", err);
+    error("Failed to initialize modules:", err);
   },
 );

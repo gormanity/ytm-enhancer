@@ -1,4 +1,4 @@
 import { defineConfig } from "vite";
 import { createConfig } from "./vite.config.shared";
 
-export default defineConfig(createConfig("chrome"));
+export default defineConfig(({ mode }) => createConfig("chrome", mode));

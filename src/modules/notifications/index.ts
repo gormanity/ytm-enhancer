@@ -1,5 +1,6 @@
 import type { FeatureModule, PlaybackState, PopupView } from "@/core/types";
 import { createNotificationsPopupView } from "./popup";
+import { debug, error } from "@/core/logger";
 
 const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 const FALLBACK_ICON = "icon48.png";
@@ -96,7 +97,7 @@ export class NotificationsModule implements FeatureModule {
 
   /** Trigger a test notification for preview purposes. */
   triggerPreview(): void {
-    console.log("[YTM Enhancer Notifications] Triggering preview...");
+    debug("Notifications: triggering preview");
     this.showNotification({
       title: "Test Track",
       artist: "Example Artist",
@@ -144,12 +145,12 @@ export class NotificationsModule implements FeatureModule {
       setTimeout(() => {
         chrome.notifications.create(NOTIFICATION_ID, options, (id) => {
           if (chrome.runtime.lastError) {
-            console.error(
-              "[YTM Enhancer Notifications] create failed:",
+            error(
+              "Notifications: create failed:",
               chrome.runtime.lastError.message,
             );
           } else {
-            console.log("[YTM Enhancer Notifications] created:", id);
+            debug("Notifications: created:", id);
           }
         });
       }, 150);

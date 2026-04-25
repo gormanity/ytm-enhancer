@@ -15,12 +15,14 @@ import { QualityBridgeInjector } from "./quality-bridge-injector";
 import { AutoPlayController } from "./auto-play";
 import { DislikeObserver } from "./dislike-observer";
 import { TrackObserver } from "./track-observer";
+import { debug } from "@/core/logger";
 
 const adapter = new YTMAdapter();
 const handler = createMessageHandler();
 
 handler.on("playback-action", async (message) => {
   const action = message.action as PlaybackAction;
+  debug("playback-action:", action);
   adapter.executeAction(action);
   return { ok: true };
 });

@@ -37,15 +37,28 @@ function bundleCss(filePath: string): string {
   );
 }
 
-function copyAssets(browser: string): Plugin {
+function outDirFor(browser: string, isDev: boolean): string {
+  return isDev ? `dist-dev/${browser}` : `dist/${browser}`;
+}
+
+function copyAssets(browser: string, isDev: boolean): Plugin {
   return {
     name: "copy-assets",
     async closeBundle() {
-      const outDir = resolve(__dirname, `dist/${browser}`);
+      const outDir = resolve(__dirname, outDirFor(browser, isDev));
 
-      copyFileSync(
-        resolve(__dirname, `src/manifests/${browser}.json`),
+      const manifest = JSON.parse(
+        readFileSync(
+          resolve(__dirname, `src/manifests/${browser}.json`),
+          "utf-8",
+        ),
+      );
+      if (isDev) {
+        manifest.name += " (dev)";
+      }
+      writeFileSync(
         resolve(outDir, "manifest.json"),
+        JSON.stringify(manifest, null, 2) + "\n",
       );
 
       copyFileSync(
@@ -81,6 +94,7 @@ function entryConfig(
   browser: string,
   entry: string,
   format: "es" | "iife",
+  isDev: boolean,
 ): InlineConfig {
   return {
     resolve: {
@@ -93,7 +107,7 @@ function entryConfig(
         fileName: () => `${entry}.js`,
         name: entry.replace(/[^a-zA-Z]/g, "_"),
       },
-      outDir: `dist/${browser}`,
+      outDir: outDirFor(browser, isDev),
       target: "ES2022",
       minify: false,
       sourcemap: true,
@@ -101,6 +115,7 @@ function entryConfig(
     },
     define: {
       __BROWSER__: JSON.stringify(browser),
+      __DEV__: JSON.stringify(isDev),
     },
     configFile: false,
     logLevel: "warn",
@@ -108,26 +123,27 @@ function entryConfig(
 }
 
 /** Build content and popup after the main background build. */
-function buildExtras(browser: string): Plugin {
+function buildExtras(browser: string, isDev: boolean): Plugin {
   return {
     name: "build-extras",
     async closeBundle() {
       // Content script as IIFE (no ES module imports allowed)
-      await build(entryConfig(browser, "content", "iife"));
+      await build(entryConfig(browser, "content", "iife", isDev));
       // Popup as ES module (loaded via <script type="module">)
-      await build(entryConfig(browser, "popup", "es"));
+      await build(entryConfig(browser, "popup", "es", isDev));
     },
   };
 }
 
-export function createConfig(browser: string) {
+export function createConfig(browser: string, mode = "production") {
+  const isDev = mode === "development";
   return {
     resolve: {
       alias: {
         "@": resolve(__dirname, "src"),
       },
     },
-    plugins: [buildExtras(browser), copyAssets(browser)],
+    plugins: [buildExtras(browser, isDev), copyAssets(browser, isDev)],
     build: {
       lib: {
         entry: resolve(__dirname, "src/background/index.ts"),
@@ -135,7 +151,7 @@ export function createConfig(browser: string) {
         fileName: () => "background.js",
         name: "background",
       },
-      outDir: `dist/${browser}`,
+      outDir: outDirFor(browser, isDev),
       target: "ES2022",
       minify: false,
       sourcemap: true,
@@ -143,6 +159,7 @@ export function createConfig(browser: string) {
     },
     define: {
       __BROWSER__: JSON.stringify(browser),
+      __DEV__: JSON.stringify(isDev),
     },
   };
 }

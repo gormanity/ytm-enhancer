@@ -5,6 +5,7 @@ import type { VisualizerOverlayManager } from "@/modules/audio-visualizer/overla
 import { PipButton } from "./pip-button";
 import { PipWindowRenderer } from "./renderer";
 import { VideoPipFallback } from "./video-fallback";
+import { debug } from "@/core/logger";
 
 const POLL_INTERVAL_MS = 1000;
 const DOCUMENT_PIP_WIDTH = 480;
@@ -163,11 +164,13 @@ export class MiniPlayerController {
 
       this.startPolling();
       this.reportPipOpenState(true);
+      debug("PiP: document PiP opened");
 
       pipWindow.addEventListener("pagehide", () => {
         this.stopPolling();
         this.overlayManager?.detachPip();
         this.reportPipOpenState(false);
+        debug("PiP: document PiP closed");
       });
 
       return true;
