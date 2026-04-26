@@ -15,7 +15,8 @@ This file covers **how to work**, not what the project is.
 
 ## VCS
 
-- Use `jj` exclusively. Never use raw `git` commands.
+- Use `jj` exclusively. The one exception is `git push origin <tag>` for pushing
+  tags, since `jj git push` does not support tags.
 - Make changes atomic and tightly scoped.
 - Write descriptive change descriptions.
 - Use `jj split` to break apart changes that touch unrelated concerns (e.g., a
@@ -31,7 +32,7 @@ This file covers **how to work**, not what the project is.
   changes local preserves the option to revise earlier commits with `jj squash`
   or `jj edit`. Push once the feature is done and all checks pass.
 - **Before every push**, run CI-equivalent checks locally (`pnpm run check` plus
-  browser builds) and only push when they pass.
+  `pnpm run dev:build`) and only push when they pass.
 - **After every push**, verify the GitHub Actions CI run for that push has
   completed successfully.
 
@@ -49,16 +50,17 @@ This file covers **how to work**, not what the project is.
 
 ## Release Process
 
-- Before tagging any release, run `pnpm run validate` locally and ensure it
-  passes.
-- Ensure `main` is at the intended release commit before creating a tag.
-- Create a semantic version tag (for example: `v0.1.0`) on the release commit.
-- Push/update the tag on GitHub and verify the `Release` workflow completes
-  successfully.
-- Verify the corresponding `CI` workflow on `main` is green.
+- Bump the version in `package.json` (the only source of truth — manifest
+  versions are injected at build time).
+- Commit the version bump, push, and ensure CI is green.
+- Before tagging, run `pnpm run validate` locally and ensure it passes.
+- Create a semantic version tag: `jj tag set v0.X.Y -r @-` then
+  `git push origin v0.X.Y`.
+- Verify the `Release` workflow completes successfully.
+- Run `pnpm run package` to generate store submission zips.
 - Write release notes from the end-user perspective:
-  - Focus on what changed for users, what improved, and any known limitations.
-  - Avoid internal implementation details unless they affect user behavior.
+  - Focus on what changed for users and what improved.
+  - Do not include known limitations or internal implementation details.
 
 ---
 
@@ -74,19 +76,21 @@ This file covers **how to work**, not what the project is.
 | Test            | `pnpm run test`          |
 | Build (Chrome)  | `pnpm run build:chrome`  |
 | Build (Firefox) | `pnpm run build:firefox` |
+| Dev build (all) | `pnpm run dev:build`     |
 
 All checks must pass before pushing.
 
-After each feature change cycle, run both `build:chrome` and `build:firefox` so
-the extension can be optested.
+After each feature change cycle, run `pnpm run dev:build` so the extension can
+be optested with debug logging enabled. Dev builds output to `dist-dev/` and
+include a "(dev)" name suffix. Only run production builds (`build:chrome`,
+`build:firefox`) for releases.
 
 ## Change Cycle Checklist
 
 - After every change cycle (even if small), run `pnpm run format`.
 - After formatting, run `pnpm run format:check` as part of validation.
-- After every change cycle (even if small), rebuild both targets:
-  `pnpm run build:chrome` and `pnpm run build:firefox`.
-- Do not consider a feature cycle complete until both builds finish
+- After every change cycle (even if small), run `pnpm run dev:build`.
+- Do not consider a feature cycle complete until the dev build finishes
   successfully.
 
 ---
