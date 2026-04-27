@@ -166,10 +166,7 @@ describe("NotificationsModule", () => {
     module.handleTrackChange(makeState({ title: "Song A" }));
 
     // Clear fires immediately
-    expect(clearMock).toHaveBeenCalledWith(
-      NOTIFICATION_ID,
-      expect.any(Function),
-    );
+    expect(clearMock).toHaveBeenCalledWith(NOTIFICATION_ID);
     // Create has not fired yet (waiting on 150ms delay)
     expect(createMock).not.toHaveBeenCalled();
 
@@ -179,6 +176,25 @@ describe("NotificationsModule", () => {
     expect(createMock).toHaveBeenCalledWith(
       NOTIFICATION_ID,
       expect.objectContaining({ title: "Song A" }),
+      expect.any(Function),
+    );
+  });
+
+  it("should still create the notification when clear's callback never fires", () => {
+    // Firefox returns a Promise from notifications.clear and may not invoke
+    // a passed callback. The previous pattern nested create() inside the
+    // clear callback, so notifications never appeared on Firefox.
+    clearMock.mockImplementation((_id: string) => {
+      // Firefox-style: ignore any callback, return a (never-resolving) Promise.
+      return new Promise(() => {});
+    });
+
+    module.handleTrackChange(makeState({ title: "Firefox Song" }));
+    flushNotificationDelay();
+
+    expect(createMock).toHaveBeenCalledWith(
+      NOTIFICATION_ID,
+      expect.objectContaining({ title: "Firefox Song" }),
       expect.any(Function),
     );
   });
