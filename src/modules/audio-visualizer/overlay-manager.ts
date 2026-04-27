@@ -40,6 +40,14 @@ export class VisualizerOverlayManager {
     this.evaluateActive();
   }
 
+  hasPlayerBarAttachment(): boolean {
+    return this.playerBarCanvas !== null;
+  }
+
+  hasSongArtAttachment(): boolean {
+    return this.songArtCanvas !== null;
+  }
+
   attachToPip(container: HTMLElement): void {
     this.pipCanvas = this.createAndAttach(container);
     this.observeContainer(container, "pip");

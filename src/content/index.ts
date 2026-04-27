@@ -196,22 +196,63 @@ function stopVisualizerStatePolling(): void {
   }
 }
 
+let visualizerSurfaceObserver: MutationObserver | null = null;
+
+function attachVisualizerSurfaces(): void {
+  if (!overlayManager.hasPlayerBarAttachment()) {
+    const playerBarEl = document.querySelector<HTMLElement>(
+      SELECTORS.playerBarThumbnail,
+    );
+    if (playerBarEl) {
+      overlayManager.attachToPlayerBar(playerBarEl);
+    }
+  }
+  if (!overlayManager.hasSongArtAttachment()) {
+    const songArtEl = document.querySelector<HTMLElement>(
+      SELECTORS.songArtPanel,
+    );
+    if (songArtEl) {
+      overlayManager.attachToSongArt(songArtEl);
+    }
+  }
+}
+
+function observeVisualizerSurfaces(): void {
+  if (visualizerSurfaceObserver) return;
+  if (
+    overlayManager.hasPlayerBarAttachment() &&
+    overlayManager.hasSongArtAttachment()
+  ) {
+    return;
+  }
+  visualizerSurfaceObserver = new MutationObserver(() => {
+    attachVisualizerSurfaces();
+    if (
+      overlayManager.hasPlayerBarAttachment() &&
+      overlayManager.hasSongArtAttachment()
+    ) {
+      visualizerSurfaceObserver?.disconnect();
+      visualizerSurfaceObserver = null;
+    }
+  });
+  visualizerSurfaceObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+function stopObservingVisualizerSurfaces(): void {
+  visualizerSurfaceObserver?.disconnect();
+  visualizerSurfaceObserver = null;
+}
+
 async function startVisualizer(): Promise<void> {
   await audioBridge.inject((data) => {
     overlayManager.updateFrequencyData(data);
   });
 
-  const playerBarEl = document.querySelector<HTMLElement>(
-    SELECTORS.playerBarThumbnail,
-  );
-  if (playerBarEl) {
-    overlayManager.attachToPlayerBar(playerBarEl);
-  }
-
-  const songArtEl = document.querySelector<HTMLElement>(SELECTORS.songArtPanel);
-  if (songArtEl) {
-    overlayManager.attachToSongArt(songArtEl);
-  }
+  attachVisualizerSurfaces();
+  observeVisualizerSurfaces();
 
   startVisualizerStatePolling();
   applyVisualizerRuntimeState();
@@ -220,6 +261,7 @@ async function startVisualizer(): Promise<void> {
 
 function stopVisualizer(): void {
   stopVisualizerStatePolling();
+  stopObservingVisualizerSurfaces();
   visualizerActive = false;
   audioBridge.stop();
   overlayManager.stopAll();

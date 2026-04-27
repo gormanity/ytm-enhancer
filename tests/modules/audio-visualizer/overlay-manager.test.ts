@@ -134,6 +134,33 @@ describe("VisualizerOverlayManager", () => {
     expect(mockCanvases[0].destroy).toHaveBeenCalledTimes(1);
   });
 
+  it("should report attachment state for player bar and song art", () => {
+    expect(manager.hasPlayerBarAttachment()).toBe(false);
+    expect(manager.hasSongArtAttachment()).toBe(false);
+
+    const playerBar = document.createElement("div");
+    manager.attachToPlayerBar(playerBar);
+    expect(manager.hasPlayerBarAttachment()).toBe(true);
+    expect(manager.hasSongArtAttachment()).toBe(false);
+
+    const songArt = document.createElement("div");
+    manager.attachToSongArt(songArt);
+    expect(manager.hasSongArtAttachment()).toBe(true);
+  });
+
+  it("should clear attachment state after destroyAll", () => {
+    const playerBar = document.createElement("div");
+    const songArt = document.createElement("div");
+    manager.attachToPlayerBar(playerBar);
+    manager.attachToSongArt(songArt);
+    expect(manager.hasPlayerBarAttachment()).toBe(true);
+    expect(manager.hasSongArtAttachment()).toBe(true);
+
+    manager.destroyAll();
+    expect(manager.hasPlayerBarAttachment()).toBe(false);
+    expect(manager.hasSongArtAttachment()).toBe(false);
+  });
+
   it("should fan out frequency data to all canvases", () => {
     const c1 = document.createElement("div");
     const c2 = document.createElement("div");
