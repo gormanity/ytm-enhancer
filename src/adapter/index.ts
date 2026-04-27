@@ -191,6 +191,21 @@ export class YTMAdapter {
   }
 
   private readVideoTime(): { progress: number; duration: number } {
+    // Prefer #progress-bar — its value/max are per-track. video.duration can
+    // jump to the queue-wide total when YTM concatenates upcoming tracks into
+    // a single MediaSource buffer, making song times read way too long.
+    const bar = document.querySelector<HTMLElement>(SELECTORS.progressBar);
+    if (bar) {
+      const max = Number(bar.getAttribute("max"));
+      if (Number.isFinite(max) && max > 0) {
+        const value = Number(bar.getAttribute("value"));
+        return {
+          progress: Number.isFinite(value) ? value : 0,
+          duration: max,
+        };
+      }
+    }
+
     const video = document.querySelector(
       SELECTORS.videoElement,
     ) as HTMLVideoElement | null;
