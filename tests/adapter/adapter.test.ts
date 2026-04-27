@@ -93,6 +93,35 @@ describe("YTMAdapter", () => {
       expect(state.duration).toBe(0);
     });
 
+    it("should prefer progress bar value/max over video element", () => {
+      document.body.innerHTML = `
+        <video class="html5-main-video"></video>
+        <tp-yt-paper-progress id="progress-bar" value="42" max="211"></tp-yt-paper-progress>
+      `;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      // Video reports queue-wide times; progress bar reports per-track.
+      Object.defineProperty(video, "currentTime", { value: 1142 });
+      Object.defineProperty(video, "duration", { value: 1172 });
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(42);
+      expect(state.duration).toBe(211);
+    });
+
+    it("should fall back to video time when progress bar has no max", () => {
+      document.body.innerHTML = `
+        <video class="html5-main-video"></video>
+        <tp-yt-paper-progress id="progress-bar"></tp-yt-paper-progress>
+      `;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "currentTime", { value: 12 });
+      Object.defineProperty(video, "duration", { value: 100 });
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(12);
+      expect(state.duration).toBe(100);
+    });
+
     it("should extract album name from subtitle second link", () => {
       document.body.innerHTML = `
         <span class="subtitle style-scope ytmusic-player-bar">
