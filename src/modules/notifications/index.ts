@@ -141,9 +141,23 @@ export class NotificationsModule implements FeatureModule {
     // Clear then re-create after a short delay so macOS has time to
     // process the removal before the new toast arrives. Without the
     // gap, the window server throttles back-to-back notifications.
-    chrome.notifications.clear(NOTIFICATION_ID, () => {
-      setTimeout(() => {
-        chrome.notifications.create(NOTIFICATION_ID, options, (id) => {
+    //
+    // Don't nest create() inside the clear() callback — Firefox returns a
+    // Promise from clear() and does not reliably invoke a passed callback,
+    // which broke notifications entirely. Fire-and-forget the clear and
+    // schedule create on its own timer.
+    const clearResult = chrome.notifications.clear(NOTIFICATION_ID) as
+      | Promise<unknown>
+      | undefined;
+    if (clearResult && typeof clearResult.then === "function") {
+      clearResult.catch(() => {});
+    }
+
+    setTimeout(() => {
+      const createResult = chrome.notifications.create(
+        NOTIFICATION_ID,
+        options,
+        (id) => {
           if (chrome.runtime.lastError) {
             error(
               "Notifications: create failed:",
@@ -152,8 +166,18 @@ export class NotificationsModule implements FeatureModule {
           } else {
             debug("Notifications: created:", id);
           }
-        });
-      }, 150);
-    });
+        },
+      ) as Promise<string> | undefined;
+      if (createResult && typeof createResult.then === "function") {
+        createResult
+          .then((id) => debug("Notifications: created:", id))
+          .catch((e: unknown) =>
+            error(
+              "Notifications: create rejected:",
+              e instanceof Error ? e.message : String(e),
+            ),
+          );
+      }
+    }, 150);
   }
 }
