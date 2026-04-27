@@ -25,17 +25,26 @@ export function createHotkeysPopupView(): PopupView {
       if (!list || !rowTemplate || !keyTemplate || !separatorTemplate) return;
       loadShortcuts(list, rowTemplate, keyTemplate, separatorTemplate);
 
+      const configActions = container.querySelector<HTMLElement>(
+        '[data-role="configure-shortcuts-actions"]',
+      );
+      const firefoxInstructions = container.querySelector<HTMLElement>(
+        '[data-role="firefox-shortcuts-instructions"]',
+      );
       const configBtn = container.querySelector<HTMLButtonElement>(
         '[data-role="configure-shortcuts"]',
       );
-      if (!configBtn) return;
-      configBtn.onclick = () => {
-        const url =
-          __BROWSER__ === "firefox"
-            ? "about:addons"
-            : "chrome://extensions/shortcuts";
-        chrome.tabs.create({ url });
-      };
+
+      // Firefox blocks programmatic navigation to privileged about: URLs from
+      // tabs.create, so we show inline instructions instead of a button.
+      if (__BROWSER__ === "firefox") {
+        configActions?.classList.add("is-hidden");
+        firefoxInstructions?.classList.remove("is-hidden");
+      } else if (configBtn) {
+        configBtn.onclick = () => {
+          chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+        };
+      }
     },
   };
 }

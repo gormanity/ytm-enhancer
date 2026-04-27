@@ -15,7 +15,7 @@
     <span class="shortcut-separator">+</span>
   </template>
 
-  <div class="panel-actions">
+  <div class="panel-actions" data-role="configure-shortcuts-actions">
     <button
       class="primary-btn primary-btn--block"
       data-role="configure-shortcuts"
@@ -24,6 +24,19 @@
       Configure Shortcuts
     </button>
   </div>
+</div>
+
+<div
+  class="shortcuts-hint shortcuts-hint--spaced is-hidden"
+  data-role="firefox-shortcuts-instructions"
+>
+  <strong>Configure shortcuts:</strong>
+  Open
+  <kbd class="shortcut-key">about:addons</kbd>
+  in a new tab, click the gear icon
+  <kbd class="shortcut-key">⚙</kbd>
+  in the top right, then choose
+  <strong>Manage Extension Shortcuts</strong>.
 </div>
 
 <div class="shortcuts-hint">

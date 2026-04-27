@@ -58,6 +58,32 @@ describe("createHotkeysPopupView", () => {
     });
   });
 
+  it("should expose a Configure Shortcuts button on Chromium", () => {
+    vi.mocked(chrome.commands.getAll).mockImplementation(
+      (cb: (commands: chrome.commands.Command[]) => void) => {
+        cb([]);
+      },
+    );
+
+    const view = createHotkeysPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    const button = container.querySelector<HTMLButtonElement>(
+      '[data-role="configure-shortcuts"]',
+    );
+    const actions = container.querySelector<HTMLElement>(
+      '[data-role="configure-shortcuts-actions"]',
+    );
+    const instructions = container.querySelector<HTMLElement>(
+      '[data-role="firefox-shortcuts-instructions"]',
+    );
+
+    expect(button).not.toBeNull();
+    expect(actions?.classList.contains("is-hidden")).toBe(false);
+    expect(instructions?.classList.contains("is-hidden")).toBe(true);
+  });
+
   it("should show 'Not set' for unbound shortcuts", async () => {
     vi.mocked(chrome.commands.getAll).mockImplementation(
       (cb: (commands: chrome.commands.Command[]) => void) => {

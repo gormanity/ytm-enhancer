@@ -9,6 +9,7 @@ export default defineConfig({
   },
   define: {
     __DEV__: JSON.stringify(true),
+    __BROWSER__: JSON.stringify("chrome"),
   },
   test: {
     globals: true,
