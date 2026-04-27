@@ -50,6 +50,9 @@
       "description": "Focus the YouTube Music tab"
     },
     "remind-me": {
+      "suggested_key": {
+        "default": "Alt+Shift+R"
+      },
       "description": "Show a notification with the current track"
     }
   },
