@@ -63,6 +63,70 @@ const KEY_SYMBOL_MAP: Record<string, string> = {
   MediaPlayPause: "⏯",
 };
 
+// On macOS, Chrome already returns modifier symbols (⌃ ⇧ ⌥ ⌘) from
+// chrome.commands.getAll, while Firefox returns text names ("MacCtrl",
+// "Command", "Alt", "Shift"). Map text → symbol so both browsers display the
+// same way on Mac.
+const MAC_MODIFIER_SYMBOLS: Record<string, string> = {
+  MacCtrl: "⌃",
+  Ctrl: "⌃",
+  Shift: "⇧",
+  Alt: "⌥",
+  Command: "⌘",
+};
+
+const MAC_SYMBOL_RE = /[⌃⇧⌥⌘]/;
+
+function isMacPlatform(): boolean {
+  return /Mac|iPhone|iPod|iPad/i.test(
+    navigator.platform || navigator.userAgent || "",
+  );
+}
+
+interface KeyToken {
+  value: string;
+  isSymbol: boolean;
+}
+
+function tokenizeShortcut(shortcut: string, mac: boolean): KeyToken[] {
+  const segments = shortcut
+    .split("+")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const tokens: KeyToken[] = [];
+
+  for (const seg of segments) {
+    // Mac symbol(s) embedded in the segment (e.g. Chrome Mac may concatenate
+    // modifiers like "⌥⇧P" without separators). Peel symbols from the front,
+    // then resolve any trailing key.
+    if (mac && MAC_SYMBOL_RE.test(seg)) {
+      let i = 0;
+      while (i < seg.length && MAC_SYMBOL_RE.test(seg[i])) {
+        tokens.push({ value: seg[i], isSymbol: true });
+        i++;
+      }
+      const rest = seg.slice(i);
+      if (rest) tokens.push(resolveKey(rest));
+      continue;
+    }
+
+    if (mac && MAC_MODIFIER_SYMBOLS[seg]) {
+      tokens.push({ value: MAC_MODIFIER_SYMBOLS[seg], isSymbol: true });
+      continue;
+    }
+
+    tokens.push(resolveKey(seg));
+  }
+
+  return tokens;
+}
+
+function resolveKey(key: string): KeyToken {
+  const symbol = KEY_SYMBOL_MAP[key];
+  if (symbol) return { value: symbol, isSymbol: true };
+  return { value: key, isSymbol: false };
+}
+
 function loadShortcuts(
   container: HTMLElement,
   rowTemplate: HTMLTemplateElement,
@@ -116,16 +180,14 @@ function loadShortcuts(
       label.textContent = cmd.description ?? cmd.name;
 
       if (cmd.shortcut) {
-        const parts = cmd.shortcut.split("+");
-        for (let i = 0; i < parts.length; i++) {
-          const key = parts[i].trim();
-          const symbol = KEY_SYMBOL_MAP[key] || key;
-
-          const kbd = createKeyElement(symbol, Boolean(KEY_SYMBOL_MAP[key]));
+        const tokens = tokenizeShortcut(cmd.shortcut, isMacPlatform());
+        for (let i = 0; i < tokens.length; i++) {
+          const { value, isSymbol } = tokens[i];
+          const kbd = createKeyElement(value, isSymbol);
           if (!kbd) continue;
           keysContainer.appendChild(kbd);
 
-          if (i < parts.length - 1) {
+          if (i < tokens.length - 1) {
             const separator = createSeparatorElement();
             if (!separator) continue;
             keysContainer.appendChild(separator);
