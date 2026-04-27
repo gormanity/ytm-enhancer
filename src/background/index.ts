@@ -755,8 +755,44 @@ const modules: FeatureModule[] = [
   sleepTimer,
 ];
 
-Promise.all([restoreModuleState(), initializeModules(context, modules)]).catch(
-  (err) => {
+const modulesReady = Promise.all([
+  restoreModuleState(),
+  initializeModules(context, modules),
+])
+  .then(() => {
+    void broadcastVisualizerSettings();
+  })
+  .catch((err) => {
     error("Failed to initialize modules:", err);
-  },
-);
+  });
+
+handler.setReadyGate(() => modulesReady);
+
+async function broadcastVisualizerSettings(): Promise<void> {
+  const tabs = await findAllYTMTabs();
+  const tunings = audioVisualizer.getStyleTunings();
+  const messages = [
+    {
+      type: "set-audio-visualizer-enabled",
+      enabled: audioVisualizer.isEnabled(),
+    },
+    { type: "set-audio-visualizer-style", style: audioVisualizer.getStyle() },
+    {
+      type: "set-audio-visualizer-target",
+      target: audioVisualizer.getTarget(),
+    },
+    { type: "set-audio-visualizer-style-tunings", tunings },
+    {
+      type: "set-audio-visualizer-color-mode",
+      mode: audioVisualizer.getColorMode(),
+    },
+  ];
+  for (const tab of tabs) {
+    if (tab.id === undefined) continue;
+    for (const message of messages) {
+      void chrome.tabs.sendMessage(tab.id, message).catch(() => {
+        // Tab may not have a content script yet; that's fine.
+      });
+    }
+  }
+}

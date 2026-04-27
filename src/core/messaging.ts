@@ -41,10 +41,20 @@ export function createMessageHandler() {
         sendResponse: (response: MessageResponse) => void,
       ) => boolean)
     | null = null;
+  let readyGate: (() => Promise<unknown>) | null = null;
 
   return {
     on(type: string, handler: MessageHandler): void {
       handlers.set(type, handler);
+    },
+
+    /**
+     * Optional gate that delays message dispatch until the returned promise
+     * resolves. Used to ensure persisted state is loaded before answering
+     * `get-*` queries that would otherwise return uninitialized defaults.
+     */
+    setReadyGate(gate: () => Promise<unknown>): void {
+      readyGate = gate;
     },
 
     start(): void {
@@ -59,7 +69,12 @@ export function createMessageHandler() {
           return true;
         }
 
-        handler(message, sender)
+        const dispatch = async () => {
+          if (readyGate) await readyGate();
+          return handler(message, sender);
+        };
+
+        dispatch()
           .then(sendResponse)
           .catch((err: Error) => {
             sendResponse({ ok: false, error: err.message });

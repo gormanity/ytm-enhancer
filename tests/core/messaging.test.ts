@@ -115,6 +115,40 @@ describe("messaging", () => {
       });
     });
 
+    it("should defer dispatch until the ready gate resolves", async () => {
+      const handler = createMessageHandler();
+      const pingHandler = vi.fn().mockResolvedValue({ ok: true, data: "pong" });
+
+      let resolveReady: (() => void) | null = null;
+      const ready = new Promise<void>((resolve) => {
+        resolveReady = resolve;
+      });
+      handler.setReadyGate(() => ready);
+      handler.on("ping", pingHandler);
+      handler.start();
+
+      const registeredListener = vi.mocked(chrome.runtime.onMessage.addListener)
+        .mock.calls[0][0];
+
+      const sendResponse = vi.fn();
+      registeredListener(
+        { type: "ping" } as Message,
+        {} as chrome.runtime.MessageSender,
+        sendResponse,
+      );
+
+      // Handler should not have been called yet because the gate is pending.
+      await Promise.resolve();
+      expect(pingHandler).not.toHaveBeenCalled();
+      expect(sendResponse).not.toHaveBeenCalled();
+
+      resolveReady!();
+      await vi.waitFor(() => {
+        expect(sendResponse).toHaveBeenCalledWith({ ok: true, data: "pong" });
+      });
+      expect(pingHandler).toHaveBeenCalledTimes(1);
+    });
+
     it("should remove listener on stop", () => {
       const handler = createMessageHandler();
       handler.start();
