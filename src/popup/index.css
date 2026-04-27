@@ -516,6 +516,56 @@ select:focus {
   color: var(--text-secondary);
 }
 
+.shortcut-row-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.shortcut-display,
+.shortcut-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.shortcut-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.shortcut-action-btn {
+  background: #3a3a3a;
+  color: var(--text-color);
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.shortcut-action-btn:hover {
+  background: #4a4a4a;
+}
+
+.shortcut-action-btn:active {
+  transform: scale(0.97);
+}
+
+.shortcut-edit-prompt {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.shortcut-error {
+  font-size: 11px;
+  color: #ff6b6b;
+}
+
 /* Playback Controls View */
 .playback-controls-inline-row {
   display: flex;

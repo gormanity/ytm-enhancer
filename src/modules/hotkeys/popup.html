@@ -5,7 +5,41 @@
   <template data-role="shortcut-row-template">
     <div class="shortcut-row">
       <span class="shortcut-label"></span>
-      <div class="shortcut-keys"></div>
+      <div class="shortcut-row-right">
+        <div class="shortcut-display" data-role="shortcut-display">
+          <div class="shortcut-keys"></div>
+          <div class="shortcut-actions is-hidden" data-role="shortcut-actions">
+            <button
+              type="button"
+              class="shortcut-action-btn"
+              data-role="shortcut-edit-btn"
+              title="Edit shortcut"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              class="shortcut-action-btn"
+              data-role="shortcut-reset-btn"
+              title="Reset to default"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+        <div class="shortcut-edit is-hidden" data-role="shortcut-edit-mode">
+          <span class="shortcut-edit-prompt">Press a shortcut…</span>
+          <button
+            type="button"
+            class="shortcut-action-btn"
+            data-role="shortcut-cancel-btn"
+            title="Cancel"
+          >
+            Cancel
+          </button>
+        </div>
+        <div class="shortcut-error is-hidden" data-role="shortcut-error"></div>
+      </div>
     </div>
   </template>
   <template data-role="shortcut-key-template">
@@ -26,20 +60,7 @@
   </div>
 </div>
 
-<div
-  class="shortcuts-hint shortcuts-hint--spaced is-hidden"
-  data-role="firefox-shortcuts-instructions"
->
-  <strong>Configure shortcuts:</strong>
-  Open
-  <kbd class="shortcut-key">about:addons</kbd>
-  in a new tab, click the gear icon
-  <kbd class="shortcut-key">⚙</kbd>
-  in the top right, then choose
-  <strong>Manage Extension Shortcuts</strong>.
-</div>
-
-<div class="shortcuts-hint">
+<div class="shortcuts-hint" data-role="shortcuts-global-tip">
   <strong>Tip:</strong>
   Set shortcuts to <strong>Global</strong> in browser settings to control
   playback while using other apps.

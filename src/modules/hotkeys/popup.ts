@@ -1,6 +1,17 @@
 import type { PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
+import {
+  findConflict,
+  keyEventToShortcut,
+  validateShortcut,
+} from "./shortcut-capture";
 import templateHtml from "./popup.html?raw";
+
+interface EditState {
+  name: string;
+  row: HTMLElement;
+  keydownHandler: (e: KeyboardEvent) => void;
+}
 
 /** Create the hotkeys settings popup view. */
 export function createHotkeysPopupView(): PopupView {
@@ -23,23 +34,36 @@ export function createHotkeysPopupView(): PopupView {
         '[data-role="shortcut-separator-template"]',
       );
       if (!list || !rowTemplate || !keyTemplate || !separatorTemplate) return;
-      loadShortcuts(list, rowTemplate, keyTemplate, separatorTemplate);
 
       const configActions = container.querySelector<HTMLElement>(
         '[data-role="configure-shortcuts-actions"]',
-      );
-      const firefoxInstructions = container.querySelector<HTMLElement>(
-        '[data-role="firefox-shortcuts-instructions"]',
       );
       const configBtn = container.querySelector<HTMLButtonElement>(
         '[data-role="configure-shortcuts"]',
       );
 
-      // Firefox blocks programmatic navigation to privileged about: URLs from
-      // tabs.create, so we show inline instructions instead of a button.
-      if (__BROWSER__ === "firefox") {
+      // Firefox exposes browser.commands.update / reset; Chromium doesn't. Use
+      // the capability check to drive UI, not a brand check.
+      const canEdit = typeof chrome.commands.update === "function";
+
+      const state: { active: EditState | null } = { active: null };
+
+      const refresh = () => {
+        loadShortcuts(list, rowTemplate, keyTemplate, separatorTemplate, {
+          canEdit,
+          onEdit: (row, name) => enterEdit(state, row, name, refresh),
+          onReset: (name) => resetShortcut(name, refresh),
+        });
+      };
+
+      refresh();
+
+      if (canEdit) {
         configActions?.classList.add("is-hidden");
-        firefoxInstructions?.classList.remove("is-hidden");
+        // Firefox has no "Global" shortcut option, so the tip doesn't apply.
+        container
+          .querySelector<HTMLElement>('[data-role="shortcuts-global-tip"]')
+          ?.classList.add("is-hidden");
       } else if (configBtn) {
         configBtn.onclick = () => {
           chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
@@ -127,11 +151,18 @@ function resolveKey(key: string): KeyToken {
   return { value: key, isSymbol: false };
 }
 
+interface LoadOptions {
+  canEdit: boolean;
+  onEdit: (row: HTMLElement, name: string) => void;
+  onReset: (name: string) => void;
+}
+
 function loadShortcuts(
   container: HTMLElement,
   rowTemplate: HTMLTemplateElement,
   keyTemplate: HTMLTemplateElement,
   separatorTemplate: HTMLTemplateElement,
+  options: LoadOptions,
 ): void {
   const createKeyElement = (
     value: string,
@@ -162,6 +193,7 @@ function loadShortcuts(
   };
 
   chrome.commands.getAll((commands) => {
+    container.replaceChildren();
     for (const cmd of commands) {
       if (!cmd.name || cmd.name === "_execute_action") continue;
 
@@ -199,7 +231,118 @@ function loadShortcuts(
         keysContainer.appendChild(kbd);
       }
 
+      if (options.canEdit) {
+        const actions = row.querySelector<HTMLElement>(
+          '[data-role="shortcut-actions"]',
+        );
+        const editBtn = row.querySelector<HTMLButtonElement>(
+          '[data-role="shortcut-edit-btn"]',
+        );
+        const resetBtn = row.querySelector<HTMLButtonElement>(
+          '[data-role="shortcut-reset-btn"]',
+        );
+        const cancelBtn = row.querySelector<HTMLButtonElement>(
+          '[data-role="shortcut-cancel-btn"]',
+        );
+        actions?.classList.remove("is-hidden");
+        const name = cmd.name;
+        editBtn?.addEventListener("click", () => options.onEdit(row, name));
+        resetBtn?.addEventListener("click", () => options.onReset(name));
+        cancelBtn?.addEventListener("click", () => exitEdit(row));
+      }
+
       container.appendChild(row);
     }
   });
+}
+
+function enterEdit(
+  state: { active: EditState | null },
+  row: HTMLElement,
+  name: string,
+  refresh: () => void,
+): void {
+  if (state.active) {
+    cleanupEdit(state.active);
+    state.active = null;
+  }
+
+  const display = row.querySelector<HTMLElement>(
+    '[data-role="shortcut-display"]',
+  );
+  const editMode = row.querySelector<HTMLElement>(
+    '[data-role="shortcut-edit-mode"]',
+  );
+  const error = row.querySelector<HTMLElement>('[data-role="shortcut-error"]');
+  display?.classList.add("is-hidden");
+  editMode?.classList.remove("is-hidden");
+  error?.classList.add("is-hidden");
+
+  const handleKeydown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      cleanupEdit(state.active!);
+      state.active = null;
+      exitEdit(row);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    const shortcut = keyEventToShortcut(e);
+    if (!shortcut) return;
+
+    const validation = validateShortcut(shortcut);
+    if (!validation.ok) {
+      showError(row, validation.reason);
+      return;
+    }
+
+    chrome.commands.getAll((commands) => {
+      const conflict = findConflict(shortcut, commands, name);
+      if (conflict) {
+        const conflictLabel = conflict.description || conflict.name || "";
+        showError(row, `Already used by "${conflictLabel}"`);
+        return;
+      }
+      const result = chrome.commands.update?.({ name, shortcut });
+      Promise.resolve(result).then(() => {
+        cleanupEdit(state.active!);
+        state.active = null;
+        refresh();
+      });
+    });
+  };
+
+  document.addEventListener("keydown", handleKeydown, true);
+  state.active = { name, row, keydownHandler: handleKeydown };
+}
+
+function cleanupEdit(edit: EditState): void {
+  document.removeEventListener("keydown", edit.keydownHandler, true);
+}
+
+function exitEdit(row: HTMLElement): void {
+  const display = row.querySelector<HTMLElement>(
+    '[data-role="shortcut-display"]',
+  );
+  const editMode = row.querySelector<HTMLElement>(
+    '[data-role="shortcut-edit-mode"]',
+  );
+  const error = row.querySelector<HTMLElement>('[data-role="shortcut-error"]');
+  editMode?.classList.add("is-hidden");
+  display?.classList.remove("is-hidden");
+  error?.classList.add("is-hidden");
+}
+
+function showError(row: HTMLElement, message: string): void {
+  const error = row.querySelector<HTMLElement>('[data-role="shortcut-error"]');
+  if (!error) return;
+  error.textContent = message;
+  error.classList.remove("is-hidden");
+}
+
+function resetShortcut(name: string, refresh: () => void): void {
+  const result = chrome.commands.reset?.(name);
+  Promise.resolve(result).then(() => refresh());
 }
