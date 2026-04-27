@@ -479,6 +479,11 @@ select:focus {
 .about-link-row {
   text-decoration: none;
   color: inherit;
+  transition: color 120ms ease;
+}
+
+.about-link-row:hover {
+  color: var(--accent-color);
 }
 
 .about-link-content {
@@ -490,10 +495,23 @@ select:focus {
 .about-link-icon {
   display: flex;
   opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+.about-link-row:hover .about-link-icon {
+  opacity: 1;
 }
 
 .about-link-arrow {
   opacity: 0.4;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.about-link-row:hover .about-link-arrow {
+  opacity: 1;
+  transform: translateX(2px);
 }
 
 /* Shared Utilities */
