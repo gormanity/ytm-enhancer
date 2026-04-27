@@ -496,15 +496,6 @@ select:focus {
   opacity: 0.4;
 }
 
-.about-placeholder-row {
-  cursor: default;
-  color: var(--text-secondary);
-}
-
-.about-coming-soon {
-  font-size: 11px;
-}
-
 /* Shared Utilities */
 .is-hidden {
   display: none !important;
