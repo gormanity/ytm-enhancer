@@ -1,7 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAboutPopupView } from "@/modules/about/popup";
 
 describe("createAboutPopupView", () => {
+  beforeEach(() => {
+    vi.stubGlobal("chrome", {
+      runtime: {
+        getManifest: () => ({ version: "9.9.9" }),
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("should return a popup view with correct metadata", () => {
     const view = createAboutPopupView();
     expect(view.id).toBe("about");
@@ -18,6 +30,17 @@ describe("createAboutPopupView", () => {
     expect(container.textContent).toContain("Resources");
     expect(container.textContent).toContain("Extension Stores");
     expect(container.querySelectorAll("a.about-link-row")).toHaveLength(5);
+  });
+
+  it("should display the extension version from the manifest", () => {
+    const view = createAboutPopupView();
+    const container = document.createElement("div");
+    view.render(container);
+
+    const versionEl = container.querySelector<HTMLElement>(
+      '[data-role="about-version"]',
+    );
+    expect(versionEl?.textContent).toBe("v9.9.9");
   });
 
   it("should link to the published extension stores", () => {

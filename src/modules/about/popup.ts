@@ -9,6 +9,14 @@ export function createAboutPopupView(): PopupView {
     label: "About",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
+
+      const versionEl = container.querySelector<HTMLElement>(
+        '[data-role="about-version"]',
+      );
+      if (versionEl) {
+        const manifest = chrome.runtime.getManifest();
+        versionEl.textContent = `v${manifest.version}`;
+      }
     },
   };
 }
