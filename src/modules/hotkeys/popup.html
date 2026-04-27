@@ -5,7 +5,7 @@
   <template data-role="shortcut-row-template">
     <div class="shortcut-row">
       <span class="shortcut-label"></span>
-      <div class="shortcut-row-right">
+      <div class="shortcut-row-right" data-mode="display">
         <div class="shortcut-display" data-role="shortcut-display">
           <div class="shortcut-keys"></div>
           <div class="shortcut-actions is-hidden" data-role="shortcut-actions">
@@ -27,16 +27,23 @@
             </button>
           </div>
         </div>
-        <div class="shortcut-edit is-hidden" data-role="shortcut-edit-mode">
-          <span class="shortcut-edit-prompt">Press a shortcut…</span>
-          <button
-            type="button"
-            class="shortcut-action-btn"
-            data-role="shortcut-cancel-btn"
-            title="Cancel"
+        <div class="shortcut-edit" data-role="shortcut-edit-mode">
+          <div
+            class="shortcut-keys shortcut-keys--editing"
+            data-role="shortcut-edit-keys"
           >
-            Cancel
-          </button>
+            <span class="shortcut-edit-prompt">Press a shortcut…</span>
+          </div>
+          <div class="shortcut-actions">
+            <button
+              type="button"
+              class="shortcut-action-btn"
+              data-role="shortcut-cancel-btn"
+              title="Cancel"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
         <div class="shortcut-error is-hidden" data-role="shortcut-error"></div>
       </div>

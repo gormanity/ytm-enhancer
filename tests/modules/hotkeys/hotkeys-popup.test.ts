@@ -302,14 +302,8 @@ describe("createHotkeysPopupView", () => {
         .querySelector<HTMLButtonElement>('[data-role="shortcut-edit-btn"]')!
         .click();
 
-      const display = row.querySelector<HTMLElement>(
-        '[data-role="shortcut-display"]',
-      );
-      const editMode = row.querySelector<HTMLElement>(
-        '[data-role="shortcut-edit-mode"]',
-      );
-      expect(display?.classList.contains("is-hidden")).toBe(true);
-      expect(editMode?.classList.contains("is-hidden")).toBe(false);
+      const right = row.querySelector<HTMLElement>(".shortcut-row-right");
+      expect(right?.dataset.mode).toBe("edit");
     });
 
     it("captures a valid combo and saves via commands.update", async () => {
@@ -395,14 +389,8 @@ describe("createHotkeysPopupView", () => {
         .click();
       document.dispatchEvent(makeKeydown({ code: "Escape", key: "Escape" }));
 
-      const display = row.querySelector<HTMLElement>(
-        '[data-role="shortcut-display"]',
-      );
-      const editMode = row.querySelector<HTMLElement>(
-        '[data-role="shortcut-edit-mode"]',
-      );
-      expect(display?.classList.contains("is-hidden")).toBe(false);
-      expect(editMode?.classList.contains("is-hidden")).toBe(true);
+      const right = row.querySelector<HTMLElement>(".shortcut-row-right");
+      expect(right?.dataset.mode).toBe("display");
       expect(update).not.toHaveBeenCalled();
     });
 
@@ -428,10 +416,8 @@ describe("createHotkeysPopupView", () => {
         .querySelector<HTMLButtonElement>('[data-role="shortcut-cancel-btn"]')!
         .click();
 
-      const editMode = row.querySelector<HTMLElement>(
-        '[data-role="shortcut-edit-mode"]',
-      );
-      expect(editMode?.classList.contains("is-hidden")).toBe(true);
+      const right = row.querySelector<HTMLElement>(".shortcut-row-right");
+      expect(right?.dataset.mode).toBe("display");
       expect(update).not.toHaveBeenCalled();
     });
 

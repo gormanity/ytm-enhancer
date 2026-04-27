@@ -3,6 +3,7 @@ import { renderPopupTemplate } from "@/popup/template";
 import {
   findConflict,
   keyEventToShortcut,
+  keyEventToShortcutParts,
   validateShortcut,
 } from "./shortcut-capture";
 import templateHtml from "./popup.html?raw";
@@ -11,6 +12,7 @@ interface EditState {
   name: string;
   row: HTMLElement;
   keydownHandler: (e: KeyboardEvent) => void;
+  keyupHandler: (e: KeyboardEvent) => void;
 }
 
 /** Create the hotkeys settings popup view. */
@@ -35,6 +37,8 @@ export function createHotkeysPopupView(): PopupView {
       );
       if (!list || !rowTemplate || !keyTemplate || !separatorTemplate) return;
 
+      const renderKeys = makeKeyRenderer(keyTemplate, separatorTemplate);
+
       const configActions = container.querySelector<HTMLElement>(
         '[data-role="configure-shortcuts-actions"]',
       );
@@ -49,9 +53,10 @@ export function createHotkeysPopupView(): PopupView {
       const state: { active: EditState | null } = { active: null };
 
       const refresh = () => {
-        loadShortcuts(list, rowTemplate, keyTemplate, separatorTemplate, {
+        loadShortcuts(list, rowTemplate, renderKeys, {
           canEdit,
-          onEdit: (row, name) => enterEdit(state, row, name, refresh),
+          onEdit: (row, name) =>
+            enterEdit(state, row, name, renderKeys, refresh),
           onReset: (name) => resetShortcut(name, refresh),
         });
       };
@@ -151,6 +156,46 @@ function resolveKey(key: string): KeyToken {
   return { value: key, isSymbol: false };
 }
 
+type KeyRenderer = (target: HTMLElement, shortcut: string) => void;
+
+function makeKeyRenderer(
+  keyTemplate: HTMLTemplateElement,
+  separatorTemplate: HTMLTemplateElement,
+): KeyRenderer {
+  const createKey = (token: KeyToken): HTMLElement | null => {
+    const fragment = keyTemplate.content.cloneNode(true) as DocumentFragment;
+    const el =
+      fragment.firstElementChild instanceof HTMLElement
+        ? fragment.firstElementChild
+        : null;
+    if (!el) return null;
+    el.textContent = token.value;
+    if (token.isSymbol) el.classList.add("key-symbol");
+    return el;
+  };
+  const createSeparator = (): HTMLElement | null => {
+    const fragment = separatorTemplate.content.cloneNode(
+      true,
+    ) as DocumentFragment;
+    return fragment.firstElementChild instanceof HTMLElement
+      ? fragment.firstElementChild
+      : null;
+  };
+
+  return (target, shortcut) => {
+    target.replaceChildren();
+    const tokens = tokenizeShortcut(shortcut, isMacPlatform());
+    for (let i = 0; i < tokens.length; i++) {
+      const kbd = createKey(tokens[i]);
+      if (kbd) target.appendChild(kbd);
+      if (i < tokens.length - 1) {
+        const sep = createSeparator();
+        if (sep) target.appendChild(sep);
+      }
+    }
+  };
+}
+
 interface LoadOptions {
   canEdit: boolean;
   onEdit: (row: HTMLElement, name: string) => void;
@@ -160,38 +205,9 @@ interface LoadOptions {
 function loadShortcuts(
   container: HTMLElement,
   rowTemplate: HTMLTemplateElement,
-  keyTemplate: HTMLTemplateElement,
-  separatorTemplate: HTMLTemplateElement,
+  renderKeys: KeyRenderer,
   options: LoadOptions,
 ): void {
-  const createKeyElement = (
-    value: string,
-    isSymbol: boolean,
-  ): HTMLElement | null => {
-    const keyFragment = keyTemplate.content.cloneNode(true) as DocumentFragment;
-    const key =
-      keyFragment.firstElementChild instanceof HTMLElement
-        ? keyFragment.firstElementChild
-        : null;
-    if (!key) return null;
-    key.textContent = value;
-    if (isSymbol) {
-      key.classList.add("key-symbol");
-    }
-    return key;
-  };
-
-  const createSeparatorElement = (): HTMLElement | null => {
-    const separatorFragment = separatorTemplate.content.cloneNode(
-      true,
-    ) as DocumentFragment;
-    const separator =
-      separatorFragment.firstElementChild instanceof HTMLElement
-        ? separatorFragment.firstElementChild
-        : null;
-    return separator;
-  };
-
   chrome.commands.getAll((commands) => {
     container.replaceChildren();
     for (const cmd of commands) {
@@ -212,23 +228,12 @@ function loadShortcuts(
       label.textContent = cmd.description ?? cmd.name;
 
       if (cmd.shortcut) {
-        const tokens = tokenizeShortcut(cmd.shortcut, isMacPlatform());
-        for (let i = 0; i < tokens.length; i++) {
-          const { value, isSymbol } = tokens[i];
-          const kbd = createKeyElement(value, isSymbol);
-          if (!kbd) continue;
-          keysContainer.appendChild(kbd);
-
-          if (i < tokens.length - 1) {
-            const separator = createSeparatorElement();
-            if (!separator) continue;
-            keysContainer.appendChild(separator);
-          }
-        }
+        renderKeys(keysContainer, cmd.shortcut);
       } else {
-        const kbd = createKeyElement("Not set", false);
-        if (!kbd) continue;
-        keysContainer.appendChild(kbd);
+        const empty = document.createElement("kbd");
+        empty.className = "shortcut-key";
+        empty.textContent = "Not set";
+        keysContainer.appendChild(empty);
       }
 
       if (options.canEdit) {
@@ -256,10 +261,37 @@ function loadShortcuts(
   });
 }
 
+function setMode(row: HTMLElement, mode: "display" | "edit"): void {
+  const right = row.querySelector<HTMLElement>(".shortcut-row-right");
+  if (right) right.dataset.mode = mode;
+}
+
+function renderEditPreview(
+  row: HTMLElement,
+  parts: { modifiers: string[]; main: string | null },
+  renderKeys: KeyRenderer,
+): void {
+  const target = row.querySelector<HTMLElement>(
+    '[data-role="shortcut-edit-keys"]',
+  );
+  if (!target) return;
+  if (parts.modifiers.length === 0 && !parts.main) {
+    const prompt = document.createElement("span");
+    prompt.className = "shortcut-edit-prompt";
+    prompt.textContent = "Press a shortcut…";
+    target.replaceChildren(prompt);
+    return;
+  }
+  const segments = [...parts.modifiers];
+  if (parts.main) segments.push(parts.main);
+  renderKeys(target, segments.join("+"));
+}
+
 function enterEdit(
   state: { active: EditState | null },
   row: HTMLElement,
   name: string,
+  renderKeys: KeyRenderer,
   refresh: () => void,
 ): void {
   if (state.active) {
@@ -267,16 +299,10 @@ function enterEdit(
     state.active = null;
   }
 
-  const display = row.querySelector<HTMLElement>(
-    '[data-role="shortcut-display"]',
-  );
-  const editMode = row.querySelector<HTMLElement>(
-    '[data-role="shortcut-edit-mode"]',
-  );
   const error = row.querySelector<HTMLElement>('[data-role="shortcut-error"]');
-  display?.classList.add("is-hidden");
-  editMode?.classList.remove("is-hidden");
+  setMode(row, "edit");
   error?.classList.add("is-hidden");
+  renderEditPreview(row, { modifiers: [], main: null }, renderKeys);
 
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -288,6 +314,9 @@ function enterEdit(
     }
     e.preventDefault();
     e.stopPropagation();
+
+    const parts = keyEventToShortcutParts(e);
+    renderEditPreview(row, parts, renderKeys);
 
     const shortcut = keyEventToShortcut(e);
     if (!shortcut) return;
@@ -314,24 +343,35 @@ function enterEdit(
     });
   };
 
+  const handleKeyup = (e: KeyboardEvent) => {
+    // Update the live preview when a modifier is released so it always matches
+    // what's currently held. Don't trigger save.
+    const parts = keyEventToShortcutParts(e);
+    renderEditPreview(
+      row,
+      { modifiers: parts.modifiers, main: null },
+      renderKeys,
+    );
+  };
+
   document.addEventListener("keydown", handleKeydown, true);
-  state.active = { name, row, keydownHandler: handleKeydown };
+  document.addEventListener("keyup", handleKeyup, true);
+  state.active = {
+    name,
+    row,
+    keydownHandler: handleKeydown,
+    keyupHandler: handleKeyup,
+  };
 }
 
 function cleanupEdit(edit: EditState): void {
   document.removeEventListener("keydown", edit.keydownHandler, true);
+  document.removeEventListener("keyup", edit.keyupHandler, true);
 }
 
 function exitEdit(row: HTMLElement): void {
-  const display = row.querySelector<HTMLElement>(
-    '[data-role="shortcut-display"]',
-  );
-  const editMode = row.querySelector<HTMLElement>(
-    '[data-role="shortcut-edit-mode"]',
-  );
   const error = row.querySelector<HTMLElement>('[data-role="shortcut-error"]');
-  editMode?.classList.add("is-hidden");
-  display?.classList.remove("is-hidden");
+  setMode(row, "display");
   error?.classList.add("is-hidden");
 }
 

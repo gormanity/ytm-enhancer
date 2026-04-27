@@ -78,19 +78,21 @@ export interface CaptureOptions {
   isMac?: boolean;
 }
 
+export interface ShortcutParts {
+  modifiers: string[];
+  main: string | null;
+}
+
 /**
- * Convert a `KeyboardEvent` into a WebExtensions shortcut string. Returns
- * `null` if the event represents only modifier presses, or if the main key is
- * not bindable.
+ * Decompose a `KeyboardEvent` into its modifier list and main key (or `null`
+ * if only modifiers are pressed / the key is not bindable). Used by both the
+ * final-save check and the live preview while the user is still pressing keys.
  */
-export function keyEventToShortcut(
+export function keyEventToShortcutParts(
   event: KeyboardEvent,
   options: CaptureOptions = {},
-): string | null {
+): ShortcutParts {
   const isMac = options.isMac ?? isMacPlatform();
-  const main = mapMainKey(event);
-  if (!main) return null;
-
   const modifiers: string[] = [];
   if (isMac) {
     if (event.metaKey) modifiers.push("Command");
@@ -100,7 +102,20 @@ export function keyEventToShortcut(
   }
   if (event.altKey) modifiers.push("Alt");
   if (event.shiftKey) modifiers.push("Shift");
+  return { modifiers, main: mapMainKey(event) };
+}
 
+/**
+ * Convert a `KeyboardEvent` into a WebExtensions shortcut string. Returns
+ * `null` if the event represents only modifier presses, or if the main key is
+ * not bindable.
+ */
+export function keyEventToShortcut(
+  event: KeyboardEvent,
+  options: CaptureOptions = {},
+): string | null {
+  const { modifiers, main } = keyEventToShortcutParts(event, options);
+  if (!main) return null;
   return [...modifiers, main].join("+");
 }
 
