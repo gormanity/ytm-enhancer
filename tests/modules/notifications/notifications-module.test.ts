@@ -55,6 +55,7 @@ describe("NotificationsModule", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it("should have the correct module metadata", () => {
@@ -79,9 +80,31 @@ describe("NotificationsModule", () => {
         title: "Song Title",
         message: "Artist Name",
         iconUrl: "https://example.com/art.jpg",
+        silent: true,
       },
       expect.any(Function),
     );
+  });
+
+  it("should mark notifications silent so the OS does not chime each track", () => {
+    module.handleTrackChange(makeState());
+    flushNotificationDelay();
+
+    expect(createMock).toHaveBeenCalledWith(
+      NOTIFICATION_ID,
+      expect.objectContaining({ silent: true }),
+      expect.any(Function),
+    );
+  });
+
+  it("should omit silent on Firefox because it prevents notifications from appearing", () => {
+    vi.stubGlobal("browser", { runtime: {} });
+
+    module.handleTrackChange(makeState());
+    flushNotificationDelay();
+
+    const options = createMock.mock.calls[0][1] as Record<string, unknown>;
+    expect(options.silent).toBeUndefined();
   });
 
   it("should not show a notification when disabled", () => {

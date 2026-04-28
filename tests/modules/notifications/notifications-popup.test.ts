@@ -8,6 +8,7 @@ describe("notifications popup view", () => {
     sendMessageMock = vi.fn();
 
     vi.stubGlobal("chrome", {
+      commands: {},
       runtime: {
         sendMessage: sendMessageMock,
       },
@@ -86,6 +87,46 @@ describe("notifications popup view", () => {
     expect(labels).toHaveLength(2);
     expect(labels[1].querySelector("span")?.textContent).toBe(
       "Show on resume playback",
+    );
+  });
+
+  it("should hide Firefox notification chime limitations on Chrome", () => {
+    const view = createNotificationsPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const hint = container.querySelector<HTMLElement>(
+      '[data-role="notifications-firefox-tip"]',
+    );
+    expect(hint?.classList.contains("is-hidden")).toBe(true);
+  });
+
+  it("should show Firefox notification chime limitations on Firefox", () => {
+    vi.stubGlobal("chrome", {
+      commands: {
+        update: vi.fn(),
+      },
+      runtime: {
+        sendMessage: sendMessageMock,
+      },
+    });
+
+    const view = createNotificationsPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const hint = container.querySelector<HTMLElement>(
+      '[data-role="notifications-firefox-tip"]',
+    );
+    const text = hint?.textContent?.replace(/\s+/g, " ").trim();
+    expect(hint?.classList.contains("is-hidden")).toBe(false);
+    expect(text).toContain(
+      "Firefox does not support silent extension notifications",
+    );
+    expect(text).toContain(
+      "disable notification sounds for Firefox at the operating system level",
     );
   });
 
