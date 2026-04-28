@@ -93,13 +93,40 @@ describe("YTMAdapter", () => {
       expect(state.duration).toBe(0);
     });
 
-    it("should prefer progress bar value/max over video element", () => {
+    it("should prefer #time-info text over progress bar and video", () => {
+      // #time-info shows YTM's per-track displayed times. Both
+      // video.duration and progress-bar.max can be queue-wide when
+      // YTM concatenates upcoming tracks into a single MediaSource buffer.
+      document.body.innerHTML = `
+        <video class="html5-main-video"></video>
+        <tp-yt-paper-progress id="progress-bar" value="1142" max="1172"></tp-yt-paper-progress>
+        <span id="time-info">1:23 / 3:31</span>
+      `;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "currentTime", { value: 1142 });
+      Object.defineProperty(video, "duration", { value: 1172 });
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(83);
+      expect(state.duration).toBe(211);
+    });
+
+    it("should parse hours, minutes, and seconds from #time-info", () => {
+      document.body.innerHTML = `
+        <span id="time-info">1:02:03 / 2:34:56</span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(3723);
+      expect(state.duration).toBe(9296);
+    });
+
+    it("should fall back to progress bar when #time-info is absent", () => {
       document.body.innerHTML = `
         <video class="html5-main-video"></video>
         <tp-yt-paper-progress id="progress-bar" value="42" max="211"></tp-yt-paper-progress>
       `;
       const video = document.querySelector("video") as HTMLVideoElement;
-      // Video reports queue-wide times; progress bar reports per-track.
       Object.defineProperty(video, "currentTime", { value: 1142 });
       Object.defineProperty(video, "duration", { value: 1172 });
 
@@ -108,7 +135,7 @@ describe("YTMAdapter", () => {
       expect(state.duration).toBe(211);
     });
 
-    it("should fall back to video time when progress bar has no max", () => {
+    it("should fall back to video time when neither #time-info nor progress bar are populated", () => {
       document.body.innerHTML = `
         <video class="html5-main-video"></video>
         <tp-yt-paper-progress id="progress-bar"></tp-yt-paper-progress>
