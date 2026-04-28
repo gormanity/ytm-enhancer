@@ -105,6 +105,14 @@ listings are coming soon.
 
 </details>
 
+### Browser Compatibility Notes
+
+Mini Player depends on the experimental
+[Document Picture-in-Picture API](https://developer.mozilla.org/en-US/docs/Web/API/Document_Picture-in-Picture_API).
+MDN lists experimental Firefox support beginning in Firefox 151. Firefox users
+must enable `dom.documentpip.enabled` from `about:config` before Mini Player is
+available.
+
 ## Privacy
 
 YTM Enhancer is private by design. It has no analytics, no tracking, and no

@@ -6,6 +6,7 @@ describe("mini player popup view", () => {
 
   beforeEach(() => {
     sendMessageMock = vi.fn();
+    vi.stubGlobal("documentPictureInPicture", { requestWindow: vi.fn() });
 
     vi.stubGlobal("chrome", {
       runtime: {
@@ -79,6 +80,33 @@ describe("mini player popup view", () => {
       { type: "get-mini-player-suppress-notifications" },
       expect.any(Function),
     );
+  });
+
+  it("should disable controls and show a tip when Document PiP is unavailable", () => {
+    vi.stubGlobal("documentPictureInPicture", undefined);
+
+    const view = createMiniPlayerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const toggles = container.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    expect(toggles).toHaveLength(2);
+    expect(toggles[0]?.checked).toBe(false);
+    expect(toggles[0]?.disabled).toBe(true);
+    expect(toggles[1]?.checked).toBe(false);
+    expect(toggles[1]?.disabled).toBe(true);
+
+    const tip = container.querySelector<HTMLElement>(
+      '[data-role="mini-player-document-pip-tip"]',
+    );
+    expect(tip?.classList.contains("is-hidden")).toBe(false);
+    expect(tip?.textContent).toContain(
+      "Mini Player requires Document Picture-in-Picture support",
+    );
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
   it("should send set-mini-player-enabled message on toggle", async () => {

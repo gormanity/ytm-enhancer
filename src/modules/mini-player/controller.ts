@@ -11,6 +11,10 @@ const POLL_INTERVAL_MS = 1000;
 const DOCUMENT_PIP_WIDTH = 480;
 const DOCUMENT_PIP_HEIGHT = 180;
 
+function hasDocumentPipSupport(): boolean {
+  return typeof documentPictureInPicture !== "undefined";
+}
+
 export class MiniPlayerController {
   private adapter = new YTMAdapter();
   private pipButton = new PipButton(() => this.handlePipClick());
@@ -32,7 +36,7 @@ export class MiniPlayerController {
       if (newEnabled === this.enabled) return;
 
       this.enabled = newEnabled;
-      if (newEnabled) {
+      if (newEnabled && hasDocumentPipSupport()) {
         this.tryInjectButton();
       } else {
         this.pipButton.remove();
@@ -45,7 +49,7 @@ export class MiniPlayerController {
   async init(): Promise<void> {
     chrome.runtime.onMessage.addListener(this.messageListener);
     this.enabled = await this.queryEnabled();
-    if (!this.enabled) return;
+    if (!this.enabled || !hasDocumentPipSupport()) return;
 
     this.tryInjectButton();
   }
@@ -127,7 +131,7 @@ export class MiniPlayerController {
   }
 
   private async openDocumentPip(): Promise<boolean> {
-    if (typeof documentPictureInPicture === "undefined") return false;
+    if (!hasDocumentPipSupport()) return false;
 
     try {
       const pipWindow = await documentPictureInPicture.requestWindow({

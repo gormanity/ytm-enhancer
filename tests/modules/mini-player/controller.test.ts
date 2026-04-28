@@ -55,7 +55,7 @@ describe("MiniPlayerController", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     stubChrome();
-    vi.stubGlobal("documentPictureInPicture", undefined);
+    vi.stubGlobal("documentPictureInPicture", { requestWindow: vi.fn() });
   });
 
   afterEach(() => {
@@ -136,29 +136,34 @@ describe("MiniPlayerController", () => {
     expect(removeSpy).toHaveBeenCalledWith("click", expect.any(Function), true);
   });
 
-  it("should open video PiP fallback when Document PiP is unavailable", async () => {
+  it("should not hijack native button when Document PiP is unavailable", async () => {
+    vi.stubGlobal("documentPictureInPicture", undefined);
     const nativeButton = createNativeMiniPlayerButton();
-
-    const requestPiP = vi.fn().mockResolvedValue({});
-    const video = document.createElement("video");
-    video.className = "html5-main-video";
-    video.requestPictureInPicture = requestPiP;
-    document.body.appendChild(video);
-
-    const original = document.querySelector.bind(document);
-    vi.spyOn(document, "querySelector").mockImplementation((sel: string) => {
-      if (sel === SELECTORS.videoElement) return video;
-      if (sel === SELECTORS.nativeMiniPlayerButton) return nativeButton;
-      return original(sel);
-    });
+    const spy = vi.spyOn(nativeButton, "addEventListener");
 
     controller = new MiniPlayerController();
     await controller.init();
 
-    nativeButton.click();
-    await vi.advanceTimersByTimeAsync(0);
+    expect(spy).not.toHaveBeenCalled();
+  });
 
-    expect(requestPiP).toHaveBeenCalled();
+  it("should not re-enable Mini Player when Document PiP is unavailable", async () => {
+    vi.stubGlobal("documentPictureInPicture", undefined);
+    const nativeButton = createNativeMiniPlayerButton();
+    const spy = vi.spyOn(nativeButton, "addEventListener");
+
+    const sendMessage = vi.fn(
+      (_msg: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: false });
+      },
+    );
+    stubChrome({ sendMessage });
+
+    controller = new MiniPlayerController();
+    await controller.init();
+    sendRuntimeMessage({ type: "set-mini-player-enabled", data: true });
+
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("should open Document PiP when API is available", async () => {
