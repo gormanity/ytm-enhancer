@@ -122,9 +122,7 @@ describe("notifications popup view", () => {
     );
     const text = hint?.textContent?.replace(/\s+/g, " ").trim();
     expect(hint?.classList.contains("is-hidden")).toBe(false);
-    expect(text).toContain(
-      "Firefox does not support silent extension notifications",
-    );
+    expect(text).toContain("Firefox does not support silent notifications");
     expect(text).toContain(
       "disable notification sounds for Firefox at the operating system level",
     );
