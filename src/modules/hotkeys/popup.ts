@@ -79,14 +79,14 @@ export function createHotkeysPopupView(): PopupView {
 }
 
 const KEY_SYMBOL_MAP: Record<string, string> = {
-  Left: "←",
-  Right: "→",
-  Up: "↑",
-  Down: "↓",
-  ArrowLeft: "←",
-  ArrowRight: "→",
-  ArrowUp: "↑",
-  ArrowDown: "↓",
+  Left: "⇦",
+  Right: "⇨",
+  Up: "⇧",
+  Down: "⇩",
+  ArrowLeft: "⇦",
+  ArrowRight: "⇨",
+  ArrowUp: "⇧",
+  ArrowDown: "⇩",
   MediaNextTrack: "⏭",
   MediaPrevTrack: "⏮",
   MediaPlayPause: "⏯",
