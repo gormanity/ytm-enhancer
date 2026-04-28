@@ -9,6 +9,14 @@ function getManifestCommands(manifest: Record<string, unknown>): string[] {
   return commands ? Object.keys(commands) : [];
 }
 
+const expectedCommandOrder = [
+  "play-pause",
+  "next-track",
+  "previous-track",
+  "focus-ytm-tab",
+  "remind-me",
+];
+
 function getRegisteredCommands(): string[] {
   const commands = new Set<string>();
 
@@ -68,6 +76,10 @@ describe("hotkey manifest sync", () => {
           extra,
           `Commands registered but not in manifest: ${extra.join(", ")}`,
         ).toEqual([]);
+      });
+
+      it("should keep commands in the shared display order", () => {
+        expect(getManifestCommands(manifest)).toEqual(expectedCommandOrder);
       });
     });
   }

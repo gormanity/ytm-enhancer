@@ -49,6 +49,7 @@ export function createHotkeysPopupView(): PopupView {
       // Firefox exposes browser.commands.update / reset; Chromium doesn't. Use
       // the capability check to drive UI, not a brand check.
       const canEdit = typeof chrome.commands.update === "function";
+      list.classList.toggle("shortcuts-list--editable", canEdit);
 
       const state: { active: EditState | null } = { active: null };
 
@@ -79,18 +80,50 @@ export function createHotkeysPopupView(): PopupView {
 }
 
 const KEY_SYMBOL_MAP: Record<string, string> = {
-  Left: "⇦",
-  Right: "⇨",
-  Up: "⇧",
-  Down: "⇩",
-  ArrowLeft: "⇦",
-  ArrowRight: "⇨",
-  ArrowUp: "⇧",
-  ArrowDown: "⇩",
+  Left: "←",
+  Right: "→",
+  Up: "↑",
+  Down: "↓",
+  ArrowLeft: "←",
+  ArrowRight: "→",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+  "⇦": "←",
+  "⇨": "→",
+  "⇧": "↑",
+  "⇩": "↓",
   MediaNextTrack: "⏭",
   MediaPrevTrack: "⏮",
   MediaPlayPause: "⏯",
 };
+
+const COMMAND_DISPLAY_ORDER = [
+  "play-pause",
+  "next-track",
+  "previous-track",
+  "focus-ytm-tab",
+  "remind-me",
+];
+
+const COMMAND_DISPLAY_RANK = new Map(
+  COMMAND_DISPLAY_ORDER.map((name, index) => [name, index]),
+);
+
+const KEY_TOOLTIP_LABELS: Record<string, string> = {
+  "⌃": "Control",
+  "⇧": "Shift",
+  "⌥": "Option",
+  "⌘": "Command",
+  "←": "Left Arrow",
+  "→": "Right Arrow",
+  "↑": "Up Arrow",
+  "↓": "Down Arrow",
+  "⏭": "Media Next Track",
+  "⏮": "Media Previous Track",
+  "⏯": "Media Play/Pause",
+};
+
+const ARROW_SYMBOLS = new Set(["←", "→", "↑", "↓"]);
 
 // On macOS, Chrome already returns modifier symbols (⌃ ⇧ ⌥ ⌘) from
 // chrome.commands.getAll, while Firefox returns text names ("MacCtrl",
@@ -156,6 +189,10 @@ function resolveKey(key: string): KeyToken {
   return { value: key, isSymbol: false };
 }
 
+function tooltipForKey(token: KeyToken): string | null {
+  return KEY_TOOLTIP_LABELS[token.value] ?? null;
+}
+
 type KeyRenderer = (target: HTMLElement, shortcut: string) => void;
 
 function makeKeyRenderer(
@@ -170,7 +207,10 @@ function makeKeyRenderer(
         : null;
     if (!el) return null;
     el.textContent = token.value;
+    const tooltip = tooltipForKey(token);
+    if (tooltip) el.title = tooltip;
     if (token.isSymbol) el.classList.add("key-symbol");
+    if (ARROW_SYMBOLS.has(token.value)) el.classList.add("key-arrow");
     return el;
   };
   const createSeparator = (): HTMLElement | null => {
@@ -210,8 +250,12 @@ function loadShortcuts(
 ): void {
   chrome.commands.getAll((commands) => {
     container.replaceChildren();
-    for (const cmd of commands) {
-      if (!cmd.name || cmd.name === "_execute_action") continue;
+    const visibleCommands = commands
+      .filter((cmd) => cmd.name && cmd.name !== "_execute_action")
+      .sort((a, b) => commandSortKey(a) - commandSortKey(b));
+
+    for (const cmd of visibleCommands) {
+      if (!cmd.name) continue;
 
       const rowFragment = rowTemplate.content.cloneNode(
         true,
@@ -259,6 +303,11 @@ function loadShortcuts(
       container.appendChild(row);
     }
   });
+}
+
+function commandSortKey(command: chrome.commands.Command): number {
+  const name = command.name ?? "";
+  return COMMAND_DISPLAY_RANK.get(name) ?? Number.MAX_SAFE_INTEGER;
 }
 
 function setMode(row: HTMLElement, mode: "display" | "edit"): void {

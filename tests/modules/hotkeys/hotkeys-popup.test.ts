@@ -160,6 +160,150 @@ describe("createHotkeysPopupView", () => {
         expect(text).toContain("P");
       });
     });
+
+    it("should normalize Chrome arrow symbols to plain directional arrows", async () => {
+      vi.mocked(chrome.commands.getAll).mockImplementation(
+        (cb: (commands: chrome.commands.Command[]) => void) => {
+          cb([
+            {
+              name: "next-track",
+              shortcut: "⌃+⇧+⇨",
+              description: "Skip to the next track",
+            },
+            {
+              name: "previous-track",
+              shortcut: "⌃+⇧+⇦",
+              description: "Go to the previous track",
+            },
+            {
+              name: "play-pause",
+              shortcut: "⌃+⇧+↑",
+              description: "Play or pause",
+            },
+          ]);
+        },
+      );
+
+      const view = createHotkeysPopupView();
+      const container = document.createElement("div");
+
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const keys = Array.from(
+          container.querySelectorAll<HTMLElement>(".shortcut-key"),
+        ).map((el) => el.textContent);
+        expect(keys).toContain("→");
+        expect(keys).toContain("←");
+        expect(keys).toContain("↑");
+        expect(keys).not.toContain("⇨");
+        expect(keys).not.toContain("⇦");
+      });
+    });
+
+    it("should mark directional arrows for heavier glyph styling", async () => {
+      vi.mocked(chrome.commands.getAll).mockImplementation(
+        (cb: (commands: chrome.commands.Command[]) => void) => {
+          cb([
+            {
+              name: "next-track",
+              shortcut: "⌃+⇧+→",
+              description: "Skip to the next track",
+            },
+          ]);
+        },
+      );
+
+      const view = createHotkeysPopupView();
+      const container = document.createElement("div");
+
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const arrow = Array.from(
+          container.querySelectorAll<HTMLElement>(".shortcut-key"),
+        ).find((el) => el.textContent === "→");
+        expect(arrow?.classList.contains("key-arrow")).toBe(true);
+      });
+    });
+
+    it("should add spelled-out tooltips to symbolic keys", async () => {
+      vi.mocked(chrome.commands.getAll).mockImplementation(
+        (cb: (commands: chrome.commands.Command[]) => void) => {
+          cb([
+            {
+              name: "next-track",
+              shortcut: "⌥+⇧+→",
+              description: "Skip to the next track",
+            },
+          ]);
+        },
+      );
+
+      const view = createHotkeysPopupView();
+      const container = document.createElement("div");
+
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const titles = Array.from(
+          container.querySelectorAll<HTMLElement>(".shortcut-key"),
+        ).map((el) => el.title);
+        expect(titles).toEqual(["Option", "Shift", "Right Arrow"]);
+      });
+    });
+
+    it("should sort commands into the manifest display order", async () => {
+      vi.mocked(chrome.commands.getAll).mockImplementation(
+        (cb: (commands: chrome.commands.Command[]) => void) => {
+          cb([
+            {
+              name: "focus-ytm-tab",
+              shortcut: "⌥Y",
+              description: "Focus the YouTube Music tab",
+            },
+            {
+              name: "previous-track",
+              shortcut: "⌥⇧←",
+              description: "Go to the previous track",
+            },
+            {
+              name: "next-track",
+              shortcut: "⌥⇧→",
+              description: "Skip to the next track",
+            },
+            {
+              name: "remind-me",
+              shortcut: "⌥⇧R",
+              description: "Show a notification with the current track",
+            },
+            {
+              name: "play-pause",
+              shortcut: "⌥⇧P",
+              description: "Play/pause the current track",
+            },
+          ]);
+        },
+      );
+
+      const view = createHotkeysPopupView();
+      const container = document.createElement("div");
+
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const labels = Array.from(
+          container.querySelectorAll<HTMLElement>(".shortcut-label"),
+        ).map((el) => el.textContent);
+        expect(labels).toEqual([
+          "Play/pause the current track",
+          "Skip to the next track",
+          "Go to the previous track",
+          "Focus the YouTube Music tab",
+          "Show a notification with the current track",
+        ]);
+      });
+    });
   });
 
   describe.each([
@@ -212,6 +356,54 @@ describe("createHotkeysPopupView", () => {
     });
   });
 
+  describe("non-Mac modifier display", () => {
+    let originalPlatform: PropertyDescriptor | undefined;
+
+    beforeEach(() => {
+      originalPlatform = Object.getOwnPropertyDescriptor(navigator, "platform");
+      Object.defineProperty(navigator, "platform", {
+        value: "Win32",
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      if (originalPlatform) {
+        Object.defineProperty(navigator, "platform", originalPlatform);
+      }
+    });
+
+    it("should display returned modifier labels without normalizing them", async () => {
+      vi.mocked(chrome.commands.getAll).mockImplementation(
+        (cb: (commands: chrome.commands.Command[]) => void) => {
+          cb([
+            {
+              name: "focus-ytm-tab",
+              shortcut: "Super+Meta+Y",
+              description: "Focus the YouTube Music tab",
+            },
+          ]);
+        },
+      );
+
+      const view = createHotkeysPopupView();
+      const container = document.createElement("div");
+
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const keys = Array.from(
+          container.querySelectorAll<HTMLElement>(".shortcut-key"),
+        );
+        expect(keys.map((el) => el.textContent)).toEqual([
+          "Super",
+          "Meta",
+          "Y",
+        ]);
+      });
+    });
+  });
+
   describe("Firefox inline editor", () => {
     beforeEach(() => {
       Object.defineProperty(navigator, "platform", {
@@ -255,6 +447,23 @@ describe("createHotkeysPopupView", () => {
           '[data-role="configure-shortcuts-actions"]',
         );
         expect(actions?.classList.contains("is-hidden")).toBe(true);
+      });
+    });
+
+    it("marks the shortcuts list as editable for Firefox-specific spacing", async () => {
+      setupCommands([
+        { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
+      ]);
+
+      const view = createHotkeysPopupView();
+      const container = document.createElement("div");
+      view.render(container);
+
+      await vi.waitFor(() => {
+        const list = container.querySelector<HTMLElement>(
+          '[data-role="shortcuts-list"]',
+        );
+        expect(list?.classList.contains("shortcuts-list--editable")).toBe(true);
       });
     });
 
