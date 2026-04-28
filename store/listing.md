@@ -19,8 +19,8 @@ experience, this extension is for you.
 
 ### Key Features
 
-- Quick Settings: one panel for playback control, tab switching, and now playing
-  details
+- Playback Controls: one panel for playback control, tab switching, and now
+  playing details
 - Autoplay: optionally start playback automatically when YouTube Music loads
 - Auto Skip Disliked: automatically skip disliked tracks when they appear
 - Audio Visualizer: configurable visualizer overlays

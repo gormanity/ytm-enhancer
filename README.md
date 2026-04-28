@@ -40,16 +40,16 @@ fully-featured listening experience, this extension is for you.
 
 ## Current Modules
 
-| Feature                                                                                       | Why You Want It                                                                  |
-| --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| <img src="src/assets/module-icons/quick-settings.svg" width="18" alt="" /> **Quick Settings** | Control playback, switch tabs, and manage now playing from one panel.            |
-| <img src="src/assets/module-icons/auto-play.svg" width="18" alt="" /> **Auto Play**           | Open YouTube Music and have playback start automatically when you are ready.     |
-| <img src="src/assets/module-icons/auto-skip.svg" width="18" alt="" /> **Auto Skip Disliked**  | Automatically skip disliked tracks so your playlists stay great start to finish. |
-| <img src="src/assets/module-icons/visualizer.svg" width="18" alt="" /> **Audio Visualizer**   | Add responsive visualizer overlays and tune the look to match your setup.        |
-| <img src="src/assets/module-icons/hotkeys.svg" width="18" alt="" /> **Hotkeys**               | Control playback from any app or jump back to YouTube Music instantly.           |
-| <img src="src/assets/module-icons/mini-player.svg" width="18" alt="" /> **Mini Player**       | Keep controls and now playing visible in a compact PiP view while multitasking.  |
-| <img src="src/assets/module-icons/notifications.svg" width="18" alt="" /> **Notifications**   | Get desktop updates on track changes and playback resumption with custom detail. |
-| <img src="src/assets/module-icons/sleep-timer.svg" width="18" alt="" /> **Sleep Timer**       | Stop playback by duration or clock time so your queue does not run all night.    |
+| Feature                                                                                          | Why You Want It                                                                  |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| <img src="src/assets/module-icons/quick-settings.svg" width="18" alt="" /> **Playback Controls** | Control playback, switch tabs, and manage now playing from one panel.            |
+| <img src="src/assets/module-icons/auto-play.svg" width="18" alt="" /> **Auto Play**              | Open YouTube Music and have playback start automatically when you are ready.     |
+| <img src="src/assets/module-icons/auto-skip.svg" width="18" alt="" /> **Auto Skip Disliked**     | Automatically skip disliked tracks so your playlists stay great start to finish. |
+| <img src="src/assets/module-icons/visualizer.svg" width="18" alt="" /> **Audio Visualizer**      | Add responsive visualizer overlays and tune the look to match your setup.        |
+| <img src="src/assets/module-icons/hotkeys.svg" width="18" alt="" /> **Hotkeys**                  | Control playback from any app or jump back to YouTube Music instantly.           |
+| <img src="src/assets/module-icons/mini-player.svg" width="18" alt="" /> **Mini Player**          | Keep controls and now playing visible in a compact PiP view while multitasking.  |
+| <img src="src/assets/module-icons/notifications.svg" width="18" alt="" /> **Notifications**      | Get desktop updates on track changes and playback resumption with custom detail. |
+| <img src="src/assets/module-icons/sleep-timer.svg" width="18" alt="" /> **Sleep Timer**          | Stop playback by duration or clock time so your queue does not run all night.    |
 
 ## Installation
 

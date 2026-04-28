@@ -36,7 +36,7 @@ Depending on which modules you enable, locally stored settings may include:
 - Sleep Timer preferences (duration/time defaults)
 - Notification field visibility preferences
 - Audio Visualizer style/configuration options
-- Quick Settings and popup view preferences
+- Playback Controls and popup view preferences
 
 YTM Enhancer does not store your Google account password, payment data, or full
 YouTube Music history for the developer.

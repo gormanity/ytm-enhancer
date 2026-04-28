@@ -56,7 +56,7 @@ always verify attributes against the live YTM DOM first — do not assume
 
 The project currently includes these user-facing modules:
 
-- Quick Settings (tab source selection, now playing, key controls)
+- Playback Controls (tab source selection, now playing, key controls)
 - Auto Play
 - Auto Skip Disliked
 - Audio Visualizer
