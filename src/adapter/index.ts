@@ -191,9 +191,13 @@ export class YTMAdapter {
   }
 
   private readVideoTime(): { progress: number; duration: number } {
-    // Prefer #progress-bar — its value/max are per-track. video.duration can
-    // jump to the queue-wide total when YTM concatenates upcoming tracks into
-    // a single MediaSource buffer, making song times read way too long.
+    // Prefer #time-info text — it shows YTM's authoritative per-track
+    // times. Both video.duration and #progress-bar.max can be queue-wide
+    // when YTM concatenates upcoming tracks into a single MediaSource
+    // buffer, making song times read way too long.
+    const timeInfo = this.parseTimeInfo();
+    if (timeInfo.duration > 0) return timeInfo;
+
     const bar = document.querySelector<HTMLElement>(SELECTORS.progressBar);
     if (bar) {
       const max = Number(bar.getAttribute("max"));
@@ -214,6 +218,25 @@ export class YTMAdapter {
     const progress = video.currentTime || 0;
     const duration = Number.isFinite(video.duration) ? video.duration : 0;
     return { progress, duration };
+  }
+
+  private parseTimeInfo(): { progress: number; duration: number } {
+    const el = document.querySelector(SELECTORS.timeInfo);
+    const text = el?.textContent?.trim() ?? "";
+    const match = text.match(/^(.+?)\s*\/\s*(.+)$/);
+    if (!match) return { progress: 0, duration: 0 };
+    return {
+      progress: this.parseTimestamp(match[1].trim()),
+      duration: this.parseTimestamp(match[2].trim()),
+    };
+  }
+
+  private parseTimestamp(timestamp: string): number {
+    const parts = timestamp.split(":").map(Number);
+    if (parts.some((p) => !Number.isFinite(p))) return 0;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return 0;
   }
 
   private isPlaying(): boolean {
