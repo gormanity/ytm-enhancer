@@ -30,6 +30,15 @@ function getNotificationArtworkUrl(artworkUrl: string): string {
   return artworkUrl.replace(/=w\d+-h\d+/, "=w256-h256");
 }
 
+function isFirefoxRuntime(): boolean {
+  const maybeBrowser = (globalThis as { browser?: unknown }).browser;
+  return (
+    typeof maybeBrowser === "object" &&
+    maybeBrowser !== null &&
+    typeof (maybeBrowser as { runtime?: unknown }).runtime === "object"
+  );
+}
+
 export class NotificationsModule implements FeatureModule {
   readonly id = "notifications";
   readonly name = "Notifications";
@@ -137,6 +146,12 @@ export class NotificationsModule implements FeatureModule {
       message: notificationMessage,
       iconUrl,
     };
+    if (!isFirefoxRuntime()) {
+      // YTM Enhancer fires a notification on every track change, so the
+      // OS chime quickly becomes noise. Suppress it where the option is
+      // supported.
+      options.silent = true;
+    }
 
     // Clear then re-create after a short delay so macOS has time to
     // process the removal before the new toast arrives. Without the

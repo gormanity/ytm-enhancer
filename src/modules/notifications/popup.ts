@@ -29,6 +29,14 @@ export function createNotificationsPopupView(): PopupView {
         setType: "set-notify-on-unpause",
       });
 
+      // Firefox doesn't support the WebExtensions `silent` notification
+      // option, so expose OS-level sound guidance only there.
+      if (typeof chrome.commands.update === "function") {
+        container
+          .querySelector<HTMLElement>('[data-role="notifications-firefox-tip"]')
+          ?.classList.remove("is-hidden");
+      }
+
       const previewBtn = container.querySelector<HTMLButtonElement>(
         '[data-role="notifications-preview-btn"]',
       );
