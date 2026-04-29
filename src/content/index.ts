@@ -13,7 +13,10 @@ import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-man
 import { AudioBridgeInjector } from "./audio-bridge-injector";
 import { QualityBridgeInjector } from "./quality-bridge-injector";
 import { AutoPlayController } from "./auto-play";
-import { DislikeObserver } from "./dislike-observer";
+import {
+  DislikeObserver,
+  shouldAutoSkipDislikedChange,
+} from "./dislike-observer";
 import { TrackObserver } from "./track-observer";
 import { debug } from "@/core/logger";
 
@@ -433,8 +436,10 @@ safeSendMessage<{ ok: boolean; data?: VisualizerColorMode }>(
   },
 );
 
-const dislikeObserver = new DislikeObserver((isDisliked) => {
-  if (autoSkipDislikedEnabled && isDisliked) {
+const dislikeObserver = new DislikeObserver((isDisliked, source) => {
+  if (
+    shouldAutoSkipDislikedChange(autoSkipDislikedEnabled, isDisliked, source)
+  ) {
     adapter.executeAction("next");
   }
 });

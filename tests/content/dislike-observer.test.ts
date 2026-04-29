@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DislikeObserver } from "@/content/dislike-observer";
+import {
+  DislikeObserver,
+  shouldAutoSkipDislikedChange,
+  type DislikeChangeSource,
+} from "@/content/dislike-observer";
 
 /** Flush pending MutationObserver callbacks. */
 async function flush(): Promise<void> {
@@ -15,11 +19,14 @@ function createRenderer(likeStatus: string): HTMLElement {
 }
 
 describe("DislikeObserver", () => {
-  let onDislikeChange: ReturnType<typeof vi.fn<(isDisliked: boolean) => void>>;
+  let onDislikeChange: ReturnType<
+    typeof vi.fn<(isDisliked: boolean, source: DislikeChangeSource) => void>
+  >;
   let observer: DislikeObserver;
 
   beforeEach(() => {
-    onDislikeChange = vi.fn<(isDisliked: boolean) => void>();
+    onDislikeChange =
+      vi.fn<(isDisliked: boolean, source: DislikeChangeSource) => void>();
     observer = new DislikeObserver(onDislikeChange);
   });
 
@@ -35,7 +42,7 @@ describe("DislikeObserver", () => {
     renderer.setAttribute("like-status", "DISLIKE");
     await flush();
 
-    expect(onDislikeChange).toHaveBeenCalledWith(true);
+    expect(onDislikeChange).toHaveBeenCalledWith(true, "change");
   });
 
   it("should fire callback when like-status changes to INDIFFERENT", async () => {
@@ -45,7 +52,7 @@ describe("DislikeObserver", () => {
     renderer.setAttribute("like-status", "INDIFFERENT");
     await flush();
 
-    expect(onDislikeChange).toHaveBeenCalledWith(false);
+    expect(onDislikeChange).toHaveBeenCalledWith(false, "change");
   });
 
   it("should not fire callback when other attributes change", async () => {
@@ -68,7 +75,7 @@ describe("DislikeObserver", () => {
     renderer.setAttribute("like-status", "DISLIKE");
     await flush();
 
-    expect(onDislikeChange).toHaveBeenCalledWith(true);
+    expect(onDislikeChange).toHaveBeenCalledWith(true, "change");
   });
 
   it("should stop observing when stop() is called", async () => {
@@ -104,7 +111,7 @@ describe("DislikeObserver", () => {
     renderer.setAttribute("like-status", "DISLIKE");
     await flush();
 
-    expect(onDislikeChange).toHaveBeenCalledWith(true);
+    expect(onDislikeChange).toHaveBeenCalledWith(true, "change");
   });
 
   it("should check initial state on reobserve()", async () => {
@@ -119,7 +126,7 @@ describe("DislikeObserver", () => {
     observer.reobserve();
     await flush();
 
-    expect(onDislikeChange).toHaveBeenCalledWith(true);
+    expect(onDislikeChange).toHaveBeenCalledWith(true, "initial");
   });
 
   it("should report not-disliked on reobserve() for INDIFFERENT track", async () => {
@@ -132,6 +139,20 @@ describe("DislikeObserver", () => {
     observer.reobserve();
     await flush();
 
-    expect(onDislikeChange).toHaveBeenCalledWith(false);
+    expect(onDislikeChange).toHaveBeenCalledWith(false, "initial");
+  });
+});
+
+describe("shouldAutoSkipDislikedChange", () => {
+  it("should skip disliked tracks discovered during an initial track check", () => {
+    expect(shouldAutoSkipDislikedChange(true, true, "initial")).toBe(true);
+  });
+
+  it("should not skip when the user dislikes the current track", () => {
+    expect(shouldAutoSkipDislikedChange(true, true, "change")).toBe(false);
+  });
+
+  it("should not skip when the module is disabled", () => {
+    expect(shouldAutoSkipDislikedChange(false, true, "initial")).toBe(false);
   });
 });

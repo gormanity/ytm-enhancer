@@ -1,11 +1,26 @@
 import { SELECTORS } from "@/adapter/selectors";
 
+export type DislikeChangeSource = "initial" | "change";
+
+export function shouldAutoSkipDislikedChange(
+  enabled: boolean,
+  isDisliked: boolean,
+  source: DislikeChangeSource,
+): boolean {
+  return enabled && isDisliked && source === "initial";
+}
+
 export class DislikeObserver {
   private rendererObserver: MutationObserver | null = null;
   private discoveryObserver: MutationObserver | null = null;
-  private onDislikeChange: (isDisliked: boolean) => void;
+  private onDislikeChange: (
+    isDisliked: boolean,
+    source: DislikeChangeSource,
+  ) => void;
 
-  constructor(onDislikeChange: (isDisliked: boolean) => void) {
+  constructor(
+    onDislikeChange: (isDisliked: boolean, source: DislikeChangeSource) => void,
+  ) {
     this.onDislikeChange = onDislikeChange;
   }
 
@@ -34,14 +49,14 @@ export class DislikeObserver {
       this.observeRenderer(renderer);
       // Check initial state for the new track
       const isDisliked = renderer.getAttribute("like-status") === "DISLIKE";
-      this.onDislikeChange(isDisliked);
+      this.onDislikeChange(isDisliked, "initial");
     }
   }
 
   private observeRenderer(renderer: Element): void {
     this.rendererObserver = new MutationObserver(() => {
       const isDisliked = renderer.getAttribute("like-status") === "DISLIKE";
-      this.onDislikeChange(isDisliked);
+      this.onDislikeChange(isDisliked, "change");
     });
 
     this.rendererObserver.observe(renderer, {
