@@ -638,6 +638,18 @@ handler.on("set-sleep-timer-mode", async (message) => {
 });
 
 handler.on("playback-action", async (message) => {
+  if (message.action === "seekTo") {
+    if (typeof message.time !== "number") {
+      return { ok: false, error: "Invalid seek time" };
+    }
+    void relayToSelectedTab({
+      type: "playback-action",
+      action: "seekTo",
+      time: message.time,
+    });
+    return { ok: true };
+  }
+
   void relayToSelectedTab({
     type: "playback-action",
     action: message.action,

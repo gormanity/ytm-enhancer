@@ -21,6 +21,15 @@ const adapter = new YTMAdapter();
 const handler = createMessageHandler();
 
 handler.on("playback-action", async (message) => {
+  if (message.action === "seekTo") {
+    if (typeof message.time !== "number") {
+      return { ok: false, error: "Invalid seek time" };
+    }
+    debug("playback-action: seekTo", message.time);
+    adapter.seekTo(message.time);
+    return { ok: true };
+  }
+
   const action = message.action as PlaybackAction;
   debug("playback-action:", action);
   adapter.executeAction(action);

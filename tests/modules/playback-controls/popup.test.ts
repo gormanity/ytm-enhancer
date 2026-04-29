@@ -4,6 +4,8 @@ import { createPlaybackControlsPopupView } from "@/modules/playback-controls/pop
 interface RuntimeMessage {
   type: string;
   tabId?: number;
+  action?: string;
+  time?: number;
 }
 
 const GOOD_ARTWORK_DATA_URL =
@@ -394,5 +396,74 @@ describe("playback controls popup view", () => {
     expect(selectedItem?.title).toBe("Tab 2");
 
     secondCleanup?.();
+  });
+
+  it("sends seek action with the selected time from the progress bar", async () => {
+    sendMessageMock.mockImplementation(
+      (message: RuntimeMessage, callback?: (response: unknown) => void) => {
+        switch (message.type) {
+          case "get-ytm-tabs":
+            callback?.({ ok: true, data: { tabs: [] } });
+            return;
+          case "get-playback-state":
+            callback?.({
+              ok: true,
+              data: {
+                title: "Track A",
+                artist: "Artist A",
+                album: null,
+                year: null,
+                artworkUrl: null,
+                isPlaying: true,
+                progress: 25,
+                duration: 200,
+              },
+            });
+            return;
+          case "get-volume":
+            callback?.({ ok: true, data: 50 });
+            return;
+          case "get-playback-speed":
+            callback?.({ ok: true, data: "1" });
+            return;
+          case "get-stream-quality":
+            callback?.({ ok: true, data: { current: "2" } });
+            return;
+          default:
+            callback?.({ ok: true });
+        }
+      },
+    );
+
+    const view = createPlaybackControlsPopupView();
+    const container = document.createElement("div");
+    const cleanup = view.render(container);
+
+    await vi.waitFor(() => {
+      expect(container.querySelector(".progress-bar")).not.toBeNull();
+    });
+
+    const bar = container.querySelector<HTMLElement>(".progress-bar")!;
+    vi.spyOn(bar, "getBoundingClientRect").mockReturnValue({
+      left: 100,
+      right: 300,
+      width: 200,
+      top: 0,
+      bottom: 10,
+      height: 10,
+      x: 100,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 200 }));
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "playback-action",
+      action: "seekTo",
+      time: 100,
+    });
+
+    cleanup?.();
   });
 });
