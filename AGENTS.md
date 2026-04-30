@@ -61,6 +61,9 @@ This file covers **how to work**, not what the project is.
 - Write release notes from the end-user perspective:
   - Focus on what changed for users and what improved.
   - Do not include known limitations or internal implementation details.
+  - Draft the notes for manual approval before publishing or updating the GitHub
+    release.
+  - After approval, add the approved notes to the GitHub release.
 
 ---
 
