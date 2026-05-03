@@ -22,6 +22,8 @@ export type PlaybackAction =
   | "shuffle"
   | "repeat";
 
+export type AutoPlayMode = "default" | "off" | "on";
+
 /** A popup view registered by a feature module. */
 export interface PopupView {
   id: string;

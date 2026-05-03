@@ -25,13 +25,24 @@ describe("AutoPlayModule", () => {
 
   it("should be disabled by default", () => {
     expect(module.isEnabled()).toBe(false);
+    expect(module.getMode()).toBe("default");
   });
 
   it("should toggle enabled state", () => {
     module.setEnabled(true);
     expect(module.isEnabled()).toBe(true);
+    expect(module.getMode()).toBe("on");
 
     module.setEnabled(false);
+    expect(module.isEnabled()).toBe(false);
+    expect(module.getMode()).toBe("off");
+  });
+
+  it("should set mode", () => {
+    module.setMode("on");
+    expect(module.isEnabled()).toBe(true);
+
+    module.setMode("default");
     expect(module.isEnabled()).toBe(false);
   });
 

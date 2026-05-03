@@ -8,6 +8,7 @@ import {
   relayToYTMTab,
   findYTMTab,
   type FeatureModule,
+  type AutoPlayMode,
   type PlaybackAction,
 } from "@/core";
 import { findAllYTMTabs } from "@/core/tab-finder";
@@ -69,6 +70,14 @@ function notifyYtmTabsChanged(): void {
 
 function notifySleepTimerStateChanged(): void {
   broadcastPopupMessage({ type: "sleep-timer-state-changed" });
+}
+
+function isAutoPlayMode(value: unknown): value is AutoPlayMode {
+  return value === "default" || value === "off" || value === "on";
+}
+
+function normalizeAutoPlayMode(value: unknown): AutoPlayMode {
+  return isAutoPlayMode(value) ? value : "default";
 }
 
 async function relayToSelectedTab(message: unknown): Promise<void> {
@@ -361,12 +370,31 @@ handler.on("get-auto-play-enabled", async () => {
   return { ok: true, data: autoPlay.isEnabled() };
 });
 
+handler.on("get-auto-play-mode", async () => {
+  return { ok: true, data: autoPlay.getMode() };
+});
+
 handler.on("set-auto-play-enabled", async (message) => {
-  autoPlay.setEnabled(message.enabled as boolean);
+  const mode: AutoPlayMode = message.enabled === true ? "on" : "off";
+  autoPlay.setMode(mode);
+  await saveModuleStateValue("auto-play.mode", mode);
   await saveModuleStateValue("auto-play.enabled", message.enabled);
   void relayToYTMTab({
-    type: "set-auto-play-enabled",
-    enabled: message.enabled,
+    type: "set-auto-play-mode",
+    mode,
+  }).catch(() => {
+    // Tab may be navigating/reloading; state is already persisted.
+  });
+  return { ok: true };
+});
+
+handler.on("set-auto-play-mode", async (message) => {
+  const mode = normalizeAutoPlayMode(message.mode);
+  autoPlay.setMode(mode);
+  await saveModuleStateValue("auto-play.mode", mode);
+  void relayToYTMTab({
+    type: "set-auto-play-mode",
+    mode,
   }).catch(() => {
     // Tab may be navigating/reloading; state is already persisted.
   });
@@ -693,6 +721,14 @@ async function restoreModuleState(): Promise<void> {
     typeof state[key] === "string" ? (state[key] as string) : fallback;
   const num = (key: string) =>
     typeof state[key] === "number" ? (state[key] as number) : null;
+  const autoPlayMode = (): AutoPlayMode => {
+    const mode = state["auto-play.mode"];
+    if (isAutoPlayMode(mode)) return mode;
+    if (typeof state["auto-play.enabled"] === "boolean") {
+      return state["auto-play.enabled"] ? "on" : "off";
+    }
+    return "default";
+  };
 
   notifications.setEnabled(bool("notifications.enabled", true));
   notifications.setNotifyOnUnpause(
@@ -706,7 +742,7 @@ async function restoreModuleState(): Promise<void> {
       state["notifications.fields"] as NotificationFields,
     );
   }
-  autoPlay.setEnabled(bool("auto-play.enabled", false));
+  autoPlay.setMode(autoPlayMode());
   autoSkipDisliked.setEnabled(bool("auto-skip-disliked.enabled", false));
   audioVisualizer.setEnabled(bool("audio-visualizer.enabled", true));
   audioVisualizer.setStyle(

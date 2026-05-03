@@ -1,5 +1,6 @@
 import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
+import type { AutoPlayMode } from "@/core/types";
 
 const TIMEOUT_MS = 10_000;
 const HAVE_FUTURE_DATA = 3;
@@ -19,23 +20,28 @@ export class AutoPlayController {
     null;
   private suppressVideo: HTMLVideoElement | null = null;
   private suppressArmed = false;
-  private enabled = false;
+  private mode: AutoPlayMode = "default";
   private messageListener: (message: {
     type: string;
+    mode?: AutoPlayMode;
     enabled?: boolean;
   }) => void;
 
   constructor() {
     this.messageListener = (message) => {
+      if (message.type === "set-auto-play-mode") {
+        const nextMode = this.normalizeMode(message.mode);
+        if (nextMode === this.mode) return;
+        this.mode = nextMode;
+        this.applyRuntimeMode();
+        return;
+      }
+
       if (message.type === "set-auto-play-enabled") {
-        const nextEnabled = message.enabled === true;
-        if (nextEnabled === this.enabled) return;
-        this.enabled = nextEnabled;
-        if (this.enabled) {
-          this.cancelInitialSuppression();
-        } else {
-          this.cancelPendingAutoPlay();
-        }
+        const nextMode = message.enabled === true ? "on" : "off";
+        if (nextMode === this.mode) return;
+        this.mode = nextMode;
+        this.applyRuntimeMode();
       }
     };
   }
@@ -45,15 +51,14 @@ export class AutoPlayController {
 
     try {
       chrome.runtime.sendMessage(
-        { type: "get-auto-play-enabled" },
-        (response: { ok: boolean; data?: boolean }) => {
+        { type: "get-auto-play-mode" },
+        (response: { ok: boolean; data?: AutoPlayMode }) => {
           if (chrome.runtime.lastError) return;
-          this.enabled = response?.ok === true && response.data === true;
-          if (this.enabled) {
-            this.tryAutoPlay();
-          } else if (this.shouldSuppressInitialPlayback()) {
-            this.armInitialSuppression();
-          }
+          this.mode =
+            response?.ok === true
+              ? this.normalizeMode(response.data)
+              : "default";
+          this.applyInitialMode();
         },
       );
     } catch {
@@ -74,7 +79,7 @@ export class AutoPlayController {
   }
 
   private tryAutoPlay(): void {
-    if (!this.enabled) return;
+    if (this.mode !== "on") return;
 
     const video = document.querySelector<HTMLVideoElement>(
       SELECTORS.videoElement,
@@ -94,7 +99,7 @@ export class AutoPlayController {
    * which fires after YTM finishes its internal pause/load cycle.
    */
   private onVideoFound(video: HTMLVideoElement): void {
-    if (!this.enabled) return;
+    if (this.mode !== "on") return;
     if (video.readyState >= HAVE_FUTURE_DATA) {
       this.performAutoPlay(video);
     } else {
@@ -104,7 +109,7 @@ export class AutoPlayController {
 
   private waitForCanplay(video: HTMLVideoElement): void {
     this.canplayHandler = () => {
-      if (!this.enabled) return;
+      if (this.mode !== "on") return;
       this.clearCanplayListener();
       this.performAutoPlay(video);
     };
@@ -128,7 +133,7 @@ export class AutoPlayController {
    */
   private waitForVideo(): void {
     this.observer = new MutationObserver(() => {
-      if (!this.enabled) return;
+      if (this.mode !== "on") return;
       const video = document.querySelector<HTMLVideoElement>(
         SELECTORS.videoElement,
       );
@@ -157,7 +162,7 @@ export class AutoPlayController {
   }
 
   private performAutoPlay(video: HTMLVideoElement): void {
-    if (!this.enabled) return;
+    if (this.mode !== "on") return;
 
     const state = this.adapter.getPlaybackState();
 
@@ -187,6 +192,41 @@ export class AutoPlayController {
 
   private shouldSuppressInitialPlayback(): boolean {
     return performance.now() <= INITIAL_SUPPRESSION_MAX_AGE_MS;
+  }
+
+  private applyInitialMode(): void {
+    if (this.mode === "on") {
+      this.cancelInitialSuppression();
+      this.tryAutoPlay();
+      return;
+    }
+
+    this.cancelPendingAutoPlay();
+
+    if (this.mode === "off" && this.shouldSuppressInitialPlayback()) {
+      this.armInitialSuppression();
+      return;
+    }
+
+    this.cancelInitialSuppression();
+  }
+
+  private applyRuntimeMode(): void {
+    if (this.mode === "on") {
+      this.cancelInitialSuppression();
+      return;
+    }
+
+    this.cancelPendingAutoPlay();
+    if (this.mode === "default") {
+      this.cancelInitialSuppression();
+    }
+  }
+
+  private normalizeMode(mode: unknown): AutoPlayMode {
+    return mode === "off" || mode === "on" || mode === "default"
+      ? mode
+      : "default";
   }
 
   private armInitialSuppression(): void {

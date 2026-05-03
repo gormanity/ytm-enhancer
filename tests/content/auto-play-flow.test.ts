@@ -19,11 +19,12 @@ vi.mock("@/adapter", () => {
 
 type RuntimeMessage = {
   type: string;
+  mode?: "default" | "off" | "on";
   enabled?: boolean;
 };
 
 describe("auto-play integration flows", () => {
-  let autoPlayEnabled = false;
+  let autoPlayMode: "default" | "off" | "on" = "default";
   let runtimeListeners: Array<(message: RuntimeMessage) => void> = [];
   let sendMessageMock: ReturnType<typeof vi.fn>;
   const controllers: AutoPlayController[] = [];
@@ -31,24 +32,27 @@ describe("auto-play integration flows", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     runtimeListeners = [];
-    autoPlayEnabled = false;
+    autoPlayMode = "default";
 
     sendMessageMock = vi.fn(
       (
         message: RuntimeMessage,
-        callback?: (response: { ok: boolean; data?: boolean }) => void,
+        callback?: (response: {
+          ok: boolean;
+          data?: boolean | "default" | "off" | "on";
+        }) => void,
       ) => {
-        if (message.type === "get-auto-play-enabled") {
-          callback?.({ ok: true, data: autoPlayEnabled });
+        if (message.type === "get-auto-play-mode") {
+          callback?.({ ok: true, data: autoPlayMode });
           return;
         }
-        if (message.type === "set-auto-play-enabled") {
-          autoPlayEnabled = message.enabled === true;
-          callback?.({ ok: true, data: autoPlayEnabled });
+        if (message.type === "set-auto-play-mode") {
+          autoPlayMode = message.mode ?? "default";
+          callback?.({ ok: true, data: autoPlayMode });
           for (const listener of runtimeListeners) {
             listener({
-              type: "set-auto-play-enabled",
-              enabled: autoPlayEnabled,
+              type: "set-auto-play-mode",
+              mode: autoPlayMode,
             });
           }
           return;
@@ -103,7 +107,7 @@ describe("auto-play integration flows", () => {
   }
 
   it("does not pause a currently playing tab when injected late", () => {
-    autoPlayEnabled = false;
+    autoPlayMode = "off";
     vi.spyOn(performance, "now").mockReturnValue(60_000);
 
     const video = createReadyVideo();
@@ -119,8 +123,22 @@ describe("auto-play integration flows", () => {
     expect(video.pause).not.toHaveBeenCalled();
   });
 
-  it("suppresses initial autoplay in a freshly loaded tab when disabled", () => {
-    autoPlayEnabled = false;
+  it("does not suppress initial autoplay in a freshly loaded tab by default", () => {
+    autoPlayMode = "default";
+    vi.spyOn(performance, "now").mockReturnValue(500);
+
+    const video = createReadyVideo();
+
+    const controller = createController();
+    controller.init();
+    video.dispatchEvent(new Event("play"));
+
+    expect(video.pause).not.toHaveBeenCalled();
+    expect(video.play).not.toHaveBeenCalled();
+  });
+
+  it("suppresses initial autoplay in a freshly loaded tab when off", () => {
+    autoPlayMode = "off";
     vi.spyOn(performance, "now").mockReturnValue(500);
 
     const video = createReadyVideo();
@@ -134,20 +152,18 @@ describe("auto-play integration flows", () => {
   });
 
   it("honors toggling off in popup before immediate reload", () => {
-    autoPlayEnabled = true;
+    autoPlayMode = "on";
 
     const popupContainer = document.createElement("div");
     createAutoPlayPopupView().render(popupContainer);
 
-    const toggle = popupContainer.querySelector<HTMLInputElement>(
-      'input[type="checkbox"]',
-    );
-    expect(toggle).not.toBeNull();
-    expect(toggle?.checked).toBe(true);
+    const select = popupContainer.querySelector<HTMLSelectElement>("select");
+    expect(select).not.toBeNull();
+    expect(select?.value).toBe("on");
 
-    toggle!.checked = false;
-    toggle!.dispatchEvent(new Event("change"));
-    expect(autoPlayEnabled).toBe(false);
+    select!.value = "off";
+    select!.dispatchEvent(new Event("change"));
+    expect(autoPlayMode).toBe("off");
 
     vi.spyOn(performance, "now").mockReturnValue(800);
     const reloadedVideo = createReadyVideo();

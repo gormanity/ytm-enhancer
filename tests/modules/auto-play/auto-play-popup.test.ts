@@ -32,11 +32,11 @@ describe("auto-play popup view", () => {
     expect(heading?.textContent).toBe("Auto-Play");
   });
 
-  it("should render a toggle switch checked when enabled", async () => {
+  it("should render a mode selector with current mode", async () => {
     sendMessageMock.mockImplementation(
       (message: unknown, callback?: (response: unknown) => void) => {
         if (callback) {
-          callback({ ok: true, data: true });
+          callback({ ok: true, data: "on" });
         }
       },
     );
@@ -47,32 +47,30 @@ describe("auto-play popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const toggle = container.querySelector<HTMLInputElement>(
-        'input[type="checkbox"]',
-      );
-      expect(toggle).not.toBeNull();
-      expect(toggle?.checked).toBe(true);
-      expect(toggle?.disabled).toBe(false);
+      const select = container.querySelector<HTMLSelectElement>("select");
+      expect(select).not.toBeNull();
+      expect(select?.value).toBe("on");
+      expect(select?.disabled).toBe(false);
     });
   });
 
-  it("should query current enabled state on render", () => {
+  it("should query current mode on render", () => {
     const view = createAutoPlayPopupView();
     const container = document.createElement("div");
 
     view.render(container);
 
     expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "get-auto-play-enabled" },
+      { type: "get-auto-play-mode" },
       expect.any(Function),
     );
   });
 
-  it("should send set-auto-play-enabled message on toggle", async () => {
+  it("should send set-auto-play-mode message on change", async () => {
     sendMessageMock.mockImplementation(
       (message: unknown, callback?: (response: unknown) => void) => {
         if (callback) {
-          callback({ ok: true, data: false });
+          callback({ ok: true, data: "default" });
         }
       },
     );
@@ -83,24 +81,17 @@ describe("auto-play popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      const toggle = container.querySelector<HTMLInputElement>(
-        'input[type="checkbox"]',
-      );
-      expect(toggle?.disabled).toBe(false);
+      const select = container.querySelector<HTMLSelectElement>("select");
+      expect(select?.disabled).toBe(false);
     });
 
-    const toggle = container.querySelector<HTMLInputElement>(
-      'input[type="checkbox"]',
-    )!;
-    toggle.checked = true;
-    toggle.dispatchEvent(new Event("change"));
+    const select = container.querySelector<HTMLSelectElement>("select")!;
+    select.value = "off";
+    select.dispatchEvent(new Event("change"));
 
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      {
-        type: "set-auto-play-enabled",
-        enabled: true,
-      },
-      expect.any(Function),
-    );
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-auto-play-mode",
+      mode: "off",
+    });
   });
 });

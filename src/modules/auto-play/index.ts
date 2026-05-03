@@ -1,4 +1,4 @@
-import type { FeatureModule, PopupView } from "@/core/types";
+import type { AutoPlayMode, FeatureModule, PopupView } from "@/core/types";
 import { createAutoPlayPopupView } from "./popup";
 
 export class AutoPlayModule implements FeatureModule {
@@ -7,7 +7,7 @@ export class AutoPlayModule implements FeatureModule {
   readonly description =
     "Automatically start playback when YouTube Music loads";
 
-  private enabled = false;
+  private mode: AutoPlayMode = "default";
 
   init(): void {
     // No background-side setup needed; auto-play logic runs in
@@ -15,15 +15,23 @@ export class AutoPlayModule implements FeatureModule {
   }
 
   destroy(): void {
-    this.enabled = false;
+    this.mode = "default";
   }
 
   isEnabled(): boolean {
-    return this.enabled;
+    return this.mode === "on";
   }
 
   setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
+    this.mode = enabled ? "on" : "off";
+  }
+
+  getMode(): AutoPlayMode {
+    return this.mode;
+  }
+
+  setMode(mode: AutoPlayMode): void {
+    this.mode = mode;
   }
 
   getPopupViews(): PopupView[] {

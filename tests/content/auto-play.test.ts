@@ -48,7 +48,7 @@ describe("AutoPlayController", () => {
   let addListenerMock: ReturnType<typeof vi.fn>;
   let removeListenerMock: ReturnType<typeof vi.fn>;
   let runtimeMessageListener:
-    | ((message: { type: string; enabled?: boolean }) => void)
+    | ((message: { type: string; mode?: string; enabled?: boolean }) => void)
     | null;
   let adapterInstance: {
     getPlaybackState: ReturnType<typeof vi.fn>;
@@ -56,12 +56,20 @@ describe("AutoPlayController", () => {
     clickQuickPicksPlayAll: ReturnType<typeof vi.fn>;
   };
 
-  function enableAutoPlay(): void {
+  function setAutoPlayMode(mode: "default" | "off" | "on"): void {
     sendMessageMock.mockImplementation(
       (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: true });
+        if (callback) callback({ ok: true, data: mode });
       },
     );
+  }
+
+  function enableAutoPlay(): void {
+    setAutoPlayMode("on");
+  }
+
+  function turnAutoPlayOff(): void {
+    setAutoPlayMode("off");
   }
 
   beforeEach(() => {
@@ -73,6 +81,7 @@ describe("AutoPlayController", () => {
     addListenerMock = vi.fn((listener) => {
       runtimeMessageListener = listener as (message: {
         type: string;
+        mode?: string;
         enabled?: boolean;
       }) => void;
     });
@@ -103,6 +112,7 @@ describe("AutoPlayController", () => {
 
   function sendRuntimeMessage(message: {
     type: string;
+    mode?: string;
     enabled?: boolean;
   }): void {
     runtimeMessageListener?.(message);
@@ -113,24 +123,26 @@ describe("AutoPlayController", () => {
     vi.useRealTimers();
   });
 
-  it("should not trigger play when disabled", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: false });
-      },
-    );
+  it("should not trigger play in default mode", () => {
+    setAutoPlayMode("default");
 
     controller.init();
 
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
   });
 
-  it("should pause when disabled and video is already playing", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: false });
-      },
-    );
+  it("should not suppress initial play in default mode", () => {
+    setAutoPlayMode("default");
+
+    const video = createReadyVideo();
+    controller.init();
+    video.dispatchEvent(new Event("play"));
+
+    expect(video.pause).not.toHaveBeenCalled();
+  });
+
+  it("should pause when off and video is already playing", () => {
+    turnAutoPlayOff();
 
     const video = createReadyVideo();
     Object.defineProperty(video, "paused", {
@@ -143,12 +155,8 @@ describe("AutoPlayController", () => {
     expect(video.pause).toHaveBeenCalled();
   });
 
-  it("should pause initial play event when disabled", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: false });
-      },
-    );
+  it("should pause initial play event when off", () => {
+    turnAutoPlayOff();
 
     const video = createReadyVideo();
     controller.init();
@@ -158,11 +166,7 @@ describe("AutoPlayController", () => {
   });
 
   it("should not suppress an initial play started from the play button", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: false });
-      },
-    );
+    turnAutoPlayOff();
 
     const playButton = document.createElement("button");
     playButton.id = "play-pause-button";
@@ -180,11 +184,7 @@ describe("AutoPlayController", () => {
   });
 
   it("should not suppress an initial keyboard play from the play button", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: false });
-      },
-    );
+    turnAutoPlayOff();
 
     const playButton = document.createElement("button");
     playButton.id = "play-pause-button";
@@ -203,11 +203,7 @@ describe("AutoPlayController", () => {
 
   it("should not suppress playback on late injection into an existing tab", () => {
     const perfSpy = vi.spyOn(performance, "now").mockReturnValue(60_000);
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: false });
-      },
-    );
+    turnAutoPlayOff();
 
     const video = createReadyVideo();
     Object.defineProperty(video, "paused", {
@@ -367,7 +363,7 @@ describe("AutoPlayController", () => {
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
   });
 
-  it("should listen for set-auto-play-enabled messages", () => {
+  it("should listen for set-auto-play-mode messages", () => {
     controller.init();
 
     expect(addListenerMock).toHaveBeenCalled();
@@ -391,18 +387,14 @@ describe("AutoPlayController", () => {
     controller.init();
     expect(video.play).not.toHaveBeenCalled();
 
-    sendRuntimeMessage({ type: "set-auto-play-enabled", enabled: false });
+    sendRuntimeMessage({ type: "set-auto-play-mode", mode: "off" });
     makeReady(video);
 
     expect(video.play).not.toHaveBeenCalled();
   });
 
   it("should not auto-play when enabled via runtime message", () => {
-    sendMessageMock.mockImplementation(
-      (_message: unknown, callback?: (response: unknown) => void) => {
-        if (callback) callback({ ok: true, data: false });
-      },
-    );
+    turnAutoPlayOff();
     adapterInstance.getPlaybackState.mockReturnValue({
       title: "Some Song",
       isPlaying: false,
@@ -412,7 +404,7 @@ describe("AutoPlayController", () => {
     controller.init();
     expect(video.play).not.toHaveBeenCalled();
 
-    sendRuntimeMessage({ type: "set-auto-play-enabled", enabled: true });
+    sendRuntimeMessage({ type: "set-auto-play-mode", mode: "on" });
 
     expect(video.play).not.toHaveBeenCalled();
   });

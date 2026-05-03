@@ -1,6 +1,13 @@
-import type { PopupView } from "@/core/types";
+import type { AutoPlayMode, PopupView } from "@/core/types";
+import { bindSelect } from "@/popup/bind-select";
 import { renderPopupTemplate } from "@/popup/template";
 import templateHtml from "./popup.html?raw";
+
+function normalizeMode(mode: unknown): AutoPlayMode {
+  return mode === "default" || mode === "off" || mode === "on"
+    ? mode
+    : "default";
+}
 
 /** Create the auto-play settings popup view. */
 export function createAutoPlayPopupView(): PopupView {
@@ -9,34 +16,12 @@ export function createAutoPlayPopupView(): PopupView {
     label: "Auto-Play",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
-      const toggle = container.querySelector<HTMLInputElement>(
-        '[data-role="auto-play-toggle"]',
-      );
-      if (!toggle) return;
-      toggle.disabled = true;
-
-      // Query current state from the background script.
-      chrome.runtime.sendMessage(
-        { type: "get-auto-play-enabled" },
-        (response: { ok: boolean; data?: boolean }) => {
-          if (response?.ok) {
-            toggle.checked = response.data === true;
-            toggle.disabled = false;
-          }
-        },
-      );
-
-      toggle.addEventListener("change", () => {
-        toggle.disabled = true;
-        chrome.runtime.sendMessage(
-          {
-            type: "set-auto-play-enabled",
-            enabled: toggle.checked,
-          },
-          () => {
-            toggle.disabled = false;
-          },
-        );
+      bindSelect(container, "auto-play-mode", {
+        getType: "get-auto-play-mode",
+        setType: "set-auto-play-mode",
+        setKey: "mode",
+        parseData: normalizeMode,
+        transformValue: normalizeMode,
       });
     },
   };

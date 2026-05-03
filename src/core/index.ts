@@ -16,6 +16,7 @@ export type { Message, MessageResponse, SendOptions } from "./messaging";
 export type { Capabilities, BrowserRuntime } from "./capabilities";
 export type {
   FeatureModule,
+  AutoPlayMode,
   PlaybackState,
   PlaybackAction,
   PopupView,
