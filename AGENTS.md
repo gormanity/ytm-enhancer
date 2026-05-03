@@ -88,6 +88,12 @@ be optested with debug logging enabled. Dev builds output to `dist-dev/` and
 include a "(dev)" name suffix. Only run production builds (`build:chrome`,
 `build:firefox`) for releases.
 
+When developing new features or debugging bugs, add targeted debug logging with
+the existing debug logger where it helps verify runtime behavior in the dev
+build. Keep debug output focused on decision points, browser/API differences,
+and selector or state detection. Remove or reduce temporary logging before
+considering the change complete unless it remains useful for future debugging.
+
 ## Change Cycle Checklist
 
 - After every change cycle (even if small), run `pnpm run format`.
