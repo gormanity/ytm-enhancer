@@ -157,6 +157,50 @@ describe("AutoPlayController", () => {
     expect(video.pause).toHaveBeenCalled();
   });
 
+  it("should not suppress an initial play started from the play button", () => {
+    sendMessageMock.mockImplementation(
+      (_message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: false });
+      },
+    );
+
+    const playButton = document.createElement("button");
+    playButton.id = "play-pause-button";
+    document.body.appendChild(playButton);
+
+    const video = createReadyVideo();
+    controller.init();
+    playButton.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true }),
+    );
+    video.dispatchEvent(new Event("play"));
+
+    expect(video.play).toHaveBeenCalled();
+    expect(video.pause).not.toHaveBeenCalled();
+  });
+
+  it("should not suppress an initial keyboard play from the play button", () => {
+    sendMessageMock.mockImplementation(
+      (_message: unknown, callback?: (response: unknown) => void) => {
+        if (callback) callback({ ok: true, data: false });
+      },
+    );
+
+    const playButton = document.createElement("button");
+    playButton.id = "play-pause-button";
+    document.body.appendChild(playButton);
+
+    const video = createReadyVideo();
+    controller.init();
+    playButton.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }),
+    );
+    video.dispatchEvent(new Event("play"));
+
+    expect(video.play).toHaveBeenCalled();
+    expect(video.pause).not.toHaveBeenCalled();
+  });
+
   it("should not suppress playback on late injection into an existing tab", () => {
     const perfSpy = vi.spyOn(performance, "now").mockReturnValue(60_000);
     sendMessageMock.mockImplementation(

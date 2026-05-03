@@ -14,6 +14,9 @@ export class AutoPlayController {
   private suppressObserver: MutationObserver | null = null;
   private suppressTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private suppressPlayHandler: (() => void) | null = null;
+  private suppressPointerHandler: ((event: PointerEvent) => void) | null = null;
+  private suppressKeyboardHandler: ((event: KeyboardEvent) => void) | null =
+    null;
   private suppressVideo: HTMLVideoElement | null = null;
   private suppressArmed = false;
   private enabled = false;
@@ -189,6 +192,7 @@ export class AutoPlayController {
   private armInitialSuppression(): void {
     if (this.suppressArmed) return;
     this.suppressArmed = true;
+    this.listenForUserPlayIntent();
 
     const video = document.querySelector<HTMLVideoElement>(
       SELECTORS.videoElement,
@@ -216,6 +220,51 @@ export class AutoPlayController {
     this.suppressTimeoutId = setTimeout(() => {
       this.cancelInitialSuppression();
     }, TIMEOUT_MS);
+  }
+
+  private listenForUserPlayIntent(): void {
+    this.suppressPointerHandler = (event) => {
+      if (this.eventTargetsPlayPauseButton(event)) {
+        this.playFromUserIntent();
+        this.cancelInitialSuppression();
+      }
+    };
+    this.suppressKeyboardHandler = (event) => {
+      if (
+        (event.key === "Enter" || event.key === " ") &&
+        this.eventTargetsPlayPauseButton(event)
+      ) {
+        this.playFromUserIntent();
+        this.cancelInitialSuppression();
+      }
+    };
+
+    document.addEventListener("pointerdown", this.suppressPointerHandler, {
+      capture: true,
+    });
+    document.addEventListener("keydown", this.suppressKeyboardHandler, {
+      capture: true,
+    });
+  }
+
+  private eventTargetsPlayPauseButton(event: Event): boolean {
+    return event
+      .composedPath()
+      .some(
+        (target) =>
+          target instanceof Element &&
+          target.matches(SELECTORS.playPauseButton),
+      );
+  }
+
+  private playFromUserIntent(): void {
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+    if (!video || !video.paused) return;
+    void video.play().catch(() => {
+      // Leave the native YTM handler to report/playback-manage failures.
+    });
   }
 
   private attachSuppression(video: HTMLVideoElement): void {
@@ -252,7 +301,19 @@ export class AutoPlayController {
     if (this.suppressVideo && this.suppressPlayHandler) {
       this.suppressVideo.removeEventListener("play", this.suppressPlayHandler);
     }
+    if (this.suppressPointerHandler) {
+      document.removeEventListener("pointerdown", this.suppressPointerHandler, {
+        capture: true,
+      });
+    }
+    if (this.suppressKeyboardHandler) {
+      document.removeEventListener("keydown", this.suppressKeyboardHandler, {
+        capture: true,
+      });
+    }
     this.suppressVideo = null;
     this.suppressPlayHandler = null;
+    this.suppressPointerHandler = null;
+    this.suppressKeyboardHandler = null;
   }
 }
