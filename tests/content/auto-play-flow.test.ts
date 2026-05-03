@@ -14,6 +14,9 @@ vi.mock("@/adapter", () => {
   MockYTMAdapter.prototype.clickQuickPicksPlayAll = vi
     .fn()
     .mockReturnValue(false);
+  MockYTMAdapter.prototype.clickFirstPlayButtonWhenPlayerBarClosed = vi
+    .fn()
+    .mockReturnValue(false);
   return { YTMAdapter: MockYTMAdapter };
 });
 
@@ -186,6 +189,10 @@ describe("auto-play integration flows", () => {
       duration: 180,
     });
     vi.spyOn(adapterInstance!, "clickQuickPicksPlayAll").mockReturnValue(false);
+    vi.spyOn(
+      adapterInstance!,
+      "clickFirstPlayButtonWhenPlayerBarClosed",
+    ).mockReturnValue(false);
 
     controller.init();
     reloadedVideo.dispatchEvent(new Event("play"));

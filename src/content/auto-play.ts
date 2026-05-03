@@ -1,5 +1,6 @@
 import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
+import { debug } from "@/core/logger";
 import type { AutoPlayMode } from "@/core/types";
 
 const TIMEOUT_MS = 10_000;
@@ -33,6 +34,7 @@ export class AutoPlayController {
         const nextMode = this.normalizeMode(message.mode);
         if (nextMode === this.mode) return;
         this.mode = nextMode;
+        debug("AutoPlay: runtime mode set", this.mode);
         this.applyRuntimeMode();
         return;
       }
@@ -41,6 +43,11 @@ export class AutoPlayController {
         const nextMode = message.enabled === true ? "on" : "off";
         if (nextMode === this.mode) return;
         this.mode = nextMode;
+        debug(
+          "AutoPlay: legacy runtime enabled set",
+          message.enabled,
+          this.mode,
+        );
         this.applyRuntimeMode();
       }
     };
@@ -58,6 +65,12 @@ export class AutoPlayController {
             response?.ok === true
               ? this.normalizeMode(response.data)
               : "default";
+          debug(
+            "AutoPlay: initial mode response",
+            response,
+            "using",
+            this.mode,
+          );
           this.applyInitialMode();
         },
       );
@@ -81,13 +94,25 @@ export class AutoPlayController {
   private tryAutoPlay(): void {
     if (this.mode !== "on") return;
 
+    debug("AutoPlay: trying startup auto-play");
+
+    if (this.adapter.clickFirstPlayButtonWhenPlayerBarClosed()) {
+      debug("AutoPlay: clicked page play button on initial attempt");
+      return;
+    }
+
     const video = document.querySelector<HTMLVideoElement>(
       SELECTORS.videoElement,
     );
 
     if (video) {
+      debug("AutoPlay: found video", {
+        readyState: video.readyState,
+        paused: video.paused,
+      });
       this.onVideoFound(video);
     } else {
+      debug("AutoPlay: no video yet; observing DOM");
       this.waitForVideo();
     }
   }
@@ -108,8 +133,10 @@ export class AutoPlayController {
   }
 
   private waitForCanplay(video: HTMLVideoElement): void {
+    debug("AutoPlay: waiting for canplay", { readyState: video.readyState });
     this.canplayHandler = () => {
       if (this.mode !== "on") return;
+      debug("AutoPlay: canplay fired");
       this.clearCanplayListener();
       this.performAutoPlay(video);
     };
@@ -134,17 +161,25 @@ export class AutoPlayController {
   private waitForVideo(): void {
     this.observer = new MutationObserver(() => {
       if (this.mode !== "on") return;
+
+      debug("AutoPlay: DOM changed while waiting for video");
+
+      if (this.adapter.clickFirstPlayButtonWhenPlayerBarClosed()) {
+        debug("AutoPlay: clicked page play button while waiting for video");
+        this.stopWaitingForVideo();
+        return;
+      }
+
       const video = document.querySelector<HTMLVideoElement>(
         SELECTORS.videoElement,
       );
 
       if (video) {
-        this.observer?.disconnect();
-        this.observer = null;
-        if (this.timeoutId !== null) {
-          clearTimeout(this.timeoutId);
-          this.timeoutId = null;
-        }
+        debug("AutoPlay: video appeared", {
+          readyState: video.readyState,
+          paused: video.paused,
+        });
+        this.stopWaitingForVideo();
         this.onVideoFound(video);
       }
     });
@@ -155,29 +190,81 @@ export class AutoPlayController {
     });
 
     this.timeoutId = setTimeout(() => {
+      debug("AutoPlay: timed out waiting for video/page play button");
       this.observer?.disconnect();
       this.observer = null;
       this.timeoutId = null;
     }, TIMEOUT_MS);
   }
 
+  private stopWaitingForVideo(): void {
+    this.observer?.disconnect();
+    this.observer = null;
+    if (this.timeoutId !== null) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+  }
+
   private performAutoPlay(video: HTMLVideoElement): void {
     if (this.mode !== "on") return;
 
     const state = this.adapter.getPlaybackState();
+    debug("AutoPlay: performing auto-play", {
+      isPlaying: state.isPlaying,
+      title: state.title,
+      readyState: video.readyState,
+      paused: video.paused,
+    });
 
     if (state.isPlaying) return;
 
     if (state.title !== null) {
-      void video.play();
+      this.playVideoOrUsePlayerButton(video);
       return;
     }
 
-    // No track loaded -- try clicking Quick Picks Play All
-    const clicked = this.adapter.clickQuickPicksPlayAll();
+    // No track loaded -- start from the page surface before falling back.
+    const clicked =
+      this.adapter.clickFirstPlayButtonWhenPlayerBarClosed() ||
+      this.adapter.clickQuickPicksPlayAll();
     if (!clicked) {
-      void video.play();
+      debug("AutoPlay: falling back to video.play()");
+      this.playVideoOrUsePlayerButton(video);
     }
+  }
+
+  private playVideoOrUsePlayerButton(video: HTMLVideoElement): void {
+    void video.play().catch((error: unknown) => {
+      const name = error instanceof DOMException ? error.name : undefined;
+      const message = error instanceof Error ? error.message : String(error);
+      debug("AutoPlay: video.play() failed", {
+        name,
+        message,
+      });
+
+      if (name === "NotAllowedError") {
+        debug(
+          "AutoPlay: browser blocked audible autoplay; allow autoplay for music.youtube.com in Firefox site permissions",
+        );
+        return;
+      }
+
+      debug(
+        "AutoPlay: clicking player play button after video.play() failure",
+        {
+          name: error instanceof DOMException ? error.name : undefined,
+          message: error instanceof Error ? error.message : String(error),
+        },
+      );
+
+      if (this.mode !== "on") return;
+
+      const state = this.adapter.getPlaybackState();
+      if (!state.isPlaying) {
+        this.adapter.executeAction("play");
+      }
+    });
   }
 
   private cancelPendingAutoPlay(): void {
@@ -195,6 +282,7 @@ export class AutoPlayController {
   }
 
   private applyInitialMode(): void {
+    debug("AutoPlay: applying initial mode", this.mode);
     if (this.mode === "on") {
       this.cancelInitialSuppression();
       this.tryAutoPlay();
@@ -212,6 +300,7 @@ export class AutoPlayController {
   }
 
   private applyRuntimeMode(): void {
+    debug("AutoPlay: applying runtime mode", this.mode);
     if (this.mode === "on") {
       this.cancelInitialSuppression();
       return;

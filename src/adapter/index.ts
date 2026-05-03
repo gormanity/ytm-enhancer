@@ -1,4 +1,5 @@
 import { SELECTORS } from "./selectors";
+import { debug } from "@/core/logger";
 import type { PlaybackAction, PlaybackState } from "@/core/types";
 
 export { SELECTORS } from "./selectors";
@@ -170,6 +171,74 @@ export class YTMAdapter {
     return false;
   }
 
+  clickFirstPlayButtonWhenPlayerBarClosed(): boolean {
+    const playerBarButton = document.querySelector<HTMLElement>(
+      SELECTORS.playPauseButton,
+    );
+    if (playerBarButton) {
+      const reason = this.getNotClickableReason(playerBarButton);
+      if (!reason) {
+        if (this.hasLoadedPlayerBarTrack()) {
+          debug(
+            "AutoPlay: visible player bar play button exists; skip page play scan",
+          );
+          return false;
+        }
+        debug(
+          "AutoPlay: player bar play button is visible without loaded track; scan page play buttons",
+        );
+      }
+      if (reason) {
+        debug("AutoPlay: player bar play button is not clickable", { reason });
+      }
+    }
+
+    const candidates = document.querySelectorAll<HTMLElement>(
+      [
+        'button[aria-label^="Play" i]',
+        'button[title^="Play" i]',
+        '[role="button"][aria-label^="Play" i]',
+        '[role="button"][title^="Play" i]',
+        'yt-icon-button[aria-label^="Play" i]',
+        'yt-icon-button[title^="Play" i]',
+        'tp-yt-paper-icon-button[aria-label^="Play" i]',
+        'tp-yt-paper-icon-button[title^="Play" i]',
+        "ytmusic-play-button-renderer",
+        "a.play-all",
+      ].join(","),
+    );
+
+    debug("AutoPlay: page play scan candidates", candidates.length);
+
+    for (const candidate of candidates) {
+      const reason = this.getNotClickableReason(candidate);
+      if (reason) {
+        debug("AutoPlay: skipping page play candidate", {
+          reason,
+          tag: candidate.tagName.toLowerCase(),
+          ariaLabel: candidate.getAttribute("aria-label"),
+          title: candidate.getAttribute("title"),
+          role: candidate.getAttribute("role"),
+          className: candidate.className,
+          text: candidate.textContent?.trim().slice(0, 80),
+        });
+        continue;
+      }
+      debug("AutoPlay: clicking page play candidate", {
+        tag: candidate.tagName.toLowerCase(),
+        ariaLabel: candidate.getAttribute("aria-label"),
+        title: candidate.getAttribute("title"),
+        role: candidate.getAttribute("role"),
+        className: candidate.className,
+        text: candidate.textContent?.trim().slice(0, 80),
+      });
+      this.activateClick(candidate);
+      return true;
+    }
+
+    return false;
+  }
+
   private parseSubtitle(): { album: string | null; year: number | null } {
     const subtitleEl = document.querySelector(SELECTORS.subtitle);
     if (!subtitleEl) return { album: null, year: null };
@@ -279,5 +348,75 @@ export class YTMAdapter {
     }
 
     return el.getClientRects().length > 0;
+  }
+
+  private getNotClickableReason(el: HTMLElement): string | null {
+    if (
+      el.hasAttribute("disabled") ||
+      el.getAttribute("aria-disabled") === "true"
+    ) {
+      return "disabled";
+    }
+
+    if (!this.isElementVisible(el)) return "not visible";
+
+    return null;
+  }
+
+  private hasLoadedPlayerBarTrack(): boolean {
+    const title = document.querySelector(SELECTORS.trackTitle);
+    if (title?.textContent?.trim()) return true;
+
+    const thumbnail = document.querySelector<HTMLImageElement>(
+      SELECTORS.albumArt,
+    );
+    if (thumbnail?.src) return true;
+
+    const timeInfo = document.querySelector(SELECTORS.timeInfo);
+    return Boolean(timeInfo?.textContent?.trim());
+  }
+
+  private activateClick(el: HTMLElement): void {
+    const target = this.findActivationTarget(el);
+    debug("AutoPlay: activating page play target", {
+      candidateTag: el.tagName.toLowerCase(),
+      targetTag: target.tagName.toLowerCase(),
+      targetAriaLabel: target.getAttribute("aria-label"),
+      targetTitle: target.getAttribute("title"),
+      targetRole: target.getAttribute("role"),
+      targetClassName: target.className,
+    });
+
+    const view = target.ownerDocument.defaultView ?? window;
+
+    for (const type of ["pointerdown", "mousedown", "mouseup", "click"]) {
+      target.dispatchEvent(
+        new view.MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+        }),
+      );
+    }
+  }
+
+  private findActivationTarget(el: HTMLElement): HTMLElement {
+    const nested = el.querySelector<HTMLElement>(
+      [
+        'button[aria-label^="Play" i]',
+        'button[title^="Play" i]',
+        '[role="button"][aria-label^="Play" i]',
+        '[role="button"][title^="Play" i]',
+        'yt-icon-button[aria-label^="Play" i]',
+        'yt-icon-button[title^="Play" i]',
+        'tp-yt-paper-icon-button[aria-label^="Play" i]',
+        'tp-yt-paper-icon-button[title^="Play" i]',
+        "a.play-all",
+      ].join(","),
+    );
+
+    if (nested && !this.getNotClickableReason(nested)) return nested;
+
+    return el;
   }
 }

@@ -510,6 +510,169 @@ describe("YTMAdapter", () => {
     });
   });
 
+  describe("clickFirstPlayButtonWhenPlayerBarClosed", () => {
+    function makeVisible(el: HTMLElement): void {
+      vi.spyOn(el, "getClientRects").mockReturnValue([
+        new DOMRect(0, 0, 24, 24),
+      ] as unknown as DOMRectList);
+    }
+
+    it("should click the first visible play button when player bar is closed", () => {
+      const listenButton = document.createElement("button");
+      listenButton.setAttribute("aria-label", "Listen again");
+      listenButton.click = vi.fn();
+      makeVisible(listenButton);
+      document.body.appendChild(listenButton);
+
+      const firstPlayButton = document.createElement("button");
+      firstPlayButton.setAttribute("aria-label", "Play Mix");
+      const firstClick = vi.fn();
+      firstPlayButton.addEventListener("click", firstClick);
+      makeVisible(firstPlayButton);
+      document.body.appendChild(firstPlayButton);
+
+      const secondPlayButton = document.createElement("button");
+      secondPlayButton.setAttribute("aria-label", "Play Album");
+      secondPlayButton.click = vi.fn();
+      makeVisible(secondPlayButton);
+      document.body.appendChild(secondPlayButton);
+
+      const result = adapter.clickFirstPlayButtonWhenPlayerBarClosed();
+
+      expect(result).toBe(true);
+      expect(firstClick).toHaveBeenCalled();
+      expect(secondPlayButton.click).not.toHaveBeenCalled();
+      expect(listenButton.click).not.toHaveBeenCalled();
+    });
+
+    it("should not click page play buttons when player bar is open", () => {
+      const playPauseButton = document.createElement("button");
+      playPauseButton.id = "play-pause-button";
+      makeVisible(playPauseButton);
+      document.body.appendChild(playPauseButton);
+
+      const trackTitle = document.createElement("yt-formatted-string");
+      trackTitle.className = "title style-scope ytmusic-player-bar";
+      trackTitle.textContent = "Loaded Track";
+      document.body.appendChild(trackTitle);
+
+      const pagePlayButton = document.createElement("button");
+      pagePlayButton.setAttribute("aria-label", "Play Mix");
+      const pagePlayClick = vi.fn();
+      pagePlayButton.addEventListener("click", pagePlayClick);
+      makeVisible(pagePlayButton);
+      document.body.appendChild(pagePlayButton);
+
+      const result = adapter.clickFirstPlayButtonWhenPlayerBarClosed();
+
+      expect(result).toBe(false);
+      expect(pagePlayClick).not.toHaveBeenCalled();
+    });
+
+    it("should click page play buttons when player bar has no loaded track", () => {
+      const playPauseButton = document.createElement("button");
+      playPauseButton.id = "play-pause-button";
+      makeVisible(playPauseButton);
+      document.body.appendChild(playPauseButton);
+
+      const pagePlayButton = document.createElement("button");
+      pagePlayButton.setAttribute("aria-label", "Play Mix");
+      const pagePlayClick = vi.fn();
+      pagePlayButton.addEventListener("click", pagePlayClick);
+      makeVisible(pagePlayButton);
+      document.body.appendChild(pagePlayButton);
+
+      const result = adapter.clickFirstPlayButtonWhenPlayerBarClosed();
+
+      expect(result).toBe(true);
+      expect(pagePlayClick).toHaveBeenCalled();
+    });
+
+    it("should click page play buttons when player bar button is hidden", () => {
+      const playPauseButton = document.createElement("button");
+      playPauseButton.id = "play-pause-button";
+      document.body.appendChild(playPauseButton);
+
+      const pagePlayButton = document.createElement("button");
+      pagePlayButton.setAttribute("aria-label", "Play Mix");
+      const pagePlayClick = vi.fn();
+      pagePlayButton.addEventListener("click", pagePlayClick);
+      makeVisible(pagePlayButton);
+      document.body.appendChild(pagePlayButton);
+
+      const result = adapter.clickFirstPlayButtonWhenPlayerBarClosed();
+
+      expect(result).toBe(true);
+      expect(pagePlayClick).toHaveBeenCalled();
+    });
+
+    it("should skip disabled and hidden play buttons", () => {
+      const disabledButton = document.createElement("button");
+      disabledButton.setAttribute("aria-label", "Play Mix");
+      disabledButton.setAttribute("disabled", "");
+      disabledButton.click = vi.fn();
+      makeVisible(disabledButton);
+      document.body.appendChild(disabledButton);
+
+      const hiddenButton = document.createElement("button");
+      hiddenButton.setAttribute("aria-label", "Play Album");
+      hiddenButton.click = vi.fn();
+      document.body.appendChild(hiddenButton);
+
+      const visibleButton = document.createElement("button");
+      visibleButton.setAttribute("title", "Play Playlist");
+      const visibleClick = vi.fn();
+      visibleButton.addEventListener("click", visibleClick);
+      makeVisible(visibleButton);
+      document.body.appendChild(visibleButton);
+
+      const result = adapter.clickFirstPlayButtonWhenPlayerBarClosed();
+
+      expect(result).toBe(true);
+      expect(disabledButton.click).not.toHaveBeenCalled();
+      expect(hiddenButton.click).not.toHaveBeenCalled();
+      expect(visibleClick).toHaveBeenCalled();
+    });
+
+    it("should click a YTM play button renderer", () => {
+      const playRenderer = document.createElement(
+        "ytmusic-play-button-renderer",
+      ) as HTMLElement;
+      const rendererClick = vi.fn();
+      playRenderer.addEventListener("click", rendererClick);
+      makeVisible(playRenderer);
+      document.body.appendChild(playRenderer);
+
+      const result = adapter.clickFirstPlayButtonWhenPlayerBarClosed();
+
+      expect(result).toBe(true);
+      expect(rendererClick).toHaveBeenCalled();
+    });
+
+    it("should activate a nested play control inside a play renderer", () => {
+      const playRenderer = document.createElement(
+        "ytmusic-play-button-renderer",
+      ) as HTMLElement;
+      const rendererClick = vi.fn();
+      playRenderer.addEventListener("click", rendererClick);
+      makeVisible(playRenderer);
+
+      const nestedButton = document.createElement("button");
+      nestedButton.setAttribute("aria-label", "Play Playlist");
+      const nestedClick = vi.fn();
+      nestedButton.addEventListener("click", nestedClick);
+      makeVisible(nestedButton);
+      playRenderer.appendChild(nestedButton);
+      document.body.appendChild(playRenderer);
+
+      const result = adapter.clickFirstPlayButtonWhenPlayerBarClosed();
+
+      expect(result).toBe(true);
+      expect(nestedClick).toHaveBeenCalled();
+      expect(rendererClick).toHaveBeenCalled();
+    });
+  });
+
   describe("seekTo", () => {
     it("should set video currentTime", () => {
       document.body.innerHTML = `<video class="html5-main-video"></video>`;

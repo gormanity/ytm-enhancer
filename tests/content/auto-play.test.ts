@@ -13,6 +13,9 @@ vi.mock("@/adapter", () => {
   MockYTMAdapter.prototype.clickQuickPicksPlayAll = vi
     .fn()
     .mockReturnValue(false);
+  MockYTMAdapter.prototype.clickFirstPlayButtonWhenPlayerBarClosed = vi
+    .fn()
+    .mockReturnValue(false);
   return { YTMAdapter: MockYTMAdapter };
 });
 
@@ -54,6 +57,7 @@ describe("AutoPlayController", () => {
     getPlaybackState: ReturnType<typeof vi.fn>;
     executeAction: ReturnType<typeof vi.fn>;
     clickQuickPicksPlayAll: ReturnType<typeof vi.fn>;
+    clickFirstPlayButtonWhenPlayerBarClosed: ReturnType<typeof vi.fn>;
   };
 
   function setAutoPlayMode(mode: "default" | "off" | "on"): void {
@@ -108,6 +112,9 @@ describe("AutoPlayController", () => {
       isPlaying: false,
     });
     adapterInstance.clickQuickPicksPlayAll.mockReturnValue(false);
+    adapterInstance.clickFirstPlayButtonWhenPlayerBarClosed.mockReturnValue(
+      false,
+    );
   });
 
   function sendRuntimeMessage(message: {
@@ -281,6 +288,44 @@ describe("AutoPlayController", () => {
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
   });
 
+  it("should not click the player button when browser policy blocks autoplay", async () => {
+    enableAutoPlay();
+
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    const video = createReadyVideo();
+    video.play = vi
+      .fn()
+      .mockRejectedValue(new DOMException("", "NotAllowedError"));
+
+    controller.init();
+    await Promise.resolve();
+
+    expect(video.play).toHaveBeenCalled();
+    expect(adapterInstance.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("should click the player button when video.play() fails for another reason", async () => {
+    enableAutoPlay();
+
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    const video = createReadyVideo();
+    video.play = vi.fn().mockRejectedValue(new Error("Player unavailable"));
+
+    controller.init();
+    await Promise.resolve();
+
+    expect(video.play).toHaveBeenCalled();
+    expect(adapterInstance.executeAction).toHaveBeenCalledWith("play");
+  });
+
   it("should click Quick Picks when not playing and no track loaded", () => {
     enableAutoPlay();
 
@@ -295,6 +340,49 @@ describe("AutoPlayController", () => {
     controller.init();
 
     expect(adapterInstance.clickQuickPicksPlayAll).toHaveBeenCalled();
+  });
+
+  it("should click the first page play button when player bar is closed", () => {
+    enableAutoPlay();
+
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: null,
+      isPlaying: false,
+    });
+
+    adapterInstance.clickFirstPlayButtonWhenPlayerBarClosed.mockReturnValue(
+      true,
+    );
+
+    controller.init();
+
+    expect(
+      adapterInstance.clickFirstPlayButtonWhenPlayerBarClosed,
+    ).toHaveBeenCalled();
+    expect(adapterInstance.getPlaybackState).not.toHaveBeenCalled();
+    expect(adapterInstance.clickQuickPicksPlayAll).not.toHaveBeenCalled();
+  });
+
+  it("should click the first page play button while waiting for media", async () => {
+    enableAutoPlay();
+
+    adapterInstance.clickFirstPlayButtonWhenPlayerBarClosed
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+
+    controller.init();
+
+    await Promise.resolve();
+
+    document.body.appendChild(document.createElement("div"));
+
+    await vi.waitFor(() => {
+      expect(
+        adapterInstance.clickFirstPlayButtonWhenPlayerBarClosed,
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    expect(adapterInstance.getPlaybackState).not.toHaveBeenCalled();
   });
 
   it("should fall back to video.play() when Quick Picks not found", () => {
