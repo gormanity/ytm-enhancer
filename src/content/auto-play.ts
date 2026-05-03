@@ -34,6 +34,9 @@ export class AutoPlayController {
         const nextMode = this.normalizeMode(message.mode);
         if (nextMode === this.mode) return;
         this.mode = nextMode;
+        if (this.mode !== "on") {
+          this.reportAutoplayPolicyBlocked(false);
+        }
         debug("AutoPlay: runtime mode set", this.mode);
         this.applyRuntimeMode();
         return;
@@ -43,6 +46,9 @@ export class AutoPlayController {
         const nextMode = message.enabled === true ? "on" : "off";
         if (nextMode === this.mode) return;
         this.mode = nextMode;
+        if (this.mode !== "on") {
+          this.reportAutoplayPolicyBlocked(false);
+        }
         debug(
           "AutoPlay: legacy runtime enabled set",
           message.enabled,
@@ -65,6 +71,9 @@ export class AutoPlayController {
             response?.ok === true
               ? this.normalizeMode(response.data)
               : "default";
+          if (this.mode !== "on") {
+            this.reportAutoplayPolicyBlocked(false);
+          }
           debug(
             "AutoPlay: initial mode response",
             response,
@@ -235,36 +244,53 @@ export class AutoPlayController {
   }
 
   private playVideoOrUsePlayerButton(video: HTMLVideoElement): void {
-    void video.play().catch((error: unknown) => {
-      const name = error instanceof DOMException ? error.name : undefined;
-      const message = error instanceof Error ? error.message : String(error);
-      debug("AutoPlay: video.play() failed", {
-        name,
-        message,
-      });
+    void video
+      .play()
+      .then(() => {
+        this.reportAutoplayPolicyBlocked(false);
+      })
+      .catch((error: unknown) => {
+        const name = error instanceof DOMException ? error.name : undefined;
+        const message = error instanceof Error ? error.message : String(error);
+        debug("AutoPlay: video.play() failed", {
+          name,
+          message,
+        });
 
-      if (name === "NotAllowedError") {
+        if (name === "NotAllowedError") {
+          this.reportAutoplayPolicyBlocked(true);
+          debug(
+            "AutoPlay: browser blocked audible autoplay; allow autoplay for music.youtube.com in Firefox site permissions",
+          );
+          return;
+        }
+
         debug(
-          "AutoPlay: browser blocked audible autoplay; allow autoplay for music.youtube.com in Firefox site permissions",
+          "AutoPlay: clicking player play button after video.play() failure",
+          {
+            name: error instanceof DOMException ? error.name : undefined,
+            message: error instanceof Error ? error.message : String(error),
+          },
         );
-        return;
-      }
 
-      debug(
-        "AutoPlay: clicking player play button after video.play() failure",
-        {
-          name: error instanceof DOMException ? error.name : undefined,
-          message: error instanceof Error ? error.message : String(error),
-        },
-      );
+        if (this.mode !== "on") return;
 
-      if (this.mode !== "on") return;
+        const state = this.adapter.getPlaybackState();
+        if (!state.isPlaying) {
+          this.adapter.executeAction("play");
+        }
+      });
+  }
 
-      const state = this.adapter.getPlaybackState();
-      if (!state.isPlaying) {
-        this.adapter.executeAction("play");
-      }
-    });
+  private reportAutoplayPolicyBlocked(blocked: boolean): void {
+    try {
+      chrome.runtime.sendMessage({
+        type: "set-auto-play-policy-blocked",
+        blocked,
+      });
+    } catch {
+      // Extension may have been reloaded and invalidated this content context.
+    }
   }
 
   private cancelPendingAutoPlay(): void {

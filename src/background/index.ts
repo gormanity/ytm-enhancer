@@ -48,6 +48,7 @@ const playbackControls = new PlaybackControlsModule();
 const sleepTimer = new SleepTimerModule();
 let selectedTabId: number | null = null;
 const pipOpenTabIds = new Set<number>();
+const autoPlayPolicyBlockedTabIds = new Set<number>();
 const SLEEP_TIMER_ALARM = "sleep-timer";
 const TAB_ARTWORK_QUERY_TIMEOUT_MS = 150;
 let sleepTimerEndAt: number | null = null;
@@ -56,7 +57,8 @@ let sleepTimerNotifyOnEnd = true;
 let sleepTimerMode: "duration" | "absolute" = "duration";
 type PopupRuntimeMessage =
   | { type: "ytm-tabs-changed" }
-  | { type: "sleep-timer-state-changed" };
+  | { type: "sleep-timer-state-changed" }
+  | { type: "auto-play-status-changed" };
 
 function broadcastPopupMessage(message: PopupRuntimeMessage): void {
   void chrome.runtime.sendMessage(message).catch(() => {
@@ -70,6 +72,10 @@ function notifyYtmTabsChanged(): void {
 
 function notifySleepTimerStateChanged(): void {
   broadcastPopupMessage({ type: "sleep-timer-state-changed" });
+}
+
+function notifyAutoPlayStatusChanged(): void {
+  broadcastPopupMessage({ type: "auto-play-status-changed" });
 }
 
 function isAutoPlayMode(value: unknown): value is AutoPlayMode {
@@ -374,9 +380,39 @@ handler.on("get-auto-play-mode", async () => {
   return { ok: true, data: autoPlay.getMode() };
 });
 
+handler.on("get-auto-play-status", async () => {
+  const tab = await findYTMTab(selectedTabId);
+  const browserAutoplayBlocked =
+    tab?.id !== undefined && autoPlayPolicyBlockedTabIds.has(tab.id);
+  return { ok: true, data: { browserAutoplayBlocked } };
+});
+
+handler.on("set-auto-play-policy-blocked", async (message, sender) => {
+  const tabId = sender?.tab?.id;
+  if (tabId === undefined) return { ok: false, error: "No tab ID" };
+
+  const wasBlocked = autoPlayPolicyBlockedTabIds.has(tabId);
+  if (message.blocked === true) {
+    autoPlayPolicyBlockedTabIds.add(tabId);
+  } else {
+    autoPlayPolicyBlockedTabIds.delete(tabId);
+  }
+
+  const isBlocked = autoPlayPolicyBlockedTabIds.has(tabId);
+  if (isBlocked !== wasBlocked) {
+    notifyAutoPlayStatusChanged();
+  }
+
+  return { ok: true };
+});
+
 handler.on("set-auto-play-enabled", async (message) => {
   const mode: AutoPlayMode = message.enabled === true ? "on" : "off";
   autoPlay.setMode(mode);
+  if (mode !== "on") {
+    autoPlayPolicyBlockedTabIds.clear();
+    notifyAutoPlayStatusChanged();
+  }
   await saveModuleStateValue("auto-play.mode", mode);
   await saveModuleStateValue("auto-play.enabled", message.enabled);
   void relayToYTMTab({
@@ -391,6 +427,10 @@ handler.on("set-auto-play-enabled", async (message) => {
 handler.on("set-auto-play-mode", async (message) => {
   const mode = normalizeAutoPlayMode(message.mode);
   autoPlay.setMode(mode);
+  if (mode !== "on") {
+    autoPlayPolicyBlockedTabIds.clear();
+    notifyAutoPlayStatusChanged();
+  }
   await saveModuleStateValue("auto-play.mode", mode);
   void relayToYTMTab({
     type: "set-auto-play-mode",
@@ -690,6 +730,9 @@ void ensureYtmContentScripts();
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   pipOpenTabIds.delete(tabId);
+  if (autoPlayPolicyBlockedTabIds.delete(tabId)) {
+    notifyAutoPlayStatusChanged();
+  }
   notifyYtmTabsChanged();
 });
 
@@ -698,6 +741,14 @@ chrome.tabs.onActivated.addListener(() => {
 });
 
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  if (
+    (changeInfo.status === "loading" || changeInfo.url !== undefined) &&
+    _tabId !== undefined &&
+    autoPlayPolicyBlockedTabIds.delete(_tabId)
+  ) {
+    notifyAutoPlayStatusChanged();
+  }
+
   if (tab.url?.startsWith("https://music.youtube.com/")) {
     notifyYtmTabsChanged();
     return;

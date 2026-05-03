@@ -302,10 +302,34 @@ describe("AutoPlayController", () => {
       .mockRejectedValue(new DOMException("", "NotAllowedError"));
 
     controller.init();
+
+    expect(video.play).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(sendMessageMock).toHaveBeenCalledWith({
+        type: "set-auto-play-policy-blocked",
+        blocked: true,
+      });
+    });
+    expect(adapterInstance.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("should clear browser policy block status when video.play() succeeds", async () => {
+    enableAutoPlay();
+
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    const video = createReadyVideo();
+    controller.init();
     await Promise.resolve();
 
     expect(video.play).toHaveBeenCalled();
-    expect(adapterInstance.executeAction).not.toHaveBeenCalled();
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-auto-play-policy-blocked",
+      blocked: false,
+    });
   });
 
   it("should click the player button when video.play() fails for another reason", async () => {
@@ -320,10 +344,11 @@ describe("AutoPlayController", () => {
     video.play = vi.fn().mockRejectedValue(new Error("Player unavailable"));
 
     controller.init();
-    await Promise.resolve();
 
     expect(video.play).toHaveBeenCalled();
-    expect(adapterInstance.executeAction).toHaveBeenCalledWith("play");
+    await vi.waitFor(() => {
+      expect(adapterInstance.executeAction).toHaveBeenCalledWith("play");
+    });
   });
 
   it("should click Quick Picks when not playing and no track loaded", () => {
