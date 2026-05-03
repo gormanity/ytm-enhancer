@@ -27,16 +27,37 @@ describe("NotificationsModule", () => {
   let module: NotificationsModule;
   let createMock: ReturnType<typeof vi.fn>;
   let clearMock: ReturnType<typeof vi.fn>;
+  let onClickedAddListener: ReturnType<typeof vi.fn>;
+  let onClickedRemoveListener: ReturnType<typeof vi.fn>;
+  let tabsQuery: ReturnType<typeof vi.fn>;
+  let tabsUpdate: ReturnType<typeof vi.fn>;
+  let windowsUpdate: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     createMock = vi.fn();
     clearMock = vi.fn((_id: string, cb?: () => void) => cb?.());
+    onClickedAddListener = vi.fn();
+    onClickedRemoveListener = vi.fn();
+    tabsQuery = vi.fn();
+    tabsUpdate = vi.fn().mockResolvedValue(undefined);
+    windowsUpdate = vi.fn().mockResolvedValue(undefined);
 
     vi.stubGlobal("chrome", {
       notifications: {
         create: createMock,
         clear: clearMock,
+        onClicked: {
+          addListener: onClickedAddListener,
+          removeListener: onClickedRemoveListener,
+        },
+      },
+      tabs: {
+        query: tabsQuery,
+        update: tabsUpdate,
+      },
+      windows: {
+        update: windowsUpdate,
       },
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://fake-id/${path}`),
@@ -562,6 +583,77 @@ describe("NotificationsModule", () => {
       flushNotificationDelay();
 
       expect(createMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("click-to-focus", () => {
+    it("should register an onClicked listener during init", () => {
+      module.init();
+      expect(onClickedAddListener).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    it("should remove the onClicked listener on destroy", () => {
+      module.init();
+      const listener = onClickedAddListener.mock.calls[0][0];
+      module.destroy();
+      expect(onClickedRemoveListener).toHaveBeenCalledWith(listener);
+    });
+
+    it("should focus the YTM tab when our notification is clicked", async () => {
+      tabsQuery.mockResolvedValue([{ id: 42, windowId: 7 }]);
+      module.init();
+      const listener = onClickedAddListener.mock.calls[0][0] as (
+        id: string,
+      ) => void;
+
+      listener(NOTIFICATION_ID);
+      await vi.waitFor(() => {
+        expect(tabsUpdate).toHaveBeenCalledWith(42, { active: true });
+      });
+      expect(windowsUpdate).toHaveBeenCalledWith(7, { focused: true });
+    });
+
+    it("should clear the notification after click so the toast disappears", async () => {
+      tabsQuery.mockResolvedValue([{ id: 42, windowId: 7 }]);
+      module.init();
+      const listener = onClickedAddListener.mock.calls[0][0] as (
+        id: string,
+      ) => void;
+      clearMock.mockClear();
+
+      listener(NOTIFICATION_ID);
+      await vi.waitFor(() => {
+        expect(clearMock).toHaveBeenCalledWith(NOTIFICATION_ID);
+      });
+    });
+
+    it("should ignore clicks for unrelated notification ids", () => {
+      module.init();
+      const listener = onClickedAddListener.mock.calls[0][0] as (
+        id: string,
+      ) => void;
+
+      listener("some-other-notification");
+
+      expect(tabsQuery).not.toHaveBeenCalled();
+      expect(tabsUpdate).not.toHaveBeenCalled();
+      expect(windowsUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should do nothing when no YTM tab is open", async () => {
+      tabsQuery.mockResolvedValue([]);
+      module.init();
+      const listener = onClickedAddListener.mock.calls[0][0] as (
+        id: string,
+      ) => void;
+
+      listener(NOTIFICATION_ID);
+      await vi.waitFor(() => {
+        expect(tabsQuery).toHaveBeenCalled();
+      });
+
+      expect(tabsUpdate).not.toHaveBeenCalled();
+      expect(windowsUpdate).not.toHaveBeenCalled();
     });
   });
 });
