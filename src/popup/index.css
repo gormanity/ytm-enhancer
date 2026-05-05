@@ -54,20 +54,39 @@ body {
 }
 
 .sidebar-header {
+  display: flex;
+  justify-content: center;
   padding: 0 16px 16px;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 12px;
 }
 
 .sidebar-header h1 {
-  font-size: 14px;
+  font-size: 12px;
   margin: 0;
   color: var(--text-color);
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+}
+
+.dev-build-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  padding: 0 4px;
+  color: var(--accent-color);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
 /* Sidebar Navigation */
@@ -500,10 +519,19 @@ select:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .about-name-label {
   font-weight: 600;
+}
+
+.about-version-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
 }
 
 .version-label--strong {

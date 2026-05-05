@@ -1,4 +1,8 @@
 import type { PopupView } from "@/core/types";
+import {
+  getBuildTimestampLabel,
+  getBuildVersionLabel,
+} from "@/core/build-info";
 import { renderPopupTemplate } from "@/popup/template";
 import templateHtml from "./popup.html?raw";
 import {
@@ -68,7 +72,16 @@ export function createAboutPopupView(): PopupView {
       );
       if (versionEl) {
         const manifest = chrome.runtime.getManifest();
-        versionEl.textContent = `v${manifest.version}`;
+        versionEl.textContent = getBuildVersionLabel(manifest.version);
+      }
+
+      const timestampEl = container.querySelector<HTMLElement>(
+        '[data-role="about-build-timestamp"]',
+      );
+      const buildTimestampLabel = getBuildTimestampLabel();
+      if (timestampEl && buildTimestampLabel) {
+        timestampEl.textContent = buildTimestampLabel;
+        timestampEl.classList.remove("is-hidden");
       }
 
       const reviewCard = container.querySelector<HTMLElement>(

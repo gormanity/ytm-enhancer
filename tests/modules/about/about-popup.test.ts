@@ -48,7 +48,7 @@ describe("createAboutPopupView", () => {
     expect(container.textContent).toContain("Enjoying YTM Enhancer?");
   });
 
-  it("should display the extension version from the manifest", () => {
+  it("should display the dev extension version and build timestamp", () => {
     const view = createAboutPopupView();
     const container = document.createElement("div");
     view.render(container);
@@ -56,7 +56,16 @@ describe("createAboutPopupView", () => {
     const versionEl = container.querySelector<HTMLElement>(
       '[data-role="about-version"]',
     );
-    expect(versionEl?.textContent).toBe("v9.9.9");
+    const timestampEl = container.querySelector<HTMLElement>(
+      '[data-role="about-build-timestamp"]',
+    );
+
+    const buildDate = new Date("2026-05-05T13:26:00.000Z");
+    const expectedTimestamp = `Built ${buildDate.getFullYear()}-${String(buildDate.getMonth() + 1).padStart(2, "0")}-${String(buildDate.getDate()).padStart(2, "0")} ${String(buildDate.getHours()).padStart(2, "0")}:${String(buildDate.getMinutes()).padStart(2, "0")}`;
+
+    expect(versionEl?.textContent).toBe("v9.9.9-dev");
+    expect(timestampEl?.textContent).toBe(expectedTimestamp);
+    expect(timestampEl?.classList.contains("is-hidden")).toBe(false);
   });
 
   it("should link to the published extension stores", () => {

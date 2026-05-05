@@ -100,6 +100,7 @@ function entryConfig(
   entry: string,
   format: "es" | "iife",
   isDev: boolean,
+  buildTimestamp: string,
 ): InlineConfig {
   return {
     resolve: {
@@ -121,6 +122,7 @@ function entryConfig(
     define: {
       __BROWSER__: JSON.stringify(browser),
       __DEV__: JSON.stringify(isDev),
+      __BUILD_TIMESTAMP__: JSON.stringify(buildTimestamp),
     },
     configFile: false,
     logLevel: "warn",
@@ -128,27 +130,37 @@ function entryConfig(
 }
 
 /** Build content and popup after the main background build. */
-function buildExtras(browser: string, isDev: boolean): Plugin {
+function buildExtras(
+  browser: string,
+  isDev: boolean,
+  buildTimestamp: string,
+): Plugin {
   return {
     name: "build-extras",
     async closeBundle() {
       // Content script as IIFE (no ES module imports allowed)
-      await build(entryConfig(browser, "content", "iife", isDev));
+      await build(
+        entryConfig(browser, "content", "iife", isDev, buildTimestamp),
+      );
       // Popup as ES module (loaded via <script type="module">)
-      await build(entryConfig(browser, "popup", "es", isDev));
+      await build(entryConfig(browser, "popup", "es", isDev, buildTimestamp));
     },
   };
 }
 
 export function createConfig(browser: string, mode = "production") {
   const isDev = mode === "development";
+  const buildTimestamp = new Date().toISOString();
   return {
     resolve: {
       alias: {
         "@": resolve(__dirname, "src"),
       },
     },
-    plugins: [buildExtras(browser, isDev), copyAssets(browser, isDev)],
+    plugins: [
+      buildExtras(browser, isDev, buildTimestamp),
+      copyAssets(browser, isDev),
+    ],
     build: {
       lib: {
         entry: resolve(__dirname, "src/background/index.ts"),
@@ -165,6 +177,7 @@ export function createConfig(browser: string, mode = "production") {
     define: {
       __BROWSER__: JSON.stringify(browser),
       __DEV__: JSON.stringify(isDev),
+      __BUILD_TIMESTAMP__: JSON.stringify(buildTimestamp),
     },
   };
 }

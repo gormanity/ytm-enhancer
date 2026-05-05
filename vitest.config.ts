@@ -10,6 +10,7 @@ export default defineConfig({
   define: {
     __DEV__: JSON.stringify(true),
     __BROWSER__: JSON.stringify("chrome"),
+    __BUILD_TIMESTAMP__: JSON.stringify("2026-05-05T13:26:00.000Z"),
   },
   test: {
     globals: true,

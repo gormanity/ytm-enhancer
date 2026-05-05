@@ -1,4 +1,5 @@
 import { getAllPopupViews } from "@/modules/popup-views";
+import { isDevBuild } from "@/core/build-info";
 import {
   ABOUT_VIEW_ID,
   REVIEW_PROMPT_ACCESSED_KEY,
@@ -8,6 +9,7 @@ import { parseHtmlFragment } from "./html-fragment";
 
 const container = document.getElementById("view-container");
 const navList = document.getElementById("nav-list");
+const appTitle = document.querySelector<HTMLElement>('[data-role="app-title"]');
 const navItemTemplate = document.getElementById(
   "nav-item-template",
 ) as HTMLTemplateElement | null;
@@ -53,6 +55,15 @@ function loadAboutReviewIndicator() {
       renderNav();
     },
   );
+}
+
+function renderDevBuildBadge() {
+  if (!appTitle || !isDevBuild()) return;
+
+  const badge = document.createElement("span");
+  badge.className = "dev-build-badge";
+  badge.textContent = "DEV";
+  appTitle.appendChild(badge);
 }
 
 function renderNav() {
@@ -131,6 +142,7 @@ function renderActiveView() {
 
 if (container && navList) {
   loadAboutReviewIndicator();
+  renderDevBuildBadge();
   renderNav();
   renderActiveView();
 }

@@ -73,6 +73,7 @@ describe("popup index", () => {
       },
     });
     document.body.innerHTML = `
+      <h1 data-role="app-title">YTM Enhancer</h1>
       <div id="view-container"></div>
       <nav id="nav-list"></nav>
       <template id="nav-item-template">
@@ -92,6 +93,17 @@ describe("popup index", () => {
     (navItems[2] as HTMLElement).click();
 
     expect(cleanupOne).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a dev build badge next to the app title in dev builds", async () => {
+    await import("../../src/popup/index");
+
+    const title = document.querySelector<HTMLElement>(
+      '[data-role="app-title"]',
+    );
+    const badge = title?.querySelector<HTMLElement>(".dev-build-badge");
+
+    expect(badge?.textContent).toBe("DEV");
   });
 
   it("shows a notification indicator on About before the review prompt is accessed", async () => {

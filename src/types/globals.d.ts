@@ -1,5 +1,6 @@
 declare const __BROWSER__: "chrome" | "firefox" | "edge";
 declare const __DEV__: boolean;
+declare const __BUILD_TIMESTAMP__: string;
 
 // Firefox-only WebExtensions APIs not present in @types/chrome. The popup uses
 // optional chaining and capability checks before calling these.
