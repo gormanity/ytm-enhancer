@@ -58,6 +58,8 @@ This file covers **how to work**, not what the project is.
   `git push origin v0.X.Y`.
 - Verify the `Release` workflow completes successfully.
 - Run `pnpm run package` to generate store submission zips.
+- Run `pnpm run lint:addons:firefox:zip` to validate the Firefox submission zip
+  with Mozilla's add-on linter.
 - Write release notes from the end-user perspective:
   - Organize notes by module when the release includes changes across multiple
     modules.
