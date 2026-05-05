@@ -79,6 +79,7 @@ describe("AutoPlayController", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     document.body.innerHTML = "";
+    delete document.documentElement.dataset.ytmEnhancerAutoPlayInitialized;
 
     sendMessageMock = vi.fn();
     runtimeMessageListener = null;
@@ -237,6 +238,47 @@ describe("AutoPlayController", () => {
 
     expect(video.play).not.toHaveBeenCalled();
     expect(adapterInstance.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("should not trigger auto-play on late injection into an existing tab", () => {
+    const perfSpy = vi.spyOn(performance, "now").mockReturnValue(60_000);
+    enableAutoPlay();
+
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    const video = createReadyVideo();
+    controller.init();
+
+    expect(video.play).not.toHaveBeenCalled();
+    expect(
+      adapterInstance.clickFirstPlayButtonWhenPlayerBarClosed,
+    ).not.toHaveBeenCalled();
+    expect(adapterInstance.executeAction).not.toHaveBeenCalled();
+    perfSpy.mockRestore();
+  });
+
+  it("should not trigger auto-play when reinjected into an initialized page", () => {
+    const perfSpy = vi.spyOn(performance, "now").mockReturnValue(500);
+    document.documentElement.dataset.ytmEnhancerAutoPlayInitialized = "true";
+    enableAutoPlay();
+
+    adapterInstance.getPlaybackState.mockReturnValue({
+      title: "Some Song",
+      isPlaying: false,
+    });
+
+    const video = createReadyVideo();
+    controller.init();
+
+    expect(video.play).not.toHaveBeenCalled();
+    expect(
+      adapterInstance.clickFirstPlayButtonWhenPlayerBarClosed,
+    ).not.toHaveBeenCalled();
+    expect(adapterInstance.executeAction).not.toHaveBeenCalled();
+    perfSpy.mockRestore();
   });
 
   it("should call video.play() when video is ready, not playing, and track is loaded", () => {

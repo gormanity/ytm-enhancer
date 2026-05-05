@@ -6,6 +6,7 @@ import type { AutoPlayMode } from "@/core/types";
 const TIMEOUT_MS = 10_000;
 const HAVE_FUTURE_DATA = 3;
 const INITIAL_SUPPRESSION_MAX_AGE_MS = 8_000;
+const PAGE_INIT_MARKER = "ytmEnhancerAutoPlayInitialized";
 
 export class AutoPlayController {
   private adapter = new YTMAdapter();
@@ -21,6 +22,7 @@ export class AutoPlayController {
     null;
   private suppressVideo: HTMLVideoElement | null = null;
   private suppressArmed = false;
+  private initializedExistingPage = false;
   private mode: AutoPlayMode = "default";
   private messageListener: (message: {
     type: string;
@@ -60,6 +62,7 @@ export class AutoPlayController {
   }
 
   init(): void {
+    this.initializedExistingPage = this.markPageInitialized();
     chrome.runtime.onMessage.addListener(this.messageListener);
 
     try {
@@ -307,10 +310,29 @@ export class AutoPlayController {
     return performance.now() <= INITIAL_SUPPRESSION_MAX_AGE_MS;
   }
 
+  private shouldTriggerInitialAutoPlay(): boolean {
+    if (this.initializedExistingPage) return false;
+    return performance.now() <= INITIAL_SUPPRESSION_MAX_AGE_MS;
+  }
+
+  private markPageInitialized(): boolean {
+    const root = document.documentElement;
+    const alreadyInitialized = root.dataset[PAGE_INIT_MARKER] === "true";
+    root.dataset[PAGE_INIT_MARKER] = "true";
+    return alreadyInitialized;
+  }
+
   private applyInitialMode(): void {
     debug("AutoPlay: applying initial mode", this.mode);
     if (this.mode === "on") {
       this.cancelInitialSuppression();
+      if (!this.shouldTriggerInitialAutoPlay()) {
+        debug("AutoPlay: skipping startup auto-play on late injection", {
+          ageMs: performance.now(),
+          initializedExistingPage: this.initializedExistingPage,
+        });
+        return;
+      }
       this.tryAutoPlay();
       return;
     }

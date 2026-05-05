@@ -34,6 +34,7 @@ describe("auto-play integration flows", () => {
 
   beforeEach(() => {
     document.body.innerHTML = "";
+    delete document.documentElement.dataset.ytmEnhancerAutoPlayInitialized;
     runtimeListeners = [];
     autoPlayMode = "default";
 
@@ -124,6 +125,29 @@ describe("auto-play integration flows", () => {
     video.dispatchEvent(new Event("play"));
 
     expect(video.pause).not.toHaveBeenCalled();
+  });
+
+  it("does not trigger auto-play when injected late into an existing tab", () => {
+    autoPlayMode = "on";
+    vi.spyOn(performance, "now").mockReturnValue(60_000);
+
+    const video = createReadyVideo();
+    const controller = createController();
+    controller.init();
+
+    expect(video.play).not.toHaveBeenCalled();
+  });
+
+  it("does not trigger auto-play when reinjected into an initialized page", () => {
+    autoPlayMode = "on";
+    vi.spyOn(performance, "now").mockReturnValue(500);
+    document.documentElement.dataset.ytmEnhancerAutoPlayInitialized = "true";
+
+    const video = createReadyVideo();
+    const controller = createController();
+    controller.init();
+
+    expect(video.play).not.toHaveBeenCalled();
   });
 
   it("does not suppress initial autoplay in a freshly loaded tab by default", () => {
