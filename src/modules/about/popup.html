@@ -8,12 +8,83 @@
   ></span>
 </div>
 
+<div class="settings-card about-review-card" data-role="about-review-card">
+  <button
+    class="about-review-close"
+    data-role="about-review-dismiss"
+    type="button"
+    aria-label="Dismiss"
+  >
+    ×
+  </button>
+  <h3>Reviews</h3>
+
+  <div class="about-review-step" data-role="about-review-step-question">
+    <p class="about-review-copy">Enjoying YTM Enhancer?</p>
+    <div class="about-review-actions">
+      <button
+        class="about-review-choice"
+        data-role="about-review-yes"
+        type="button"
+      >
+        Yes
+      </button>
+      <button
+        class="about-review-choice"
+        data-role="about-review-no"
+        type="button"
+      >
+        Not really
+      </button>
+    </div>
+  </div>
+
+  <div
+    class="about-review-step is-hidden"
+    data-role="about-review-step-positive"
+  >
+    <p class="about-review-copy">
+      Glad to hear you're enjoying YTM Enhancer! Reviews help other YouTube
+      Music listeners find the extension.
+    </p>
+    <div class="about-review-actions">
+      <a
+        class="about-review-choice about-review-choice--primary"
+        data-role="about-review-link"
+        target="_blank"
+      >
+        Leave a review
+      </a>
+    </div>
+  </div>
+
+  <div
+    class="about-review-step is-hidden"
+    data-role="about-review-step-negative"
+  >
+    <p class="about-review-copy">
+      Sorry to hear that. Let us know what's not working — bug reports help us
+      improve.
+    </p>
+    <div class="about-review-actions">
+      <a
+        class="about-review-choice about-review-choice--primary"
+        data-role="about-review-feedback"
+        href="https://github.com/gormanity/ytm-enhancer/issues/new"
+        target="_blank"
+      >
+        Send feedback
+      </a>
+    </div>
+  </div>
+</div>
+
 <div class="settings-card">
   <h3>Resources</h3>
 
   <a
     class="card-row about-link-row"
-    href="https://github.com/jmgorman/ytm-enhancer"
+    href="https://github.com/gormanity/ytm-enhancer"
     target="_blank"
   >
     <div class="about-link-content">
@@ -38,7 +109,7 @@
 
   <a
     class="card-row about-link-row"
-    href="https://github.com/jmgorman/ytm-enhancer/issues"
+    href="https://github.com/gormanity/ytm-enhancer/issues"
     target="_blank"
   >
     <div class="about-link-content">

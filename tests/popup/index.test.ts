@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const renderOne = vi.fn();
+const renderAbout = vi.fn();
 const cleanupOne = vi.fn();
 const renderTwo = vi.fn();
+const extensionStorage: Record<string, unknown> = {};
 
 vi.mock("@/modules/popup-views", () => ({
   getAllPopupViews: () => [
@@ -12,6 +14,13 @@ vi.mock("@/modules/popup-views", () => ({
       render: (container: HTMLElement) => {
         renderOne(container);
         return cleanupOne;
+      },
+    },
+    {
+      id: "about",
+      label: "About",
+      render: (container: HTMLElement) => {
+        renderAbout(container);
       },
     },
     {
@@ -28,8 +37,28 @@ describe("popup index", () => {
   beforeEach(() => {
     vi.resetModules();
     renderOne.mockReset();
+    renderAbout.mockReset();
     cleanupOne.mockReset();
     renderTwo.mockReset();
+    for (const key of Object.keys(extensionStorage)) {
+      delete extensionStorage[key];
+    }
+    vi.stubGlobal("chrome", {
+      storage: {
+        local: {
+          get: vi.fn((keys: string[], callback) => {
+            callback(
+              Object.fromEntries(
+                keys.map((key) => [key, extensionStorage[key]]),
+              ),
+            );
+          }),
+          set: vi.fn((items: Record<string, unknown>) => {
+            Object.assign(extensionStorage, items);
+          }),
+        },
+      },
+    });
     const storage = new Map<string, string>();
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,
@@ -59,9 +88,58 @@ describe("popup index", () => {
     await import("../../src/popup/index");
 
     const navItems = document.querySelectorAll(".nav-item");
-    expect(navItems).toHaveLength(2);
-    (navItems[1] as HTMLElement).click();
+    expect(navItems).toHaveLength(3);
+    (navItems[2] as HTMLElement).click();
 
     expect(cleanupOne).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a notification indicator on About before the review prompt is accessed", async () => {
+    await import("../../src/popup/index");
+
+    const aboutItem = document.querySelector<HTMLElement>(
+      '[data-view-id="about"]',
+    );
+    expect(aboutItem?.classList.contains("has-notification")).toBe(true);
+  });
+
+  it("hides the About notification indicator after About is opened", async () => {
+    await import("../../src/popup/index");
+
+    const aboutItem = document.querySelector<HTMLElement>(
+      '[data-view-id="about"]',
+    );
+    aboutItem?.click();
+
+    const updatedAboutItem = document.querySelector<HTMLElement>(
+      '[data-view-id="about"]',
+    );
+    expect(extensionStorage["about.reviewPromptAccessed"]).toBe(true);
+    expect(updatedAboutItem?.classList.contains("has-notification")).toBe(
+      false,
+    );
+  });
+
+  it("does not show the About notification indicator after the review prompt is dismissed", async () => {
+    extensionStorage["about.reviewPromptDismissed"] = true;
+
+    await import("../../src/popup/index");
+
+    const aboutItem = document.querySelector<HTMLElement>(
+      '[data-view-id="about"]',
+    );
+    expect(aboutItem?.classList.contains("has-notification")).toBe(false);
+  });
+
+  it("marks the review prompt accessed when About is the restored view", async () => {
+    localStorage.setItem("active-view-id", "about");
+
+    await import("../../src/popup/index");
+
+    const aboutItem = document.querySelector<HTMLElement>(
+      '[data-view-id="about"]',
+    );
+    expect(extensionStorage["about.reviewPromptAccessed"]).toBe(true);
+    expect(aboutItem?.classList.contains("has-notification")).toBe(false);
   });
 });

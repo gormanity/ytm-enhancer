@@ -97,6 +97,16 @@ body {
   font-weight: 500;
 }
 
+.nav-item.has-notification::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--sidebar-bg);
+}
+
 .nav-item svg {
   width: 20px;
   height: 20px;
@@ -503,6 +513,84 @@ select:focus {
 .about-license-note {
   margin-top: 12px;
   margin-bottom: 0;
+}
+
+.about-review-card {
+  position: relative;
+  padding-right: 32px;
+}
+
+.about-review-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.about-review-close:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.about-review-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.about-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.about-review-choice {
+  border-radius: 4px;
+  border: 1px solid #3a3a3a;
+  background: #2a2a2a;
+  color: var(--text-color);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1;
+  padding: 8px 12px;
+  text-decoration: none;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.about-review-choice:hover {
+  background: #4f4f4f;
+}
+
+.about-review-choice--primary {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+  font-weight: 600;
+}
+
+.about-review-choice--primary:hover {
+  background: #cc0000;
+  border-color: #cc0000;
 }
 
 .about-link-row {
