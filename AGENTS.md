@@ -73,17 +73,18 @@ This file covers **how to work**, not what the project is.
 
 ## Commands
 
-| Task            | Command                  |
-| --------------- | ------------------------ |
-| Install deps    | `pnpm install`           |
-| Format check    | `pnpm run format:check`  |
-| Format fix      | `pnpm run format`        |
-| Lint            | `pnpm run lint`          |
-| Type check      | `pnpm run typecheck`     |
-| Test            | `pnpm run test`          |
-| Build (Chrome)  | `pnpm run build:chrome`  |
-| Build (Firefox) | `pnpm run build:firefox` |
-| Dev build (all) | `pnpm run dev:build`     |
+| Task                     | Command                  |
+| ------------------------ | ------------------------ |
+| Install deps             | `pnpm install`           |
+| Format check             | `pnpm run format:check`  |
+| Format fix               | `pnpm run format`        |
+| Lint                     | `pnpm run lint`          |
+| Type check               | `pnpm run typecheck`     |
+| Test                     | `pnpm run test`          |
+| Build (Chrome)           | `pnpm run build:chrome`  |
+| Build (Firefox)          | `pnpm run build:firefox` |
+| Dev build (stack tip)    | `pnpm run dev:build`     |
+| Dev build (working copy) | `pnpm run dev:build:wc`  |
 
 All checks must pass before pushing.
 
@@ -91,6 +92,10 @@ After each feature change cycle, run `pnpm run dev:build` so the extension can
 be optested with debug logging enabled. Dev builds output to `dist-dev/` and
 include a "(dev)" name suffix. Only run production builds (`build:chrome`,
 `build:firefox`) for releases.
+
+`pnpm run dev:build` always builds the local stack tip — if `@` is mid-stack, it
+transparently switches `@` to the tip, builds, and restores `@`. Use
+`pnpm run dev:build:wc` to build the working-copy revision exactly as it sits.
 
 When developing new features or debugging bugs, add targeted debug logging with
 the existing debug logger where it helps verify runtime behavior in the dev
