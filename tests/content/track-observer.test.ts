@@ -85,6 +85,7 @@ describe("TrackObserver", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    delete document.documentElement.dataset.ytmEnhancerTrackObserverInitialized;
 
     sendMessageMock = vi.fn();
     getStateMock = vi.fn<() => PlaybackState>();
@@ -428,6 +429,69 @@ describe("TrackObserver", () => {
       type: "track-changed",
       state,
     });
+  });
+
+  it("should not send track-changed when reinjected into a page already playing", async () => {
+    document.documentElement.dataset.ytmEnhancerTrackObserverInitialized =
+      "true";
+
+    const playerBar = createPlayerBar();
+    createTitleElement("Song", playerBar);
+    createArtistElement("Artist", playerBar);
+    createPlayPauseButton("Pause");
+
+    getStateMock.mockReturnValue(makeState());
+
+    observer.start();
+    await flush();
+
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("should send track-changed for an actual track change after reinjection", async () => {
+    document.documentElement.dataset.ytmEnhancerTrackObserverInitialized =
+      "true";
+
+    const playerBar = createPlayerBar();
+    const titleEl = createTitleElement("First", playerBar);
+    createArtistElement("Artist", playerBar);
+    createPlayPauseButton("Pause");
+
+    getStateMock.mockReturnValue(makeState({ title: "First" }));
+    observer.start();
+    await flush();
+    sendMessageMock.mockClear();
+
+    getStateMock.mockReturnValue(makeState({ title: "Second" }));
+    titleEl.textContent = "Second";
+    await flush();
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "track-changed",
+        state: expect.objectContaining({ title: "Second" }),
+      }),
+    );
+  });
+
+  it("should not call onTrackChange on reinjection during playback", async () => {
+    document.documentElement.dataset.ytmEnhancerTrackObserverInitialized =
+      "true";
+
+    const onTrackChange = vi.fn();
+    const callbackObserver = new TrackObserver(getStateMock, onTrackChange);
+
+    const playerBar = createPlayerBar();
+    createTitleElement("Song", playerBar);
+    createArtistElement("Artist", playerBar);
+    createPlayPauseButton("Pause");
+
+    getStateMock.mockReturnValue(makeState());
+    callbackObserver.start();
+    await flush();
+
+    expect(onTrackChange).not.toHaveBeenCalled();
+    callbackObserver.stop();
   });
 
   it("should debounce rapid mutations into a single check", async () => {
