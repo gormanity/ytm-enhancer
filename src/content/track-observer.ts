@@ -3,6 +3,7 @@ import type { PlaybackState } from "@/core/types";
 
 const DEBOUNCE_MS = 150;
 const HAVE_FUTURE_DATA = 3;
+const PAGE_INIT_MARKER = "ytmEnhancerTrackObserverInitialized";
 
 export class TrackObserver {
   private titleObserver: MutationObserver | null = null;
@@ -11,6 +12,7 @@ export class TrackObserver {
   private discoveryObserver: MutationObserver | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private lastTrackKey: string | null = null;
+  private seedOnFirstCheck = false;
   private getPlaybackState: () => PlaybackState;
   private onTrackChange?: (state: PlaybackState) => void;
 
@@ -23,6 +25,8 @@ export class TrackObserver {
   }
 
   start(): void {
+    this.seedOnFirstCheck = this.markPageInitialized();
+
     const elements = this.findElements();
 
     if (elements) {
@@ -150,6 +154,12 @@ export class TrackObserver {
     const trackKey = `${state.title}\0${state.artist}`;
     if (trackKey === this.lastTrackKey) return;
 
+    if (this.seedOnFirstCheck) {
+      this.seedOnFirstCheck = false;
+      this.lastTrackKey = trackKey;
+      return;
+    }
+
     this.lastTrackKey = trackKey;
     try {
       chrome.runtime.sendMessage({ type: "track-changed", state });
@@ -157,6 +167,13 @@ export class TrackObserver {
       // Extension may have been reloaded and invalidated this content context.
     }
     this.onTrackChange?.(state);
+  }
+
+  private markPageInitialized(): boolean {
+    const root = document.documentElement;
+    const alreadyInitialized = root.dataset[PAGE_INIT_MARKER] === "true";
+    root.dataset[PAGE_INIT_MARKER] = "true";
+    return alreadyInitialized;
   }
 
   private isLikelyBufferingPause(): boolean {
