@@ -120,12 +120,16 @@ export class YTMAdapter {
   executeAction(action: PlaybackAction): void {
     switch (action) {
       case "togglePlay":
-        this.clickButton(SELECTORS.playPauseButton);
+        if (!this.clickLoadedPlayerBarPlayPause()) {
+          this.clickFirstPlayButtonWhenPlayerBarClosed();
+        }
         break;
 
       case "play":
         if (!this.isPlaying()) {
-          this.clickButton(SELECTORS.playPauseButton);
+          if (!this.clickLoadedPlayerBarPlayPause()) {
+            this.clickFirstPlayButtonWhenPlayerBarClosed();
+          }
         }
         break;
 
@@ -316,6 +320,15 @@ export class YTMAdapter {
   private clickButton(selector: string): void {
     const el = document.querySelector(selector) as HTMLElement | null;
     el?.click();
+  }
+
+  private clickLoadedPlayerBarPlayPause(): boolean {
+    const el = document.querySelector<HTMLElement>(SELECTORS.playPauseButton);
+    if (!el || this.getNotClickableReason(el)) return false;
+    if (!this.hasLoadedPlayerBarTrack()) return false;
+
+    el.click();
+    return true;
   }
 
   toggleLike(): void {

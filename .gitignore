@@ -1,6 +1,8 @@
 node_modules/
 dist/
 dist-dev/
+playwright-report/
 releases/
+test-results/
 *.tsbuildinfo
 .DS_Store

@@ -261,15 +261,44 @@ describe("YTMAdapter", () => {
   });
 
   describe("executeAction", () => {
+    function makeVisible(el: HTMLElement): void {
+      vi.spyOn(el, "getClientRects").mockReturnValue([
+        new DOMRect(0, 0, 24, 24),
+      ] as unknown as DOMRectList);
+    }
+
     it("should click the play/pause button for togglePlay", () => {
       const button = document.createElement("tp-yt-paper-icon-button");
       button.id = "play-pause-button";
       button.click = vi.fn();
+      makeVisible(button);
       document.body.appendChild(button);
+
+      const trackTitle = document.createElement("yt-formatted-string");
+      trackTitle.className = "title style-scope ytmusic-player-bar";
+      trackTitle.textContent = "Loaded Track";
+      document.body.appendChild(trackTitle);
 
       adapter.executeAction("togglePlay");
 
       expect(button.click).toHaveBeenCalled();
+    });
+
+    it("should click a page play button for togglePlay when the player bar is unavailable", () => {
+      const playerBarButton = document.createElement("tp-yt-paper-icon-button");
+      playerBarButton.id = "play-pause-button";
+      document.body.appendChild(playerBarButton);
+
+      const pagePlayButton = document.createElement("button");
+      pagePlayButton.setAttribute("aria-label", "Play Album");
+      const pagePlayClick = vi.fn();
+      pagePlayButton.addEventListener("click", pagePlayClick);
+      makeVisible(pagePlayButton);
+      document.body.appendChild(pagePlayButton);
+
+      adapter.executeAction("togglePlay");
+
+      expect(pagePlayClick).toHaveBeenCalled();
     });
 
     it("should click the play/pause button for play", () => {
@@ -277,7 +306,13 @@ describe("YTMAdapter", () => {
       button.id = "play-pause-button";
       button.setAttribute("title", "Play");
       button.click = vi.fn();
+      makeVisible(button);
       document.body.appendChild(button);
+
+      const trackTitle = document.createElement("yt-formatted-string");
+      trackTitle.className = "title style-scope ytmusic-player-bar";
+      trackTitle.textContent = "Loaded Track";
+      document.body.appendChild(trackTitle);
 
       adapter.executeAction("play");
 

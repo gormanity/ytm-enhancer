@@ -14,7 +14,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["chrome"],
+    "types": ["chrome", "node"],
     "paths": {
       "@/*": ["./src/*"]
     },

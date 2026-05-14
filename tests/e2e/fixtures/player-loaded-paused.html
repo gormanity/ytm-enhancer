@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>YTM fixture: player loaded paused</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+      }
+
+      #play-pause-button,
+      .next-button,
+      .previous-button,
+      #page-play {
+        display: block;
+        width: 48px;
+        height: 48px;
+        margin: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Synthetic fixture modeled after YouTube Music with a loaded, paused
+      player bar. Keep this hand-reduced and adapter-contract focused.
+    -->
+    <section data-fixture="player-bar">
+      <tp-yt-paper-icon-button
+        id="play-pause-button"
+        title="Play"
+      ></tp-yt-paper-icon-button>
+      <button class="previous-button" type="button"></button>
+      <button class="next-button" type="button"></button>
+      <yt-formatted-string class="title style-scope ytmusic-player-bar">
+        Loaded Track
+      </yt-formatted-string>
+    </section>
+
+    <main>
+      <ytmusic-play-button-renderer data-fixture="playlist-header-play">
+        <button aria-label="Play Album" id="page-play" type="button"></button>
+      </ytmusic-play-button-renderer>
+    </main>
+
+    <script>
+      window.__ytmTestEvents = [];
+      document
+        .querySelector("#play-pause-button")
+        .addEventListener("click", () => {
+          window.__ytmTestEvents.push("player-play-pause-clicked");
+        });
+      document
+        .querySelector(".previous-button")
+        .addEventListener("click", () => {
+          window.__ytmTestEvents.push("previous-clicked");
+        });
+      document.querySelector(".next-button").addEventListener("click", () => {
+        window.__ytmTestEvents.push("next-clicked");
+      });
+      document.querySelector("#page-play").addEventListener("click", () => {
+        window.__ytmTestEvents.push("page-play-clicked");
+      });
+    </script>
+  </body>
+</html>
