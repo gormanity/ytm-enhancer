@@ -2,15 +2,15 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Page } from "playwright/test";
 
-type PlaybackActionMessage = {
-  type: "playback-action";
-  action: "togglePlay" | "play" | "pause" | "next" | "previous";
+export type RuntimeTestMessage = {
+  type: string;
+  [key: string]: unknown;
 };
 
 declare global {
   interface Window {
     __ytmEnhancerDispatchRuntimeMessage?: (
-      message: PlaybackActionMessage,
+      message: RuntimeTestMessage,
     ) => Promise<unknown>;
     __ytmTestEvents?: string[];
   }
@@ -44,11 +44,26 @@ export async function installContentScriptHarness(page: Page): Promise<void> {
     window.__ytmEnhancerDispatchRuntimeMessage = async (message) => {
       const responses: unknown[] = [];
       for (const listener of runtimeListeners) {
-        const result = listener(message, {}, (response) => {
-          responses.push(response);
+        let resolveResponse: (response: unknown) => void = () => undefined;
+        const responsePromise = new Promise<unknown>((resolve) => {
+          resolveResponse = resolve;
         });
+        let sentResponse = false;
+
+        const result = listener(message, {}, (response) => {
+          sentResponse = true;
+          responses.push(response);
+          resolveResponse(response);
+        });
+
         if (result instanceof Promise) {
           responses.push(await result);
+          continue;
+        }
+
+        if (result === true) {
+          const response = await responsePromise;
+          if (!sentResponse) responses.push(response);
         }
       }
       return responses.at(-1) ?? null;
@@ -75,4 +90,13 @@ export async function injectBuiltContentScript(
     "utf-8",
   );
   await page.addScriptTag({ content: contentScript });
+}
+
+export async function dispatchRuntimeMessage(
+  page: Page,
+  message: RuntimeTestMessage,
+): Promise<unknown> {
+  return page.evaluate(async (runtimeMessage) => {
+    return window.__ytmEnhancerDispatchRuntimeMessage?.(runtimeMessage);
+  }, message);
 }

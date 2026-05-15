@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>YTM fixture: playback controls loaded</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+      }
+
+      #play-pause-button,
+      #volume-slider,
+      #progress-bar {
+        display: block;
+        width: 160px;
+        height: 32px;
+        margin: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Synthetic fixture modeled after YouTube Music with loaded playback
+      metadata, speed, progress, and volume controls.
+    -->
+    <section data-fixture="player-bar">
+      <tp-yt-paper-icon-button
+        id="play-pause-button"
+        title="Pause"
+      ></tp-yt-paper-icon-button>
+      <yt-formatted-string class="title style-scope ytmusic-player-bar">
+        Fixture Track
+      </yt-formatted-string>
+      <span class="subtitle style-scope ytmusic-player-bar">
+        <yt-formatted-string>
+          <a class="yt-simple-endpoint">Fixture Artist</a>
+          <a class="yt-simple-endpoint">Fixture Album</a>
+          <span>2026</span>
+        </yt-formatted-string>
+      </span>
+      <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+        <img
+          class="image"
+          alt=""
+          src="https://lh3.googleusercontent.com/fixture=w226-h226-l90-rj"
+        />
+      </div>
+      <span id="time-info">1:23 / 4:56</span>
+      <div id="progress-bar" max="296" value="83"></div>
+      <div id="volume-slider" value="35"></div>
+      <video class="html5-main-video"></video>
+    </section>
+
+    <script>
+      window.__ytmTestEvents = [];
+
+      const video = document.querySelector("video");
+      Object.defineProperty(video, "playbackRate", {
+        value: 1.25,
+        writable: true,
+      });
+
+      const volumeSlider = document.querySelector("#volume-slider");
+      volumeSlider.addEventListener("change", () => {
+        window.__ytmTestEvents.push(
+          `volume-changed:${volumeSlider.getAttribute("value")}`,
+        );
+      });
+    </script>
+  </body>
+</html>
