@@ -7,17 +7,32 @@ export type RuntimeTestMessage = {
   [key: string]: unknown;
 };
 
+export type RuntimeMessageResponse =
+  | { ok: true; data?: unknown }
+  | { ok: false; error: string };
+
 declare global {
   interface Window {
     __ytmEnhancerDispatchRuntimeMessage?: (
       message: RuntimeTestMessage,
     ) => Promise<unknown>;
+    __ytmEnhancerRuntimeMessages?: RuntimeTestMessage[];
+    __ytmEnhancerRuntimeResponses?: Record<string, RuntimeMessageResponse>;
     __ytmTestEvents?: string[];
   }
 }
 
-export async function installContentScriptHarness(page: Page): Promise<void> {
-  await page.addInitScript(() => {
+export async function installContentScriptHarness(
+  page: Page,
+  runtimeResponses: Record<string, RuntimeMessageResponse> = {},
+): Promise<void> {
+  await page.addInitScript((initialRuntimeResponses) => {
+    window.__ytmEnhancerRuntimeMessages = [];
+    window.__ytmEnhancerRuntimeResponses = {
+      "get-auto-play-mode": { ok: true, data: "default" },
+      ...initialRuntimeResponses,
+    };
+
     const runtimeListeners: Array<
       (
         message: unknown,
@@ -37,7 +52,19 @@ export async function installContentScriptHarness(page: Page): Promise<void> {
             if (index >= 0) runtimeListeners.splice(index, 1);
           },
         },
-        sendMessage: () => undefined,
+        sendMessage: (
+          message: RuntimeTestMessage,
+          callback?: (response: RuntimeMessageResponse) => void,
+        ) => {
+          window.__ytmEnhancerRuntimeMessages?.push(message);
+          const response = window.__ytmEnhancerRuntimeResponses?.[
+            message.type
+          ] ?? {
+            ok: true,
+          };
+          callback?.(response);
+          return undefined;
+        },
       },
     } as unknown as typeof chrome;
 
@@ -68,7 +95,27 @@ export async function installContentScriptHarness(page: Page): Promise<void> {
       }
       return responses.at(-1) ?? null;
     };
-  });
+  }, runtimeResponses);
+}
+
+export async function setRuntimeResponse(
+  page: Page,
+  type: string,
+  response: RuntimeMessageResponse,
+): Promise<void> {
+  await page.evaluate(
+    ({ responseType, runtimeResponse }) => {
+      window.__ytmEnhancerRuntimeResponses ??= {};
+      window.__ytmEnhancerRuntimeResponses[responseType] = runtimeResponse;
+    },
+    { responseType: type, runtimeResponse: response },
+  );
+}
+
+export async function readRuntimeMessages(
+  page: Page,
+): Promise<RuntimeTestMessage[]> {
+  return page.evaluate(() => window.__ytmEnhancerRuntimeMessages ?? []);
 }
 
 export type E2EBrowserTarget = "chrome" | "edge" | "firefox";

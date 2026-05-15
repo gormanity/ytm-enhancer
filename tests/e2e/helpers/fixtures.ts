@@ -5,6 +5,7 @@ import {
   browserTargetFromProjectName,
   injectBuiltContentScript,
   installContentScriptHarness,
+  type RuntimeMessageResponse,
 } from "./content-script-harness";
 
 async function loadFixtureHtml(name: string): Promise<string> {
@@ -18,8 +19,11 @@ export async function loadYtmFixture(
   page: Page,
   projectName: string,
   name: string,
+  options: {
+    runtimeResponses?: Record<string, RuntimeMessageResponse>;
+  } = {},
 ): Promise<void> {
-  await installContentScriptHarness(page);
+  await installContentScriptHarness(page, options.runtimeResponses);
 
   await page.route(
     "https://music.youtube.com/playlist?list=fixture",

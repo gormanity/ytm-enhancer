@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>YTM fixture: auto play policy blocked</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+      }
+
+      #play-pause-button {
+        display: block;
+        width: 48px;
+        height: 48px;
+        margin: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Synthetic fixture modeled after a browser policy block. Auto Play should
+      report the blocked state instead of clicking player controls.
+    -->
+    <section data-fixture="player-bar">
+      <tp-yt-paper-icon-button
+        id="play-pause-button"
+        title="Play"
+      ></tp-yt-paper-icon-button>
+      <yt-formatted-string class="title style-scope ytmusic-player-bar">
+        Blocked Track
+      </yt-formatted-string>
+      <video class="html5-main-video"></video>
+    </section>
+
+    <script>
+      window.__ytmTestEvents = [];
+      const video = document.querySelector("video");
+      Object.defineProperty(video, "readyState", { value: 3 });
+      Object.defineProperty(video, "paused", {
+        value: true,
+        configurable: true,
+      });
+      video.play = () => {
+        window.__ytmTestEvents.push("video-play-called");
+        return Promise.reject(
+          new DOMException("Autoplay blocked", "NotAllowedError"),
+        );
+      };
+      document
+        .querySelector("#play-pause-button")
+        .addEventListener("click", () => {
+          window.__ytmTestEvents.push("player-play-pause-clicked");
+        });
+    </script>
+  </body>
+</html>
