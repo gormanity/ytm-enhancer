@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>YTM fixture: auto skip disliked track change</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+      }
+
+      #play-pause-button,
+      .next-button {
+        display: block;
+        width: 48px;
+        height: 48px;
+        margin: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Synthetic fixture modeled after a playing track where navigation loads a
+      new already-disliked track. Auto Skip Disliked should hit next once.
+    -->
+    <section data-fixture="player-bar">
+      <tp-yt-paper-icon-button
+        id="play-pause-button"
+        title="Pause"
+      ></tp-yt-paper-icon-button>
+      <button class="next-button" type="button"></button>
+      <yt-formatted-string class="title style-scope ytmusic-player-bar">
+        First Track
+      </yt-formatted-string>
+      <span class="subtitle style-scope ytmusic-player-bar">
+        <yt-formatted-string>
+          <a class="yt-simple-endpoint">Fixture Artist</a>
+        </yt-formatted-string>
+      </span>
+      <ytmusic-like-button-renderer
+        id="like-button-renderer"
+        like-status="INDIFFERENT"
+      ></ytmusic-like-button-renderer>
+      <video class="html5-main-video"></video>
+    </section>
+
+    <script>
+      window.__ytmTestEvents = [];
+
+      const video = document.querySelector("video");
+      Object.defineProperty(video, "readyState", { value: 3 });
+      Object.defineProperty(video, "ended", { value: false });
+
+      document.querySelector(".next-button").addEventListener("click", () => {
+        window.__ytmTestEvents.push("next-clicked");
+      });
+
+      window.__ytmFixtureLoadDislikedTrack = () => {
+        const oldRenderer = document.querySelector("#like-button-renderer");
+        oldRenderer.remove();
+
+        const renderer = document.createElement("ytmusic-like-button-renderer");
+        renderer.id = "like-button-renderer";
+        renderer.setAttribute("like-status", "DISLIKE");
+        document.querySelector("[data-fixture='player-bar']").append(renderer);
+
+        document.querySelector(
+          "yt-formatted-string.title.style-scope.ytmusic-player-bar",
+        ).textContent = "Second Track";
+      };
+    </script>
+  </body>
+</html>
