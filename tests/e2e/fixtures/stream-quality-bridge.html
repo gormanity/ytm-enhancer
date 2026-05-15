@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>YTM Stream Quality Bridge Fixture</title>
+  </head>
+  <body>
+    <ytmusic-app>
+      <ytmusic-player-bar>
+        <button id="play-pause-button" title="Pause" aria-label="Pause">
+          Pause
+        </button>
+      </ytmusic-player-bar>
+      <ytmusic-settings-button>
+        <yt-icon-button>
+          <button aria-label="Settings">Settings</button>
+        </yt-icon-button>
+      </ytmusic-settings-button>
+      <ytmusic-setting-single-option-menu-renderer
+        data-testid="quality-renderer"
+      >
+        <tp-yt-paper-listbox></tp-yt-paper-listbox>
+      </ytmusic-setting-single-option-menu-renderer>
+    </ytmusic-app>
+
+    <script>
+      window.__ytmTestEvents = [];
+      window.__ytmQualityValue = "2";
+
+      window.addEventListener("message", (event) => {
+        if (event.data?.type !== "ytm-enhancer:quality-bridge-cmd") return;
+
+        if (event.data.command === "get-quality") {
+          window.__ytmTestEvents.push(
+            `quality-bridge:get-quality:${window.__ytmQualityValue}`,
+          );
+          window.postMessage(
+            {
+              type: "ytm-enhancer:quality-data",
+              current: window.__ytmQualityValue,
+            },
+            "*",
+          );
+          return;
+        }
+
+        if (event.data.command === "set-quality") {
+          window.__ytmQualityValue = event.data.value;
+          window.__ytmTestEvents.push(
+            `quality-bridge:set-quality:${event.data.value}`,
+          );
+        }
+      });
+    </script>
+  </body>
+</html>
