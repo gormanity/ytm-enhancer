@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>YTM fixture: audio visualizer surfaces</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+      }
+
+      #play-pause-button {
+        display: block;
+        width: 48px;
+        height: 48px;
+      }
+
+      .thumbnail-image-wrapper.style-scope.ytmusic-player-bar,
+      #song-image.ytmusic-player {
+        display: block;
+        width: 160px;
+        height: 160px;
+        margin: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Synthetic fixture modeled after YouTube Music surfaces that can host the
+      audio visualizer overlays.
+    -->
+    <section data-fixture="player-bar">
+      <tp-yt-paper-icon-button
+        id="play-pause-button"
+        title="Pause"
+      ></tp-yt-paper-icon-button>
+      <yt-formatted-string class="title style-scope ytmusic-player-bar">
+        Visualizer Track
+      </yt-formatted-string>
+      <span class="subtitle style-scope ytmusic-player-bar">
+        <yt-formatted-string>
+          <a class="yt-simple-endpoint">Fixture Artist</a>
+        </yt-formatted-string>
+      </span>
+      <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar"></div>
+    </section>
+
+    <section id="song-image" class="ytmusic-player"></section>
+
+    <script>
+      window.__ytmTestEvents = [];
+      window.addEventListener("message", (event) => {
+        if (event.data?.type !== "ytm-enhancer:audio-bridge-cmd") return;
+        window.__ytmTestEvents.push(`audio-bridge:${event.data.command}`);
+      });
+    </script>
+  </body>
+</html>
