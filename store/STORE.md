@@ -133,7 +133,7 @@ Keep submitted source aligned with the exact release commit and version.
 
 ---
 
-## 6. Reviewer Notes
+## Reviewer Notes
 
 This add-on only runs on `https://music.youtube.com/*` and enhances the existing
 YouTube Music web app in-page.
@@ -164,7 +164,7 @@ Known limitations:
 
 ---
 
-## 7. Release Checklist
+## Release Checklist
 
 Use this checklist when publishing a new version.
 

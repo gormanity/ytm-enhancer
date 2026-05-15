@@ -18,6 +18,7 @@
     "build:chrome": "vite build --config vite.config.chrome.ts",
     "build:firefox": "vite build --config vite.config.firefox.ts",
     "build:edge": "vite build --config vite.config.edge.ts",
+    "build:store": "node scripts/build-store.mjs",
     "build": "pnpm run build:chrome && pnpm run build:firefox && pnpm run build:edge",
     "package": "pnpm run build && node scripts/package.mjs",
     "lint:addons:firefox": "pnpm run build:firefox && pnpm run lint:addons:firefox:dist",
