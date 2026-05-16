@@ -1,5 +1,6 @@
 import { getAllPopupViews } from "@/modules/popup-views";
 import { isDevBuild } from "@/core/build-info";
+import { addRuntimeMessageListener } from "@/core/runtime-listener";
 import {
   ABOUT_VIEW_ID,
   REVIEW_PROMPT_ACCESSED_KEY,
@@ -10,6 +11,9 @@ import { parseHtmlFragment } from "./html-fragment";
 const container = document.getElementById("view-container");
 const navList = document.getElementById("nav-list");
 const appTitle = document.querySelector<HTMLElement>('[data-role="app-title"]');
+const devBuildConflictBanner = document.getElementById(
+  "dev-build-conflict-banner",
+);
 const navItemTemplate = document.getElementById(
   "nav-item-template",
 ) as HTMLTemplateElement | null;
@@ -35,6 +39,46 @@ function setLocalStorage(items: Record<string, unknown>): void {
     chrome.storage.local.set(items);
   } catch {
     // Storage may be unavailable in tests or invalidated popup contexts.
+  }
+}
+
+function refreshDevBuildConflictStatus(): void {
+  if (!devBuildConflictBanner || isDevBuild()) return;
+
+  try {
+    chrome.runtime.sendMessage(
+      { type: "get-dev-build-conflict-status" },
+      (
+        response?: {
+          ok?: boolean;
+          data?: { duplicateDetected?: boolean };
+        } | null,
+      ) => {
+        if (chrome.runtime.lastError) return;
+        const duplicateDetected =
+          response?.ok === true && response.data?.duplicateDetected === true;
+        devBuildConflictBanner.classList.toggle(
+          "is-hidden",
+          !duplicateDetected,
+        );
+      },
+    );
+  } catch {
+    // Runtime messaging may be unavailable in tests or invalidated popups.
+  }
+}
+
+function listenForDevBuildConflictStatus(): void {
+  if (!devBuildConflictBanner || isDevBuild()) return;
+
+  try {
+    addRuntimeMessageListener((message: { type?: string }) => {
+      if (message.type === "dev-build-conflict-status-changed") {
+        refreshDevBuildConflictStatus();
+      }
+    });
+  } catch {
+    // Runtime messaging may be unavailable in tests or invalidated popups.
   }
 }
 
@@ -143,6 +187,8 @@ function renderActiveView() {
 if (container && navList) {
   loadAboutReviewIndicator();
   renderDevBuildBadge();
+  refreshDevBuildConflictStatus();
+  listenForDevBuildConflictStatus();
   renderNav();
   renderActiveView();
 }

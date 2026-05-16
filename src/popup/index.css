@@ -156,6 +156,17 @@ body {
   flex-direction: column;
 }
 
+.dev-build-conflict-banner {
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 0, 0, 0.55);
+  border-radius: 6px;
+  background: rgba(255, 0, 0, 0.13);
+  color: #ffb3b3;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 /* Shared Popup Typography */
 h2 {
   font-size: 20px;

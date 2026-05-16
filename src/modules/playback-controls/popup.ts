@@ -2,6 +2,10 @@ import type { PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
 import { bindRange } from "@/popup/bind-range";
+import {
+  addRuntimeMessageListener,
+  removeRuntimeMessageListener,
+} from "@/core/runtime-listener";
 import { createProgressBar } from "@/ui/progress-bar";
 import ytmTabFallbackIconUrl from "@/assets/ytm-logo.svg";
 import { renderPlaybackSpeedSelectControl } from "./playback-speed/popup";
@@ -342,10 +346,10 @@ function renderOpenTabs(
       updateTabs();
     }
   };
-  chrome.runtime.onMessage.addListener(runtimeMessageListener);
+  addRuntimeMessageListener(runtimeMessageListener);
   updateTabs();
   return () => {
-    chrome.runtime.onMessage.removeListener(runtimeMessageListener);
+    removeRuntimeMessageListener(runtimeMessageListener);
     document.removeEventListener("keydown", handleKeydown);
   };
 }

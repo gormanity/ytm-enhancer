@@ -6,6 +6,10 @@ import { PipButton } from "./pip-button";
 import { PipWindowRenderer } from "./renderer";
 import { VideoPipFallback } from "./video-fallback";
 import { debug } from "@/core/logger";
+import {
+  addRuntimeMessageListener,
+  removeRuntimeMessageListener,
+} from "@/core/runtime-listener";
 
 const POLL_INTERVAL_MS = 1000;
 const DOCUMENT_PIP_WIDTH = 480;
@@ -47,7 +51,7 @@ export class MiniPlayerController {
   }
 
   async init(): Promise<void> {
-    chrome.runtime.onMessage.addListener(this.messageListener);
+    addRuntimeMessageListener(this.messageListener);
     this.enabled = await this.queryEnabled();
     if (!this.enabled || !hasDocumentPipSupport()) return;
 
@@ -55,7 +59,7 @@ export class MiniPlayerController {
   }
 
   destroy(): void {
-    chrome.runtime.onMessage.removeListener(this.messageListener);
+    removeRuntimeMessageListener(this.messageListener);
     this.pipButton.remove();
     this.stopPolling();
     this.observer?.disconnect();

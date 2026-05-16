@@ -1,3 +1,8 @@
+import {
+  addRuntimeMessageListener,
+  removeRuntimeMessageListener,
+} from "./runtime-listener";
+
 /** Base message envelope. All messages must have a type. */
 export interface Message {
   type: string;
@@ -83,14 +88,16 @@ export function createMessageHandler() {
         return true;
       };
 
-      chrome.runtime.onMessage.addListener(listener);
+      if (!addRuntimeMessageListener(listener)) {
+        listener = null;
+      }
     },
 
     stop(): void {
-      if (listener) {
-        chrome.runtime.onMessage.removeListener(listener);
-        listener = null;
-      }
+      if (listener === null) return;
+
+      removeRuntimeMessageListener(listener);
+      listener = null;
     },
   };
 }

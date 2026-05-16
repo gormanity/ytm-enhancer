@@ -17,6 +17,11 @@ import type { PlaybackState } from "@/core/types";
 import { error } from "@/core/logger";
 
 import { parseSelectedTabId, resolveSelectedTabId } from "./selected-tab";
+import {
+  isActionSuppressedForDevBuildConflict,
+  setActionDevBuildConflictIndicator,
+  updateDevBuildSuspendedTab,
+} from "./dev-build-conflict";
 import { AutoPlayModule } from "@/modules/auto-play";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
@@ -49,6 +54,7 @@ const sleepTimer = new SleepTimerModule();
 let selectedTabId: number | null = null;
 const pipOpenTabIds = new Set<number>();
 const autoPlayPolicyBlockedTabIds = new Set<number>();
+const devBuildSuspendedTabIds = new Set<number>();
 const SLEEP_TIMER_ALARM = "sleep-timer";
 const TAB_ARTWORK_QUERY_TIMEOUT_MS = 150;
 let sleepTimerEndAt: number | null = null;
@@ -58,7 +64,8 @@ let sleepTimerMode: "duration" | "absolute" = "duration";
 type PopupRuntimeMessage =
   | { type: "ytm-tabs-changed" }
   | { type: "sleep-timer-state-changed" }
-  | { type: "auto-play-status-changed" };
+  | { type: "auto-play-status-changed" }
+  | { type: "dev-build-conflict-status-changed" };
 
 function broadcastPopupMessage(message: PopupRuntimeMessage): void {
   void chrome.runtime.sendMessage(message).catch(() => {
@@ -78,6 +85,11 @@ function notifyAutoPlayStatusChanged(): void {
   broadcastPopupMessage({ type: "auto-play-status-changed" });
 }
 
+function notifyDevBuildConflictStatusChanged(): void {
+  broadcastPopupMessage({ type: "dev-build-conflict-status-changed" });
+  setActionDevBuildConflictIndicator(devBuildSuspendedTabIds.size > 0, __DEV__);
+}
+
 function isAutoPlayMode(value: unknown): value is AutoPlayMode {
   return value === "default" || value === "off" || value === "on";
 }
@@ -89,6 +101,9 @@ function normalizeAutoPlayMode(value: unknown): AutoPlayMode {
 async function relayToSelectedTab(message: unknown): Promise<void> {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return;
+  if (isActionSuppressedForDevBuildConflict(devBuildSuspendedTabIds, tab.id)) {
+    return;
+  }
   void chrome.tabs.sendMessage(tab.id, message);
 }
 
@@ -178,6 +193,11 @@ for (const [cmd, action] of Object.entries(COMMAND_ACTION_MAP)) {
   hotkeyRegistry.register(cmd, async () => {
     const tab = await findYTMTab(selectedTabId);
     if (!tab?.id) return;
+    if (
+      isActionSuppressedForDevBuildConflict(devBuildSuspendedTabIds, tab.id)
+    ) {
+      return;
+    }
     try {
       await executor.execute(action, tab.id);
     } catch (err) {
@@ -254,6 +274,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 const handler = createMessageHandler();
+
+handler.on("dev-build-liveness-check", async () => {
+  return { ok: true };
+});
 
 handler.on("track-changed", async (message) => {
   if (
@@ -385,6 +409,30 @@ handler.on("get-auto-play-status", async () => {
   const browserAutoplayBlocked =
     tab?.id !== undefined && autoPlayPolicyBlockedTabIds.has(tab.id);
   return { ok: true, data: { browserAutoplayBlocked } };
+});
+
+handler.on("content-runtime-dev-build-suspension", async (message, sender) => {
+  const tabId = sender?.tab?.id;
+  if (tabId === undefined) return { ok: false, error: "No tab ID" };
+
+  if (
+    updateDevBuildSuspendedTab(
+      devBuildSuspendedTabIds,
+      tabId,
+      message.suspended === true,
+    )
+  ) {
+    notifyDevBuildConflictStatusChanged();
+  }
+
+  return { ok: true };
+});
+
+handler.on("get-dev-build-conflict-status", async () => {
+  return {
+    ok: true,
+    data: { duplicateDetected: devBuildSuspendedTabIds.size > 0 },
+  };
 });
 
 handler.on("set-auto-play-policy-blocked", async (message, sender) => {
@@ -733,6 +781,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   if (autoPlayPolicyBlockedTabIds.delete(tabId)) {
     notifyAutoPlayStatusChanged();
   }
+  if (devBuildSuspendedTabIds.delete(tabId)) {
+    notifyDevBuildConflictStatusChanged();
+  }
   notifyYtmTabsChanged();
 });
 
@@ -743,10 +794,14 @@ chrome.tabs.onActivated.addListener(() => {
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (
     (changeInfo.status === "loading" || changeInfo.url !== undefined) &&
-    _tabId !== undefined &&
-    autoPlayPolicyBlockedTabIds.delete(_tabId)
+    _tabId !== undefined
   ) {
-    notifyAutoPlayStatusChanged();
+    if (autoPlayPolicyBlockedTabIds.delete(_tabId)) {
+      notifyAutoPlayStatusChanged();
+    }
+    if (devBuildSuspendedTabIds.delete(_tabId)) {
+      notifyDevBuildConflictStatusChanged();
+    }
   }
 
   if (tab.url?.startsWith("https://music.youtube.com/")) {

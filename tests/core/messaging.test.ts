@@ -156,5 +156,30 @@ describe("messaging", () => {
 
       expect(chrome.runtime.onMessage.removeListener).toHaveBeenCalled();
     });
+
+    it("should tolerate invalidated extension context while stopping", () => {
+      vi.mocked(chrome.runtime.onMessage.removeListener).mockImplementation(
+        () => {
+          throw new Error("Extension context invalidated.");
+        },
+      );
+      const handler = createMessageHandler();
+
+      handler.start();
+
+      expect(() => handler.stop()).not.toThrow();
+    });
+
+    it("should tolerate invalidated extension context while starting", () => {
+      vi.mocked(chrome.runtime.onMessage.addListener).mockImplementation(() => {
+        throw new Error("Extension context invalidated.");
+      });
+      const handler = createMessageHandler();
+
+      expect(() => handler.start()).not.toThrow();
+      handler.stop();
+
+      expect(chrome.runtime.onMessage.removeListener).not.toHaveBeenCalled();
+    });
   });
 });

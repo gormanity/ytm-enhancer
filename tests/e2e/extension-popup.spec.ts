@@ -1,7 +1,9 @@
 import { expect, test } from "playwright/test";
 import { launchExtensionContext } from "./helpers/extension-context";
 
-test("renders the extension popup shell", async (_, testInfo) => {
+// Playwright requires the first callback parameter to be a destructured fixture object.
+// eslint-disable-next-line no-empty-pattern
+test("renders the extension popup shell", async ({}, testInfo) => {
   test.skip(
     testInfo.project.name === "firefox",
     "Firefox extension E2E needs a temporary add-on loading harness.",

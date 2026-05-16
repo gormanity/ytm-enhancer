@@ -1,4 +1,8 @@
 import type { PopupView } from "@/core/types";
+import {
+  addRuntimeMessageListener,
+  removeRuntimeMessageListener,
+} from "@/core/runtime-listener";
 import { renderPopupTemplate } from "@/popup/template";
 import { bindToggle } from "@/popup/bind-toggle";
 import templateHtml from "./popup.html?raw";
@@ -418,7 +422,7 @@ export function createSleepTimerPopupView(): PopupView {
           queryState();
         }
       };
-      chrome.runtime.onMessage.addListener(runtimeMessageListener);
+      addRuntimeMessageListener(runtimeMessageListener);
 
       const updateCountdown = () => {
         if (activeEndAt === null) return;
@@ -540,7 +544,7 @@ export function createSleepTimerPopupView(): PopupView {
       );
 
       return () => {
-        chrome.runtime.onMessage.removeListener(runtimeMessageListener);
+        removeRuntimeMessageListener(runtimeMessageListener);
         if (countdownTimer !== null) {
           clearInterval(countdownTimer);
         }

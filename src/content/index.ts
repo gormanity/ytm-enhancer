@@ -13,6 +13,7 @@ import { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-man
 import { AudioBridgeInjector } from "./audio-bridge-injector";
 import { QualityBridgeInjector } from "./quality-bridge-injector";
 import { AutoPlayController } from "./auto-play";
+import { createDevBuildRuntimeCoordinator } from "./dev-build-coordinator";
 import {
   DislikeObserver,
   shouldAutoSkipDislikedChange,
@@ -53,6 +54,7 @@ let visualizerColorMode: VisualizerColorMode = "white";
 let visualizerActive = false;
 let visualizerStateTimer: ReturnType<typeof setInterval> | null = null;
 const VISUALIZER_STATE_POLL_MS = 1000;
+const DEV_BUILD_SUSPENSION_REPORT_MS = 1000;
 let lastArtworkUrl: string | null = null;
 const artworkColorCache = new Map<
   string,
@@ -371,88 +373,170 @@ handler.on("set-auto-skip-disliked-enabled", async (message) => {
   return { ok: true };
 });
 
-handler.start();
-
-document.addEventListener("visibilitychange", () => {
+function onVisibilityChange(): void {
   applyVisualizerRuntimeState();
-});
+}
 
-// Query initial visualizer state from background
-safeSendMessage<{ ok: boolean; data?: boolean }>(
-  { type: "get-audio-visualizer-enabled" },
-  (response) => {
-    if (response?.ok && response.data === true) {
-      visualizerEnabled = true;
-      void startVisualizer().catch(() => {
-        visualizerEnabled = false;
-      });
+let contentRuntimeStarted = false;
+let dislikeObserver: DislikeObserver | null = null;
+let trackObserver: TrackObserver | null = null;
+let miniPlayerController: MiniPlayerController | null = null;
+let autoPlayController: AutoPlayController | null = null;
+let devBuildSuspensionReportTimer: ReturnType<typeof setInterval> | null = null;
+
+function queryInitialRuntimeState(): void {
+  safeSendMessage<{ ok: boolean; data?: boolean }>(
+    { type: "get-audio-visualizer-enabled" },
+    (response) => {
+      if (!contentRuntimeStarted) return;
+      if (response?.ok && response.data === true) {
+        visualizerEnabled = true;
+        void startVisualizer().catch(() => {
+          visualizerEnabled = false;
+        });
+      }
+    },
+  );
+
+  safeSendMessage<{ ok: boolean; data?: boolean }>(
+    { type: "get-auto-skip-disliked-enabled" },
+    (response) => {
+      if (!contentRuntimeStarted) return;
+      if (response?.ok && response.data === true) {
+        autoSkipDislikedEnabled = true;
+      }
+    },
+  );
+
+  safeSendMessage<{ ok: boolean; data?: string }>(
+    { type: "get-audio-visualizer-style" },
+    (response) => {
+      if (!contentRuntimeStarted) return;
+      if (response?.ok && response.data) {
+        overlayManager.setStyle(response.data as VisualizerStyle);
+      }
+    },
+  );
+
+  safeSendMessage<{ ok: boolean; data?: string }>(
+    { type: "get-audio-visualizer-target" },
+    (response) => {
+      if (!contentRuntimeStarted) return;
+      if (response?.ok && response.data) {
+        overlayManager.setTarget(response.data as VisualizerTarget);
+      }
+    },
+  );
+
+  safeSendMessage<{ ok: boolean; data?: VisualizerStyleTunings }>(
+    { type: "get-audio-visualizer-style-tunings" },
+    (response) => {
+      if (!contentRuntimeStarted) return;
+      if (response?.ok && response.data) {
+        overlayManager.setStyleTunings(response.data);
+      }
+    },
+  );
+
+  safeSendMessage<{ ok: boolean; data?: VisualizerColorMode }>(
+    { type: "get-audio-visualizer-color-mode" },
+    (response) => {
+      if (!contentRuntimeStarted) return;
+      if (response?.ok && response.data) {
+        visualizerColorMode = response.data;
+        void refreshVisualizerColor();
+      }
+    },
+  );
+}
+
+function startContentRuntime(): void {
+  if (contentRuntimeStarted) return;
+  contentRuntimeStarted = true;
+
+  handler.start();
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  queryInitialRuntimeState();
+
+  dislikeObserver = new DislikeObserver((isDisliked, source) => {
+    if (
+      shouldAutoSkipDislikedChange(autoSkipDislikedEnabled, isDisliked, source)
+    ) {
+      adapter.executeAction("next");
     }
-  },
-);
+  });
+  dislikeObserver.start();
 
-safeSendMessage<{ ok: boolean; data?: boolean }>(
-  { type: "get-auto-skip-disliked-enabled" },
-  (response) => {
-    if (response?.ok && response.data === true) {
-      autoSkipDislikedEnabled = true;
-    }
-  },
-);
+  trackObserver = new TrackObserver(
+    () => adapter.getPlaybackState(),
+    () => dislikeObserver?.reobserve(),
+  );
+  trackObserver.start();
 
-safeSendMessage<{ ok: boolean; data?: string }>(
-  { type: "get-audio-visualizer-style" },
-  (response) => {
-    if (response?.ok && response.data) {
-      overlayManager.setStyle(response.data as VisualizerStyle);
-    }
-  },
-);
+  miniPlayerController = new MiniPlayerController(overlayManager);
+  void miniPlayerController.init();
 
-safeSendMessage<{ ok: boolean; data?: string }>(
-  { type: "get-audio-visualizer-target" },
-  (response) => {
-    if (response?.ok && response.data) {
-      overlayManager.setTarget(response.data as VisualizerTarget);
-    }
-  },
-);
+  autoPlayController = new AutoPlayController();
+  autoPlayController.init();
+}
 
-safeSendMessage<{ ok: boolean; data?: VisualizerStyleTunings }>(
-  { type: "get-audio-visualizer-style-tunings" },
-  (response) => {
-    if (response?.ok && response.data) {
-      overlayManager.setStyleTunings(response.data);
-    }
-  },
-);
+function stopContentRuntime(): void {
+  if (!contentRuntimeStarted) return;
+  contentRuntimeStarted = false;
 
-safeSendMessage<{ ok: boolean; data?: VisualizerColorMode }>(
-  { type: "get-audio-visualizer-color-mode" },
-  (response) => {
-    if (response?.ok && response.data) {
-      visualizerColorMode = response.data;
-      void refreshVisualizerColor();
-    }
-  },
-);
+  handler.stop();
+  document.removeEventListener("visibilitychange", onVisibilityChange);
+  stopVisualizer();
+  audioBridge.destroy();
+  qualityBridge.destroy();
 
-const dislikeObserver = new DislikeObserver((isDisliked, source) => {
-  if (
-    shouldAutoSkipDislikedChange(autoSkipDislikedEnabled, isDisliked, source)
-  ) {
-    adapter.executeAction("next");
+  dislikeObserver?.stop();
+  dislikeObserver = null;
+  trackObserver?.stop();
+  trackObserver = null;
+  miniPlayerController?.destroy();
+  miniPlayerController = null;
+  autoPlayController?.destroy();
+  autoPlayController = null;
+
+  autoSkipDislikedEnabled = false;
+}
+
+function reportDevBuildSuspension(suspended: boolean): void {
+  if (__DEV__) return;
+
+  safeSendMessage(
+    { type: "content-runtime-dev-build-suspension", suspended },
+    () => undefined,
+  );
+}
+
+function startDevBuildSuspensionReporting(): void {
+  if (__DEV__) return;
+  if (devBuildSuspensionReportTimer !== null) return;
+
+  reportDevBuildSuspension(true);
+  devBuildSuspensionReportTimer = setInterval(() => {
+    reportDevBuildSuspension(true);
+  }, DEV_BUILD_SUSPENSION_REPORT_MS);
+}
+
+function stopDevBuildSuspensionReporting(): void {
+  if (devBuildSuspensionReportTimer !== null) {
+    clearInterval(devBuildSuspensionReportTimer);
+    devBuildSuspensionReportTimer = null;
   }
-});
-dislikeObserver.start();
+  reportDevBuildSuspension(false);
+}
 
-const trackObserver = new TrackObserver(
-  () => adapter.getPlaybackState(),
-  () => dislikeObserver.reobserve(),
-);
-trackObserver.start();
-
-const miniPlayerController = new MiniPlayerController(overlayManager);
-void miniPlayerController.init();
-
-const autoPlayController = new AutoPlayController();
-autoPlayController.init();
+createDevBuildRuntimeCoordinator({
+  isDevBuild: __DEV__,
+  onResume: () => {
+    stopDevBuildSuspensionReporting();
+    startContentRuntime();
+  },
+  onSuspend: () => {
+    stopContentRuntime();
+    startDevBuildSuspensionReporting();
+  },
+}).start();

@@ -1,4 +1,8 @@
 import type { AutoPlayMode, PopupView } from "@/core/types";
+import {
+  addRuntimeMessageListener,
+  removeRuntimeMessageListener,
+} from "@/core/runtime-listener";
 import { bindSelect } from "@/popup/bind-select";
 import { renderPopupTemplate } from "@/popup/template";
 import templateHtml from "./popup.html?raw";
@@ -75,11 +79,11 @@ export function createAutoPlayPopupView(): PopupView {
           updateBlockedHint();
         }
       };
-      chrome.runtime.onMessage.addListener(runtimeMessageListener);
+      addRuntimeMessageListener(runtimeMessageListener);
 
       return () => {
         modeSelect?.removeEventListener("change", modeChangeListener);
-        chrome.runtime.onMessage.removeListener(runtimeMessageListener);
+        removeRuntimeMessageListener(runtimeMessageListener);
       };
     },
   };

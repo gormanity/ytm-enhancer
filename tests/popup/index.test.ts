@@ -5,6 +5,10 @@ const renderAbout = vi.fn();
 const cleanupOne = vi.fn();
 const renderTwo = vi.fn();
 const extensionStorage: Record<string, unknown> = {};
+type RuntimeSendMessageMock = (
+  message: unknown,
+  callback?: (response: unknown) => void,
+) => void;
 
 vi.mock("@/modules/popup-views", () => ({
   getAllPopupViews: () => [
@@ -36,6 +40,9 @@ vi.mock("@/modules/popup-views", () => ({
 describe("popup index", () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.doMock("@/core/build-info", () => ({
+      isDevBuild: () => true,
+    }));
     renderOne.mockReset();
     renderAbout.mockReset();
     cleanupOne.mockReset();
@@ -44,6 +51,13 @@ describe("popup index", () => {
       delete extensionStorage[key];
     }
     vi.stubGlobal("chrome", {
+      runtime: {
+        lastError: undefined,
+        onMessage: {
+          addListener: vi.fn(),
+        },
+        sendMessage: vi.fn(),
+      },
       storage: {
         local: {
           get: vi.fn((keys: string[], callback) => {
@@ -74,6 +88,7 @@ describe("popup index", () => {
     });
     document.body.innerHTML = `
       <h1 data-role="app-title">YTM Enhancer</h1>
+      <div id="dev-build-conflict-banner" class="is-hidden"></div>
       <div id="view-container"></div>
       <nav id="nav-list"></nav>
       <template id="nav-item-template">
@@ -104,6 +119,27 @@ describe("popup index", () => {
     const badge = title?.querySelector<HTMLElement>(".dev-build-badge");
 
     expect(badge?.textContent).toBe("DEV");
+  });
+
+  it("shows a duplicate install banner in production when the runtime is suspended", async () => {
+    vi.doMock("@/core/build-info", () => ({
+      isDevBuild: () => false,
+    }));
+    (
+      chrome.runtime.sendMessage as unknown as {
+        mockImplementation: (implementation: RuntimeSendMessageMock) => void;
+      }
+    ).mockImplementation((_message, callback) => {
+      callback?.({
+        ok: true,
+        data: { duplicateDetected: true },
+      });
+    });
+
+    await import("../../src/popup/index");
+
+    const banner = document.getElementById("dev-build-conflict-banner");
+    expect(banner?.classList.contains("is-hidden")).toBe(false);
   });
 
   it("shows a notification indicator on About before the review prompt is accessed", async () => {

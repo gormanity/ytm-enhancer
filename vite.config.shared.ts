@@ -19,12 +19,18 @@ async function generateIcons(browser: string, outDir: string): Promise<void> {
     ...(STORE_ICON_SIZES[browser] ?? []),
   ];
   await Promise.all(
-    iconSizes.map((size) =>
+    iconSizes.flatMap((size) => [
       sharp(svgBuffer)
         .resize(size, size)
         .png()
         .toFile(resolve(outDir, `icon${size}.png`)),
-    ),
+      sharp(svgBuffer)
+        .resize(size, size)
+        .grayscale()
+        .modulate({ brightness: 0.72 })
+        .png()
+        .toFile(resolve(outDir, `icon${size}-disabled.png`)),
+    ]),
   );
 }
 

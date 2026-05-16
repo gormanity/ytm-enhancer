@@ -1,6 +1,10 @@
 import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
 import { debug } from "@/core/logger";
+import {
+  addRuntimeMessageListener,
+  removeRuntimeMessageListener,
+} from "@/core/runtime-listener";
 import type { AutoPlayMode } from "@/core/types";
 
 const TIMEOUT_MS = 10_000;
@@ -63,7 +67,7 @@ export class AutoPlayController {
 
   init(): void {
     this.initializedExistingPage = this.markPageInitialized();
-    chrome.runtime.onMessage.addListener(this.messageListener);
+    addRuntimeMessageListener(this.messageListener);
 
     try {
       chrome.runtime.sendMessage(
@@ -92,7 +96,7 @@ export class AutoPlayController {
   }
 
   destroy(): void {
-    chrome.runtime.onMessage.removeListener(this.messageListener);
+    removeRuntimeMessageListener(this.messageListener);
     this.observer?.disconnect();
     this.observer = null;
     this.clearCanplayListener();
