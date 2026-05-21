@@ -5,6 +5,7 @@ import {
   CHROMIUM_LOCAL_DEV_KEY,
   CHROMIUM_LOCAL_PROD_EXTENSION_ID,
   CHROMIUM_LOCAL_PROD_KEY,
+  CHROMIUM_STORE_PROD_EXTENSION_ID,
 } from "@/runtime-messages";
 import { applyChromiumCoexistenceManifestFields } from "@/manifest-coexistence";
 
@@ -48,7 +49,10 @@ describe("Chromium coexistence manifest fields", () => {
     expect(devManifest).toMatchObject({
       key: CHROMIUM_LOCAL_DEV_KEY,
       externally_connectable: {
-        ids: [CHROMIUM_LOCAL_PROD_EXTENSION_ID],
+        ids: [
+          CHROMIUM_LOCAL_PROD_EXTENSION_ID,
+          CHROMIUM_STORE_PROD_EXTENSION_ID,
+        ],
       },
     });
   });

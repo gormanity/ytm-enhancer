@@ -3,6 +3,7 @@ import { createDevBuildPresenceCoordinator } from "@/background/dev-build-presen
 import {
   CHROMIUM_LOCAL_DEV_EXTENSION_ID,
   CHROMIUM_LOCAL_PROD_EXTENSION_ID,
+  CHROMIUM_STORE_PROD_EXTENSION_ID,
   DEV_BUILD_PRESENCE_MESSAGE,
   DEV_BUILD_PRESENCE_REQUEST_MESSAGE,
 } from "@/runtime-messages";
@@ -74,10 +75,15 @@ describe("dev build cross-extension presence coordinator", () => {
       { type: DEV_BUILD_PRESENCE_MESSAGE },
       expect.any(Function),
     );
+    expect(runtime.sendMessage).toHaveBeenCalledWith(
+      CHROMIUM_STORE_PROD_EXTENSION_ID,
+      { type: DEV_BUILD_PRESENCE_MESSAGE },
+      expect.any(Function),
+    );
 
     vi.advanceTimersByTime(100);
 
-    expect(runtime.sendMessage).toHaveBeenCalledTimes(2);
+    expect(runtime.sendMessage).toHaveBeenCalledTimes(4);
   });
 
   it("prod accepts presence only from the known local dev ID", () => {
@@ -154,6 +160,12 @@ describe("dev build cross-extension presence coordinator", () => {
       dispatchExternal(
         { type: DEV_BUILD_PRESENCE_REQUEST_MESSAGE },
         { id: CHROMIUM_LOCAL_PROD_EXTENSION_ID },
+      ),
+    ).toEqual({ ok: true });
+    expect(
+      dispatchExternal(
+        { type: DEV_BUILD_PRESENCE_REQUEST_MESSAGE },
+        { id: CHROMIUM_STORE_PROD_EXTENSION_ID },
       ),
     ).toEqual({ ok: true });
   });
