@@ -33,6 +33,20 @@ describe("mini player popup view", () => {
     expect(heading?.textContent).toBe("Mini Player");
   });
 
+  it("should render the resize tip", () => {
+    const view = createMiniPlayerPopupView();
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const tip = container.querySelector<HTMLElement>(
+      '[data-role="mini-player-resize-tip"]',
+    );
+    expect(tip?.textContent).toContain(
+      "Resize the PiP window to show just the track details and controls you want.",
+    );
+  });
+
   it("should render a toggle switch checked when enabled", async () => {
     sendMessageMock.mockImplementation(
       (message: unknown, callback?: (response: unknown) => void) => {
