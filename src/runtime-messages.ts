@@ -13,9 +13,11 @@ export const CHROMIUM_LOCAL_PROD_EXTENSION_ID =
   "pggblbpjleekkobiinobaeeefnimgljh";
 export const CHROMIUM_LOCAL_DEV_EXTENSION_ID =
   "akkbieodbakphpfdibailajdknnmmoca";
-export const CHROMIUM_STORE_PROD_EXTENSION_ID = null;
+export const CHROMIUM_STORE_PROD_EXTENSION_ID =
+  "bilcedjabgiedoamakekncokccabdccp";
 export const CHROMIUM_PROD_EXTENSION_IDS = [
   CHROMIUM_LOCAL_PROD_EXTENSION_ID,
+  CHROMIUM_STORE_PROD_EXTENSION_ID,
 ] as const;
 
 export interface DevBuildPresenceMessage {

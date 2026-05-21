@@ -135,8 +135,8 @@ Dev/prod coexistence uses hybrid arbitration:
   known dev ID and probes dev before answering popup status requests.
 - Chromium local prod uses ID `pggblbpjleekkobiinobaeeefnimgljh` from the local
   prod manifest key. Chromium local dev uses ID
-  `akkbieodbakphpfdibailajdknnmmoca` from a different manifest key. No store
-  prod ID is configured yet.
+  `akkbieodbakphpfdibailajdknnmmoca` from a different manifest key. Chrome Web
+  Store prod uses ID `bilcedjabgiedoamakekncokccabdccp`.
 - `externally_connectable` is explicit. Local prod accepts only local dev. Local
   dev accepts only the known prod IDs.
 - When prod suspends on a target page, teardown removes extension-owned runtime
