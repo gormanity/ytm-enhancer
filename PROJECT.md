@@ -121,6 +121,39 @@ Responsibilities:
 Popup views are now a mix of event-driven updates and targeted polling where a
 live clock-like update is still necessary (for example, countdown display).
 
+## Dev/Prod Coexistence Details
+
+Dev/prod coexistence uses hybrid arbitration:
+
+- The page-local runtime guard still protects the `music.youtube.com` content
+  runtime. The dev build posts a `window.postMessage` heartbeat immediately and
+  every `1000ms`; prod waits `500ms` before active startup, suspends when a dev
+  heartbeat is fresh, and resumes after `3500ms` of heartbeat staleness.
+- The background service worker adds cross-extension presence so prod can show
+  disabled state even when no YouTube Music tab is open. Dev pings known prod
+  IDs with `chrome.runtime.sendMessage`; prod accepts presence only from the
+  known dev ID and probes dev before answering popup status requests.
+- Chromium local prod uses ID `pggblbpjleekkobiinobaeeefnimgljh` from the local
+  prod manifest key. Chromium local dev uses ID
+  `akkbieodbakphpfdibailajdknnmmoca` from a different manifest key. No store
+  prod ID is configured yet.
+- `externally_connectable` is explicit. Local prod accepts only local dev. Local
+  dev accepts only the known prod IDs.
+- When prod suspends on a target page, teardown removes extension-owned runtime
+  listeners, page event listeners, observers, timers, injected visualizer UI,
+  audio/quality page bridges, mini-player controls, and auto-play state.
+- For local coexistence testing, load prod from `dist/chrome` and dev from
+  `dist-dev/chrome`.
+
+Known risks:
+
+- There is a stale timeout window of up to `3500ms` after dev disappears before
+  prod re-enables itself.
+- Loading the same folder twice gives Chrome the same extension ID and bypasses
+  the intended coexistence model.
+- Store prod arbitration is not active until a Chrome Web Store extension ID is
+  configured.
+
 ## Core Abstractions
 
 Shared primitives live in `src/core` and are reused across modules:

@@ -2,6 +2,7 @@ import { resolve, dirname } from "path";
 import { readFileSync, copyFileSync, writeFileSync } from "fs";
 import sharp from "sharp";
 import { build, Plugin, InlineConfig } from "vite";
+import { applyChromiumCoexistenceManifestFields } from "./src/manifest-coexistence";
 
 const pkg = JSON.parse(
   readFileSync(resolve(__dirname, "package.json"), "utf-8"),
@@ -67,6 +68,7 @@ function copyAssets(browser: string, isDev: boolean): Plugin {
       if (isDev) {
         manifest.name += " (dev)";
       }
+      applyChromiumCoexistenceManifestFields(manifest, browser, isDev);
       writeFileSync(
         resolve(outDir, "manifest.json"),
         JSON.stringify(manifest, null, 2) + "\n",

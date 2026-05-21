@@ -6,15 +6,17 @@ import {
   type Page,
   type TestInfo,
 } from "playwright/test";
+import { CHROMIUM_LOCAL_DEV_EXTENSION_ID } from "../../../src/runtime-messages";
 import { browserTargetFromProjectName } from "./content-script-harness";
 
 export interface ExtensionTestContext {
   context: BrowserContext;
   extensionId: string;
+  extensionIds: string[];
   popup: Page;
 }
 
-function extensionPathForProject(projectName: string): string {
+function devExtensionPathForProject(projectName: string): string {
   return resolve(
     process.cwd(),
     "dist-dev",
@@ -29,25 +31,37 @@ function browserChannelForProject(projectName: string): string | undefined {
 
 export async function launchExtensionContext(
   testInfo: TestInfo,
+  mode: "dev" | "prod-and-dev" = "dev",
 ): Promise<ExtensionTestContext> {
-  const extensionPath = extensionPathForProject(testInfo.project.name);
+  const devExtensionPath = devExtensionPathForProject(testInfo.project.name);
+  const extensionPaths =
+    mode === "prod-and-dev"
+      ? [resolve(process.cwd(), "dist", "chrome"), devExtensionPath]
+      : [devExtensionPath];
   const userDataDir = testInfo.outputPath("extension-user-data");
   await mkdir(userDataDir, { recursive: true });
 
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: browserChannelForProject(testInfo.project.name),
     args: [
-      `--disable-extensions-except=${extensionPath}`,
-      `--load-extension=${extensionPath}`,
+      `--disable-extensions-except=${extensionPaths.join(",")}`,
+      `--load-extension=${extensionPaths.join(",")}`,
     ],
   });
 
-  const serviceWorker =
-    context.serviceWorkers()[0] ??
-    (await context.waitForEvent("serviceworker"));
-  const extensionId = new URL(serviceWorker.url()).host;
+  while (context.serviceWorkers().length < extensionPaths.length) {
+    await context.waitForEvent("serviceworker");
+  }
+  const extensionIds = context
+    .serviceWorkers()
+    .map((worker) => new URL(worker.url()).host);
+  const extensionId =
+    mode === "prod-and-dev"
+      ? extensionIds.find((id) => id !== CHROMIUM_LOCAL_DEV_EXTENSION_ID) ||
+        extensionIds[0]
+      : extensionIds[0];
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
 
-  return { context, extensionId, popup };
+  return { context, extensionId, extensionIds, popup };
 }

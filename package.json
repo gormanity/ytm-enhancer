@@ -26,8 +26,8 @@
     "lint:addons:firefox:zip": "pnpm run package && pnpm run lint:addons:firefox:zip:built",
     "lint:addons:firefox:zip:built": "addons-linter releases/ytm-enhancer-$npm_package_version-firefox.zip",
     "test": "vitest run",
-    "test:e2e": "pnpm run dev:build:wc && playwright test tests/e2e",
-    "test:e2e:chrome": "pnpm run dev:build:chrome && playwright test tests/e2e --project=chromium",
+    "test:e2e": "pnpm run build:chrome && pnpm run dev:build:wc && playwright test tests/e2e",
+    "test:e2e:chrome": "pnpm run build:chrome && pnpm run dev:build:chrome && playwright test tests/e2e --project=chromium",
     "test:e2e:edge": "pnpm run dev:build:edge && playwright test tests/e2e --project=edge",
     "test:e2e:firefox": "pnpm run dev:build:firefox && playwright test tests/e2e --project=firefox",
     "test:watch": "vitest",
@@ -37,7 +37,7 @@
     "data-role:check": "node scripts/check-data-role-uniqueness.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run css:dead && pnpm run data-role:check && pnpm run typecheck && pnpm run test && pnpm run lint:addons:firefox",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run css:dead && pnpm run data-role:check && pnpm run typecheck && pnpm run test && pnpm run test:e2e && pnpm run lint:addons:firefox",
     "validate": "pnpm run format && pnpm run check && pnpm run build && pnpm run lint:addons:firefox:dist"
   },
   "devDependencies": {

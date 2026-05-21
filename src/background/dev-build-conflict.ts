@@ -2,6 +2,17 @@ const ACTION_ICON_SIZES = [16, 48, 128] as const;
 
 type ActionIconPath = Record<(typeof ACTION_ICON_SIZES)[number], string>;
 
+export interface DevBuildConflictState {
+  suspendedTabIds: Set<number>;
+  externalDevBuildPresent: boolean;
+}
+
+export function isDevBuildConflictActive(
+  state: DevBuildConflictState,
+): boolean {
+  return state.externalDevBuildPresent || state.suspendedTabIds.size > 0;
+}
+
 export function getActionIconPath(disabled: boolean): ActionIconPath {
   return Object.fromEntries(
     ACTION_ICON_SIZES.map((size) => [
@@ -28,10 +39,13 @@ export function updateDevBuildSuspendedTab(
 }
 
 export function isActionSuppressedForDevBuildConflict(
-  suspendedTabIds: Set<number>,
+  state: DevBuildConflictState,
   tabId: number | undefined,
 ): boolean {
-  return tabId !== undefined && suspendedTabIds.has(tabId);
+  return (
+    state.externalDevBuildPresent ||
+    (tabId !== undefined && state.suspendedTabIds.has(tabId))
+  );
 }
 
 export function setActionDevBuildConflictIndicator(

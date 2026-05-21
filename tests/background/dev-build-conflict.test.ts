@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   getActionIconPath,
   isActionSuppressedForDevBuildConflict,
+  isDevBuildConflictActive,
   setActionDevBuildConflictIndicator,
   updateDevBuildSuspendedTab,
 } from "@/background/dev-build-conflict";
@@ -21,16 +22,22 @@ describe("dev build conflict background helpers", () => {
 
   it("suppresses actions only for suspended tabs", () => {
     const suspendedTabIds = new Set([12]);
+    const state = { suspendedTabIds, externalDevBuildPresent: false };
 
-    expect(isActionSuppressedForDevBuildConflict(suspendedTabIds, 12)).toBe(
-      true,
-    );
-    expect(isActionSuppressedForDevBuildConflict(suspendedTabIds, 13)).toBe(
-      false,
-    );
-    expect(
-      isActionSuppressedForDevBuildConflict(suspendedTabIds, undefined),
-    ).toBe(false);
+    expect(isActionSuppressedForDevBuildConflict(state, 12)).toBe(true);
+    expect(isActionSuppressedForDevBuildConflict(state, 13)).toBe(false);
+    expect(isActionSuppressedForDevBuildConflict(state, undefined)).toBe(false);
+  });
+
+  it("suppresses all actions while external dev build presence is fresh", () => {
+    const state = {
+      suspendedTabIds: new Set<number>(),
+      externalDevBuildPresent: true,
+    };
+
+    expect(isDevBuildConflictActive(state)).toBe(true);
+    expect(isActionSuppressedForDevBuildConflict(state, undefined)).toBe(true);
+    expect(isActionSuppressedForDevBuildConflict(state, 13)).toBe(true);
   });
 
   it("returns normal and disabled action icon paths", () => {

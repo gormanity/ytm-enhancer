@@ -5,12 +5,12 @@ import {
   createMessageSender,
   HotkeyRegistry,
   initializeModules,
-  relayToYTMTab,
   findYTMTab,
   type FeatureModule,
   type AutoPlayMode,
   type PlaybackAction,
 } from "@/core";
+import { DEV_BUILD_STALE_MS } from "@/runtime-messages";
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import type { PlaybackState } from "@/core/types";
@@ -18,10 +18,13 @@ import { error } from "@/core/logger";
 
 import { parseSelectedTabId, resolveSelectedTabId } from "./selected-tab";
 import {
+  isDevBuildConflictActive,
   isActionSuppressedForDevBuildConflict,
   setActionDevBuildConflictIndicator,
   updateDevBuildSuspendedTab,
+  type DevBuildConflictState,
 } from "./dev-build-conflict";
+import { createDevBuildPresenceCoordinator } from "./dev-build-presence";
 import { AutoPlayModule } from "@/modules/auto-play";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
@@ -55,12 +58,17 @@ let selectedTabId: number | null = null;
 const pipOpenTabIds = new Set<number>();
 const autoPlayPolicyBlockedTabIds = new Set<number>();
 const devBuildSuspendedTabIds = new Set<number>();
+const devBuildConflictState: DevBuildConflictState = {
+  suspendedTabIds: devBuildSuspendedTabIds,
+  externalDevBuildPresent: false,
+};
 const SLEEP_TIMER_ALARM = "sleep-timer";
 const TAB_ARTWORK_QUERY_TIMEOUT_MS = 150;
 let sleepTimerEndAt: number | null = null;
 let sleepTimerLastPausedAt: number | null = null;
 let sleepTimerNotifyOnEnd = true;
 let sleepTimerMode: "duration" | "absolute" = "duration";
+let externalDevBuildStaleTimer: ReturnType<typeof setTimeout> | null = null;
 type PopupRuntimeMessage =
   | { type: "ytm-tabs-changed" }
   | { type: "sleep-timer-state-changed" }
@@ -87,8 +95,46 @@ function notifyAutoPlayStatusChanged(): void {
 
 function notifyDevBuildConflictStatusChanged(): void {
   broadcastPopupMessage({ type: "dev-build-conflict-status-changed" });
-  setActionDevBuildConflictIndicator(devBuildSuspendedTabIds.size > 0, __DEV__);
+  setActionDevBuildConflictIndicator(
+    isDevBuildConflictActive(devBuildConflictState),
+    __DEV__,
+  );
 }
+
+function updateDevBuildConflictState(
+  update: () => void,
+  forceNotify = false,
+): void {
+  const wasDuplicateDisabled = isDevBuildConflictActive(devBuildConflictState);
+  update();
+  const isDuplicateDisabled = isDevBuildConflictActive(devBuildConflictState);
+  if (forceNotify || isDuplicateDisabled !== wasDuplicateDisabled) {
+    notifyDevBuildConflictStatusChanged();
+  }
+}
+
+function setExternalDevBuildPresent(present: boolean): void {
+  updateDevBuildConflictState(() => {
+    devBuildConflictState.externalDevBuildPresent = present;
+  });
+}
+
+function markExternalDevBuildPresent(): void {
+  setExternalDevBuildPresent(true);
+  if (externalDevBuildStaleTimer !== null) {
+    clearTimeout(externalDevBuildStaleTimer);
+  }
+  externalDevBuildStaleTimer = setTimeout(() => {
+    externalDevBuildStaleTimer = null;
+    setExternalDevBuildPresent(false);
+  }, DEV_BUILD_STALE_MS);
+}
+
+const devBuildPresenceCoordinator = createDevBuildPresenceCoordinator({
+  isDevBuild: __DEV__,
+  runtime: chrome.runtime,
+  onDevPresent: markExternalDevBuildPresent,
+});
 
 function isAutoPlayMode(value: unknown): value is AutoPlayMode {
   return value === "default" || value === "off" || value === "on";
@@ -101,10 +147,23 @@ function normalizeAutoPlayMode(value: unknown): AutoPlayMode {
 async function relayToSelectedTab(message: unknown): Promise<void> {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return;
-  if (isActionSuppressedForDevBuildConflict(devBuildSuspendedTabIds, tab.id)) {
+  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
     return;
   }
   void chrome.tabs.sendMessage(tab.id, message);
+}
+
+async function relayToAnyYTMTab(message: unknown): Promise<void> {
+  const tab = await findYTMTab();
+  if (tab?.id === undefined) return;
+  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
+    return;
+  }
+  void chrome.tabs.sendMessage(tab.id, message);
+}
+
+function isYTMTabSuppressed(tabId: number | undefined): boolean {
+  return isActionSuppressedForDevBuildConflict(devBuildConflictState, tabId);
 }
 
 async function hasContentScript(tabId: number): Promise<boolean> {
@@ -193,9 +252,7 @@ for (const [cmd, action] of Object.entries(COMMAND_ACTION_MAP)) {
   hotkeyRegistry.register(cmd, async () => {
     const tab = await findYTMTab(selectedTabId);
     if (!tab?.id) return;
-    if (
-      isActionSuppressedForDevBuildConflict(devBuildSuspendedTabIds, tab.id)
-    ) {
+    if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
       return;
     }
     try {
@@ -209,6 +266,9 @@ for (const [cmd, action] of Object.entries(COMMAND_ACTION_MAP)) {
 hotkeyRegistry.register("focus-ytm-tab", async () => {
   const tab = await findYTMTab(selectedTabId);
   if (!tab?.id) return;
+  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
+    return;
+  }
   await chrome.tabs.update(tab.id, { active: true });
   if (tab.windowId != null) {
     await chrome.windows.update(tab.windowId, { focused: true });
@@ -218,6 +278,9 @@ hotkeyRegistry.register("focus-ytm-tab", async () => {
 hotkeyRegistry.register("remind-me", async () => {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return;
+  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
+    return;
+  }
   try {
     const response = (await chrome.tabs.sendMessage(tab.id, {
       type: "get-playback-state",
@@ -279,7 +342,10 @@ handler.on("dev-build-liveness-check", async () => {
   return { ok: true };
 });
 
-handler.on("track-changed", async (message) => {
+handler.on("track-changed", async (message, sender) => {
+  if (isYTMTabSuppressed(sender?.tab?.id)) {
+    return { ok: true };
+  }
   if (
     miniPlayer.isSuppressNotificationsWhilePipOpenEnabled() &&
     pipOpenTabIds.size > 0
@@ -335,6 +401,9 @@ handler.on("get-ytm-tab-artwork", async (message) => {
   const tabId =
     typeof message.tabId === "number" ? (message.tabId as number) : null;
   if (tabId === null) return { ok: false, error: "Invalid tab ID" };
+  if (isYTMTabSuppressed(tabId)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
   const artworkUrl = await queryTabArtworkWithTimeout(tabId);
   return { ok: true, data: { artworkUrl } };
 });
@@ -353,6 +422,9 @@ handler.on("focus-ytm-tab", async (message) => {
     typeof message.tabId === "number" ? (message.tabId as number) : null;
   const tab = await findYTMTab(requestedTabId ?? selectedTabId);
   if (!tab?.id) return { ok: false, error: "No YTM tab" };
+  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
 
   await chrome.tabs.update(tab.id, { active: true });
   if (tab.windowId != null) {
@@ -415,23 +487,24 @@ handler.on("content-runtime-dev-build-suspension", async (message, sender) => {
   const tabId = sender?.tab?.id;
   if (tabId === undefined) return { ok: false, error: "No tab ID" };
 
-  if (
+  updateDevBuildConflictState(() => {
     updateDevBuildSuspendedTab(
       devBuildSuspendedTabIds,
       tabId,
       message.suspended === true,
-    )
-  ) {
-    notifyDevBuildConflictStatusChanged();
-  }
+    );
+  });
 
   return { ok: true };
 });
 
 handler.on("get-dev-build-conflict-status", async () => {
+  await devBuildPresenceCoordinator.probeDevPresence();
   return {
     ok: true,
-    data: { duplicateDetected: devBuildSuspendedTabIds.size > 0 },
+    data: {
+      duplicateDetected: isDevBuildConflictActive(devBuildConflictState),
+    },
   };
 });
 
@@ -463,7 +536,7 @@ handler.on("set-auto-play-enabled", async (message) => {
   }
   await saveModuleStateValue("auto-play.mode", mode);
   await saveModuleStateValue("auto-play.enabled", message.enabled);
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-auto-play-mode",
     mode,
   }).catch(() => {
@@ -480,7 +553,7 @@ handler.on("set-auto-play-mode", async (message) => {
     notifyAutoPlayStatusChanged();
   }
   await saveModuleStateValue("auto-play.mode", mode);
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-auto-play-mode",
     mode,
   }).catch(() => {
@@ -496,7 +569,7 @@ handler.on("get-auto-skip-disliked-enabled", async () => {
 handler.on("set-auto-skip-disliked-enabled", async (message) => {
   autoSkipDisliked.setEnabled(message.enabled as boolean);
   void saveModuleStateValue("auto-skip-disliked.enabled", message.enabled);
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-auto-skip-disliked-enabled",
     enabled: message.enabled,
   });
@@ -543,6 +616,9 @@ handler.on("pip-open-state", async (message, sender) => {
 handler.on("inject-audio-bridge", async (_message, sender) => {
   const tabId = sender?.tab?.id;
   if (tabId === undefined) return { ok: false, error: "No tab ID" };
+  if (isYTMTabSuppressed(tabId)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
   await chrome.scripting.executeScript({
     target: { tabId },
     files: ["audio-bridge.js"],
@@ -554,6 +630,9 @@ handler.on("inject-audio-bridge", async (_message, sender) => {
 handler.on("inject-quality-bridge", async (_message, sender) => {
   const tabId = sender?.tab?.id;
   if (tabId === undefined) return { ok: false, error: "No tab ID" };
+  if (isYTMTabSuppressed(tabId)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
   await chrome.scripting.executeScript({
     target: { tabId },
     files: ["quality-bridge.js"],
@@ -565,6 +644,9 @@ handler.on("inject-quality-bridge", async (_message, sender) => {
 handler.on("get-stream-quality", async () => {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
+  if (isYTMTabSuppressed(tab.id)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
   const response = await (
     chrome.tabs.sendMessage as (
       tabId: number,
@@ -585,6 +667,9 @@ handler.on("set-stream-quality", async (message) => {
 handler.on("get-playback-speed", async () => {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
+  if (isYTMTabSuppressed(tab.id)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
   const response = await (
     chrome.tabs.sendMessage as (
       tabId: number,
@@ -605,6 +690,9 @@ handler.on("set-playback-speed", async (message) => {
 handler.on("get-volume", async () => {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
+  if (isYTMTabSuppressed(tab.id)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
   const response = await (
     chrome.tabs.sendMessage as (
       tabId: number,
@@ -629,7 +717,7 @@ handler.on("get-audio-visualizer-enabled", async () => {
 handler.on("set-audio-visualizer-enabled", async (message) => {
   audioVisualizer.setEnabled(message.enabled as boolean);
   void saveModuleStateValue("audio-visualizer.enabled", message.enabled);
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-audio-visualizer-enabled",
     enabled: message.enabled,
   });
@@ -643,11 +731,11 @@ handler.on("get-audio-visualizer-style", async () => {
 handler.on("set-audio-visualizer-style", async (message) => {
   audioVisualizer.setStyle(message.style as VisualizerStyle);
   void saveModuleStateValue("audio-visualizer.style", message.style);
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-audio-visualizer-style",
     style: message.style,
   });
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-audio-visualizer-color-mode",
     mode: audioVisualizer.getColorMode(),
   });
@@ -661,7 +749,7 @@ handler.on("get-audio-visualizer-target", async () => {
 handler.on("set-audio-visualizer-target", async (message) => {
   audioVisualizer.setTarget(message.target as VisualizerTarget);
   void saveModuleStateValue("audio-visualizer.target", message.target);
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-audio-visualizer-target",
     target: message.target,
   });
@@ -679,7 +767,7 @@ handler.on("set-audio-visualizer-style-tuning", async (message) => {
   );
   const tunings = audioVisualizer.getStyleTunings();
   void saveModuleStateValue("audio-visualizer.styleTunings", tunings);
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-audio-visualizer-style-tunings",
     tunings,
   });
@@ -696,7 +784,7 @@ handler.on("set-audio-visualizer-color-mode", async (message) => {
     "audio-visualizer.styleTunings",
     audioVisualizer.getStyleTunings(),
   );
-  void relayToYTMTab({
+  void relayToAnyYTMTab({
     type: "set-audio-visualizer-color-mode",
     mode: message.mode,
   });
@@ -706,6 +794,9 @@ handler.on("set-audio-visualizer-color-mode", async (message) => {
 handler.on("get-playback-state", async () => {
   const tab = await findYTMTab(selectedTabId);
   if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
+  if (isYTMTabSuppressed(tab.id)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
   const response = await (
     chrome.tabs.sendMessage as (
       tabId: number,
@@ -774,6 +865,9 @@ handler.on("playback-action", async (message) => {
 });
 
 handler.start();
+devBuildPresenceCoordinator.registerExternalListener();
+devBuildPresenceCoordinator.startDevHeartbeat();
+void devBuildPresenceCoordinator.probeDevPresence();
 void ensureYtmContentScripts();
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -781,9 +875,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   if (autoPlayPolicyBlockedTabIds.delete(tabId)) {
     notifyAutoPlayStatusChanged();
   }
-  if (devBuildSuspendedTabIds.delete(tabId)) {
-    notifyDevBuildConflictStatusChanged();
-  }
+  updateDevBuildConflictState(() => {
+    devBuildSuspendedTabIds.delete(tabId);
+  });
   notifyYtmTabsChanged();
 });
 
@@ -799,9 +893,9 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (autoPlayPolicyBlockedTabIds.delete(_tabId)) {
       notifyAutoPlayStatusChanged();
     }
-    if (devBuildSuspendedTabIds.delete(_tabId)) {
-      notifyDevBuildConflictStatusChanged();
-    }
+    updateDevBuildConflictState(() => {
+      devBuildSuspendedTabIds.delete(_tabId);
+    });
   }
 
   if (tab.url?.startsWith("https://music.youtube.com/")) {
@@ -943,6 +1037,7 @@ async function broadcastVisualizerSettings(): Promise<void> {
   ];
   for (const tab of tabs) {
     if (tab.id === undefined) continue;
+    if (isYTMTabSuppressed(tab.id)) continue;
     for (const message of messages) {
       void chrome.tabs.sendMessage(tab.id, message).catch(() => {
         // Tab may not have a content script yet; that's fine.
