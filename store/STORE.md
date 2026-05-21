@@ -89,6 +89,62 @@ the browser listening experience.
 - picture in picture
 - streaming
 
+### Privacy Section
+
+#### Single Purpose Description
+
+YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` with
+optional playback controls, automation, notifications, keyboard shortcuts, and
+Picture-in-Picture interface improvements.
+
+#### Permission Justification
+
+##### `activeTab`
+
+Used to identify and interact with the active YouTube Music tab when the user
+opens the extension popup or triggers a command.
+
+##### `alarms`
+
+Used by the Sleep Timer feature to stop playback after a user-selected duration
+or clock time.
+
+##### `notifications`
+
+Used to show optional desktop notifications for track changes, playback resume
+reminders, and the "remind me" shortcut.
+
+##### `scripting`
+
+Used to inject extension scripts into YouTube Music tabs so user-enabled
+features can control playback and read current playback state.
+
+##### `storage`
+
+Used to save user preferences, module settings, shortcut configuration, and
+feature state locally in the browser.
+
+#### Host Permission Justification
+
+`https://music.youtube.com/*` is required because the extension only operates on
+the YouTube Music web app. It reads playback state and applies user-enabled
+controls and UI enhancements on that site.
+
+`https://lh3.googleusercontent.com/*` is required to display YouTube Music album
+artwork served from Google's image host in extension UI surfaces such as the
+popup and Mini Player.
+
+#### Remote Code
+
+No.
+
+#### Remote Code Justification
+
+YTM Enhancer does not load or execute remote code. All executable JavaScript,
+CSS, HTML, and extension assets are packaged with the extension. The extension
+may display media metadata or artwork from YouTube Music/Google image URLs, but
+those resources are not executed as code.
+
 ---
 
 ## Firefox Add-ons
@@ -172,6 +228,7 @@ Use this checklist when publishing a new version.
 - verify homepage, support, and privacy links
 - verify Chrome single purpose statement still matches functionality
 - verify Edge search terms are still appropriate
+- verify Edge privacy section permission justifications still match the manifest
 - verify Firefox categories and reviewer notes are still accurate
 - prepare Firefox source code URL and source archive for the exact tag
 - confirm release artifact names match the current build output
