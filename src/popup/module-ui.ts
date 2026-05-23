@@ -10,8 +10,7 @@ export interface ModuleControlBinding<TValue> {
   transformValue?: (value: TValue) => unknown;
 }
 
-export interface ModuleRangeBinding
-  extends ModuleControlBinding<number> {
+export interface ModuleRangeBinding extends ModuleControlBinding<number> {
   label: string;
   min?: number;
   max?: number;
@@ -19,8 +18,7 @@ export interface ModuleRangeBinding
   onLoaded?: (range: HTMLInputElement) => void;
 }
 
-export interface ModuleSelectBinding
-  extends ModuleControlBinding<string> {
+export interface ModuleSelectBinding extends ModuleControlBinding<string> {
   onLoaded?: (select: HTMLSelectElement) => void;
 }
 

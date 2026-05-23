@@ -27,5 +27,6 @@ export type {
   AutoPlayMode,
   PlaybackState,
   PlaybackAction,
+  ModuleContext,
   PopupView,
 } from "./types";

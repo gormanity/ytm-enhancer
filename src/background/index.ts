@@ -40,7 +40,6 @@ import type { NotificationFields } from "@/modules/notifications";
 import { PlaybackControlsModule } from "@/modules/playback-controls";
 import { SleepTimerModule } from "@/modules/sleep-timer";
 
-const context = createExtensionContext();
 const hotkeyRegistry = new HotkeyRegistry();
 const autoPlay = new AutoPlayModule();
 const autoSkipDisliked = new AutoSkipDislikedModule();
@@ -92,6 +91,7 @@ const ytm = createYtmRuntimeClient({
   onTabsChanged: notifyYtmTabsChanged,
   tabArtworkQueryTimeoutMs: TAB_ARTWORK_QUERY_TIMEOUT_MS,
 });
+const context = createExtensionContext({ ytm });
 
 function notifySleepTimerStateChanged(): void {
   broadcastPopupMessage({ type: "sleep-timer-state-changed" });

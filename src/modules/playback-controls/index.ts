@@ -1,4 +1,4 @@
-import type { FeatureModule, PopupView } from "@/core/types";
+import type { FeatureModule, ModuleContext, PopupView } from "@/core/types";
 import { createPlaybackControlsPopupView } from "./popup";
 
 export class PlaybackControlsModule implements FeatureModule {
@@ -20,7 +20,7 @@ export class PlaybackControlsModule implements FeatureModule {
     this.enabled = enabled;
   }
 
-  getPopupViews(): PopupView[] {
-    return [createPlaybackControlsPopupView()];
+  getPopupViews(context?: ModuleContext): PopupView[] {
+    return [createPlaybackControlsPopupView(context)];
   }
 }

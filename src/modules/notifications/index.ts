@@ -1,7 +1,11 @@
-import type { FeatureModule, PlaybackState, PopupView } from "@/core/types";
+import type {
+  FeatureModule,
+  ModuleContext,
+  PlaybackState,
+  PopupView,
+} from "@/core/types";
 import { createNotificationsPopupView } from "./popup";
 import { debug, error } from "@/core/logger";
-import { findYTMTab } from "@/core/tab-finder";
 
 const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 const FALLBACK_ICON = "icon48.png";
@@ -50,8 +54,10 @@ export class NotificationsModule implements FeatureModule {
   private fields: NotificationFields = { ...DEFAULT_FIELDS };
   private lastTrackKey: string | null = null;
   private clickListener: ((id: string) => void) | null = null;
+  private context: ModuleContext | null = null;
 
-  init(): void {
+  init(context: ModuleContext): void {
+    this.context = context;
     const listener = (id: string): void => {
       if (id !== NOTIFICATION_ID) return;
       void this.focusYtmTab();
@@ -62,6 +68,7 @@ export class NotificationsModule implements FeatureModule {
 
   destroy(): void {
     this.lastTrackKey = null;
+    this.context = null;
     if (this.clickListener) {
       chrome.notifications.onClicked.removeListener(this.clickListener);
       this.clickListener = null;
@@ -75,12 +82,7 @@ export class NotificationsModule implements FeatureModule {
     if (clearResult && typeof clearResult.then === "function") {
       clearResult.catch(() => {});
     }
-    const tab = await findYTMTab();
-    if (tab?.id == null) return;
-    await chrome.tabs.update(tab.id, { active: true });
-    if (tab.windowId != null) {
-      await chrome.windows.update(tab.windowId, { focused: true });
-    }
+    await Promise.resolve(this.context?.ytm.focusTab()).catch(() => undefined);
   }
 
   isEnabled(): boolean {

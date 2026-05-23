@@ -101,9 +101,8 @@ describe("module popup UI kit", () => {
       transformValue: (value) => value / 100,
       unit: "%",
     });
-    const range = container.querySelector<HTMLInputElement>(
-      "input.range-slider",
-    )!;
+    const range =
+      container.querySelector<HTMLInputElement>("input.range-slider")!;
     range.value = "75";
     range.dispatchEvent(new Event("input"));
 

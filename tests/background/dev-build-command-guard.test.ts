@@ -31,9 +31,7 @@ describe("dev build conflict command guards", () => {
     expect(backgroundSource).toContain(
       "isActionSuppressedForDevBuildConflict(devBuildConflictState, tabId)",
     );
-    expect(registeredHotkeyBody("focus-ytm-tab")).toContain(
-      "ytm.focusTab()",
-    );
+    expect(registeredHotkeyBody("focus-ytm-tab")).toContain("ytm.focusTab()");
     expect(registeredHotkeyBody("remind-me")).toContain(
       "ytm.getPlaybackState()",
     );
@@ -44,16 +42,10 @@ describe("dev build conflict command guards", () => {
 
   it("routes direct content queries through the guarded runtime client", () => {
     expect(handlerBody("get-ytm-tab-artwork")).toContain("ytm.getTabArtwork");
-    expect(handlerBody("get-stream-quality")).toContain(
-      "ytm.getStreamQuality",
-    );
-    expect(handlerBody("get-playback-speed")).toContain(
-      "ytm.getPlaybackSpeed",
-    );
+    expect(handlerBody("get-stream-quality")).toContain("ytm.getStreamQuality");
+    expect(handlerBody("get-playback-speed")).toContain("ytm.getPlaybackSpeed");
     expect(handlerBody("get-volume")).toContain("ytm.getVolume");
-    expect(handlerBody("get-playback-state")).toContain(
-      "ytm.getPlaybackState",
-    );
+    expect(handlerBody("get-playback-state")).toContain("ytm.getPlaybackState");
     for (const type of [
       "get-ytm-tab-artwork",
       "get-stream-quality",

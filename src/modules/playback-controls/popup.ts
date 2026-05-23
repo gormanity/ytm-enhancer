@@ -1,4 +1,4 @@
-import type { PopupView, PlaybackState } from "@/core/types";
+import type { ModuleContext, PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
 import { bindModuleRange } from "@/popup/module-ui";
@@ -56,7 +56,9 @@ interface NowPlayingElements {
 }
 
 /** Create the combined Playback Controls popup view. */
-export function createPlaybackControlsPopupView(): PopupView {
+export function createPlaybackControlsPopupView(
+  context?: ModuleContext,
+): PopupView {
   return {
     id: "playback-controls",
     label: "Playback Controls",
@@ -122,19 +124,22 @@ export function createPlaybackControlsPopupView(): PopupView {
       }
 
       cleanups.push(
-        renderOpenTabs(container, tabsCard, tabsList, tabItemTemplate),
+        renderOpenTabs(container, tabsCard, tabsList, tabItemTemplate, context),
       );
       cleanups.push(
-        renderCompactNowPlaying({
-          artwork,
-          title,
-          artist,
-          controls,
-          prevButton,
-          playButton,
-          nextButton,
-          progressSlot,
-        }),
+        renderCompactNowPlaying(
+          {
+            artwork,
+            title,
+            artist,
+            controls,
+            prevButton,
+            playButton,
+            nextButton,
+            progressSlot,
+          },
+          context,
+        ),
       );
       bindModuleRange(container, "quick-volume-range", {
         getType: "get-volume",
@@ -167,6 +172,7 @@ function renderOpenTabs(
   card: HTMLElement,
   list: HTMLElement,
   itemTemplate: HTMLTemplateElement,
+  context?: ModuleContext,
 ): () => void {
   let lastRenderedSignature: string | null = null;
   let currentTabs: YtmTabSummary[] = [];
@@ -232,12 +238,23 @@ function renderOpenTabs(
       item.title = tab.title.replace(" - YouTube Music", "");
       item.onclick = () => {
         if (tab.id === null) return;
-        chrome.runtime.sendMessage({ type: "set-selected-tab", tabId: tab.id });
+        if (context) {
+          void context.ytm.selectTab(tab.id);
+        } else {
+          chrome.runtime.sendMessage({
+            type: "set-selected-tab",
+            tabId: tab.id,
+          });
+        }
         updateTabs();
       };
       item.ondblclick = () => {
         if (tab.id === null) return;
-        chrome.runtime.sendMessage({ type: "focus-ytm-tab", tabId: tab.id });
+        if (context) {
+          void context.ytm.focusTab(tab.id);
+        } else {
+          chrome.runtime.sendMessage({ type: "focus-ytm-tab", tabId: tab.id });
+        }
       };
 
       list.appendChild(item);
@@ -253,30 +270,36 @@ function renderOpenTabs(
       }
       attemptedArtworkTabs.add(tabId);
       artworkRequests.add(tabId);
-      chrome.runtime.sendMessage(
-        { type: "get-ytm-tab-artwork", tabId },
-        async (response) => {
-          artworkRequests.delete(tabId);
-          const artworkUrl = response?.ok
-            ? (response.data?.artworkUrl as string | null)
-            : null;
-          if (!artworkUrl) return;
-          const didLoad = await preloadImage(artworkUrl);
-          if (!didLoad) return;
-          artworkCache.set(tabId, artworkUrl);
-          if (currentEpoch !== renderEpoch || !icon.isConnected) {
-            return;
-          }
-          icon.onerror = null;
-          icon.src = artworkUrl;
-        },
-      );
+      const handleArtwork = async (artworkUrl: string | null) => {
+        artworkRequests.delete(tabId);
+        if (!artworkUrl) return;
+        const didLoad = await preloadImage(artworkUrl);
+        if (!didLoad) return;
+        artworkCache.set(tabId, artworkUrl);
+        if (currentEpoch !== renderEpoch || !icon.isConnected) {
+          return;
+        }
+        icon.onerror = null;
+        icon.src = artworkUrl;
+      };
+      if (context) {
+        void context.ytm.getTabArtwork(tabId).then(handleArtwork);
+      } else {
+        chrome.runtime.sendMessage(
+          { type: "get-ytm-tab-artwork", tabId },
+          async (response) => {
+            const artworkUrl = response?.ok
+              ? (response.data?.artworkUrl as string | null)
+              : null;
+            await handleArtwork(artworkUrl);
+          },
+        );
+      }
     }
   };
 
   const updateTabs = () => {
-    chrome.runtime.sendMessage({ type: "get-ytm-tabs" }, (response) => {
-      const tabs = (response?.ok ? response.data?.tabs : []) as YtmTabSummary[];
+    const handleTabs = (tabs: YtmTabSummary[]) => {
       if (!Array.isArray(tabs) || tabs.length <= 1) {
         card.classList.add("is-hidden");
         currentTabs = [];
@@ -299,7 +322,17 @@ function renderOpenTabs(
       card.classList.remove("is-hidden");
       currentTabs = tabs;
       renderTabs(tabs);
-    });
+    };
+    if (context) {
+      void context.ytm.listTabs().then((state) => handleTabs(state.tabs));
+    } else {
+      chrome.runtime.sendMessage({ type: "get-ytm-tabs" }, (response) => {
+        const tabs = (
+          response?.ok ? response.data?.tabs : []
+        ) as YtmTabSummary[];
+        handleTabs(tabs);
+      });
+    }
   };
 
   const cycleSelectedTab = (reverse = false) => {
@@ -311,7 +344,14 @@ function renderOpenTabs(
       (baseIndex + direction + currentTabs.length) % currentTabs.length;
     const nextTab = currentTabs[nextIndex];
     if (nextTab.id === null) return;
-    chrome.runtime.sendMessage({ type: "set-selected-tab", tabId: nextTab.id });
+    if (context) {
+      void context.ytm.selectTab(nextTab.id);
+    } else {
+      chrome.runtime.sendMessage({
+        type: "set-selected-tab",
+        tabId: nextTab.id,
+      });
+    }
     updateTabs();
   };
 
@@ -354,7 +394,10 @@ function renderOpenTabs(
   };
 }
 
-function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
+function renderCompactNowPlaying(
+  elements: NowPlayingElements,
+  context?: ModuleContext,
+): () => void {
   const {
     artwork,
     title,
@@ -371,73 +414,89 @@ function renderCompactNowPlaying(elements: NowPlayingElements): () => void {
     artwork.classList.add("is-hidden");
   };
 
-  prevButton.onclick = () =>
-    chrome.runtime.sendMessage({ type: "playback-action", action: "previous" });
-  playButton.onclick = () =>
-    chrome.runtime.sendMessage({
-      type: "playback-action",
-      action: "togglePlay",
-    });
-  nextButton.onclick = () =>
-    chrome.runtime.sendMessage({ type: "playback-action", action: "next" });
+  const executeAction = (action: "previous" | "togglePlay" | "next") => {
+    if (context) {
+      void context.ytm.executePlaybackAction(action);
+      return;
+    }
+    chrome.runtime.sendMessage({ type: "playback-action", action });
+  };
+
+  prevButton.onclick = () => executeAction("previous");
+  playButton.onclick = () => executeAction("togglePlay");
+  nextButton.onclick = () => executeAction("next");
 
   const progressBar = createProgressBar({
     onSeek: (time) => {
-      chrome.runtime.sendMessage({
-        type: "playback-action",
-        action: "seekTo",
-        time,
-      });
+      if (context) {
+        void context.ytm.seekTo(time);
+      } else {
+        chrome.runtime.sendMessage({
+          type: "playback-action",
+          action: "seekTo",
+          time,
+        });
+      }
     },
   });
   progressSlot.replaceChildren(progressBar.element);
 
   const update = () => {
-    chrome.runtime.sendMessage(
-      { type: "get-playback-state" },
-      (
-        response: { ok: boolean; data?: PlaybackState; error?: string } | null,
-      ) => {
-        if (response?.ok && response.data) {
-          const state = response.data;
-          const hasTrack = Boolean(state.title && state.artist);
+    const handleResponse = (
+      response: { ok: boolean; data?: PlaybackState; error?: string } | null,
+    ) => {
+      if (response?.ok && response.data) {
+        const state = response.data;
+        const hasTrack = Boolean(state.title && state.artist);
 
-          if (hasTrack && state.artworkUrl) {
-            artwork.src = state.artworkUrl;
-            artwork.classList.remove("is-hidden");
-          } else {
-            artwork.removeAttribute("src");
-            artwork.classList.add("is-hidden");
-          }
-          title.textContent = state.title || "No track loaded";
-          artist.textContent = state.artist || "Start playback to see details";
-          controls.classList.toggle("is-hidden", !hasTrack);
-
-          if (hasTrack && state.duration > 0) {
-            progressBar.setProgress(state.progress, state.duration);
-            progressSlot.classList.remove("is-hidden");
-          } else {
-            progressSlot.classList.add("is-hidden");
-          }
-
-          setButtonSvgIcon(
-            playButton,
-            state.isPlaying ? getPauseIconTemplate() : getPlayIconTemplate(),
-          );
+        if (hasTrack && state.artworkUrl) {
+          artwork.src = state.artworkUrl;
+          artwork.classList.remove("is-hidden");
         } else {
+          artwork.removeAttribute("src");
           artwork.classList.add("is-hidden");
-          controls.classList.add("is-hidden");
-          progressSlot.classList.add("is-hidden");
-          if (response?.error === "No YTM tab") {
-            title.textContent = "YouTube Music not found";
-            artist.textContent = "Open YTM to get started";
-          } else {
-            title.textContent = "No music playing";
-            artist.textContent = "Waiting for playback...";
-          }
         }
-      },
-    );
+        title.textContent = state.title || "No track loaded";
+        artist.textContent = state.artist || "Start playback to see details";
+        controls.classList.toggle("is-hidden", !hasTrack);
+
+        if (hasTrack && state.duration > 0) {
+          progressBar.setProgress(state.progress, state.duration);
+          progressSlot.classList.remove("is-hidden");
+        } else {
+          progressSlot.classList.add("is-hidden");
+        }
+
+        setButtonSvgIcon(
+          playButton,
+          state.isPlaying ? getPauseIconTemplate() : getPlayIconTemplate(),
+        );
+      } else {
+        artwork.classList.add("is-hidden");
+        controls.classList.add("is-hidden");
+        progressSlot.classList.add("is-hidden");
+        if (response?.error === "No YTM tab") {
+          title.textContent = "YouTube Music not found";
+          artist.textContent = "Open YTM to get started";
+        } else {
+          title.textContent = "No music playing";
+          artist.textContent = "Waiting for playback...";
+        }
+      }
+    };
+    if (context) {
+      void context.ytm
+        .getPlaybackState()
+        .then((state) => handleResponse({ ok: true, data: state }))
+        .catch((err: Error) =>
+          handleResponse({ ok: false, error: err.message }),
+        );
+    } else {
+      chrome.runtime.sendMessage(
+        { type: "get-playback-state" },
+        handleResponse,
+      );
+    }
   };
 
   update();

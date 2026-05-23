@@ -32,6 +32,14 @@ export interface PopupView {
   render: (container: HTMLElement) => void | (() => void);
 }
 
+/** Stable runtime capabilities provided to feature modules. */
+export interface ModuleContext {
+  events: EventBus;
+  popup: PopupRegistry;
+  capabilities: Capabilities;
+  ytm: YtmRuntimeClient;
+}
+
 /** Interface that all feature modules must implement. */
 export interface FeatureModule {
   id: string;
@@ -39,7 +47,7 @@ export interface FeatureModule {
   description: string;
 
   /** Called when the module is initialized. */
-  init(): void | Promise<void>;
+  init(context: ModuleContext): void | Promise<void>;
 
   /** Called when the module is destroyed. */
   destroy(): void;
@@ -51,5 +59,9 @@ export interface FeatureModule {
   setEnabled(enabled: boolean): void;
 
   /** Optional popup views this module provides. */
-  getPopupViews?(): PopupView[];
+  getPopupViews?(context: ModuleContext): PopupView[];
 }
+import type { Capabilities } from "./capabilities";
+import type { EventBus } from "./events";
+import type { PopupRegistry } from "./popup-registry";
+import type { YtmRuntimeClient } from "./ytm-client";

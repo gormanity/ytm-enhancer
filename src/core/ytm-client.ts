@@ -175,7 +175,9 @@ export function createYtmRuntimeClient(
 
     async focusTab(tabId?: number | null): Promise<void> {
       const tab = await resolveTargetTab(
-        typeof tabId === "number" ? { kind: "tab", tabId } : { kind: "selected" },
+        typeof tabId === "number"
+          ? { kind: "tab", tabId }
+          : { kind: "selected" },
       );
       await chrome.tabs.update(tab.id!, { active: true });
       if (tab.windowId != null) {
@@ -215,7 +217,10 @@ export function createYtmRuntimeClient(
     },
 
     async seekTo(time: number, target?: YtmTarget): Promise<void> {
-      await relayToTarget({ type: "playback-action", action: "seekTo", time }, target);
+      await relayToTarget(
+        { type: "playback-action", action: "seekTo", time },
+        target,
+      );
     },
 
     async getVolume(): Promise<number> {
