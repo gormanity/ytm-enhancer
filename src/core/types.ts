@@ -1,3 +1,9 @@
+import type { Capabilities } from "./capabilities";
+import type { EventBus } from "./events";
+import type { ModuleHandlerRegistry, RuntimeClient } from "./messaging";
+import type { PopupRegistry } from "./popup-registry";
+import type { YtmRuntimeClient } from "./ytm-client";
+
 /** Playback state snapshot produced by the adapter layer. */
 export interface PlaybackState {
   title: string | null;
@@ -38,6 +44,17 @@ export interface ModuleContext {
   popup: PopupRegistry;
   capabilities: Capabilities;
   ytm: YtmRuntimeClient;
+  runtime: RuntimeClient;
+  state: {
+    saveValue(key: string, value: unknown): Promise<void>;
+  };
+  storage: {
+    get(keys: string[]): Promise<Record<string, unknown>>;
+    set(items: Record<string, unknown>): Promise<void>;
+  };
+  popupEvents: {
+    broadcast(message: { type: string; [key: string]: unknown }): void;
+  };
 }
 
 /** Interface that all feature modules must implement. */
@@ -47,7 +64,7 @@ export interface FeatureModule {
   description: string;
 
   /** Called when the module is initialized. */
-  init(context: ModuleContext): void | Promise<void>;
+  init(context?: ModuleContext): void | Promise<void>;
 
   /** Called when the module is destroyed. */
   destroy(): void;
@@ -59,9 +76,11 @@ export interface FeatureModule {
   setEnabled(enabled: boolean): void;
 
   /** Optional popup views this module provides. */
-  getPopupViews?(context: ModuleContext): PopupView[];
+  getPopupViews?(context?: ModuleContext): PopupView[];
+
+  /** Optional background message handlers this module owns. */
+  registerHandlers?(
+    registry: ModuleHandlerRegistry,
+    context: ModuleContext,
+  ): void;
 }
-import type { Capabilities } from "./capabilities";
-import type { EventBus } from "./events";
-import type { PopupRegistry } from "./popup-registry";
-import type { YtmRuntimeClient } from "./ytm-client";

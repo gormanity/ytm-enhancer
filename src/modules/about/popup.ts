@@ -1,9 +1,10 @@
-import type { PopupView } from "@/core/types";
+import type { ModuleContext, PopupView } from "@/core/types";
 import {
   getBuildTimestampLabel,
   getBuildVersionLabel,
 } from "@/core/build-info";
 import { renderPopupTemplate } from "@/popup/template";
+import { bindModuleActionButton } from "@/popup/module-ui";
 import templateHtml from "./popup.html?raw";
 import {
   ABOUT_VIEW_ID,
@@ -51,7 +52,14 @@ function showStep(container: HTMLElement, step: ReviewStep): void {
   }
 }
 
-function persist(items: Record<string, unknown>): void {
+function persist(
+  items: Record<string, unknown>,
+  context?: ModuleContext,
+): void {
+  if (context) {
+    void context.storage.set(items).catch(() => undefined);
+    return;
+  }
   try {
     chrome.storage.local.set(items);
   } catch {
@@ -60,7 +68,7 @@ function persist(items: Record<string, unknown>): void {
 }
 
 /** Create the About popup view. */
-export function createAboutPopupView(): PopupView {
+export function createAboutPopupView(context?: ModuleContext): PopupView {
   return {
     id: ABOUT_VIEW_ID,
     label: "About",
@@ -107,40 +115,57 @@ export function createAboutPopupView(): PopupView {
         reviewLink.href = getReviewUrl();
       }
 
-      try {
-        chrome.storage.local.get(
-          [REVIEW_PROMPT_DISMISSED_KEY, REVIEW_PROMPT_SENTIMENT_KEY],
-          (result) => {
-            const dismissed = result[REVIEW_PROMPT_DISMISSED_KEY] === true;
-            setReviewCardVisible(reviewCard, !dismissed);
-            const sentiment = result[REVIEW_PROMPT_SENTIMENT_KEY];
-            if (sentiment === "positive") showStep(container, "positive");
-            else if (sentiment === "negative") showStep(container, "negative");
-            else showStep(container, "question");
-          },
-        );
-      } catch {
+      const applyReviewState = (result: Record<string, unknown>) => {
+        const dismissed = result[REVIEW_PROMPT_DISMISSED_KEY] === true;
+        setReviewCardVisible(reviewCard, !dismissed);
+        const sentiment = result[REVIEW_PROMPT_SENTIMENT_KEY];
+        if (sentiment === "positive") showStep(container, "positive");
+        else if (sentiment === "negative") showStep(container, "negative");
+        else showStep(container, "question");
+      };
+
+      const loadReviewState = context
+        ? context.storage
+            .get([REVIEW_PROMPT_DISMISSED_KEY, REVIEW_PROMPT_SENTIMENT_KEY])
+            .then(applyReviewState)
+        : new Promise<void>((resolve, reject) => {
+            try {
+              chrome.storage.local.get(
+                [REVIEW_PROMPT_DISMISSED_KEY, REVIEW_PROMPT_SENTIMENT_KEY],
+                (result) => {
+                  applyReviewState(result);
+                  resolve();
+                },
+              );
+            } catch (err) {
+              reject(err);
+            }
+          });
+
+      void loadReviewState.catch(() => {
         setReviewCardVisible(reviewCard, true);
         showStep(container, "question");
-      }
+      });
 
       yesButton?.addEventListener("click", () => {
         showStep(container, "positive");
-        persist({ [REVIEW_PROMPT_SENTIMENT_KEY]: "positive" });
+        persist({ [REVIEW_PROMPT_SENTIMENT_KEY]: "positive" }, context);
       });
 
       noButton?.addEventListener("click", () => {
         showStep(container, "negative");
-        persist({ [REVIEW_PROMPT_SENTIMENT_KEY]: "negative" });
+        persist({ [REVIEW_PROMPT_SENTIMENT_KEY]: "negative" }, context);
       });
 
-      dismissButton?.addEventListener("click", () => {
-        setReviewCardVisible(reviewCard, false);
-        persist({ [REVIEW_PROMPT_DISMISSED_KEY]: true });
-      });
+      if (dismissButton) {
+        bindModuleActionButton(container, "about-review-dismiss", () => {
+          setReviewCardVisible(reviewCard, false);
+          persist({ [REVIEW_PROMPT_DISMISSED_KEY]: true }, context);
+        });
+      }
 
       const dismissOnFollow = () => {
-        persist({ [REVIEW_PROMPT_DISMISSED_KEY]: true });
+        persist({ [REVIEW_PROMPT_DISMISSED_KEY]: true }, context);
       };
       reviewLink?.addEventListener("click", dismissOnFollow);
       feedbackLink?.addEventListener("click", dismissOnFollow);

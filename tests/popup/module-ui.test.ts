@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  bindModuleActionButton,
+  bindModuleCheckboxGroup,
   bindModuleRange,
   bindModuleSelect,
   bindModuleToggle,
@@ -111,6 +113,65 @@ describe("module popup UI kit", () => {
       type: "set-volume",
       volume: 0.75,
     });
+  });
+
+  it("supports function-based toggle bindings", async () => {
+    const get = vi.fn().mockResolvedValue(true);
+    const set = vi.fn().mockResolvedValue(undefined);
+    const container = document.createElement("div");
+    container.innerHTML = `<input type="checkbox" data-role="feature-toggle" />`;
+
+    bindModuleToggle(container, "feature-toggle", { get, set });
+    await Promise.resolve();
+    const toggle = container.querySelector<HTMLInputElement>(
+      '[data-role="feature-toggle"]',
+    )!;
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change"));
+
+    expect(get).toHaveBeenCalledOnce();
+    expect(set).toHaveBeenCalledWith(false);
+  });
+
+  it("supports function-based checkbox groups", async () => {
+    const get = vi.fn().mockResolvedValue({ title: true, artist: false });
+    const set = vi.fn().mockResolvedValue(undefined);
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <input type="checkbox" data-role="field-title" />
+      <input type="checkbox" data-role="field-artist" />
+    `;
+
+    bindModuleCheckboxGroup(
+      container,
+      { title: "field-title", artist: "field-artist" },
+      { get, set },
+    );
+    await Promise.resolve();
+    const artist = container.querySelector<HTMLInputElement>(
+      '[data-role="field-artist"]',
+    )!;
+    artist.checked = true;
+    artist.dispatchEvent(new Event("change"));
+
+    expect(get).toHaveBeenCalledOnce();
+    expect(set).toHaveBeenCalledWith({ title: true, artist: true });
+  });
+
+  it("binds async action buttons and restores disabled state", async () => {
+    const onClick = vi.fn(async () => {});
+    const container = document.createElement("div");
+    container.innerHTML = `<button data-role="run-action">Run</button>`;
+    const button = container.querySelector("button")!;
+
+    bindModuleActionButton(container, "run-action", onClick);
+    button.click();
+    expect(button.disabled).toBe(true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(button.disabled).toBe(false);
   });
 
   it("creates status messages with tone and text", () => {

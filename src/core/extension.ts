@@ -5,6 +5,11 @@ import { detectCapabilities } from "./capabilities";
 import type { Capabilities } from "./capabilities";
 import type { FeatureModule, ModuleContext } from "./types";
 import type { YtmRuntimeClient } from "./ytm-client";
+import {
+  createRuntimeClient,
+  type ModuleHandlerRegistry,
+  type RuntimeClient,
+} from "./messaging";
 
 /** Central extension context shared across all modules. */
 export interface ExtensionContext extends ModuleContext {
@@ -16,6 +21,10 @@ export interface ExtensionContext extends ModuleContext {
 
 export interface ExtensionContextOptions {
   ytm: YtmRuntimeClient;
+  runtime?: RuntimeClient;
+  state?: ModuleContext["state"];
+  storage?: ModuleContext["storage"];
+  popupEvents?: ModuleContext["popupEvents"];
 }
 
 /** Create and initialize the extension context. */
@@ -28,6 +37,13 @@ export function createExtensionContext(
     popup: new PopupRegistry(),
     capabilities: detectCapabilities(),
     ytm: options.ytm,
+    runtime: options.runtime ?? createRuntimeClient(),
+    state: options.state ?? { saveValue: async () => undefined },
+    storage: options.storage ?? {
+      get: async () => ({}),
+      set: async () => undefined,
+    },
+    popupEvents: options.popupEvents ?? { broadcast: () => undefined },
   };
 }
 
@@ -47,5 +63,16 @@ export async function initializeModules(
     if (module.isEnabled()) {
       await module.init(context);
     }
+  }
+}
+
+/** Register message handlers owned by feature modules. */
+export function registerModuleHandlers(
+  context: ExtensionContext,
+  modules: FeatureModule[],
+  registry: ModuleHandlerRegistry,
+): void {
+  for (const module of modules) {
+    module.registerHandlers?.(registry, context);
   }
 }

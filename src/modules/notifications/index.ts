@@ -6,6 +6,7 @@ import type {
 } from "@/core/types";
 import { createNotificationsPopupView } from "./popup";
 import { debug, error } from "@/core/logger";
+import type { ModuleHandlerRegistry } from "@/core/messaging";
 
 const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 const FALLBACK_ICON = "icon48.png";
@@ -56,8 +57,8 @@ export class NotificationsModule implements FeatureModule {
   private clickListener: ((id: string) => void) | null = null;
   private context: ModuleContext | null = null;
 
-  init(context: ModuleContext): void {
-    this.context = context;
+  init(context?: ModuleContext): void {
+    this.context = context ?? null;
     const listener = (id: string): void => {
       if (id !== NOTIFICATION_ID) return;
       void this.focusYtmTab();
@@ -109,8 +110,48 @@ export class NotificationsModule implements FeatureModule {
     this.fields = { ...fields };
   }
 
-  getPopupViews(): PopupView[] {
-    return [createNotificationsPopupView()];
+  getPopupViews(context?: ModuleContext): PopupView[] {
+    return [createNotificationsPopupView(context)];
+  }
+
+  registerHandlers(
+    registry: ModuleHandlerRegistry,
+    context: ModuleContext,
+  ): void {
+    registry.on("get-notifications-enabled", async () => ({
+      ok: true,
+      data: this.isEnabled(),
+    }));
+    registry.on("set-notifications-enabled", async (message) => {
+      this.setEnabled(message.enabled as boolean);
+      void context.state.saveValue("notifications.enabled", message.enabled);
+      return { ok: true };
+    });
+    registry.on("get-notify-on-unpause", async () => ({
+      ok: true,
+      data: this.isNotifyOnUnpauseEnabled(),
+    }));
+    registry.on("set-notify-on-unpause", async (message) => {
+      this.setNotifyOnUnpause(message.enabled as boolean);
+      void context.state.saveValue(
+        "notifications.notifyOnUnpause",
+        message.enabled,
+      );
+      return { ok: true };
+    });
+    registry.on("get-notification-fields", async () => ({
+      ok: true,
+      data: this.getFields(),
+    }));
+    registry.on("set-notification-fields", async (message) => {
+      this.setFields(message.fields as NotificationFields);
+      void context.state.saveValue("notifications.fields", message.fields);
+      return { ok: true };
+    });
+    registry.on("preview-notification", async () => {
+      this.triggerPreview();
+      return { ok: true };
+    });
   }
 
   /** Show a reminder notification unconditionally (ignores enabled/dedup). */

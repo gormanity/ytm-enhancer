@@ -1,30 +1,51 @@
-import type { PopupView } from "@/core/types";
+import type { ModuleContext, PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
-import { bindSelect } from "@/popup/bind-select";
+import { bindModuleSelect } from "@/popup/module-ui";
 import templateHtml from "./popup.html?raw";
 import selectControlTemplateHtml from "./select-control.html?raw";
 
-function initializeStreamQualityControl(container: HTMLElement): void {
+function initializeStreamQualityControl(
+  container: HTMLElement,
+  context?: ModuleContext,
+): void {
   const hint = container.querySelector<HTMLElement>(
     '[data-role="stream-quality-hint"]',
   );
 
-  bindSelect(container, "stream-quality-select", {
-    getType: "get-stream-quality",
-    setType: "set-stream-quality",
-    parseData: (data) => {
-      const d = data as { current: string | null } | undefined;
-      return d?.current ?? "2";
-    },
-    onLoaded: () => {
-      hint?.classList.add("is-hidden");
-    },
-  });
+  bindModuleSelect(
+    container,
+    "stream-quality-select",
+    context
+      ? {
+          get: async () => {
+            const data = await context.ytm.getStreamQuality();
+            return ((data as { current?: string | null } | null)?.current ??
+              data ??
+              "2") as string;
+          },
+          set: (value) => context.ytm.setStreamQuality(value),
+        }
+      : {
+          getType: "get-stream-quality",
+          setType: "set-stream-quality",
+          parseData: (data) => {
+            const d = data as { current: string | null } | undefined;
+            return d?.current ?? "2";
+          },
+          onLoaded: () => {
+            hint?.classList.add("is-hidden");
+          },
+        },
+  );
+  if (context) hint?.classList.add("is-hidden");
 }
 
-export function renderStreamQualitySelectControl(container: HTMLElement): void {
+export function renderStreamQualitySelectControl(
+  container: HTMLElement,
+  context?: ModuleContext,
+): void {
   renderPopupTemplate(container, selectControlTemplateHtml);
-  initializeStreamQualityControl(container);
+  initializeStreamQualityControl(container, context);
 }
 
 export function createStreamQualityPopupView(): PopupView {

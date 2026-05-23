@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createExtensionContext, initializeModules } from "@/core/extension";
+import {
+  createExtensionContext,
+  initializeModules,
+  registerModuleHandlers,
+} from "@/core/extension";
 import type { FeatureModule, PopupView, ModuleContext } from "@/core/types";
 import type { YtmRuntimeClient } from "@/core/ytm-client";
 
@@ -55,6 +59,21 @@ describe("createExtensionContext", () => {
     expect(ctx.popup).toBeDefined();
     expect(ctx.capabilities).toBeDefined();
     expect(ctx.ytm).toBeDefined();
+  });
+});
+
+describe("registerModuleHandlers", () => {
+  it("should register handlers owned by modules", async () => {
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
+    const registry = { on: vi.fn() };
+    const module = {
+      ...createMockModule("test"),
+      registerHandlers: vi.fn(),
+    };
+
+    registerModuleHandlers(ctx, [module], registry);
+
+    expect(module.registerHandlers).toHaveBeenCalledWith(registry, ctx);
   });
 });
 

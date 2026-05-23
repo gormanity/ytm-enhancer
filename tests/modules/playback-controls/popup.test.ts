@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPlaybackControlsPopupView } from "@/modules/playback-controls/popup";
 import type { ModuleContext } from "@/core/types";
 import type { YtmRuntimeClient } from "@/core/ytm-client";
+import { createRuntimeClient } from "@/core/messaging";
 
 interface RuntimeMessage {
   type: string;
@@ -35,6 +36,13 @@ function createModuleContext(
     events: {} as ModuleContext["events"],
     popup: {} as ModuleContext["popup"],
     capabilities: {} as ModuleContext["capabilities"],
+    runtime: createRuntimeClient(),
+    state: { saveValue: vi.fn() },
+    storage: {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+    },
+    popupEvents: { broadcast: vi.fn() },
     ytm: {
       listTabs: vi.fn().mockResolvedValue({
         tabs: [

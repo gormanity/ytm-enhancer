@@ -1,6 +1,6 @@
-import type { PopupView } from "@/core/types";
+import type { ModuleContext, PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
-import { bindToggle } from "@/popup/bind-toggle";
+import { bindModuleToggle } from "@/popup/module-ui";
 import templateHtml from "./popup.html?raw";
 
 function hasDocumentPipSupport(): boolean {
@@ -8,14 +8,15 @@ function hasDocumentPipSupport(): boolean {
 }
 
 /** Create the mini player settings popup view. */
-export function createMiniPlayerPopupView(): PopupView {
+export function createMiniPlayerPopupView(context?: ModuleContext): PopupView {
   return {
     id: "mini-player-settings",
     label: "Mini Player",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
 
-      const hasDocumentPip = hasDocumentPipSupport();
+      const hasDocumentPip =
+        context?.capabilities.documentPip ?? hasDocumentPipSupport();
       if (!hasDocumentPip) {
         container
           .querySelector<HTMLElement>(
@@ -32,14 +33,46 @@ export function createMiniPlayerPopupView(): PopupView {
         return;
       }
 
-      bindToggle(container, "mini-player-enabled-toggle", {
-        getType: "get-mini-player-enabled",
-        setType: "set-mini-player-enabled",
-      });
-      bindToggle(container, "mini-player-suppress-notifications-toggle", {
-        getType: "get-mini-player-suppress-notifications",
-        setType: "set-mini-player-suppress-notifications",
-      });
+      bindModuleToggle(
+        container,
+        "mini-player-enabled-toggle",
+        context
+          ? {
+              get: () =>
+                context.runtime.request<boolean>({
+                  type: "get-mini-player-enabled",
+                }),
+              set: (enabled) =>
+                context.runtime.command({
+                  type: "set-mini-player-enabled",
+                  enabled,
+                }),
+            }
+          : {
+              getType: "get-mini-player-enabled",
+              setType: "set-mini-player-enabled",
+            },
+      );
+      bindModuleToggle(
+        container,
+        "mini-player-suppress-notifications-toggle",
+        context
+          ? {
+              get: () =>
+                context.runtime.request<boolean>({
+                  type: "get-mini-player-suppress-notifications",
+                }),
+              set: (enabled) =>
+                context.runtime.command({
+                  type: "set-mini-player-suppress-notifications",
+                  enabled,
+                }),
+            }
+          : {
+              getType: "get-mini-player-suppress-notifications",
+              setType: "set-mini-player-suppress-notifications",
+            },
+      );
     },
   };
 }

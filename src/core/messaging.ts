@@ -23,6 +23,18 @@ type MessageHandler = (
   sender: chrome.runtime.MessageSender,
 ) => Promise<MessageResponse>;
 
+export interface RuntimeClient {
+  request<TData = unknown>(message: Message): Promise<TData>;
+  command(message: Message): Promise<void>;
+  subscribe(
+    listener: (message: Message, sender: chrome.runtime.MessageSender) => void,
+  ): () => void;
+}
+
+export interface ModuleHandlerRegistry {
+  on(type: string, handler: MessageHandler): void;
+}
+
 /** Create a function for sending messages to background or tabs. */
 export function createMessageSender() {
   return async (
@@ -33,6 +45,30 @@ export function createMessageSender() {
       return chrome.tabs.sendMessage(options.tabId, message);
     }
     return chrome.runtime.sendMessage(message);
+  };
+}
+
+export function createRuntimeClient(): RuntimeClient {
+  return {
+    async request<TData = unknown>(message: Message): Promise<TData> {
+      const response = (await chrome.runtime.sendMessage(
+        message,
+      )) as MessageResponse;
+      if (!response.ok) throw new Error(response.error);
+      return response.data as TData;
+    },
+
+    async command(message: Message): Promise<void> {
+      const response = (await chrome.runtime.sendMessage(
+        message,
+      )) as MessageResponse;
+      if (!response.ok) throw new Error(response.error);
+    },
+
+    subscribe(listener) {
+      addRuntimeMessageListener(listener);
+      return () => removeRuntimeMessageListener(listener);
+    },
   };
 }
 

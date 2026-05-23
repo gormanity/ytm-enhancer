@@ -1,4 +1,5 @@
 import type { PopupView } from "@/core/types";
+import { createPopupModuleContext } from "@/core/popup-context";
 import { createPlaybackControlsPopupView } from "./playback-controls/popup";
 import { createAutoPlayPopupView } from "./auto-play/popup";
 import { createAutoSkipDislikedPopupView } from "./auto-skip-disliked/popup";
@@ -37,15 +38,19 @@ const ICONS = {
  * factory here so it appears in the extension popup.
  */
 export function getAllPopupViews(): PopupView[] {
+  const context = createPopupModuleContext();
   return [
-    { ...createPlaybackControlsPopupView(), icon: ICONS.playbackControls },
-    { ...createAutoPlayPopupView(), icon: ICONS.autoPlay },
-    { ...createAutoSkipDislikedPopupView(), icon: ICONS.autoSkip },
-    { ...createAudioVisualizerPopupView(), icon: ICONS.visualizer },
-    { ...createHotkeysPopupView(), icon: ICONS.hotkeys },
-    { ...createMiniPlayerPopupView(), icon: ICONS.miniPlayer },
-    { ...createNotificationsPopupView(), icon: ICONS.notifications },
-    { ...createSleepTimerPopupView(), icon: ICONS.sleepTimer },
-    { ...createAboutPopupView(), icon: ICONS.about },
+    {
+      ...createPlaybackControlsPopupView(context),
+      icon: ICONS.playbackControls,
+    },
+    { ...createAutoPlayPopupView(context), icon: ICONS.autoPlay },
+    { ...createAutoSkipDislikedPopupView(context), icon: ICONS.autoSkip },
+    { ...createAudioVisualizerPopupView(context), icon: ICONS.visualizer },
+    { ...createHotkeysPopupView(context), icon: ICONS.hotkeys },
+    { ...createMiniPlayerPopupView(context), icon: ICONS.miniPlayer },
+    { ...createNotificationsPopupView(context), icon: ICONS.notifications },
+    { ...createSleepTimerPopupView(context), icon: ICONS.sleepTimer },
+    { ...createAboutPopupView(context), icon: ICONS.about },
   ];
 }

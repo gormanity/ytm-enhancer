@@ -1,5 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SleepTimerModule } from "@/modules/sleep-timer";
+import { createExtensionContext } from "@/core/extension";
+import type { YtmRuntimeClient } from "@/core/ytm-client";
+import type { MessageResponse, ModuleHandlerRegistry } from "@/core/messaging";
+
+function createYtmClient(): YtmRuntimeClient {
+  return {
+    listTabs: vi.fn(),
+    selectTab: vi.fn(),
+    focusTab: vi.fn(),
+    getTabArtwork: vi.fn(),
+    getPlaybackState: vi.fn(),
+    executePlaybackAction: vi.fn().mockResolvedValue(undefined),
+    seekTo: vi.fn(),
+    getVolume: vi.fn(),
+    setVolume: vi.fn(),
+    getPlaybackSpeed: vi.fn(),
+    setPlaybackSpeed: vi.fn(),
+    getStreamQuality: vi.fn(),
+    setStreamQuality: vi.fn(),
+    broadcast: vi.fn(),
+  };
+}
 
 describe("SleepTimerModule", () => {
   let module: SleepTimerModule;
@@ -12,6 +34,13 @@ describe("SleepTimerModule", () => {
           set: vi.fn().mockResolvedValue(undefined),
           remove: vi.fn().mockResolvedValue(undefined),
         },
+      },
+      alarms: {
+        create: vi.fn().mockResolvedValue(undefined),
+        clear: vi.fn().mockResolvedValue(true),
+      },
+      notifications: {
+        create: vi.fn().mockResolvedValue("sleep-timer"),
       },
     });
 
@@ -40,5 +69,44 @@ describe("SleepTimerModule", () => {
 
     expect(views).toHaveLength(1);
     expect(views[0].id).toBe("sleep-timer-settings");
+  });
+
+  it("should register timer handlers and persist starts", async () => {
+    const state = { saveValue: vi.fn().mockResolvedValue(undefined) };
+    const context = createExtensionContext({
+      ytm: createYtmClient(),
+      state,
+    });
+    module.init(context);
+    const handlers = new Map<
+      string,
+      Parameters<ModuleHandlerRegistry["on"]>[1]
+    >();
+
+    module.registerHandlers?.(
+      { on: (type, handler) => handlers.set(type, handler) },
+      context,
+    );
+
+    await handlers.get("start-sleep-timer")?.(
+      { type: "start-sleep-timer", durationMs: 1000 },
+      {},
+    );
+    const stateResponse = (await handlers.get("get-sleep-timer-state")?.(
+      { type: "get-sleep-timer-state" },
+      {},
+    )) as MessageResponse;
+
+    expect(chrome.alarms.create).toHaveBeenCalledWith(
+      "sleep-timer",
+      expect.objectContaining({ when: expect.any(Number) }),
+    );
+    expect(state.saveValue).toHaveBeenCalledWith(
+      "sleep-timer.endAt",
+      expect.any(Number),
+    );
+    expect(
+      stateResponse.ok && (stateResponse.data as { active: boolean }).active,
+    ).toBe(true);
   });
 });

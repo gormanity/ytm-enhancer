@@ -1,4 +1,5 @@
-import type { PopupView } from "@/core/types";
+import type { ModuleContext, PopupView } from "@/core/types";
+import { bindModuleActionButton } from "@/popup/module-ui";
 import { renderPopupTemplate } from "@/popup/template";
 import {
   findConflict,
@@ -15,8 +16,38 @@ interface EditState {
   keyupHandler: (e: KeyboardEvent) => void;
 }
 
+interface HotkeysClient {
+  canEdit(): boolean;
+  getAll(): Promise<chrome.commands.Command[]>;
+  update(name: string, shortcut: string): Promise<void>;
+  reset(name: string): Promise<void>;
+  openShortcutsPage(): Promise<void>;
+}
+
+function createHotkeysClient(): HotkeysClient {
+  return {
+    canEdit() {
+      return typeof chrome.commands.update === "function";
+    },
+    getAll() {
+      return new Promise((resolve) => {
+        chrome.commands.getAll((commands) => resolve(commands));
+      });
+    },
+    async update(name, shortcut) {
+      await Promise.resolve(chrome.commands.update?.({ name, shortcut }));
+    },
+    async reset(name) {
+      await Promise.resolve(chrome.commands.reset?.(name));
+    },
+    async openShortcutsPage() {
+      await chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+    },
+  };
+}
+
 /** Create the hotkeys settings popup view. */
-export function createHotkeysPopupView(): PopupView {
+export function createHotkeysPopupView(_context?: ModuleContext): PopupView {
   return {
     id: "hotkeys-settings",
     label: "Hotkeys",
@@ -37,6 +68,7 @@ export function createHotkeysPopupView(): PopupView {
       );
       if (!list || !rowTemplate || !keyTemplate || !separatorTemplate) return;
 
+      const client = createHotkeysClient();
       const renderKeys = makeKeyRenderer(keyTemplate, separatorTemplate);
 
       const configActions = container.querySelector<HTMLElement>(
@@ -48,17 +80,18 @@ export function createHotkeysPopupView(): PopupView {
 
       // Firefox exposes browser.commands.update / reset; Chromium doesn't. Use
       // the capability check to drive UI, not a brand check.
-      const canEdit = typeof chrome.commands.update === "function";
+      const canEdit = client.canEdit();
       list.classList.toggle("shortcuts-list--editable", canEdit);
 
       const state: { active: EditState | null } = { active: null };
 
       const refresh = () => {
         loadShortcuts(list, rowTemplate, renderKeys, {
+          client,
           canEdit,
           onEdit: (row, name) =>
-            enterEdit(state, row, name, renderKeys, refresh),
-          onReset: (name) => resetShortcut(name, refresh),
+            enterEdit(state, row, name, renderKeys, refresh, client),
+          onReset: (name) => resetShortcut(name, refresh, client),
         });
       };
 
@@ -71,9 +104,9 @@ export function createHotkeysPopupView(): PopupView {
           .querySelector<HTMLElement>('[data-role="shortcuts-global-tip"]')
           ?.classList.add("is-hidden");
       } else if (configBtn) {
-        configBtn.onclick = () => {
-          chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
-        };
+        bindModuleActionButton(container, "configure-shortcuts", () =>
+          client.openShortcutsPage(),
+        );
       }
     },
   };
@@ -237,6 +270,7 @@ function makeKeyRenderer(
 }
 
 interface LoadOptions {
+  client: HotkeysClient;
   canEdit: boolean;
   onEdit: (row: HTMLElement, name: string) => void;
   onReset: (name: string) => void;
@@ -248,7 +282,7 @@ function loadShortcuts(
   renderKeys: KeyRenderer,
   options: LoadOptions,
 ): void {
-  chrome.commands.getAll((commands) => {
+  void options.client.getAll().then((commands) => {
     container.replaceChildren();
     const visibleCommands = commands
       .filter((cmd) => cmd.name && cmd.name !== "_execute_action")
@@ -342,6 +376,7 @@ function enterEdit(
   name: string,
   renderKeys: KeyRenderer,
   refresh: () => void,
+  client: HotkeysClient,
 ): void {
   if (state.active) {
     cleanupEdit(state.active);
@@ -376,15 +411,14 @@ function enterEdit(
       return;
     }
 
-    chrome.commands.getAll((commands) => {
+    void client.getAll().then((commands) => {
       const conflict = findConflict(shortcut, commands, name);
       if (conflict) {
         const conflictLabel = conflict.description || conflict.name || "";
         showError(row, `Already used by "${conflictLabel}"`);
         return;
       }
-      const result = chrome.commands.update?.({ name, shortcut });
-      Promise.resolve(result).then(() => {
+      void client.update(name, shortcut).then(() => {
         cleanupEdit(state.active!);
         state.active = null;
         refresh();
@@ -431,7 +465,10 @@ function showError(row: HTMLElement, message: string): void {
   error.classList.remove("is-hidden");
 }
 
-function resetShortcut(name: string, refresh: () => void): void {
-  const result = chrome.commands.reset?.(name);
-  Promise.resolve(result).then(() => refresh());
+function resetShortcut(
+  name: string,
+  refresh: () => void,
+  client: HotkeysClient,
+): void {
+  void client.reset(name).then(() => refresh());
 }

@@ -1,7 +1,11 @@
 import type { NotificationFields } from "./index";
-import type { PopupView } from "@/core/types";
+import type { ModuleContext, PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
-import { bindToggle } from "@/popup/bind-toggle";
+import {
+  bindModuleActionButton,
+  bindModuleCheckboxGroup,
+  bindModuleToggle,
+} from "@/popup/module-ui";
 import templateHtml from "./popup.html?raw";
 
 const FIELD_KEYS: Array<keyof NotificationFields> = [
@@ -13,21 +17,55 @@ const FIELD_KEYS: Array<keyof NotificationFields> = [
 ];
 
 /** Create the notifications settings popup view. */
-export function createNotificationsPopupView(): PopupView {
+export function createNotificationsPopupView(
+  context?: ModuleContext,
+): PopupView {
   return {
     id: "notifications-settings",
     label: "Notifications",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
 
-      bindToggle(container, "notifications-toggle", {
-        getType: "get-notifications-enabled",
-        setType: "set-notifications-enabled",
-      });
-      bindToggle(container, "notifications-unpause-toggle", {
-        getType: "get-notify-on-unpause",
-        setType: "set-notify-on-unpause",
-      });
+      bindModuleToggle(
+        container,
+        "notifications-toggle",
+        context
+          ? {
+              get: () =>
+                context.runtime.request<boolean>({
+                  type: "get-notifications-enabled",
+                }),
+              set: (enabled) =>
+                context.runtime.command({
+                  type: "set-notifications-enabled",
+                  enabled,
+                }),
+            }
+          : {
+              getType: "get-notifications-enabled",
+              setType: "set-notifications-enabled",
+            },
+      );
+      bindModuleToggle(
+        container,
+        "notifications-unpause-toggle",
+        context
+          ? {
+              get: () =>
+                context.runtime.request<boolean>({
+                  type: "get-notify-on-unpause",
+                }),
+              set: (enabled) =>
+                context.runtime.command({
+                  type: "set-notify-on-unpause",
+                  enabled,
+                }),
+            }
+          : {
+              getType: "get-notify-on-unpause",
+              setType: "set-notify-on-unpause",
+            },
+      );
 
       // Firefox doesn't support the WebExtensions `silent` notification
       // option, so expose OS-level sound guidance only there.
@@ -57,35 +95,61 @@ export function createNotificationsPopupView(): PopupView {
         fieldCheckboxes.push({ key, input });
       }
 
-      chrome.runtime.sendMessage(
-        { type: "get-notification-fields" },
-        (response: { ok: boolean; data?: NotificationFields }) => {
-          if (response?.ok && response.data) {
-            for (const { key, input } of fieldCheckboxes) {
-              input.checked = response.data[key];
-              input.disabled = false;
+      if (context) {
+        bindModuleCheckboxGroup<NotificationFields>(
+          container,
+          Object.fromEntries(
+            FIELD_KEYS.map((key) => [key, `notifications-field-${key}`]),
+          ) as Record<keyof NotificationFields, string>,
+          {
+            get: () =>
+              context.runtime.request<NotificationFields>({
+                type: "get-notification-fields",
+              }),
+            set: (fields) =>
+              context.runtime.command({
+                type: "set-notification-fields",
+                fields,
+              }),
+          },
+        );
+      } else {
+        chrome.runtime.sendMessage(
+          { type: "get-notification-fields" },
+          (response: { ok: boolean; data?: NotificationFields }) => {
+            if (response?.ok && response.data) {
+              for (const { key, input } of fieldCheckboxes) {
+                input.checked = response.data[key];
+                input.disabled = false;
+              }
             }
-          }
-        },
-      );
+          },
+        );
 
-      for (const { input } of fieldCheckboxes) {
-        input.addEventListener("change", () => {
-          const fields = {} as NotificationFields;
-          for (const { key, input: cb } of fieldCheckboxes) {
-            fields[key] = cb.checked;
-          }
-          chrome.runtime.sendMessage({
-            type: "set-notification-fields",
-            fields,
+        for (const { input } of fieldCheckboxes) {
+          input.addEventListener("change", () => {
+            const fields = {} as NotificationFields;
+            for (const { key, input: cb } of fieldCheckboxes) {
+              fields[key] = cb.checked;
+            }
+            chrome.runtime.sendMessage({
+              type: "set-notification-fields",
+              fields,
+            });
           });
-        });
+        }
       }
 
       // Preview section
-      previewBtn.onclick = () => {
-        chrome.runtime.sendMessage({ type: "preview-notification" });
-      };
+      if (context) {
+        bindModuleActionButton(container, "notifications-preview-btn", () =>
+          context.runtime.command({ type: "preview-notification" }),
+        );
+      } else {
+        previewBtn.onclick = () => {
+          chrome.runtime.sendMessage({ type: "preview-notification" });
+        };
+      }
     },
   };
 }

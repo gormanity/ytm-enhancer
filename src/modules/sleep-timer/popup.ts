@@ -1,10 +1,10 @@
-import type { PopupView } from "@/core/types";
+import type { ModuleContext, PopupView } from "@/core/types";
 import {
   addRuntimeMessageListener,
   removeRuntimeMessageListener,
 } from "@/core/runtime-listener";
 import { renderPopupTemplate } from "@/popup/template";
-import { bindToggle } from "@/popup/bind-toggle";
+import { bindModuleToggle } from "@/popup/module-ui";
 import templateHtml from "./popup.html?raw";
 
 const PRESET_MINUTES = [15, 30, 45, 60];
@@ -173,7 +173,7 @@ function persistAbsoluteTime(value: string): void {
 }
 
 /** Create the sleep timer settings popup view. */
-export function createSleepTimerPopupView(): PopupView {
+export function createSleepTimerPopupView(context?: ModuleContext): PopupView {
   return {
     id: "sleep-timer-settings",
     label: "Sleep Timer",
@@ -408,6 +408,12 @@ export function createSleepTimerPopupView(): PopupView {
       };
 
       const queryState = () => {
+        if (context) {
+          void context.runtime
+            .request<SleepTimerState>({ type: "get-sleep-timer-state" })
+            .then(applyState);
+          return;
+        }
         chrome.runtime.sendMessage(
           { type: "get-sleep-timer-state" },
           (response: { ok: boolean; data?: SleepTimerState } | null) => {
@@ -441,6 +447,15 @@ export function createSleepTimerPopupView(): PopupView {
         const durationMs = getDurationMs();
         if (durationMs === null) return;
         startBtn.disabled = true;
+        if (context) {
+          void context.runtime
+            .command({ type: "start-sleep-timer", durationMs })
+            .finally(() => {
+              updateStartEnabled();
+              queryState();
+            });
+          return;
+        }
         chrome.runtime.sendMessage(
           { type: "start-sleep-timer", durationMs },
           () => {
@@ -452,35 +467,74 @@ export function createSleepTimerPopupView(): PopupView {
 
       cancelBtn.addEventListener("click", () => {
         cancelBtn.disabled = true;
+        if (context) {
+          void context.runtime
+            .command({ type: "cancel-sleep-timer" })
+            .finally(() => {
+              queryState();
+            });
+          return;
+        }
         chrome.runtime.sendMessage({ type: "cancel-sleep-timer" }, () => {
           queryState();
         });
       });
 
-      bindToggle(container, "sleep-notification-toggle", {
-        getType: "get-sleep-timer-notify-enabled",
-        setType: "set-sleep-timer-notify-enabled",
-      });
-
-      chrome.runtime.sendMessage(
-        { type: "get-sleep-timer-mode" },
-        (response: { ok: boolean; data?: string } | null) => {
-          if (!response?.ok) return;
-          mode = response.data === "absolute" ? "absolute" : "duration";
-          modeSelect.value = mode;
-          updateModeVisibility();
-          updateStartEnabled();
-        },
+      bindModuleToggle(
+        container,
+        "sleep-notification-toggle",
+        context
+          ? {
+              get: () =>
+                context.runtime.request<boolean>({
+                  type: "get-sleep-timer-notify-enabled",
+                }),
+              set: (enabled) =>
+                context.runtime.command({
+                  type: "set-sleep-timer-notify-enabled",
+                  enabled,
+                }),
+            }
+          : {
+              getType: "get-sleep-timer-notify-enabled",
+              setType: "set-sleep-timer-notify-enabled",
+            },
       );
+
+      if (context) {
+        void context.runtime
+          .request<string>({ type: "get-sleep-timer-mode" })
+          .then((data) => {
+            mode = data === "absolute" ? "absolute" : "duration";
+            modeSelect.value = mode;
+            updateModeVisibility();
+            updateStartEnabled();
+          });
+      } else {
+        chrome.runtime.sendMessage(
+          { type: "get-sleep-timer-mode" },
+          (response: { ok: boolean; data?: string } | null) => {
+            if (!response?.ok) return;
+            mode = response.data === "absolute" ? "absolute" : "duration";
+            modeSelect.value = mode;
+            updateModeVisibility();
+            updateStartEnabled();
+          },
+        );
+      }
 
       modeSelect.addEventListener("change", () => {
         mode = modeSelect.value === "absolute" ? "absolute" : "duration";
         updateModeVisibility();
         updateStartEnabled();
-        chrome.runtime.sendMessage({
-          type: "set-sleep-timer-mode",
-          mode,
-        });
+        if (context) {
+          void context.runtime.command({ type: "set-sleep-timer-mode", mode });
+        } else {
+          chrome.runtime.sendMessage({
+            type: "set-sleep-timer-mode",
+            mode,
+          });
+        }
       });
 
       hoursInput.addEventListener("input", () => {

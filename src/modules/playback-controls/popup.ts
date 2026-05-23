@@ -150,8 +150,8 @@ export function createPlaybackControlsPopupView(
         transformValue: (v) => v / 100,
         unit: "%",
       });
-      renderPlaybackSpeedSelectControl(speedSlot);
-      renderStreamQualitySelectControl(qualitySlot);
+      renderPlaybackSpeedSelectControl(speedSlot, context);
+      renderStreamQualitySelectControl(qualitySlot, context);
 
       speedSlot
         .querySelector<HTMLElement>(".card-row span")

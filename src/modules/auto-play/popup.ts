@@ -1,9 +1,9 @@
-import type { AutoPlayMode, PopupView } from "@/core/types";
+import type { AutoPlayMode, ModuleContext, PopupView } from "@/core/types";
 import {
   addRuntimeMessageListener,
   removeRuntimeMessageListener,
 } from "@/core/runtime-listener";
-import { bindSelect } from "@/popup/bind-select";
+import { bindModuleSelect } from "@/popup/module-ui";
 import { renderPopupTemplate } from "@/popup/template";
 import templateHtml from "./popup.html?raw";
 
@@ -21,7 +21,7 @@ type AutoPlayStatusResponse = {
 };
 
 /** Create the auto-play settings popup view. */
-export function createAutoPlayPopupView(): PopupView {
+export function createAutoPlayPopupView(context?: ModuleContext): PopupView {
   return {
     id: "auto-play-settings",
     label: "Auto-Play",
@@ -43,6 +43,17 @@ export function createAutoPlayPopupView(): PopupView {
       };
 
       const updateBlockedHint = () => {
+        if (context) {
+          void context.runtime
+            .request<{ browserAutoplayBlocked?: boolean }>({
+              type: "get-auto-play-status",
+            })
+            .then((data) => {
+              setBlockedHintVisible(data.browserAutoplayBlocked === true);
+            })
+            .catch(() => undefined);
+          return;
+        }
         chrome.runtime.sendMessage(
           { type: "get-auto-play-status" },
           (response: AutoPlayStatusResponse) => {
@@ -55,13 +66,31 @@ export function createAutoPlayPopupView(): PopupView {
         );
       };
 
-      bindSelect(container, "auto-play-mode", {
-        getType: "get-auto-play-mode",
-        setType: "set-auto-play-mode",
-        setKey: "mode",
-        parseData: normalizeMode,
-        transformValue: normalizeMode,
-      });
+      bindModuleSelect(
+        container,
+        "auto-play-mode",
+        context
+          ? {
+              get: async () =>
+                normalizeMode(
+                  await context.runtime.request<AutoPlayMode>({
+                    type: "get-auto-play-mode",
+                  }),
+                ),
+              set: (mode) =>
+                context.runtime.command({
+                  type: "set-auto-play-mode",
+                  mode: normalizeMode(mode),
+                }),
+            }
+          : {
+              getType: "get-auto-play-mode",
+              setType: "set-auto-play-mode",
+              setKey: "mode",
+              parseData: normalizeMode,
+              transformValue: normalizeMode,
+            },
+      );
 
       const modeChangeListener = () => {
         if (modeSelect?.value !== "on") {

@@ -1,4 +1,5 @@
-import type { FeatureModule, PopupView } from "@/core/types";
+import type { FeatureModule, ModuleContext, PopupView } from "@/core/types";
+import type { ModuleHandlerRegistry } from "@/core/messaging";
 import {
   DEFAULT_VISUALIZER_STYLE_TUNING,
   DEFAULT_VISUALIZER_STYLE_TUNINGS,
@@ -133,7 +134,107 @@ export class AudioVisualizerModule implements FeatureModule {
     };
   }
 
-  getPopupViews(): PopupView[] {
-    return [createAudioVisualizerPopupView()];
+  getPopupViews(context?: ModuleContext): PopupView[] {
+    return [createAudioVisualizerPopupView(context)];
+  }
+
+  registerHandlers(
+    registry: ModuleHandlerRegistry,
+    context: ModuleContext,
+  ): void {
+    registry.on("get-audio-visualizer-enabled", async () => ({
+      ok: true,
+      data: this.isEnabled(),
+    }));
+    registry.on("set-audio-visualizer-enabled", async (message) => {
+      this.setEnabled(message.enabled as boolean);
+      void context.state.saveValue("audio-visualizer.enabled", message.enabled);
+      void context.ytm.broadcast({
+        type: "set-audio-visualizer-enabled",
+        enabled: message.enabled,
+      });
+      return { ok: true };
+    });
+    registry.on("get-audio-visualizer-snapshot", async () => ({
+      ok: true,
+      data: this.getSnapshot(),
+    }));
+    registry.on("get-audio-visualizer-style", async () => ({
+      ok: true,
+      data: this.getStyle(),
+    }));
+    registry.on("set-audio-visualizer-style", async (message) => {
+      this.setStyle(message.style as VisualizerStyle);
+      void context.state.saveValue("audio-visualizer.style", message.style);
+      void context.ytm.broadcast({
+        type: "set-audio-visualizer-style",
+        style: message.style,
+      });
+      void context.ytm.broadcast({
+        type: "set-audio-visualizer-color-mode",
+        mode: this.getColorMode(),
+      });
+      return { ok: true };
+    });
+    registry.on("get-audio-visualizer-target", async () => ({
+      ok: true,
+      data: this.getTarget(),
+    }));
+    registry.on("set-audio-visualizer-target", async (message) => {
+      this.setTarget(message.target as VisualizerTarget);
+      void context.state.saveValue("audio-visualizer.target", message.target);
+      void context.ytm.broadcast({
+        type: "set-audio-visualizer-target",
+        target: message.target,
+      });
+      return { ok: true };
+    });
+    registry.on("get-audio-visualizer-style-tunings", async () => ({
+      ok: true,
+      data: this.getStyleTunings(),
+    }));
+    registry.on("set-audio-visualizer-style-tuning", async (message) => {
+      this.setStyleTuning(
+        message.style as VisualizerStyle,
+        message.tuning as VisualizerStyleTuning,
+      );
+      const tunings = this.getStyleTunings();
+      void context.state.saveValue("audio-visualizer.styleTunings", tunings);
+      void context.ytm.broadcast({
+        type: "set-audio-visualizer-style-tunings",
+        tunings,
+      });
+      return { ok: true };
+    });
+    registry.on("get-audio-visualizer-color-mode", async () => ({
+      ok: true,
+      data: this.getColorMode(),
+    }));
+    registry.on("set-audio-visualizer-color-mode", async (message) => {
+      this.setColorMode(message.mode as VisualizerColorMode);
+      void context.state.saveValue(
+        "audio-visualizer.styleTunings",
+        this.getStyleTunings(),
+      );
+      void context.ytm.broadcast({
+        type: "set-audio-visualizer-color-mode",
+        mode: message.mode,
+      });
+      return { ok: true };
+    });
+  }
+
+  getSnapshot(): {
+    enabled: boolean;
+    style: VisualizerStyle;
+    target: VisualizerTarget;
+    tunings: VisualizerStyleTunings;
+  } {
+    return {
+      enabled: this.isEnabled(),
+      style: this.getStyle(),
+      target: this.getTarget(),
+      tunings: this.getStyleTunings(),
+    };
   }
 }

@@ -1,4 +1,5 @@
-import type { FeatureModule, PopupView } from "@/core/types";
+import type { FeatureModule, ModuleContext, PopupView } from "@/core/types";
+import type { ModuleHandlerRegistry } from "@/core/messaging";
 import { createMiniPlayerPopupView } from "./popup";
 
 export class MiniPlayerModule implements FeatureModule {
@@ -35,7 +36,34 @@ export class MiniPlayerModule implements FeatureModule {
     this.suppressNotificationsWhilePipOpen = enabled;
   }
 
-  getPopupViews(): PopupView[] {
-    return [createMiniPlayerPopupView()];
+  getPopupViews(context?: ModuleContext): PopupView[] {
+    return [createMiniPlayerPopupView(context)];
+  }
+
+  registerHandlers(
+    registry: ModuleHandlerRegistry,
+    context: ModuleContext,
+  ): void {
+    registry.on("get-mini-player-enabled", async () => ({
+      ok: true,
+      data: this.isEnabled(),
+    }));
+    registry.on("set-mini-player-enabled", async (message) => {
+      this.setEnabled(message.enabled as boolean);
+      void context.state.saveValue("mini-player.enabled", message.enabled);
+      return { ok: true };
+    });
+    registry.on("get-mini-player-suppress-notifications", async () => ({
+      ok: true,
+      data: this.isSuppressNotificationsWhilePipOpenEnabled(),
+    }));
+    registry.on("set-mini-player-suppress-notifications", async (message) => {
+      this.setSuppressNotificationsWhilePipOpen(message.enabled as boolean);
+      void context.state.saveValue(
+        "mini-player.suppressNotificationsWhilePipOpen",
+        message.enabled,
+      );
+      return { ok: true };
+    });
   }
 }
