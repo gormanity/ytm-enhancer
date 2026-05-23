@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NotificationsModule } from "@/modules/notifications";
-import type { PlaybackState } from "@/core/types";
+import type { ModuleContext, PlaybackState } from "@/core/types";
+import type { YtmRuntimeClient } from "@/core/ytm-client";
 
 const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 
@@ -21,6 +22,33 @@ function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
 /** Flush the 150ms delay between clear and create. */
 function flushNotificationDelay(): void {
   vi.advanceTimersByTime(150);
+}
+
+function createModuleContext(
+  ytmOverrides: Partial<YtmRuntimeClient> = {},
+): ModuleContext {
+  return {
+    events: {} as ModuleContext["events"],
+    popup: {} as ModuleContext["popup"],
+    capabilities: {} as ModuleContext["capabilities"],
+    ytm: {
+      listTabs: vi.fn(),
+      selectTab: vi.fn(),
+      focusTab: vi.fn(),
+      getTabArtwork: vi.fn(),
+      getPlaybackState: vi.fn(),
+      executePlaybackAction: vi.fn(),
+      seekTo: vi.fn(),
+      getVolume: vi.fn(),
+      setVolume: vi.fn(),
+      getPlaybackSpeed: vi.fn(),
+      setPlaybackSpeed: vi.fn(),
+      getStreamQuality: vi.fn(),
+      setStreamQuality: vi.fn(),
+      broadcast: vi.fn(),
+      ...ytmOverrides,
+    },
+  };
 }
 
 describe("NotificationsModule", () => {
@@ -588,34 +616,32 @@ describe("NotificationsModule", () => {
 
   describe("click-to-focus", () => {
     it("should register an onClicked listener during init", () => {
-      module.init();
+      module.init(createModuleContext());
       expect(onClickedAddListener).toHaveBeenCalledWith(expect.any(Function));
     });
 
     it("should remove the onClicked listener on destroy", () => {
-      module.init();
+      module.init(createModuleContext());
       const listener = onClickedAddListener.mock.calls[0][0];
       module.destroy();
       expect(onClickedRemoveListener).toHaveBeenCalledWith(listener);
     });
 
-    it("should focus the YTM tab when our notification is clicked", async () => {
-      tabsQuery.mockResolvedValue([{ id: 42, windowId: 7 }]);
-      module.init();
+    it("should focus the YTM tab through context when our notification is clicked", async () => {
+      const focusTab = vi.fn().mockResolvedValue(undefined);
+      module.init(createModuleContext({ focusTab }));
       const listener = onClickedAddListener.mock.calls[0][0] as (
         id: string,
       ) => void;
 
       listener(NOTIFICATION_ID);
       await vi.waitFor(() => {
-        expect(tabsUpdate).toHaveBeenCalledWith(42, { active: true });
+        expect(focusTab).toHaveBeenCalled();
       });
-      expect(windowsUpdate).toHaveBeenCalledWith(7, { focused: true });
     });
 
     it("should clear the notification after click so the toast disappears", async () => {
-      tabsQuery.mockResolvedValue([{ id: 42, windowId: 7 }]);
-      module.init();
+      module.init(createModuleContext());
       const listener = onClickedAddListener.mock.calls[0][0] as (
         id: string,
       ) => void;
@@ -628,32 +654,31 @@ describe("NotificationsModule", () => {
     });
 
     it("should ignore clicks for unrelated notification ids", () => {
-      module.init();
+      const focusTab = vi.fn();
+      module.init(createModuleContext({ focusTab }));
       const listener = onClickedAddListener.mock.calls[0][0] as (
         id: string,
       ) => void;
 
       listener("some-other-notification");
 
+      expect(focusTab).not.toHaveBeenCalled();
       expect(tabsQuery).not.toHaveBeenCalled();
       expect(tabsUpdate).not.toHaveBeenCalled();
       expect(windowsUpdate).not.toHaveBeenCalled();
     });
 
-    it("should do nothing when no YTM tab is open", async () => {
-      tabsQuery.mockResolvedValue([]);
-      module.init();
+    it("should ignore focus failures from the context YTM client", async () => {
+      const focusTab = vi.fn().mockRejectedValue(new Error("No YTM tab"));
+      module.init(createModuleContext({ focusTab }));
       const listener = onClickedAddListener.mock.calls[0][0] as (
         id: string,
       ) => void;
 
       listener(NOTIFICATION_ID);
       await vi.waitFor(() => {
-        expect(tabsQuery).toHaveBeenCalled();
+        expect(focusTab).toHaveBeenCalled();
       });
-
-      expect(tabsUpdate).not.toHaveBeenCalled();
-      expect(windowsUpdate).not.toHaveBeenCalled();
     });
   });
 });

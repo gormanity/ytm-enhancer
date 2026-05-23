@@ -1,6 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createExtensionContext, initializeModules } from "@/core/extension";
-import type { FeatureModule, PopupView } from "@/core/types";
+import type { FeatureModule, PopupView, ModuleContext } from "@/core/types";
+import type { YtmRuntimeClient } from "@/core/ytm-client";
+
+function createMockYtmClient(): YtmRuntimeClient {
+  return {
+    listTabs: vi.fn(),
+    selectTab: vi.fn(),
+    focusTab: vi.fn(),
+    getTabArtwork: vi.fn(),
+    getPlaybackState: vi.fn(),
+    executePlaybackAction: vi.fn(),
+    seekTo: vi.fn(),
+    getVolume: vi.fn(),
+    setVolume: vi.fn(),
+    getPlaybackSpeed: vi.fn(),
+    setPlaybackSpeed: vi.fn(),
+    getStreamQuality: vi.fn(),
+    setStreamQuality: vi.fn(),
+    broadcast: vi.fn(),
+  };
+}
 
 function createMockModule(
   id: string,
@@ -28,12 +48,13 @@ describe("createExtensionContext", () => {
   });
 
   it("should create a context with all core systems", () => {
-    const ctx = createExtensionContext();
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
 
     expect(ctx.modules).toBeDefined();
     expect(ctx.events).toBeDefined();
     expect(ctx.popup).toBeDefined();
     expect(ctx.capabilities).toBeDefined();
+    expect(ctx.ytm).toBeDefined();
   });
 });
 
@@ -44,7 +65,7 @@ describe("initializeModules", () => {
   });
 
   it("should register all modules in the registry", async () => {
-    const ctx = createExtensionContext();
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
     const moduleA = createMockModule("a");
     const moduleB = createMockModule("b");
 
@@ -55,16 +76,16 @@ describe("initializeModules", () => {
   });
 
   it("should initialize enabled modules", async () => {
-    const ctx = createExtensionContext();
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
     const module = createMockModule("test", { enabled: true });
 
     await initializeModules(ctx, [module]);
 
-    expect(module.init).toHaveBeenCalled();
+    expect(module.init).toHaveBeenCalledWith(ctx satisfies ModuleContext);
   });
 
   it("should not initialize disabled modules", async () => {
-    const ctx = createExtensionContext();
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
     const module = createMockModule("test", { enabled: false });
 
     await initializeModules(ctx, [module]);
@@ -73,7 +94,7 @@ describe("initializeModules", () => {
   });
 
   it("should register popup views from modules", async () => {
-    const ctx = createExtensionContext();
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
     const view: PopupView = {
       id: "test-view",
       label: "Test",
@@ -83,11 +104,14 @@ describe("initializeModules", () => {
 
     await initializeModules(ctx, [module]);
 
+    expect(module.getPopupViews).toHaveBeenCalledWith(
+      ctx satisfies ModuleContext,
+    );
     expect(ctx.popup.get("test-view")).toBe(view);
   });
 
   it("should register modules even if they have no popup views", async () => {
-    const ctx = createExtensionContext();
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
     const module = createMockModule("test");
 
     await initializeModules(ctx, [module]);

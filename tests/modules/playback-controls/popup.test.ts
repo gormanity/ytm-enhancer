@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPlaybackControlsPopupView } from "@/modules/playback-controls/popup";
+import type { ModuleContext } from "@/core/types";
+import type { YtmRuntimeClient } from "@/core/ytm-client";
 
 interface RuntimeMessage {
   type: string;
@@ -24,6 +26,52 @@ class MockImage {
       this.onerror?.call(window, new Event("error"));
     });
   }
+}
+
+function createModuleContext(
+  ytmOverrides: Partial<YtmRuntimeClient> = {},
+): ModuleContext {
+  return {
+    events: {} as ModuleContext["events"],
+    popup: {} as ModuleContext["popup"],
+    capabilities: {} as ModuleContext["capabilities"],
+    ytm: {
+      listTabs: vi.fn().mockResolvedValue({
+        tabs: [
+          {
+            id: 1,
+            title: "Tab 1 - YouTube Music",
+            artworkUrl: null,
+            isSelected: true,
+          },
+        ],
+        selectedTabId: 1,
+      }),
+      selectTab: vi.fn().mockResolvedValue(undefined),
+      focusTab: vi.fn().mockResolvedValue(undefined),
+      getTabArtwork: vi.fn().mockResolvedValue(null),
+      getPlaybackState: vi.fn().mockResolvedValue({
+        title: "Track A",
+        artist: "Artist A",
+        album: null,
+        year: null,
+        artworkUrl: null,
+        isPlaying: false,
+        progress: 0,
+        duration: 0,
+      }),
+      executePlaybackAction: vi.fn().mockResolvedValue(undefined),
+      seekTo: vi.fn().mockResolvedValue(undefined),
+      getVolume: vi.fn().mockResolvedValue(0.5),
+      setVolume: vi.fn().mockResolvedValue(undefined),
+      getPlaybackSpeed: vi.fn().mockResolvedValue(1),
+      setPlaybackSpeed: vi.fn().mockResolvedValue(undefined),
+      getStreamQuality: vi.fn().mockResolvedValue({ current: "2" } as never),
+      setStreamQuality: vi.fn().mockResolvedValue(undefined),
+      broadcast: vi.fn().mockResolvedValue(undefined),
+      ...ytmOverrides,
+    },
+  };
 }
 
 describe("playback controls popup view", () => {
@@ -107,6 +155,46 @@ describe("playback controls popup view", () => {
         },
       },
     });
+  });
+
+  it("uses the injected YTM client for tab and playback state", async () => {
+    const listTabs = vi.fn().mockResolvedValue({
+      tabs: [
+        {
+          id: 1,
+          title: "Tab 1 - YouTube Music",
+          artworkUrl: null,
+          isSelected: true,
+        },
+      ],
+      selectedTabId: 1,
+    });
+    const getPlaybackState = vi.fn().mockResolvedValue({
+      title: "Track A",
+      artist: "Artist A",
+      album: null,
+      year: null,
+      artworkUrl: null,
+      isPlaying: false,
+      progress: 0,
+      duration: 0,
+    });
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({ listTabs, getPlaybackState }),
+    );
+    const container = document.createElement("div");
+    const cleanup = view.render(container);
+
+    await vi.waitFor(() => {
+      expect(listTabs).toHaveBeenCalled();
+      expect(getPlaybackState).toHaveBeenCalled();
+    });
+    expect(sendMessageMock).not.toHaveBeenCalledWith(
+      { type: "get-ytm-tabs" },
+      expect.any(Function),
+    );
+
+    cleanup?.();
   });
 
   it("renders music source chips with bundled YTM logo fallback", async () => {
