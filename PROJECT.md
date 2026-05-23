@@ -160,11 +160,16 @@ Shared primitives live in `src/core` and are reused across modules:
 
 - Extension context and module initialization
 - Message sender/handler helpers
+- Module runtime context and handler registration
+- Typed YTM tab/playback runtime client
+- Popup-side context and YTM client proxy
 - Relay and tab-finding helpers
 - Module state load/save utilities
 - Type definitions for actions, playback state, and popup views
 
 This layer is intentionally feature-agnostic.
+
+See `docs/module-api.md` for the module-facing API.
 
 ## Module Model
 
@@ -173,14 +178,16 @@ Each module implements the `FeatureModule` contract and can provide:
 - Background behavior and state
 - Content-side behavior
 - Optional popup view(s)
+- Optional background message handlers
 
 The target workflow for new functionality is:
 
 1. Create a new module directory.
 2. Implement module behavior behind the shared interfaces.
 3. Register the module in background initialization.
-4. Add popup view wiring only if the feature needs UI.
-5. Add or update focused tests.
+4. Add module-owned background handlers when the feature needs messages.
+5. Add popup view wiring only if the feature needs UI.
+6. Add or update focused tests.
 
 ## Data Flow (High-Level)
 

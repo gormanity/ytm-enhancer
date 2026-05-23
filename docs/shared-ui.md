@@ -1,19 +1,73 @@
 # Shared UI Library
 
-Reusable UI primitives live in two places:
+Reusable UI primitives live in three places:
 
 - **`src/popup/`** — binding helpers that wire HTML elements to
   `chrome.runtime.sendMessage` get/set patterns.
+- **`src/popup/module-ui.ts`** — module-facing helpers that compose popup
+  binders, typed clients, and shared UI components.
 - **`src/ui/`** — standalone UI components (CSS + TypeScript) that work in any
   DOM context (popup, PiP window, content script).
 
+For runtime context, module lifecycle, and typed YTM APIs, see
+[`docs/module-api.md`](module-api.md).
+
 ---
 
-# Popup Binding Helpers
+# Module UI Helpers
+
+Module popup views should prefer `src/popup/module-ui.ts`. These helpers accept
+function-based clients so modules can use `ModuleContext` and typed APIs instead
+of embedding raw `chrome.runtime.sendMessage` calls.
+
+```typescript
+import { bindModuleToggle } from "@/popup/module-ui";
+
+bindModuleToggle(container, "mini-player-toggle", {
+  get: () =>
+    context.runtime.request<boolean>({
+      type: "get-mini-player-enabled",
+    }),
+  set: (enabled) =>
+    context.runtime.command({
+      type: "set-mini-player-enabled",
+      enabled,
+    }),
+});
+```
+
+Use module helpers for:
+
+- `bindModuleToggle` — checkbox controls;
+- `bindModuleSelect` — select controls;
+- `bindModuleRange` — shared range slider controls;
+- `bindModuleCheckboxGroup` — grouped boolean fields;
+- `bindModuleActionButton` — async action buttons;
+- `createStatusMessage` — status text with tone classes;
+- `createActionRow` — labeled async action rows.
+
+The older message-type binding shape is still supported for compatibility:
+
+```typescript
+bindModuleToggle(container, "feature-toggle", {
+  getType: "get-feature-enabled",
+  setType: "set-feature-enabled",
+});
+```
+
+New module code should use function bindings backed by typed clients or
+`ModuleContext`.
+
+---
+
+# Low-Level Popup Binding Helpers
 
 Shared helpers in `src/popup/` wire HTML template elements to
 `chrome.runtime.sendMessage` get/set patterns. They eliminate repetitive
 boilerplate and enforce a consistent UX across popup views.
+
+These are low-level helpers. Prefer the module-facing helpers above for module
+popup code.
 
 ## Design
 
