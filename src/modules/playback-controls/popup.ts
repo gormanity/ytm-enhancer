@@ -1,7 +1,7 @@
 import type { PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
-import { bindRange } from "@/popup/bind-range";
+import { bindModuleRange } from "@/popup/module-ui";
 import {
   addRuntimeMessageListener,
   removeRuntimeMessageListener,
@@ -136,7 +136,7 @@ export function createPlaybackControlsPopupView(): PopupView {
           progressSlot,
         }),
       );
-      bindRange(container, "quick-volume-range", {
+      bindModuleRange(container, "quick-volume-range", {
         getType: "get-volume",
         setType: "set-volume",
         label: "Volume",
