@@ -27,22 +27,33 @@ describe("dev build conflict command guards", () => {
     expect(backgroundSource).not.toContain("relayToYTMTab");
   });
 
-  it("suppresses focus and reminder hotkeys while prod is duplicate-disabled", () => {
+  it("routes YTM tab actions through the guarded runtime client", () => {
+    expect(backgroundSource).toContain(
+      "isActionSuppressedForDevBuildConflict(devBuildConflictState, tabId)",
+    );
     expect(registeredHotkeyBody("focus-ytm-tab")).toContain(
-      "isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)",
+      "ytm.focusTab()",
     );
     expect(registeredHotkeyBody("remind-me")).toContain(
-      "isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)",
+      "ytm.getPlaybackState()",
     );
-  });
-
-  it("suppresses popup focus requests while prod is duplicate-disabled", () => {
     expect(handlerBody("focus-ytm-tab")).toContain(
-      "isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)",
+      "ytm.focusTab(requestedTabId)",
     );
   });
 
-  it("suppresses direct content queries while prod is duplicate-disabled", () => {
+  it("routes direct content queries through the guarded runtime client", () => {
+    expect(handlerBody("get-ytm-tab-artwork")).toContain("ytm.getTabArtwork");
+    expect(handlerBody("get-stream-quality")).toContain(
+      "ytm.getStreamQuality",
+    );
+    expect(handlerBody("get-playback-speed")).toContain(
+      "ytm.getPlaybackSpeed",
+    );
+    expect(handlerBody("get-volume")).toContain("ytm.getVolume");
+    expect(handlerBody("get-playback-state")).toContain(
+      "ytm.getPlaybackState",
+    );
     for (const type of [
       "get-ytm-tab-artwork",
       "get-stream-quality",
@@ -50,7 +61,7 @@ describe("dev build conflict command guards", () => {
       "get-volume",
       "get-playback-state",
     ]) {
-      expect(handlerBody(type)).toContain("isYTMTabSuppressed");
+      expect(handlerBody(type)).not.toContain("chrome.tabs.sendMessage");
     }
   });
 });

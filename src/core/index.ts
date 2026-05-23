@@ -11,9 +11,17 @@ export { PopupRegistry } from "./popup-registry";
 export { createExtensionContext, initializeModules } from "./extension";
 export { findYTMTab } from "./tab-finder";
 export { relayToYTMTab } from "./relay";
+export { createYtmRuntimeClient } from "./ytm-client";
 export type { ExtensionContext } from "./extension";
 export type { Message, MessageResponse, SendOptions } from "./messaging";
 export type { Capabilities, BrowserRuntime } from "./capabilities";
+export type {
+  YtmRuntimeClient,
+  YtmRuntimeClientOptions,
+  YtmTabListState,
+  YtmTabSummary,
+  YtmTarget,
+} from "./ytm-client";
 export type {
   FeatureModule,
   AutoPlayMode,

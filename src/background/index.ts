@@ -1,11 +1,9 @@
 import {
-  ActionExecutor,
   createExtensionContext,
   createMessageHandler,
-  createMessageSender,
+  createYtmRuntimeClient,
   HotkeyRegistry,
   initializeModules,
-  findYTMTab,
   type FeatureModule,
   type AutoPlayMode,
   type PlaybackAction,
@@ -16,7 +14,7 @@ import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import type { PlaybackState } from "@/core/types";
 import { error } from "@/core/logger";
 
-import { parseSelectedTabId, resolveSelectedTabId } from "./selected-tab";
+import { parseSelectedTabId } from "./selected-tab";
 import {
   isDevBuildConflictActive,
   isActionSuppressedForDevBuildConflict,
@@ -43,8 +41,6 @@ import { PlaybackControlsModule } from "@/modules/playback-controls";
 import { SleepTimerModule } from "@/modules/sleep-timer";
 
 const context = createExtensionContext();
-const send = createMessageSender();
-const executor = new ActionExecutor(send);
 const hotkeyRegistry = new HotkeyRegistry();
 const autoPlay = new AutoPlayModule();
 const autoSkipDisliked = new AutoSkipDislikedModule();
@@ -84,6 +80,18 @@ function broadcastPopupMessage(message: PopupRuntimeMessage): void {
 function notifyYtmTabsChanged(): void {
   broadcastPopupMessage({ type: "ytm-tabs-changed" });
 }
+
+const ytm = createYtmRuntimeClient({
+  getSelectedTabId: () => selectedTabId,
+  setSelectedTabId: async (tabId) => {
+    selectedTabId = tabId;
+    await saveModuleStateValue("tabs.selectedTabId", selectedTabId);
+  },
+  isTabSuppressed: (tabId) =>
+    isActionSuppressedForDevBuildConflict(devBuildConflictState, tabId),
+  onTabsChanged: notifyYtmTabsChanged,
+  tabArtworkQueryTimeoutMs: TAB_ARTWORK_QUERY_TIMEOUT_MS,
+});
 
 function notifySleepTimerStateChanged(): void {
   broadcastPopupMessage({ type: "sleep-timer-state-changed" });
@@ -144,22 +152,10 @@ function normalizeAutoPlayMode(value: unknown): AutoPlayMode {
   return isAutoPlayMode(value) ? value : "default";
 }
 
-async function relayToSelectedTab(message: unknown): Promise<void> {
-  const tab = await findYTMTab(selectedTabId);
-  if (tab?.id === undefined) return;
-  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
-    return;
-  }
-  void chrome.tabs.sendMessage(tab.id, message);
-}
-
 async function relayToAnyYTMTab(message: unknown): Promise<void> {
-  const tab = await findYTMTab();
-  if (tab?.id === undefined) return;
-  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
-    return;
-  }
-  void chrome.tabs.sendMessage(tab.id, message);
+  await ytm
+    .broadcast(message as Record<string, unknown>)
+    .catch(() => undefined);
 }
 
 function isYTMTabSuppressed(tabId: number | undefined): boolean {
@@ -250,13 +246,8 @@ const COMMAND_ACTION_MAP: Record<string, PlaybackAction> = {
 
 for (const [cmd, action] of Object.entries(COMMAND_ACTION_MAP)) {
   hotkeyRegistry.register(cmd, async () => {
-    const tab = await findYTMTab(selectedTabId);
-    if (!tab?.id) return;
-    if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
-      return;
-    }
     try {
-      await executor.execute(action, tab.id);
+      await ytm.executePlaybackAction(action);
     } catch (err) {
       error("Hotkey action failed:", err);
     }
@@ -264,30 +255,13 @@ for (const [cmd, action] of Object.entries(COMMAND_ACTION_MAP)) {
 }
 
 hotkeyRegistry.register("focus-ytm-tab", async () => {
-  const tab = await findYTMTab(selectedTabId);
-  if (!tab?.id) return;
-  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
-    return;
-  }
-  await chrome.tabs.update(tab.id, { active: true });
-  if (tab.windowId != null) {
-    await chrome.windows.update(tab.windowId, { focused: true });
-  }
+  await ytm.focusTab().catch(() => undefined);
 });
 
 hotkeyRegistry.register("remind-me", async () => {
-  const tab = await findYTMTab(selectedTabId);
-  if (tab?.id === undefined) return;
-  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
-    return;
-  }
   try {
-    const response = (await chrome.tabs.sendMessage(tab.id, {
-      type: "get-playback-state",
-    })) as { ok: boolean; data?: PlaybackState };
-    if (response?.ok && response.data) {
-      notifications.showReminder(response.data);
-    }
+    const state = await ytm.getPlaybackState();
+    notifications.showReminder(state);
   } catch {
     // Tab may not have the content script loaded.
   }
@@ -329,10 +303,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
       message: `Playback paused at ${pausedAtLabel}`,
     });
   }
-  void relayToSelectedTab({
-    type: "playback-action",
-    action: "pause",
-  });
+  void ytm.executePlaybackAction("pause").catch(() => undefined);
   notifySleepTimerStateChanged();
 });
 
@@ -356,80 +327,29 @@ handler.on("track-changed", async (message, sender) => {
   return { ok: true };
 });
 
-async function queryTabArtworkWithTimeout(
-  tabId: number,
-): Promise<string | null> {
-  try {
-    const responsePromise = chrome.tabs.sendMessage(tabId, {
-      type: "get-playback-state",
-    }) as Promise<{ ok: boolean; data?: PlaybackState }>;
-
-    const timeoutPromise = new Promise<null>((resolve) => {
-      setTimeout(() => resolve(null), TAB_ARTWORK_QUERY_TIMEOUT_MS);
-    });
-
-    const response = await Promise.race([responsePromise, timeoutPromise]);
-    if (response && typeof response === "object" && response.ok) {
-      return response.data?.artworkUrl ?? null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 handler.on("get-ytm-tabs", async () => {
-  const tabs = await findAllYTMTabs();
-  const nextSelectedTabId = resolveSelectedTabId(tabs, selectedTabId);
-  if (nextSelectedTabId !== selectedTabId) {
-    selectedTabId = nextSelectedTabId;
-    void saveModuleStateValue("tabs.selectedTabId", selectedTabId);
-    notifyYtmTabsChanged();
-  }
-
-  const tabData = tabs.map((tab) => ({
-    id: tab.id ?? null,
-    title: tab.title ?? "YouTube Music",
-    artworkUrl: null,
-    isSelected: tab.id === selectedTabId,
-  }));
-
-  return { ok: true, data: { tabs: tabData, selectedTabId } };
+  return { ok: true, data: await ytm.listTabs() };
 });
 
 handler.on("get-ytm-tab-artwork", async (message) => {
   const tabId =
     typeof message.tabId === "number" ? (message.tabId as number) : null;
   if (tabId === null) return { ok: false, error: "Invalid tab ID" };
-  if (isYTMTabSuppressed(tabId)) {
-    return { ok: false, error: "Disabled while the dev build is active" };
-  }
-  const artworkUrl = await queryTabArtworkWithTimeout(tabId);
+  const artworkUrl = await ytm.getTabArtwork(tabId);
   return { ok: true, data: { artworkUrl } };
 });
 
 handler.on("set-selected-tab", async (message) => {
   const tabId =
     typeof message.tabId === "number" ? (message.tabId as number) : null;
-  selectedTabId = tabId;
-  await saveModuleStateValue("tabs.selectedTabId", selectedTabId);
-  notifyYtmTabsChanged();
+  await ytm.selectTab(tabId);
   return { ok: true };
 });
 
 handler.on("focus-ytm-tab", async (message) => {
   const requestedTabId =
     typeof message.tabId === "number" ? (message.tabId as number) : null;
-  const tab = await findYTMTab(requestedTabId ?? selectedTabId);
-  if (!tab?.id) return { ok: false, error: "No YTM tab" };
-  if (isActionSuppressedForDevBuildConflict(devBuildConflictState, tab.id)) {
-    return { ok: false, error: "Disabled while the dev build is active" };
-  }
-
-  await chrome.tabs.update(tab.id, { active: true });
-  if (tab.windowId != null) {
-    await chrome.windows.update(tab.windowId, { focused: true });
-  }
+  await ytm.focusTab(requestedTabId);
   return { ok: true };
 });
 
@@ -477,9 +397,10 @@ handler.on("get-auto-play-mode", async () => {
 });
 
 handler.on("get-auto-play-status", async () => {
-  const tab = await findYTMTab(selectedTabId);
+  const tabState = await ytm.listTabs();
   const browserAutoplayBlocked =
-    tab?.id !== undefined && autoPlayPolicyBlockedTabIds.has(tab.id);
+    tabState.selectedTabId !== null &&
+    autoPlayPolicyBlockedTabIds.has(tabState.selectedTabId);
   return { ok: true, data: { browserAutoplayBlocked } };
 });
 
@@ -642,71 +563,29 @@ handler.on("inject-quality-bridge", async (_message, sender) => {
 });
 
 handler.on("get-stream-quality", async () => {
-  const tab = await findYTMTab(selectedTabId);
-  if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
-  if (isYTMTabSuppressed(tab.id)) {
-    return { ok: false, error: "Disabled while the dev build is active" };
-  }
-  const response = await (
-    chrome.tabs.sendMessage as (
-      tabId: number,
-      message: unknown,
-    ) => Promise<{ ok: true; data?: unknown }>
-  )(tab.id, { type: "get-stream-quality" });
-  return response;
+  return { ok: true, data: await ytm.getStreamQuality() };
 });
 
 handler.on("set-stream-quality", async (message) => {
-  void relayToSelectedTab({
-    type: "set-stream-quality",
-    value: message.value,
-  });
+  void ytm.setStreamQuality(String(message.value)).catch(() => undefined);
   return { ok: true };
 });
 
 handler.on("get-playback-speed", async () => {
-  const tab = await findYTMTab(selectedTabId);
-  if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
-  if (isYTMTabSuppressed(tab.id)) {
-    return { ok: false, error: "Disabled while the dev build is active" };
-  }
-  const response = await (
-    chrome.tabs.sendMessage as (
-      tabId: number,
-      message: unknown,
-    ) => Promise<{ ok: true; data?: unknown }>
-  )(tab.id, { type: "get-playback-speed" });
-  return response;
+  return { ok: true, data: await ytm.getPlaybackSpeed() };
 });
 
 handler.on("set-playback-speed", async (message) => {
-  void relayToSelectedTab({
-    type: "set-playback-speed",
-    rate: message.rate,
-  });
+  void ytm.setPlaybackSpeed(Number(message.rate)).catch(() => undefined);
   return { ok: true };
 });
 
 handler.on("get-volume", async () => {
-  const tab = await findYTMTab(selectedTabId);
-  if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
-  if (isYTMTabSuppressed(tab.id)) {
-    return { ok: false, error: "Disabled while the dev build is active" };
-  }
-  const response = await (
-    chrome.tabs.sendMessage as (
-      tabId: number,
-      message: unknown,
-    ) => Promise<{ ok: true; data?: unknown }>
-  )(tab.id, { type: "get-volume" });
-  return response;
+  return { ok: true, data: await ytm.getVolume() };
 });
 
 handler.on("set-volume", async (message) => {
-  void relayToSelectedTab({
-    type: "set-volume",
-    volume: message.volume,
-  });
+  void ytm.setVolume(Number(message.volume)).catch(() => undefined);
   return { ok: true };
 });
 
@@ -792,18 +671,7 @@ handler.on("set-audio-visualizer-color-mode", async (message) => {
 });
 
 handler.on("get-playback-state", async () => {
-  const tab = await findYTMTab(selectedTabId);
-  if (tab?.id === undefined) return { ok: false, error: "No YTM tab" };
-  if (isYTMTabSuppressed(tab.id)) {
-    return { ok: false, error: "Disabled while the dev build is active" };
-  }
-  const response = await (
-    chrome.tabs.sendMessage as (
-      tabId: number,
-      message: unknown,
-    ) => Promise<{ ok: true; data?: PlaybackState }>
-  )(tab.id, { type: "get-playback-state" });
-  return response;
+  return { ok: true, data: await ytm.getPlaybackState() };
 });
 
 handler.on("get-sleep-timer-state", async () => {
@@ -849,18 +717,13 @@ handler.on("playback-action", async (message) => {
     if (typeof message.time !== "number") {
       return { ok: false, error: "Invalid seek time" };
     }
-    void relayToSelectedTab({
-      type: "playback-action",
-      action: "seekTo",
-      time: message.time,
-    });
+    void ytm.seekTo(message.time).catch(() => undefined);
     return { ok: true };
   }
 
-  void relayToSelectedTab({
-    type: "playback-action",
-    action: message.action,
-  });
+  void ytm
+    .executePlaybackAction(message.action as PlaybackAction)
+    .catch(() => undefined);
   return { ok: true };
 });
 
