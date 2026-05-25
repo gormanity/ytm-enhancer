@@ -294,8 +294,22 @@ export class YTMAdapter {
   }
 
   private parseTimeInfo(): { progress: number; duration: number } {
-    const el = document.querySelector(SELECTORS.timeInfo);
-    const text = el?.textContent?.trim() ?? "";
+    const candidates = document.querySelectorAll<HTMLElement>(
+      SELECTORS.timeInfo,
+    );
+
+    for (const el of candidates) {
+      const parsed = this.parseTimeInfoText(el.textContent?.trim() ?? "");
+      if (parsed.duration > 0) return parsed;
+    }
+
+    return { progress: 0, duration: 0 };
+  }
+
+  private parseTimeInfoText(text: string): {
+    progress: number;
+    duration: number;
+  } {
     const match = text.match(/^(.+?)\s*\/\s*(.+)$/);
     if (!match) return { progress: 0, duration: 0 };
     return {

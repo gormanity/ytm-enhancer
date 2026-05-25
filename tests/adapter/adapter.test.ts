@@ -111,6 +111,23 @@ describe("YTMAdapter", () => {
       expect(state.duration).toBe(211);
     });
 
+    it("should prefer player bar .time-info text over stale progress sources", () => {
+      document.body.innerHTML = `
+        <video class="html5-main-video"></video>
+        <tp-yt-paper-progress id="progress-bar" value="446" max="569"></tp-yt-paper-progress>
+        <ytmusic-player-bar>
+          <span class="time-info style-scope ytmusic-player-bar">3:13 / 5:17</span>
+        </ytmusic-player-bar>
+      `;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "currentTime", { value: 446 });
+      Object.defineProperty(video, "duration", { value: 569 });
+
+      const state = adapter.getPlaybackState();
+      expect(state.progress).toBe(193);
+      expect(state.duration).toBe(317);
+    });
+
     it("should parse hours, minutes, and seconds from #time-info", () => {
       document.body.innerHTML = `
         <span id="time-info">1:02:03 / 2:34:56</span>
