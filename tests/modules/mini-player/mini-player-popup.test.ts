@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMiniPlayerPopupView } from "@/modules/mini-player/popup";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("mini player popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
@@ -16,14 +17,14 @@ describe("mini player popup view", () => {
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createMiniPlayerPopupView();
+    const view = createMiniPlayerPopupView(createTestModuleContext());
 
     expect(view.id).toBe("mini-player-settings");
     expect(view.label).toBe("Mini Player");
   });
 
   it("should render a heading", () => {
-    const view = createMiniPlayerPopupView();
+    const view = createMiniPlayerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -34,7 +35,7 @@ describe("mini player popup view", () => {
   });
 
   it("should render the resize tip", () => {
-    const view = createMiniPlayerPopupView();
+    const view = createMiniPlayerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -63,7 +64,7 @@ describe("mini player popup view", () => {
       },
     );
 
-    const view = createMiniPlayerPopupView();
+    const view = createMiniPlayerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -81,7 +82,7 @@ describe("mini player popup view", () => {
   });
 
   it("should query current states on render", () => {
-    const view = createMiniPlayerPopupView();
+    const view = createMiniPlayerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -99,7 +100,9 @@ describe("mini player popup view", () => {
   it("should disable controls and show a tip when Document PiP is unavailable", () => {
     vi.stubGlobal("documentPictureInPicture", undefined);
 
-    const view = createMiniPlayerPopupView();
+    const view = createMiniPlayerPopupView(
+      createTestModuleContext({ capabilities: { documentPip: false } }),
+    );
     const container = document.createElement("div");
 
     view.render(container);
@@ -139,7 +142,7 @@ describe("mini player popup view", () => {
       },
     );
 
-    const view = createMiniPlayerPopupView();
+    const view = createMiniPlayerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -179,7 +182,7 @@ describe("mini player popup view", () => {
       },
     );
 
-    const view = createMiniPlayerPopupView();
+    const view = createMiniPlayerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);

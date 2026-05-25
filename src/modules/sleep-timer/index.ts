@@ -39,7 +39,7 @@ export class SleepTimerModule implements FeatureModule {
     this.enabled = enabled;
   }
 
-  getPopupViews(context?: ModuleContext): PopupView[] {
+  getPopupViews(context: ModuleContext): PopupView[] {
     return [createSleepTimerPopupView(context)];
   }
 

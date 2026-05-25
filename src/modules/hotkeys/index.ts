@@ -1,4 +1,4 @@
-import type { FeatureModule, PopupView } from "@/core/types";
+import type { FeatureModule, ModuleContext, PopupView } from "@/core/types";
 import { createHotkeysPopupView } from "./popup";
 
 export class HotkeysModule implements FeatureModule {
@@ -19,7 +19,7 @@ export class HotkeysModule implements FeatureModule {
     this.enabled = enabled;
   }
 
-  getPopupViews(): PopupView[] {
-    return [createHotkeysPopupView()];
+  getPopupViews(context: ModuleContext): PopupView[] {
+    return [createHotkeysPopupView(context)];
   }
 }

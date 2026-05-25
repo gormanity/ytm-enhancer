@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createTestModuleContext } from "../../helpers/module-context";
 import { AutoPlayModule } from "@/modules/auto-play";
 
 describe("AutoPlayModule", () => {
@@ -47,7 +48,7 @@ describe("AutoPlayModule", () => {
   });
 
   it("should provide popup views", () => {
-    const views = module.getPopupViews();
+    const views = module.getPopupViews(createTestModuleContext());
 
     expect(views).toHaveLength(1);
     expect(views[0].id).toBe("auto-play-settings");

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAudioVisualizerPopupView } from "@/modules/audio-visualizer/popup";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("audio visualizer popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
@@ -16,6 +17,38 @@ describe("audio visualizer popup view", () => {
       '[data-role="audio-visualizer-color-mode-select"]',
     );
 
+  function mockVisualizerMessages(
+    snapshot: {
+      style?: string;
+      target?: string;
+      tunings?: Record<string, Record<string, unknown>>;
+    } = {},
+  ) {
+    sendMessageMock.mockImplementation(
+      (message: { type: string }, callback?: (response: unknown) => void) => {
+        if (!callback) return;
+        if (message.type === "get-audio-visualizer-enabled") {
+          callback({ ok: true, data: true });
+          return;
+        }
+        if (message.type === "get-audio-visualizer-snapshot") {
+          callback({
+            ok: true,
+            data: {
+              style: snapshot.style ?? "bars",
+              target: snapshot.target ?? "auto",
+              tunings: snapshot.tunings ?? {
+                bars: { intensity: 1, thickness: 1, opacity: 1 },
+                waveform: { intensity: 1, thickness: 1, opacity: 1 },
+                circular: { intensity: 1, thickness: 1, opacity: 1 },
+              },
+            },
+          });
+        }
+      },
+    );
+  }
+
   beforeEach(() => {
     sendMessageMock = vi.fn();
 
@@ -24,17 +57,18 @@ describe("audio visualizer popup view", () => {
         sendMessage: sendMessageMock,
       },
     });
+    mockVisualizerMessages();
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
 
     expect(view.id).toBe("audio-visualizer-settings");
     expect(view.label).toBe("Audio Visualizer");
   });
 
   it("should render a heading", () => {
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -45,21 +79,7 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should render a toggle switch checked when enabled", async () => {
-    sendMessageMock.mockImplementation(
-      (message: { type: string }, callback?: (response: unknown) => void) => {
-        if (callback) {
-          if (message.type === "get-audio-visualizer-enabled") {
-            callback({ ok: true, data: true });
-          } else if (message.type === "get-audio-visualizer-style") {
-            callback({ ok: true, data: "bars" });
-          } else if (message.type === "get-audio-visualizer-target") {
-            callback({ ok: true, data: "auto" });
-          }
-        }
-      },
-    );
-
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -75,7 +95,7 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should query enabled state and style on render", () => {
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -85,27 +105,13 @@ describe("audio visualizer popup view", () => {
       expect.any(Function),
     );
     expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "get-audio-visualizer-style" },
+      { type: "get-audio-visualizer-snapshot" },
       expect.any(Function),
     );
   });
 
   it("should send set-audio-visualizer-enabled on toggle change", async () => {
-    sendMessageMock.mockImplementation(
-      (message: { type: string }, callback?: (response: unknown) => void) => {
-        if (callback) {
-          if (message.type === "get-audio-visualizer-enabled") {
-            callback({ ok: true, data: true });
-          } else if (message.type === "get-audio-visualizer-style") {
-            callback({ ok: true, data: "bars" });
-          } else if (message.type === "get-audio-visualizer-target") {
-            callback({ ok: true, data: "auto" });
-          }
-        }
-      },
-    );
-
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -130,7 +136,7 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should render a style select with three options", () => {
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -144,21 +150,9 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should set style select value from background", async () => {
-    sendMessageMock.mockImplementation(
-      (message: { type: string }, callback?: (response: unknown) => void) => {
-        if (callback) {
-          if (message.type === "get-audio-visualizer-enabled") {
-            callback({ ok: true, data: true });
-          } else if (message.type === "get-audio-visualizer-style") {
-            callback({ ok: true, data: "waveform" });
-          } else if (message.type === "get-audio-visualizer-target") {
-            callback({ ok: true, data: "auto" });
-          }
-        }
-      },
-    );
+    mockVisualizerMessages({ style: "waveform" });
 
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -171,21 +165,7 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should send set-audio-visualizer-style on select change", async () => {
-    sendMessageMock.mockImplementation(
-      (message: { type: string }, callback?: (response: unknown) => void) => {
-        if (callback) {
-          if (message.type === "get-audio-visualizer-enabled") {
-            callback({ ok: true, data: true });
-          } else if (message.type === "get-audio-visualizer-style") {
-            callback({ ok: true, data: "bars" });
-          } else if (message.type === "get-audio-visualizer-target") {
-            callback({ ok: true, data: "auto" });
-          }
-        }
-      },
-    );
-
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -206,19 +186,19 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should query target state on render", () => {
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
 
     expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "get-audio-visualizer-target" },
+      { type: "get-audio-visualizer-snapshot" },
       expect.any(Function),
     );
   });
 
   it("should render a target select with five options", () => {
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -234,21 +214,9 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should set target select value from background", async () => {
-    sendMessageMock.mockImplementation(
-      (message: { type: string }, callback?: (response: unknown) => void) => {
-        if (callback) {
-          if (message.type === "get-audio-visualizer-enabled") {
-            callback({ ok: true, data: true });
-          } else if (message.type === "get-audio-visualizer-style") {
-            callback({ ok: true, data: "bars" });
-          } else if (message.type === "get-audio-visualizer-target") {
-            callback({ ok: true, data: "pip-only" });
-          }
-        }
-      },
-    );
+    mockVisualizerMessages({ target: "pip-only" });
 
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -261,21 +229,7 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should send set-audio-visualizer-target on target select change", async () => {
-    sendMessageMock.mockImplementation(
-      (message: { type: string }, callback?: (response: unknown) => void) => {
-        if (callback) {
-          if (message.type === "get-audio-visualizer-enabled") {
-            callback({ ok: true, data: true });
-          } else if (message.type === "get-audio-visualizer-style") {
-            callback({ ok: true, data: "bars" });
-          } else if (message.type === "get-audio-visualizer-target") {
-            callback({ ok: true, data: "auto" });
-          }
-        }
-      },
-    );
-
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -296,42 +250,19 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should query style tuning values on render", () => {
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
 
     expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "get-audio-visualizer-style-tunings" },
+      { type: "get-audio-visualizer-snapshot" },
       expect.any(Function),
     );
   });
 
   it("should send style tuning update when slider changes", async () => {
-    sendMessageMock.mockImplementation(
-      (message: { type: string }, callback?: (response: unknown) => void) => {
-        if (callback) {
-          if (message.type === "get-audio-visualizer-enabled") {
-            callback({ ok: true, data: true });
-          } else if (message.type === "get-audio-visualizer-style") {
-            callback({ ok: true, data: "bars" });
-          } else if (message.type === "get-audio-visualizer-target") {
-            callback({ ok: true, data: "auto" });
-          } else if (message.type === "get-audio-visualizer-style-tunings") {
-            callback({
-              ok: true,
-              data: {
-                bars: { intensity: 1, thickness: 1, opacity: 1 },
-                waveform: { intensity: 1, thickness: 1, opacity: 1 },
-                circular: { intensity: 1, thickness: 1, opacity: 1 },
-              },
-            });
-          }
-        }
-      },
-    );
-
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -362,44 +293,30 @@ describe("audio visualizer popup view", () => {
   });
 
   it("should send set-audio-visualizer-color-mode on color mode change", async () => {
-    sendMessageMock.mockImplementation(
-      (message: { type: string }, callback?: (response: unknown) => void) => {
-        if (!callback) return;
-        if (message.type === "get-audio-visualizer-enabled") {
-          callback({ ok: true, data: true });
-        } else if (message.type === "get-audio-visualizer-style") {
-          callback({ ok: true, data: "bars" });
-        } else if (message.type === "get-audio-visualizer-target") {
-          callback({ ok: true, data: "auto" });
-        } else if (message.type === "get-audio-visualizer-style-tunings") {
-          callback({
-            ok: true,
-            data: {
-              bars: {
-                intensity: 1,
-                thickness: 1,
-                opacity: 1,
-                colorMode: "white",
-              },
-              waveform: {
-                intensity: 1,
-                thickness: 1,
-                opacity: 1,
-                colorMode: "artwork-adaptive",
-              },
-              circular: {
-                intensity: 1,
-                thickness: 1,
-                opacity: 1,
-                colorMode: "monochrome-dim",
-              },
-            },
-          });
-        }
+    mockVisualizerMessages({
+      tunings: {
+        bars: {
+          intensity: 1,
+          thickness: 1,
+          opacity: 1,
+          colorMode: "white",
+        },
+        waveform: {
+          intensity: 1,
+          thickness: 1,
+          opacity: 1,
+          colorMode: "artwork-adaptive",
+        },
+        circular: {
+          intensity: 1,
+          thickness: 1,
+          opacity: 1,
+          colorMode: "monochrome-dim",
+        },
       },
-    );
+    });
 
-    const view = createAudioVisualizerPopupView();
+    const view = createAudioVisualizerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 

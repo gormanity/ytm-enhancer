@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSleepTimerPopupView } from "@/modules/sleep-timer/popup";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("sleep timer popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
@@ -40,7 +41,7 @@ describe("sleep timer popup view", () => {
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
 
     expect(view.id).toBe("sleep-timer-settings");
     expect(view.label).toBe("Sleep Timer");
@@ -56,7 +57,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -88,7 +89,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -106,10 +107,10 @@ describe("sleep timer popup view", () => {
       container.querySelector<HTMLButtonElement>("button.primary-btn")!;
     startBtn.click();
 
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "start-sleep-timer", durationMs: 30 * 60 * 1000 },
-      expect.any(Function),
-    );
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "start-sleep-timer",
+      durationMs: 30 * 60 * 1000,
+    });
   });
 
   it("should send cancel message", () => {
@@ -126,7 +127,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -136,10 +137,9 @@ describe("sleep timer popup view", () => {
     if (!cancelBtn) throw new Error("Cancel button not found");
     cancelBtn.click();
 
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "cancel-sleep-timer" },
-      expect.any(Function),
-    );
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "cancel-sleep-timer",
+    });
   });
 
   it("should send start message with custom duration", () => {
@@ -156,7 +156,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -174,13 +174,13 @@ describe("sleep timer popup view", () => {
       container.querySelector<HTMLButtonElement>("button.primary-btn")!;
     startBtn.click();
 
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "start-sleep-timer", durationMs: 77 * 60 * 1000 },
-      expect.any(Function),
-    );
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "start-sleep-timer",
+      durationMs: 77 * 60 * 1000,
+    });
   });
 
-  it("should label start button as restart when timer is active", () => {
+  it("should label start button as restart when timer is active", async () => {
     sendMessageMock.mockImplementation(
       (message: { type: string }, callback?: (response: unknown) => void) => {
         if (message.type === "get-sleep-timer-state") {
@@ -199,13 +199,15 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
     const startBtn =
       container.querySelector<HTMLButtonElement>("button.primary-btn")!;
-    expect(startBtn.textContent).toBe("Restart Timer");
+    await vi.waitFor(() => {
+      expect(startBtn.textContent).toBe("Restart Timer");
+    });
   });
 
   it("should send notification setting updates on toggle", () => {
@@ -231,7 +233,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -278,7 +280,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -329,7 +331,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -359,7 +361,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -394,7 +396,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -405,7 +407,7 @@ describe("sleep timer popup view", () => {
     expect(pausedHint?.classList.contains("is-hidden")).toBe(true);
   });
 
-  it("should show a paused message once before hiding stale entries", () => {
+  it("should show a paused message once before hiding stale entries", async () => {
     const pausedAt = Date.now() - 8 * 60 * 60 * 1000;
 
     sendMessageMock.mockImplementation(
@@ -426,17 +428,19 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const firstContainer = document.createElement("div");
     view.render(firstContainer);
 
     const firstPausedHint = firstContainer.querySelector<HTMLElement>(
       '[data-role="sleep-paused-at"]',
     );
-    expect(firstPausedHint?.classList.contains("is-hidden")).toBe(false);
-    expect(localStorage.getItem(LAST_PAUSED_AT_SEEN_KEY)).toBe(
-      String(pausedAt),
-    );
+    await vi.waitFor(() => {
+      expect(firstPausedHint?.classList.contains("is-hidden")).toBe(false);
+      expect(localStorage.getItem(LAST_PAUSED_AT_SEEN_KEY)).toBe(
+        String(pausedAt),
+      );
+    });
 
     const secondContainer = document.createElement("div");
     view.render(secondContainer);
@@ -444,10 +448,12 @@ describe("sleep timer popup view", () => {
     const secondPausedHint = secondContainer.querySelector<HTMLElement>(
       '[data-role="sleep-paused-at"]',
     );
-    expect(secondPausedHint?.classList.contains("is-hidden")).toBe(true);
+    await vi.waitFor(() => {
+      expect(secondPausedHint?.classList.contains("is-hidden")).toBe(true);
+    });
   });
 
-  it("should keep paused message visible when seen but still within 30 minutes", () => {
+  it("should keep paused message visible when seen but still within 30 minutes", async () => {
     vi.useFakeTimers();
     const now = new Date("2026-03-06T09:00:00.000Z");
     vi.setSystemTime(now);
@@ -471,7 +477,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const firstContainer = document.createElement("div");
     view.render(firstContainer);
 
@@ -480,7 +486,9 @@ describe("sleep timer popup view", () => {
     const secondPausedHint = secondContainer.querySelector<HTMLElement>(
       '[data-role="sleep-paused-at"]',
     );
-    expect(secondPausedHint?.classList.contains("is-hidden")).toBe(false);
+    await vi.waitFor(() => {
+      expect(secondPausedHint?.classList.contains("is-hidden")).toBe(false);
+    });
 
     vi.useRealTimers();
   });
@@ -509,7 +517,7 @@ describe("sleep timer popup view", () => {
     );
 
     vi.setSystemTime(base);
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const firstContainer = document.createElement("div");
     view.render(firstContainer);
 
@@ -526,7 +534,7 @@ describe("sleep timer popup view", () => {
     vi.useRealTimers();
   });
 
-  it('should replace "Timer is off" with paused message when shown', () => {
+  it('should replace "Timer is off" with paused message when shown', async () => {
     const pausedAt = Date.now();
 
     sendMessageMock.mockImplementation(
@@ -547,7 +555,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -558,8 +566,10 @@ describe("sleep timer popup view", () => {
       '[data-role="sleep-paused-at"]',
     );
 
-    expect(status?.classList.contains("is-hidden")).toBe(true);
-    expect(pausedHint?.classList.contains("is-hidden")).toBe(false);
+    await vi.waitFor(() => {
+      expect(status?.classList.contains("is-hidden")).toBe(true);
+      expect(pausedHint?.classList.contains("is-hidden")).toBe(false);
+    });
   });
 
   it("should persist pause-at time across popup opens", () => {
@@ -577,7 +587,7 @@ describe("sleep timer popup view", () => {
       },
     );
 
-    const view = createSleepTimerPopupView();
+    const view = createSleepTimerPopupView(createTestModuleContext());
     const containerA = document.createElement("div");
     view.render(containerA);
 

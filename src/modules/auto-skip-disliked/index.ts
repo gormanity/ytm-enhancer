@@ -26,7 +26,7 @@ export class AutoSkipDislikedModule implements FeatureModule {
     this.enabled = enabled;
   }
 
-  getPopupViews(context?: ModuleContext): PopupView[] {
+  getPopupViews(context: ModuleContext): PopupView[] {
     return [createAutoSkipDislikedPopupView(context)];
   }
 

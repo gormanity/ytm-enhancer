@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createTestModuleContext } from "../../helpers/module-context";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 
 describe("AutoSkipDislikedModule", () => {
@@ -36,7 +37,7 @@ describe("AutoSkipDislikedModule", () => {
   });
 
   it("should provide popup views", () => {
-    const views = module.getPopupViews();
+    const views = module.getPopupViews(createTestModuleContext());
 
     expect(views).toHaveLength(1);
     expect(views[0].id).toBe("auto-skip-disliked-settings");

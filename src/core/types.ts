@@ -76,7 +76,7 @@ export interface FeatureModule {
   setEnabled(enabled: boolean): void;
 
   /** Optional popup views this module provides. */
-  getPopupViews?(context?: ModuleContext): PopupView[];
+  getPopupViews?(context: ModuleContext): PopupView[];
 
   /** Optional background message handlers this module owns. */
   registerHandlers?(

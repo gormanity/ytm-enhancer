@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createTestModuleContext } from "../../helpers/module-context";
 import { PlaybackControlsModule } from "@/modules/playback-controls";
 
 describe("PlaybackControlsModule", () => {
@@ -39,7 +40,7 @@ describe("PlaybackControlsModule", () => {
   });
 
   it("should provide popup views", () => {
-    const views = module.getPopupViews();
+    const views = module.getPopupViews(createTestModuleContext());
     expect(views).toHaveLength(1);
     expect(views[0].id).toBe("playback-controls");
   });

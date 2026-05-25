@@ -1,8 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createStreamQualityPopupView } from "@/modules/playback-controls/stream-quality/popup";
+import { createTestModuleContext } from "../../../helpers/module-context";
 
 describe("stream quality popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
+
+  function createStreamQualityContext(quality: unknown = "2") {
+    const getStreamQuality = vi.fn().mockResolvedValue(quality);
+    const setStreamQuality = vi.fn().mockResolvedValue(undefined);
+    return {
+      context: createTestModuleContext({
+        ytm: {
+          getStreamQuality,
+          setStreamQuality,
+        },
+      }),
+      getStreamQuality,
+      setStreamQuality,
+    };
+  }
 
   beforeEach(() => {
     sendMessageMock = vi.fn();
@@ -15,14 +31,14 @@ describe("stream quality popup view", () => {
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createStreamQualityPopupView();
+    const view = createStreamQualityPopupView(createTestModuleContext());
 
     expect(view.id).toBe("stream-quality-settings");
     expect(view.label).toBe("Stream Quality");
   });
 
   it("should render a heading", () => {
-    const view = createStreamQualityPopupView();
+    const view = createStreamQualityPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -33,7 +49,7 @@ describe("stream quality popup view", () => {
   });
 
   it("should render a disabled select with placeholder initially", () => {
-    const view = createStreamQualityPopupView();
+    const view = createStreamQualityPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -53,31 +69,21 @@ describe("stream quality popup view", () => {
   });
 
   it("should query current quality on render", () => {
-    const view = createStreamQualityPopupView();
+    const { context, getStreamQuality } = createStreamQualityContext();
+    const view = createStreamQualityPopupView(context);
     const container = document.createElement("div");
 
     view.render(container);
 
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      { type: "get-stream-quality" },
-      expect.any(Function),
-    );
+    expect(getStreamQuality).toHaveBeenCalled();
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
   it("should select current quality and enable when response arrives", async () => {
-    sendMessageMock.mockImplementation(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        const msg = message as { type: string };
-        if (msg.type === "get-stream-quality" && callback) {
-          callback({
-            ok: true,
-            data: { current: "3" },
-          });
-        }
-      },
-    );
-
-    const view = createStreamQualityPopupView();
+    const { context } = createStreamQualityContext({
+      current: "3",
+    });
+    const view = createStreamQualityPopupView(context);
     const container = document.createElement("div");
 
     view.render(container);
@@ -92,19 +98,10 @@ describe("stream quality popup view", () => {
   });
 
   it("should enable select even when current is null", async () => {
-    sendMessageMock.mockImplementation(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        const msg = message as { type: string };
-        if (msg.type === "get-stream-quality" && callback) {
-          callback({
-            ok: true,
-            data: { current: null },
-          });
-        }
-      },
-    );
-
-    const view = createStreamQualityPopupView();
+    const { context } = createStreamQualityContext({
+      current: null,
+    });
+    const view = createStreamQualityPopupView(context);
     const container = document.createElement("div");
 
     view.render(container);
@@ -116,19 +113,10 @@ describe("stream quality popup view", () => {
   });
 
   it("should send set-stream-quality on change", async () => {
-    sendMessageMock.mockImplementation(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        const msg = message as { type: string };
-        if (msg.type === "get-stream-quality" && callback) {
-          callback({
-            ok: true,
-            data: { current: "2" },
-          });
-        }
-      },
-    );
-
-    const view = createStreamQualityPopupView();
+    const { context, setStreamQuality } = createStreamQualityContext({
+      current: "2",
+    });
+    const view = createStreamQualityPopupView(context);
     const container = document.createElement("div");
 
     view.render(container);
@@ -142,23 +130,17 @@ describe("stream quality popup view", () => {
     select.value = "3";
     select.dispatchEvent(new Event("change"));
 
-    expect(sendMessageMock).toHaveBeenCalledWith({
-      type: "set-stream-quality",
-      value: "3",
-    });
+    expect(setStreamQuality).toHaveBeenCalledWith("3");
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
   it("should remain disabled when response is not ok", () => {
-    sendMessageMock.mockImplementation(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        const msg = message as { type: string };
-        if (msg.type === "get-stream-quality" && callback) {
-          callback({ ok: false });
-        }
+    const context = createTestModuleContext({
+      ytm: {
+        getStreamQuality: vi.fn().mockRejectedValue(new Error("No YTM tab")),
       },
-    );
-
-    const view = createStreamQualityPopupView();
+    });
+    const view = createStreamQualityPopupView(context);
     const container = document.createElement("div");
 
     view.render(container);

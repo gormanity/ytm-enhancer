@@ -6,49 +6,35 @@ import selectControlTemplateHtml from "./select-control.html?raw";
 
 function initializeStreamQualityControl(
   container: HTMLElement,
-  context?: ModuleContext,
+  context: ModuleContext,
 ): void {
   const hint = container.querySelector<HTMLElement>(
     '[data-role="stream-quality-hint"]',
   );
 
-  bindModuleSelect(
-    container,
-    "stream-quality-select",
-    context
-      ? {
-          get: async () => {
-            const data = await context.ytm.getStreamQuality();
-            return ((data as { current?: string | null } | null)?.current ??
-              data ??
-              "2") as string;
-          },
-          set: (value) => context.ytm.setStreamQuality(value),
-        }
-      : {
-          getType: "get-stream-quality",
-          setType: "set-stream-quality",
-          parseData: (data) => {
-            const d = data as { current: string | null } | undefined;
-            return d?.current ?? "2";
-          },
-          onLoaded: () => {
-            hint?.classList.add("is-hidden");
-          },
-        },
-  );
-  if (context) hint?.classList.add("is-hidden");
+  bindModuleSelect(container, "stream-quality-select", {
+    get: async () => {
+      const data = await context.ytm.getStreamQuality();
+      return (
+        (data as { current?: string | null } | null)?.current ?? data ?? "2"
+      );
+    },
+    set: (value) => context.ytm.setStreamQuality(value),
+  });
+  hint?.classList.add("is-hidden");
 }
 
 export function renderStreamQualitySelectControl(
   container: HTMLElement,
-  context?: ModuleContext,
+  context: ModuleContext,
 ): void {
   renderPopupTemplate(container, selectControlTemplateHtml);
   initializeStreamQualityControl(container, context);
 }
 
-export function createStreamQualityPopupView(): PopupView {
+export function createStreamQualityPopupView(
+  context: ModuleContext,
+): PopupView {
   return {
     id: "stream-quality-settings",
     label: "Stream Quality",
@@ -58,7 +44,7 @@ export function createStreamQualityPopupView(): PopupView {
         '[data-role="stream-quality-control-slot"]',
       );
       if (!slot) return;
-      renderStreamQualitySelectControl(slot);
+      renderStreamQualitySelectControl(slot, context);
     },
   };
 }

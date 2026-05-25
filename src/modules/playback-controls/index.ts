@@ -20,7 +20,7 @@ export class PlaybackControlsModule implements FeatureModule {
     this.enabled = enabled;
   }
 
-  getPopupViews(context?: ModuleContext): PopupView[] {
+  getPopupViews(context: ModuleContext): PopupView[] {
     return [createPlaybackControlsPopupView(context)];
   }
 }

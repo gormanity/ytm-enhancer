@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAutoPlayPopupView } from "@/modules/auto-play/popup";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("auto-play popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
@@ -23,14 +24,14 @@ describe("auto-play popup view", () => {
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createAutoPlayPopupView();
+    const view = createAutoPlayPopupView(createTestModuleContext());
 
     expect(view.id).toBe("auto-play-settings");
     expect(view.label).toBe("Auto-Play");
   });
 
   it("should render a heading", () => {
-    const view = createAutoPlayPopupView();
+    const view = createAutoPlayPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -49,7 +50,7 @@ describe("auto-play popup view", () => {
       },
     );
 
-    const view = createAutoPlayPopupView();
+    const view = createAutoPlayPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -63,7 +64,7 @@ describe("auto-play popup view", () => {
   });
 
   it("should query current mode on render", () => {
-    const view = createAutoPlayPopupView();
+    const view = createAutoPlayPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -83,7 +84,7 @@ describe("auto-play popup view", () => {
       },
     );
 
-    const view = createAutoPlayPopupView();
+    const view = createAutoPlayPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -118,7 +119,7 @@ describe("auto-play popup view", () => {
       },
     );
 
-    const view = createAutoPlayPopupView();
+    const view = createAutoPlayPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -152,7 +153,7 @@ describe("auto-play popup view", () => {
       },
     );
 
-    const view = createAutoPlayPopupView();
+    const view = createAutoPlayPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -191,7 +192,7 @@ describe("auto-play popup view", () => {
       },
     );
 
-    const view = createAutoPlayPopupView();
+    const view = createAutoPlayPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);

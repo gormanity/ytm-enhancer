@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AutoPlayController } from "@/content/auto-play";
 import { createAutoPlayPopupView } from "@/modules/auto-play/popup";
 import { YTMAdapter } from "@/adapter";
+import { createTestModuleContext } from "../helpers/module-context";
 
 vi.mock("@/adapter", () => {
   const MockYTMAdapter = vi.fn();
@@ -178,15 +179,17 @@ describe("auto-play integration flows", () => {
     expect(video.play).not.toHaveBeenCalled();
   });
 
-  it("honors toggling off in popup before immediate reload", () => {
+  it("honors toggling off in popup before immediate reload", async () => {
     autoPlayMode = "on";
 
     const popupContainer = document.createElement("div");
-    createAutoPlayPopupView().render(popupContainer);
+    createAutoPlayPopupView(createTestModuleContext()).render(popupContainer);
 
     const select = popupContainer.querySelector<HTMLSelectElement>("select");
     expect(select).not.toBeNull();
-    expect(select?.value).toBe("on");
+    await vi.waitFor(() => {
+      expect(select?.value).toBe("on");
+    });
 
     select!.value = "off";
     select!.dispatchEvent(new Event("change"));

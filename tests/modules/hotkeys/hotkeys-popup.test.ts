@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createHotkeysPopupView } from "@/modules/hotkeys/popup";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("createHotkeysPopupView", () => {
   beforeEach(() => {
@@ -11,14 +12,14 @@ describe("createHotkeysPopupView", () => {
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createHotkeysPopupView();
+    const view = createHotkeysPopupView(createTestModuleContext());
 
     expect(view.id).toBe("hotkeys-settings");
     expect(view.label).toBe("Hotkeys");
   });
 
   it("should render a heading into the container", () => {
-    const view = createHotkeysPopupView();
+    const view = createHotkeysPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -46,7 +47,7 @@ describe("createHotkeysPopupView", () => {
       },
     );
 
-    const view = createHotkeysPopupView();
+    const view = createHotkeysPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -65,7 +66,7 @@ describe("createHotkeysPopupView", () => {
       },
     );
 
-    const view = createHotkeysPopupView();
+    const view = createHotkeysPopupView(createTestModuleContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -115,7 +116,7 @@ describe("createHotkeysPopupView", () => {
         },
       );
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
 
       view.render(container);
@@ -148,7 +149,7 @@ describe("createHotkeysPopupView", () => {
         },
       );
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
 
       view.render(container);
@@ -184,7 +185,7 @@ describe("createHotkeysPopupView", () => {
         },
       );
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
 
       view.render(container);
@@ -214,7 +215,7 @@ describe("createHotkeysPopupView", () => {
         },
       );
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
 
       view.render(container);
@@ -240,7 +241,7 @@ describe("createHotkeysPopupView", () => {
         },
       );
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
 
       view.render(container);
@@ -286,7 +287,7 @@ describe("createHotkeysPopupView", () => {
         },
       );
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
 
       view.render(container);
@@ -339,7 +340,7 @@ describe("createHotkeysPopupView", () => {
         },
       );
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
 
       view.render(container);
@@ -386,7 +387,7 @@ describe("createHotkeysPopupView", () => {
         },
       );
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
 
       view.render(container);
@@ -438,7 +439,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -455,7 +456,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -472,7 +473,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -497,7 +498,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -520,7 +521,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -555,7 +556,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -583,7 +584,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -608,7 +609,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -635,7 +636,7 @@ describe("createHotkeysPopupView", () => {
         { name: "play-pause", shortcut: "Alt+Shift+P", description: "Play" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -658,7 +659,7 @@ describe("createHotkeysPopupView", () => {
         { name: "next-track", shortcut: "Ctrl+Shift+M", description: "Next" },
       ]);
 
-      const view = createHotkeysPopupView();
+      const view = createHotkeysPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -695,7 +696,7 @@ describe("createHotkeysPopupView", () => {
       },
     );
 
-    const view = createHotkeysPopupView();
+    const view = createHotkeysPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);

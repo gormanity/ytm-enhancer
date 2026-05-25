@@ -36,7 +36,7 @@ export class MiniPlayerModule implements FeatureModule {
     this.suppressNotificationsWhilePipOpen = enabled;
   }
 
-  getPopupViews(context?: ModuleContext): PopupView[] {
+  getPopupViews(context: ModuleContext): PopupView[] {
     return [createMiniPlayerPopupView(context)];
   }
 

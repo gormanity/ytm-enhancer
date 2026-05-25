@@ -1,8 +1,4 @@
 import type { AutoPlayMode, ModuleContext, PopupView } from "@/core/types";
-import {
-  addRuntimeMessageListener,
-  removeRuntimeMessageListener,
-} from "@/core/runtime-listener";
 import { bindModuleSelect } from "@/popup/module-ui";
 import { renderPopupTemplate } from "@/popup/template";
 import templateHtml from "./popup.html?raw";
@@ -13,15 +9,8 @@ function normalizeMode(mode: unknown): AutoPlayMode {
     : "default";
 }
 
-type AutoPlayStatusResponse = {
-  ok: boolean;
-  data?: {
-    browserAutoplayBlocked?: boolean;
-  };
-};
-
 /** Create the auto-play settings popup view. */
-export function createAutoPlayPopupView(context?: ModuleContext): PopupView {
+export function createAutoPlayPopupView(context: ModuleContext): PopupView {
   return {
     id: "auto-play-settings",
     label: "Auto-Play",
@@ -43,54 +32,29 @@ export function createAutoPlayPopupView(context?: ModuleContext): PopupView {
       };
 
       const updateBlockedHint = () => {
-        if (context) {
-          void context.runtime
-            .request<{ browserAutoplayBlocked?: boolean }>({
-              type: "get-auto-play-status",
-            })
-            .then((data) => {
-              setBlockedHintVisible(data.browserAutoplayBlocked === true);
-            })
-            .catch(() => undefined);
-          return;
-        }
-        chrome.runtime.sendMessage(
-          { type: "get-auto-play-status" },
-          (response: AutoPlayStatusResponse) => {
-            if (chrome.runtime.lastError || !blockedHint) return;
-            const shouldShow =
-              response?.ok === true &&
-              response.data?.browserAutoplayBlocked === true;
-            setBlockedHintVisible(shouldShow);
-          },
-        );
+        void context.runtime
+          .request<{ browserAutoplayBlocked?: boolean }>({
+            type: "get-auto-play-status",
+          })
+          .then((data) => {
+            setBlockedHintVisible(data.browserAutoplayBlocked === true);
+          })
+          .catch(() => undefined);
       };
 
-      bindModuleSelect(
-        container,
-        "auto-play-mode",
-        context
-          ? {
-              get: async () =>
-                normalizeMode(
-                  await context.runtime.request<AutoPlayMode>({
-                    type: "get-auto-play-mode",
-                  }),
-                ),
-              set: (mode) =>
-                context.runtime.command({
-                  type: "set-auto-play-mode",
-                  mode: normalizeMode(mode),
-                }),
-            }
-          : {
-              getType: "get-auto-play-mode",
-              setType: "set-auto-play-mode",
-              setKey: "mode",
-              parseData: normalizeMode,
-              transformValue: normalizeMode,
-            },
-      );
+      bindModuleSelect(container, "auto-play-mode", {
+        get: async () =>
+          normalizeMode(
+            await context.runtime.request<AutoPlayMode>({
+              type: "get-auto-play-mode",
+            }),
+          ),
+        set: (mode) =>
+          context.runtime.command({
+            type: "set-auto-play-mode",
+            mode: normalizeMode(mode),
+          }),
+      });
 
       const modeChangeListener = () => {
         if (modeSelect?.value !== "on") {
@@ -108,11 +72,11 @@ export function createAutoPlayPopupView(context?: ModuleContext): PopupView {
           updateBlockedHint();
         }
       };
-      addRuntimeMessageListener(runtimeMessageListener);
+      const unsubscribe = context.runtime.subscribe(runtimeMessageListener);
 
       return () => {
         modeSelect?.removeEventListener("change", modeChangeListener);
-        removeRuntimeMessageListener(runtimeMessageListener);
+        unsubscribe();
       };
     },
   };

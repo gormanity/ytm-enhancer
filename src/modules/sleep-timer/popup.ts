@@ -1,8 +1,4 @@
 import type { ModuleContext, PopupView } from "@/core/types";
-import {
-  addRuntimeMessageListener,
-  removeRuntimeMessageListener,
-} from "@/core/runtime-listener";
 import { renderPopupTemplate } from "@/popup/template";
 import { bindModuleToggle } from "@/popup/module-ui";
 import templateHtml from "./popup.html?raw";
@@ -173,7 +169,7 @@ function persistAbsoluteTime(value: string): void {
 }
 
 /** Create the sleep timer settings popup view. */
-export function createSleepTimerPopupView(context?: ModuleContext): PopupView {
+export function createSleepTimerPopupView(context: ModuleContext): PopupView {
   return {
     id: "sleep-timer-settings",
     label: "Sleep Timer",
@@ -408,27 +404,16 @@ export function createSleepTimerPopupView(context?: ModuleContext): PopupView {
       };
 
       const queryState = () => {
-        if (context) {
-          void context.runtime
-            .request<SleepTimerState>({ type: "get-sleep-timer-state" })
-            .then(applyState);
-          return;
-        }
-        chrome.runtime.sendMessage(
-          { type: "get-sleep-timer-state" },
-          (response: { ok: boolean; data?: SleepTimerState } | null) => {
-            if (response?.ok && response.data) {
-              applyState(response.data);
-            }
-          },
-        );
+        void context.runtime
+          .request<SleepTimerState>({ type: "get-sleep-timer-state" })
+          .then(applyState);
       };
       const runtimeMessageListener = (message: { type?: string }) => {
         if (message.type === "sleep-timer-state-changed") {
           queryState();
         }
       };
-      addRuntimeMessageListener(runtimeMessageListener);
+      const unsubscribe = context.runtime.subscribe(runtimeMessageListener);
 
       const updateCountdown = () => {
         if (activeEndAt === null) return;
@@ -447,94 +432,49 @@ export function createSleepTimerPopupView(context?: ModuleContext): PopupView {
         const durationMs = getDurationMs();
         if (durationMs === null) return;
         startBtn.disabled = true;
-        if (context) {
-          void context.runtime
-            .command({ type: "start-sleep-timer", durationMs })
-            .finally(() => {
-              updateStartEnabled();
-              queryState();
-            });
-          return;
-        }
-        chrome.runtime.sendMessage(
-          { type: "start-sleep-timer", durationMs },
-          () => {
+        void context.runtime
+          .command({ type: "start-sleep-timer", durationMs })
+          .finally(() => {
             updateStartEnabled();
             queryState();
-          },
-        );
+          });
       });
 
       cancelBtn.addEventListener("click", () => {
         cancelBtn.disabled = true;
-        if (context) {
-          void context.runtime
-            .command({ type: "cancel-sleep-timer" })
-            .finally(() => {
-              queryState();
-            });
-          return;
-        }
-        chrome.runtime.sendMessage({ type: "cancel-sleep-timer" }, () => {
-          queryState();
-        });
+        void context.runtime
+          .command({ type: "cancel-sleep-timer" })
+          .finally(() => {
+            queryState();
+          });
       });
 
-      bindModuleToggle(
-        container,
-        "sleep-notification-toggle",
-        context
-          ? {
-              get: () =>
-                context.runtime.request<boolean>({
-                  type: "get-sleep-timer-notify-enabled",
-                }),
-              set: (enabled) =>
-                context.runtime.command({
-                  type: "set-sleep-timer-notify-enabled",
-                  enabled,
-                }),
-            }
-          : {
-              getType: "get-sleep-timer-notify-enabled",
-              setType: "set-sleep-timer-notify-enabled",
-            },
-      );
+      bindModuleToggle(container, "sleep-notification-toggle", {
+        get: () =>
+          context.runtime.request<boolean>({
+            type: "get-sleep-timer-notify-enabled",
+          }),
+        set: (enabled) =>
+          context.runtime.command({
+            type: "set-sleep-timer-notify-enabled",
+            enabled,
+          }),
+      });
 
-      if (context) {
-        void context.runtime
-          .request<string>({ type: "get-sleep-timer-mode" })
-          .then((data) => {
-            mode = data === "absolute" ? "absolute" : "duration";
-            modeSelect.value = mode;
-            updateModeVisibility();
-            updateStartEnabled();
-          });
-      } else {
-        chrome.runtime.sendMessage(
-          { type: "get-sleep-timer-mode" },
-          (response: { ok: boolean; data?: string } | null) => {
-            if (!response?.ok) return;
-            mode = response.data === "absolute" ? "absolute" : "duration";
-            modeSelect.value = mode;
-            updateModeVisibility();
-            updateStartEnabled();
-          },
-        );
-      }
+      void context.runtime
+        .request<string>({ type: "get-sleep-timer-mode" })
+        .then((data) => {
+          mode = data === "absolute" ? "absolute" : "duration";
+          modeSelect.value = mode;
+          updateModeVisibility();
+          updateStartEnabled();
+        });
 
       modeSelect.addEventListener("change", () => {
         mode = modeSelect.value === "absolute" ? "absolute" : "duration";
         updateModeVisibility();
         updateStartEnabled();
-        if (context) {
-          void context.runtime.command({ type: "set-sleep-timer-mode", mode });
-        } else {
-          chrome.runtime.sendMessage({
-            type: "set-sleep-timer-mode",
-            mode,
-          });
-        }
+        void context.runtime.command({ type: "set-sleep-timer-mode", mode });
       });
 
       hoursInput.addEventListener("input", () => {
@@ -598,7 +538,7 @@ export function createSleepTimerPopupView(context?: ModuleContext): PopupView {
       );
 
       return () => {
-        removeRuntimeMessageListener(runtimeMessageListener);
+        unsubscribe();
         if (countdownTimer !== null) {
           clearInterval(countdownTimer);
         }

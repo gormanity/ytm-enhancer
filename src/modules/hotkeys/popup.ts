@@ -47,7 +47,7 @@ function createHotkeysClient(): HotkeysClient {
 }
 
 /** Create the hotkeys settings popup view. */
-export function createHotkeysPopupView(_context?: ModuleContext): PopupView {
+export function createHotkeysPopupView(_context: ModuleContext): PopupView {
   return {
     id: "hotkeys-settings",
     label: "Hotkeys",

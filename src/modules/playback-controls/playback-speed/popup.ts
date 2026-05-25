@@ -6,35 +6,25 @@ import selectControlTemplateHtml from "./select-control.html?raw";
 
 function initializePlaybackSpeedControl(
   container: HTMLElement,
-  context?: ModuleContext,
+  context: ModuleContext,
 ): void {
-  bindModuleSelect(
-    container,
-    "playback-speed-select",
-    context
-      ? {
-          get: async () => String(await context.ytm.getPlaybackSpeed()),
-          set: (value) => context.ytm.setPlaybackSpeed(Number(value)),
-        }
-      : {
-          getType: "get-playback-speed",
-          setType: "set-playback-speed",
-          parseData: (data) => String(data ?? 1),
-          setKey: "rate",
-          transformValue: (v) => Number(v),
-        },
-  );
+  bindModuleSelect(container, "playback-speed-select", {
+    get: async () => String((await context.ytm.getPlaybackSpeed()) ?? 1),
+    set: (value) => context.ytm.setPlaybackSpeed(Number(value)),
+  });
 }
 
 export function renderPlaybackSpeedSelectControl(
   container: HTMLElement,
-  context?: ModuleContext,
+  context: ModuleContext,
 ): void {
   renderPopupTemplate(container, selectControlTemplateHtml);
   initializePlaybackSpeedControl(container, context);
 }
 
-export function createPlaybackSpeedPopupView(): PopupView {
+export function createPlaybackSpeedPopupView(
+  context: ModuleContext,
+): PopupView {
   return {
     id: "playback-speed-settings",
     label: "Playback Speed",
@@ -44,7 +34,7 @@ export function createPlaybackSpeedPopupView(): PopupView {
         '[data-role="playback-speed-control-slot"]',
       );
       if (!slot) return;
-      renderPlaybackSpeedSelectControl(slot);
+      renderPlaybackSpeedSelectControl(slot, context);
     },
   };
 }

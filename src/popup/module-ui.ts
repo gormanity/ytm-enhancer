@@ -24,6 +24,14 @@ export interface ModuleRangeBinding extends ModuleControlBinding<number> {
   onLoaded?: (range: HTMLInputElement) => void;
 }
 
+export interface ModuleRangeClientBinding extends ModuleClientBinding<number> {
+  label: string;
+  min?: number;
+  max?: number;
+  unit?: string;
+  onLoaded?: (range: HTMLInputElement) => void;
+}
+
 export interface ModuleSelectBinding extends ModuleControlBinding<string> {
   onLoaded?: (select: HTMLSelectElement) => void;
 }
@@ -41,10 +49,12 @@ export function bindModuleToggle(
     );
     if (!toggle) return;
     toggle.disabled = true;
-    Promise.resolve(options.get()).then((value) => {
-      toggle.checked = value;
-      toggle.disabled = false;
-    });
+    Promise.resolve(options.get())
+      .then((value) => {
+        toggle.checked = value;
+        toggle.disabled = false;
+      })
+      .catch(() => undefined);
     toggle.addEventListener("change", () => {
       void options.set(toggle.checked);
     });
@@ -67,11 +77,13 @@ export function bindModuleSelect(
     const placeholder =
       select.querySelector<HTMLOptionElement>('option[value=""]');
     select.disabled = true;
-    Promise.resolve(options.get()).then((value) => {
-      select.value = value;
-      select.disabled = false;
-      placeholder?.remove();
-    });
+    Promise.resolve(options.get())
+      .then((value) => {
+        select.value = value;
+        select.disabled = false;
+        placeholder?.remove();
+      })
+      .catch(() => undefined);
     select.addEventListener("change", () => {
       if (select.value) void options.set(select.value);
     });
@@ -84,9 +96,7 @@ export function bindModuleSelect(
 export function bindModuleRange(
   container: HTMLElement,
   dataRole: string,
-  options:
-    | ModuleRangeBinding
-    | (ModuleRangeBinding & ModuleClientBinding<number>),
+  options: ModuleRangeBinding | ModuleRangeClientBinding,
 ): void {
   if ("get" in options) {
     const slot = container.querySelector<HTMLElement>(
@@ -109,11 +119,13 @@ export function bindModuleRange(
     const range =
       slider.element.querySelector<HTMLInputElement>(".range-slider")!;
     if (!range) return;
-    Promise.resolve(options.get()).then((value) => {
-      slider.setValue(value);
-      slider.setEnabled(true);
-      options.onLoaded?.(range);
-    });
+    Promise.resolve(options.get())
+      .then((value) => {
+        slider.setValue(value);
+        slider.setEnabled(true);
+        options.onLoaded?.(range);
+      })
+      .catch(() => undefined);
     return;
   }
 
@@ -154,12 +166,14 @@ export function bindModuleCheckboxGroup<TFields extends object>(
     return [{ key, input }];
   });
 
-  Promise.resolve(options.get()).then((fields) => {
-    for (const { key, input } of entries) {
-      input.checked = fields[key as keyof TFields] === true;
-      input.disabled = false;
-    }
-  });
+  Promise.resolve(options.get())
+    .then((fields) => {
+      for (const { key, input } of entries) {
+        input.checked = fields[key as keyof TFields] === true;
+        input.disabled = false;
+      }
+    })
+    .catch(() => undefined);
 
   for (const { input } of entries) {
     input.addEventListener("change", () => {

@@ -52,6 +52,12 @@ function createModuleContext(
             artworkUrl: null,
             isSelected: true,
           },
+          {
+            id: 2,
+            title: "Tab 2 - YouTube Music",
+            artworkUrl: null,
+            isSelected: false,
+          },
         ],
         selectedTabId: 1,
       }),
@@ -206,7 +212,7 @@ describe("playback controls popup view", () => {
   });
 
   it("renders music source chips with bundled YTM logo fallback", async () => {
-    const view = createPlaybackControlsPopupView();
+    const view = createPlaybackControlsPopupView(createModuleContext());
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -223,64 +229,27 @@ describe("playback controls popup view", () => {
   });
 
   it("uses artwork when tab data provides one", async () => {
-    sendMessageMock.mockImplementation(
-      (message: RuntimeMessage, callback?: (response: unknown) => void) => {
-        switch (message.type) {
-          case "get-ytm-tabs":
-            callback?.({
-              ok: true,
-              data: {
-                tabs: [
-                  {
-                    id: 1,
-                    title: "Tab 1 - YouTube Music",
-                    artworkUrl: GOOD_ARTWORK_DATA_URL,
-                    isSelected: true,
-                  },
-                  {
-                    id: 2,
-                    title: "Tab 2 - YouTube Music",
-                    artworkUrl: null,
-                    isSelected: false,
-                  },
-                ],
-              },
-            });
-            return;
-          case "get-ytm-tab-artwork":
-            callback?.({ ok: true, data: { artworkUrl: null } });
-            return;
-          case "get-playback-state":
-            callback?.({
-              ok: true,
-              data: {
-                title: "Track A",
-                artist: "Artist A",
-                album: null,
-                year: null,
-                artworkUrl: null,
-                isPlaying: false,
-                progress: 0,
-                duration: 0,
-              },
-            });
-            return;
-          case "get-volume":
-            callback?.({ ok: true, data: 50 });
-            return;
-          case "get-playback-speed":
-            callback?.({ ok: true, data: "1" });
-            return;
-          case "get-stream-quality":
-            callback?.({ ok: true, data: { current: "2" } });
-            return;
-          default:
-            callback?.({ ok: true });
-        }
-      },
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({
+        listTabs: vi.fn().mockResolvedValue({
+          tabs: [
+            {
+              id: 1,
+              title: "Tab 1 - YouTube Music",
+              artworkUrl: GOOD_ARTWORK_DATA_URL,
+              isSelected: true,
+            },
+            {
+              id: 2,
+              title: "Tab 2 - YouTube Music",
+              artworkUrl: null,
+              isSelected: false,
+            },
+          ],
+          selectedTabId: 1,
+        }),
+      }),
     );
-
-    const view = createPlaybackControlsPopupView();
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -294,67 +263,13 @@ describe("playback controls popup view", () => {
   });
 
   it("keeps fallback logo when artwork preload fails", async () => {
-    sendMessageMock.mockImplementation(
-      (message: RuntimeMessage, callback?: (response: unknown) => void) => {
-        switch (message.type) {
-          case "get-ytm-tabs":
-            callback?.({
-              ok: true,
-              data: {
-                tabs: [
-                  {
-                    id: 1,
-                    title: "Tab 1 - YouTube Music",
-                    artworkUrl: null,
-                    isSelected: true,
-                  },
-                  {
-                    id: 2,
-                    title: "Tab 2 - YouTube Music",
-                    artworkUrl: null,
-                    isSelected: false,
-                  },
-                ],
-              },
-            });
-            return;
-          case "get-ytm-tab-artwork":
-            callback?.({
-              ok: true,
-              data: { artworkUrl: "https://example.com/bad-artwork.jpg" },
-            });
-            return;
-          case "get-playback-state":
-            callback?.({
-              ok: true,
-              data: {
-                title: "Track A",
-                artist: "Artist A",
-                album: null,
-                year: null,
-                artworkUrl: null,
-                isPlaying: false,
-                progress: 0,
-                duration: 0,
-              },
-            });
-            return;
-          case "get-volume":
-            callback?.({ ok: true, data: 50 });
-            return;
-          case "get-playback-speed":
-            callback?.({ ok: true, data: "1" });
-            return;
-          case "get-stream-quality":
-            callback?.({ ok: true, data: { current: "2" } });
-            return;
-          default:
-            callback?.({ ok: true });
-        }
-      },
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({
+        getTabArtwork: vi
+          .fn()
+          .mockResolvedValue("https://example.com/bad-artwork.jpg"),
+      }),
     );
-
-    const view = createPlaybackControlsPopupView();
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -371,7 +286,10 @@ describe("playback controls popup view", () => {
   });
 
   it("cycles selected music source tab on Tab key", async () => {
-    const view = createPlaybackControlsPopupView();
+    const selectTab = vi.fn().mockResolvedValue(undefined);
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({ selectTab }),
+    );
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -387,78 +305,39 @@ describe("playback controls popup view", () => {
     document.dispatchEvent(tabEvent);
 
     expect(tabEvent.defaultPrevented).toBe(true);
-    expect(sendMessageMock).toHaveBeenCalledWith({
-      type: "set-selected-tab",
-      tabId: 2,
-    });
+    expect(selectTab).toHaveBeenCalledWith(2);
 
     cleanup?.();
   });
 
   it("persists selected music source tab across popup reopen", async () => {
     let selectedTabId = 1;
-    sendMessageMock.mockImplementation(
-      (message: RuntimeMessage, callback?: (response: unknown) => void) => {
-        switch (message.type) {
-          case "get-ytm-tabs":
-            callback?.({
-              ok: true,
-              data: {
-                tabs: [
-                  {
-                    id: 1,
-                    title: "Tab 1 - YouTube Music",
-                    artworkUrl: null,
-                    isSelected: selectedTabId === 1,
-                  },
-                  {
-                    id: 2,
-                    title: "Tab 2 - YouTube Music",
-                    artworkUrl: null,
-                    isSelected: selectedTabId === 2,
-                  },
-                ],
-              },
-            });
-            return;
-          case "set-selected-tab":
-            selectedTabId = message.tabId ?? selectedTabId;
-            callback?.({ ok: true });
-            return;
-          case "get-ytm-tab-artwork":
-            callback?.({ ok: true, data: { artworkUrl: null } });
-            return;
-          case "get-playback-state":
-            callback?.({
-              ok: true,
-              data: {
-                title: "Track A",
-                artist: "Artist A",
-                album: null,
-                year: null,
-                artworkUrl: null,
-                isPlaying: false,
-                progress: 0,
-                duration: 0,
-              },
-            });
-            return;
-          case "get-volume":
-            callback?.({ ok: true, data: 50 });
-            return;
-          case "get-playback-speed":
-            callback?.({ ok: true, data: "1" });
-            return;
-          case "get-stream-quality":
-            callback?.({ ok: true, data: { current: "2" } });
-            return;
-          default:
-            callback?.({ ok: true });
-        }
-      },
+    const listTabs = vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        tabs: [
+          {
+            id: 1,
+            title: "Tab 1 - YouTube Music",
+            artworkUrl: null,
+            isSelected: selectedTabId === 1,
+          },
+          {
+            id: 2,
+            title: "Tab 2 - YouTube Music",
+            artworkUrl: null,
+            isSelected: selectedTabId === 2,
+          },
+        ],
+        selectedTabId,
+      }),
     );
-
-    const view = createPlaybackControlsPopupView();
+    const selectTab = vi.fn().mockImplementation((tabId: number) => {
+      selectedTabId = tabId;
+      return Promise.resolve();
+    });
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({ listTabs, selectTab }),
+    );
     const firstContainer = document.createElement("div");
     const firstCleanup = view.render(firstContainer);
 
@@ -495,43 +374,23 @@ describe("playback controls popup view", () => {
   });
 
   it("sends seek action with the selected time from the progress bar", async () => {
-    sendMessageMock.mockImplementation(
-      (message: RuntimeMessage, callback?: (response: unknown) => void) => {
-        switch (message.type) {
-          case "get-ytm-tabs":
-            callback?.({ ok: true, data: { tabs: [] } });
-            return;
-          case "get-playback-state":
-            callback?.({
-              ok: true,
-              data: {
-                title: "Track A",
-                artist: "Artist A",
-                album: null,
-                year: null,
-                artworkUrl: null,
-                isPlaying: true,
-                progress: 25,
-                duration: 200,
-              },
-            });
-            return;
-          case "get-volume":
-            callback?.({ ok: true, data: 50 });
-            return;
-          case "get-playback-speed":
-            callback?.({ ok: true, data: "1" });
-            return;
-          case "get-stream-quality":
-            callback?.({ ok: true, data: { current: "2" } });
-            return;
-          default:
-            callback?.({ ok: true });
-        }
-      },
+    const seekTo = vi.fn().mockResolvedValue(undefined);
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({
+        listTabs: vi.fn().mockResolvedValue({ tabs: [], selectedTabId: null }),
+        getPlaybackState: vi.fn().mockResolvedValue({
+          title: "Track A",
+          artist: "Artist A",
+          album: null,
+          year: null,
+          artworkUrl: null,
+          isPlaying: true,
+          progress: 25,
+          duration: 200,
+        }),
+        seekTo,
+      }),
     );
-
-    const view = createPlaybackControlsPopupView();
     const container = document.createElement("div");
     const cleanup = view.render(container);
 
@@ -554,11 +413,7 @@ describe("playback controls popup view", () => {
 
     bar.dispatchEvent(new MouseEvent("mousedown", { clientX: 200 }));
 
-    expect(sendMessageMock).toHaveBeenCalledWith({
-      type: "playback-action",
-      action: "seekTo",
-      time: 100,
-    });
+    expect(seekTo).toHaveBeenCalledWith(100);
 
     cleanup?.();
   });

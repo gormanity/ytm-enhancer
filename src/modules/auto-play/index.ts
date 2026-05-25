@@ -40,7 +40,7 @@ export class AutoPlayModule implements FeatureModule {
     this.mode = mode;
   }
 
-  getPopupViews(context?: ModuleContext): PopupView[] {
+  getPopupViews(context: ModuleContext): PopupView[] {
     return [createAutoPlayPopupView(context)];
   }
 

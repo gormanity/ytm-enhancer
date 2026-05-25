@@ -52,23 +52,12 @@ function showStep(container: HTMLElement, step: ReviewStep): void {
   }
 }
 
-function persist(
-  items: Record<string, unknown>,
-  context?: ModuleContext,
-): void {
-  if (context) {
-    void context.storage.set(items).catch(() => undefined);
-    return;
-  }
-  try {
-    chrome.storage.local.set(items);
-  } catch {
-    // Storage may be unavailable in tests or invalidated popup contexts.
-  }
+function persist(items: Record<string, unknown>, context: ModuleContext): void {
+  void context.storage.set(items).catch(() => undefined);
 }
 
 /** Create the About popup view. */
-export function createAboutPopupView(context?: ModuleContext): PopupView {
+export function createAboutPopupView(context: ModuleContext): PopupView {
   return {
     id: ABOUT_VIEW_ID,
     label: "About",
@@ -124,23 +113,9 @@ export function createAboutPopupView(context?: ModuleContext): PopupView {
         else showStep(container, "question");
       };
 
-      const loadReviewState = context
-        ? context.storage
-            .get([REVIEW_PROMPT_DISMISSED_KEY, REVIEW_PROMPT_SENTIMENT_KEY])
-            .then(applyReviewState)
-        : new Promise<void>((resolve, reject) => {
-            try {
-              chrome.storage.local.get(
-                [REVIEW_PROMPT_DISMISSED_KEY, REVIEW_PROMPT_SENTIMENT_KEY],
-                (result) => {
-                  applyReviewState(result);
-                  resolve();
-                },
-              );
-            } catch (err) {
-              reject(err);
-            }
-          });
+      const loadReviewState = context.storage
+        .get([REVIEW_PROMPT_DISMISSED_KEY, REVIEW_PROMPT_SENTIMENT_KEY])
+        .then(applyReviewState);
 
       void loadReviewState.catch(() => {
         setReviewCardVisible(reviewCard, true);

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createNotificationsPopupView } from "@/modules/notifications/popup";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("notifications popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
@@ -16,14 +17,14 @@ describe("notifications popup view", () => {
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
 
     expect(view.id).toBe("notifications-settings");
     expect(view.label).toBe("Notifications");
   });
 
   it("should render a heading", () => {
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -42,7 +43,7 @@ describe("notifications popup view", () => {
       },
     );
 
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -58,7 +59,7 @@ describe("notifications popup view", () => {
   });
 
   it("should query current enabled state on render", () => {
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -78,7 +79,7 @@ describe("notifications popup view", () => {
       },
     );
 
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -91,7 +92,7 @@ describe("notifications popup view", () => {
   });
 
   it("should hide Firefox notification chime limitations on Chrome", () => {
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -112,7 +113,9 @@ describe("notifications popup view", () => {
       },
     });
 
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(
+      createTestModuleContext({ capabilities: { runtime: "firefox" } }),
+    );
     const container = document.createElement("div");
 
     view.render(container);
@@ -129,7 +132,7 @@ describe("notifications popup view", () => {
   });
 
   it("should query unpause state on render", () => {
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -149,7 +152,7 @@ describe("notifications popup view", () => {
       },
     );
 
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -182,7 +185,7 @@ describe("notifications popup view", () => {
       },
     );
 
-    const view = createNotificationsPopupView();
+    const view = createNotificationsPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -232,7 +235,7 @@ describe("notifications popup view", () => {
     it("should render display field checkboxes", async () => {
       setupWithFields();
 
-      const view = createNotificationsPopupView();
+      const view = createNotificationsPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -246,7 +249,7 @@ describe("notifications popup view", () => {
     it("should query notification fields on render", () => {
       setupWithFields();
 
-      const view = createNotificationsPopupView();
+      const view = createNotificationsPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -265,7 +268,7 @@ describe("notifications popup view", () => {
         artwork: true,
       });
 
-      const view = createNotificationsPopupView();
+      const view = createNotificationsPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -287,7 +290,7 @@ describe("notifications popup view", () => {
     it("should send set-notification-fields when a checkbox changes", async () => {
       setupWithFields();
 
-      const view = createNotificationsPopupView();
+      const view = createNotificationsPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 
@@ -318,7 +321,7 @@ describe("notifications popup view", () => {
     it("should render field labels", async () => {
       setupWithFields();
 
-      const view = createNotificationsPopupView();
+      const view = createNotificationsPopupView(createTestModuleContext());
       const container = document.createElement("div");
       view.render(container);
 

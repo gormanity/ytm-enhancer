@@ -134,7 +134,7 @@ export class AudioVisualizerModule implements FeatureModule {
     };
   }
 
-  getPopupViews(context?: ModuleContext): PopupView[] {
+  getPopupViews(context: ModuleContext): PopupView[] {
     return [createAudioVisualizerPopupView(context)];
   }
 

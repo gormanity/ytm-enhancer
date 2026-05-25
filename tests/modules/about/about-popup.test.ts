@@ -1,8 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAboutPopupView } from "@/modules/about/popup";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("createAboutPopupView", () => {
   const storage: Record<string, unknown> = {};
+
+  function createAboutContext() {
+    return createTestModuleContext({
+      storage: {
+        get: vi.fn((keys: string[]) =>
+          Promise.resolve(
+            Object.fromEntries(keys.map((key) => [key, storage[key]])),
+          ),
+        ),
+        set: vi.fn((items: Record<string, unknown>) => {
+          Object.assign(storage, items);
+          return Promise.resolve();
+        }),
+      },
+    });
+  }
 
   beforeEach(() => {
     for (const key of Object.keys(storage)) delete storage[key];
@@ -30,13 +47,13 @@ describe("createAboutPopupView", () => {
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     expect(view.id).toBe("about");
     expect(view.label).toBe("About");
   });
 
   it("should render the expected static sections", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -49,7 +66,7 @@ describe("createAboutPopupView", () => {
   });
 
   it("should display the dev extension version and build timestamp", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -69,7 +86,7 @@ describe("createAboutPopupView", () => {
   });
 
   it("should link to the published extension stores", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -89,7 +106,7 @@ describe("createAboutPopupView", () => {
   });
 
   it("should link the review prompt to the Chrome Web Store by default", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -106,7 +123,7 @@ describe("createAboutPopupView", () => {
       userAgent: "Mozilla/5.0 Firefox/126.0",
     });
 
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -118,21 +135,23 @@ describe("createAboutPopupView", () => {
     );
   });
 
-  it("should hide the review prompt when dismissed", () => {
+  it("should hide the review prompt when dismissed", async () => {
     storage["about.reviewPromptDismissed"] = true;
 
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
     const reviewCard = container.querySelector<HTMLElement>(
       '[data-role="about-review-card"]',
     );
-    expect(reviewCard?.classList.contains("is-hidden")).toBe(true);
+    await vi.waitFor(() => {
+      expect(reviewCard?.classList.contains("is-hidden")).toBe(true);
+    });
   });
 
   it("should persist dismissal when the close button is clicked", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -149,7 +168,7 @@ describe("createAboutPopupView", () => {
   });
 
   it("shows the question step initially", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -169,7 +188,7 @@ describe("createAboutPopupView", () => {
   });
 
   it("routes to the review CTA when the user reports enjoying the extension", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -190,7 +209,7 @@ describe("createAboutPopupView", () => {
   });
 
   it("routes to the feedback CTA when the user reports issues", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -210,10 +229,10 @@ describe("createAboutPopupView", () => {
     expect(storage["about.reviewPromptSentiment"]).toBe("negative");
   });
 
-  it("restores the previously selected sentiment step on render", () => {
+  it("restores the previously selected sentiment step on render", async () => {
     storage["about.reviewPromptSentiment"] = "positive";
 
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -224,12 +243,14 @@ describe("createAboutPopupView", () => {
       '[data-role="about-review-step-positive"]',
     );
 
-    expect(question?.classList.contains("is-hidden")).toBe(true);
-    expect(positive?.classList.contains("is-hidden")).toBe(false);
+    await vi.waitFor(() => {
+      expect(question?.classList.contains("is-hidden")).toBe(true);
+      expect(positive?.classList.contains("is-hidden")).toBe(false);
+    });
   });
 
   it("dismisses the prompt after the user follows the review link", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 
@@ -242,7 +263,7 @@ describe("createAboutPopupView", () => {
   });
 
   it("dismisses the prompt after the user follows the feedback link", () => {
-    const view = createAboutPopupView();
+    const view = createAboutPopupView(createAboutContext());
     const container = document.createElement("div");
     view.render(container);
 

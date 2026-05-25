@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
 import type { FeatureModule } from "@/core/types";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("AudioVisualizerModule", () => {
   it("should implement FeatureModule interface", () => {
@@ -66,7 +67,7 @@ describe("AudioVisualizerModule", () => {
 
   it("should return popup views", () => {
     const mod = new AudioVisualizerModule();
-    const views = mod.getPopupViews!();
+    const views = mod.getPopupViews!(createTestModuleContext());
     expect(views).toHaveLength(1);
     expect(views[0].id).toBe("audio-visualizer-settings");
     expect(views[0].label).toBe("Audio Visualizer");

@@ -110,7 +110,7 @@ export class NotificationsModule implements FeatureModule {
     this.fields = { ...fields };
   }
 
-  getPopupViews(context?: ModuleContext): PopupView[] {
+  getPopupViews(context: ModuleContext): PopupView[] {
     return [createNotificationsPopupView(context)];
   }
 

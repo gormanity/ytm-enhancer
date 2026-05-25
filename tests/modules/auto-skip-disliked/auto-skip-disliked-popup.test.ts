@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAutoSkipDislikedPopupView } from "@/modules/auto-skip-disliked/popup";
+import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("auto-skip-disliked popup view", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
@@ -15,14 +16,14 @@ describe("auto-skip-disliked popup view", () => {
   });
 
   it("should return a popup view with correct metadata", () => {
-    const view = createAutoSkipDislikedPopupView();
+    const view = createAutoSkipDislikedPopupView(createTestModuleContext());
 
     expect(view.id).toBe("auto-skip-disliked-settings");
     expect(view.label).toBe("Auto-Skip Disliked");
   });
 
   it("should render a heading", () => {
-    const view = createAutoSkipDislikedPopupView();
+    const view = createAutoSkipDislikedPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -41,7 +42,7 @@ describe("auto-skip-disliked popup view", () => {
       },
     );
 
-    const view = createAutoSkipDislikedPopupView();
+    const view = createAutoSkipDislikedPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -57,7 +58,7 @@ describe("auto-skip-disliked popup view", () => {
   });
 
   it("should query current enabled state on render", () => {
-    const view = createAutoSkipDislikedPopupView();
+    const view = createAutoSkipDislikedPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);
@@ -77,7 +78,7 @@ describe("auto-skip-disliked popup view", () => {
       },
     );
 
-    const view = createAutoSkipDislikedPopupView();
+    const view = createAutoSkipDislikedPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
     view.render(container);

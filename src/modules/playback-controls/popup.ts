@@ -2,10 +2,6 @@ import type { ModuleContext, PopupView, PlaybackState } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
 import { bindModuleRange } from "@/popup/module-ui";
-import {
-  addRuntimeMessageListener,
-  removeRuntimeMessageListener,
-} from "@/core/runtime-listener";
 import { createProgressBar } from "@/ui/progress-bar";
 import ytmTabFallbackIconUrl from "@/assets/ytm-logo.svg";
 import { renderPlaybackSpeedSelectControl } from "./playback-speed/popup";
@@ -57,7 +53,7 @@ interface NowPlayingElements {
 
 /** Create the combined Playback Controls popup view. */
 export function createPlaybackControlsPopupView(
-  context?: ModuleContext,
+  context: ModuleContext,
 ): PopupView {
   return {
     id: "playback-controls",
@@ -142,12 +138,9 @@ export function createPlaybackControlsPopupView(
         ),
       );
       bindModuleRange(container, "quick-volume-range", {
-        getType: "get-volume",
-        setType: "set-volume",
         label: "Volume",
-        setKey: "volume",
-        parseData: (data) => Math.round(((data as number) ?? 1) * 100),
-        transformValue: (v) => v / 100,
+        get: async () => Math.round((await context.ytm.getVolume()) * 100),
+        set: (volume) => context.ytm.setVolume(volume / 100),
         unit: "%",
       });
       renderPlaybackSpeedSelectControl(speedSlot, context);
@@ -172,7 +165,7 @@ function renderOpenTabs(
   card: HTMLElement,
   list: HTMLElement,
   itemTemplate: HTMLTemplateElement,
-  context?: ModuleContext,
+  context: ModuleContext,
 ): () => void {
   let lastRenderedSignature: string | null = null;
   let currentTabs: YtmTabSummary[] = [];
@@ -238,23 +231,12 @@ function renderOpenTabs(
       item.title = tab.title.replace(" - YouTube Music", "");
       item.onclick = () => {
         if (tab.id === null) return;
-        if (context) {
-          void context.ytm.selectTab(tab.id);
-        } else {
-          chrome.runtime.sendMessage({
-            type: "set-selected-tab",
-            tabId: tab.id,
-          });
-        }
+        void context.ytm.selectTab(tab.id);
         updateTabs();
       };
       item.ondblclick = () => {
         if (tab.id === null) return;
-        if (context) {
-          void context.ytm.focusTab(tab.id);
-        } else {
-          chrome.runtime.sendMessage({ type: "focus-ytm-tab", tabId: tab.id });
-        }
+        void context.ytm.focusTab(tab.id);
       };
 
       list.appendChild(item);
@@ -282,19 +264,7 @@ function renderOpenTabs(
         icon.onerror = null;
         icon.src = artworkUrl;
       };
-      if (context) {
-        void context.ytm.getTabArtwork(tabId).then(handleArtwork);
-      } else {
-        chrome.runtime.sendMessage(
-          { type: "get-ytm-tab-artwork", tabId },
-          async (response) => {
-            const artworkUrl = response?.ok
-              ? (response.data?.artworkUrl as string | null)
-              : null;
-            await handleArtwork(artworkUrl);
-          },
-        );
-      }
+      void context.ytm.getTabArtwork(tabId).then(handleArtwork);
     }
   };
 
@@ -323,16 +293,7 @@ function renderOpenTabs(
       currentTabs = tabs;
       renderTabs(tabs);
     };
-    if (context) {
-      void context.ytm.listTabs().then((state) => handleTabs(state.tabs));
-    } else {
-      chrome.runtime.sendMessage({ type: "get-ytm-tabs" }, (response) => {
-        const tabs = (
-          response?.ok ? response.data?.tabs : []
-        ) as YtmTabSummary[];
-        handleTabs(tabs);
-      });
-    }
+    void context.ytm.listTabs().then((state) => handleTabs(state.tabs));
   };
 
   const cycleSelectedTab = (reverse = false) => {
@@ -344,14 +305,7 @@ function renderOpenTabs(
       (baseIndex + direction + currentTabs.length) % currentTabs.length;
     const nextTab = currentTabs[nextIndex];
     if (nextTab.id === null) return;
-    if (context) {
-      void context.ytm.selectTab(nextTab.id);
-    } else {
-      chrome.runtime.sendMessage({
-        type: "set-selected-tab",
-        tabId: nextTab.id,
-      });
-    }
+    void context.ytm.selectTab(nextTab.id);
     updateTabs();
   };
 
@@ -386,17 +340,17 @@ function renderOpenTabs(
       updateTabs();
     }
   };
-  addRuntimeMessageListener(runtimeMessageListener);
+  const unsubscribe = context.runtime.subscribe(runtimeMessageListener);
   updateTabs();
   return () => {
-    removeRuntimeMessageListener(runtimeMessageListener);
+    unsubscribe();
     document.removeEventListener("keydown", handleKeydown);
   };
 }
 
 function renderCompactNowPlaying(
   elements: NowPlayingElements,
-  context?: ModuleContext,
+  context: ModuleContext,
 ): () => void {
   const {
     artwork,
@@ -415,11 +369,7 @@ function renderCompactNowPlaying(
   };
 
   const executeAction = (action: "previous" | "togglePlay" | "next") => {
-    if (context) {
-      void context.ytm.executePlaybackAction(action);
-      return;
-    }
-    chrome.runtime.sendMessage({ type: "playback-action", action });
+    void context.ytm.executePlaybackAction(action);
   };
 
   prevButton.onclick = () => executeAction("previous");
@@ -428,15 +378,7 @@ function renderCompactNowPlaying(
 
   const progressBar = createProgressBar({
     onSeek: (time) => {
-      if (context) {
-        void context.ytm.seekTo(time);
-      } else {
-        chrome.runtime.sendMessage({
-          type: "playback-action",
-          action: "seekTo",
-          time,
-        });
-      }
+      void context.ytm.seekTo(time);
     },
   });
   progressSlot.replaceChildren(progressBar.element);
@@ -484,19 +426,10 @@ function renderCompactNowPlaying(
         }
       }
     };
-    if (context) {
-      void context.ytm
-        .getPlaybackState()
-        .then((state) => handleResponse({ ok: true, data: state }))
-        .catch((err: Error) =>
-          handleResponse({ ok: false, error: err.message }),
-        );
-    } else {
-      chrome.runtime.sendMessage(
-        { type: "get-playback-state" },
-        handleResponse,
-      );
-    }
+    void context.ytm
+      .getPlaybackState()
+      .then((state) => handleResponse({ ok: true, data: state }))
+      .catch((err: Error) => handleResponse({ ok: false, error: err.message }));
   };
 
   update();

@@ -14,7 +14,7 @@ import templateHtml from "./popup.html?raw";
 
 /** Create the audio visualizer settings popup view. */
 export function createAudioVisualizerPopupView(
-  context?: ModuleContext,
+  context: ModuleContext,
 ): PopupView {
   return {
     id: "audio-visualizer-settings",
@@ -22,26 +22,17 @@ export function createAudioVisualizerPopupView(
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
 
-      bindModuleToggle(
-        container,
-        "audio-visualizer-enabled-toggle",
-        context
-          ? {
-              get: () =>
-                context.runtime.request<boolean>({
-                  type: "get-audio-visualizer-enabled",
-                }),
-              set: (enabled) =>
-                context.runtime.command({
-                  type: "set-audio-visualizer-enabled",
-                  enabled,
-                }),
-            }
-          : {
-              getType: "get-audio-visualizer-enabled",
-              setType: "set-audio-visualizer-enabled",
-            },
-      );
+      bindModuleToggle(container, "audio-visualizer-enabled-toggle", {
+        get: () =>
+          context.runtime.request<boolean>({
+            type: "get-audio-visualizer-enabled",
+          }),
+        set: (enabled) =>
+          context.runtime.command({
+            type: "set-audio-visualizer-enabled",
+            enabled,
+          }),
+      });
 
       const styleSelect = container.querySelector<HTMLSelectElement>(
         '[data-role="audio-visualizer-style-select"]',
@@ -150,19 +141,11 @@ export function createAudioVisualizerPopupView(
           colorMode: styleTunings[style].colorMode,
         };
         styleTunings[style] = tuning;
-        if (context) {
-          void context.runtime.command({
-            type: "set-audio-visualizer-style-tuning",
-            style,
-            tuning,
-          });
-        } else {
-          chrome.runtime.sendMessage({
-            type: "set-audio-visualizer-style-tuning",
-            style,
-            tuning,
-          });
-        }
+        void context.runtime.command({
+          type: "set-audio-visualizer-style-tuning",
+          style,
+          tuning,
+        });
       }
 
       const loadFromSnapshot = (snapshot: {
@@ -185,76 +168,29 @@ export function createAudioVisualizerPopupView(
         refreshTuningControls();
       };
 
-      if (context) {
-        void context.runtime
-          .request<{
-            style: VisualizerStyle;
-            target: string;
-            tunings: Partial<
-              Record<VisualizerStyle, Partial<VisualizerStyleTuning>>
-            >;
-          }>({ type: "get-audio-visualizer-snapshot" })
-          .then(loadFromSnapshot);
-      } else {
-        chrome.runtime.sendMessage(
-          { type: "get-audio-visualizer-style" },
-          (response: { ok: boolean; data?: string }) => {
-            if (response?.ok && response.data) {
-              styleSelect.value = response.data;
-              styleSelect.disabled = false;
-              refreshTuningControls();
-            }
-          },
-        );
-
-        chrome.runtime.sendMessage(
-          { type: "get-audio-visualizer-target" },
-          (response: { ok: boolean; data?: string }) => {
-            if (response?.ok && response.data) {
-              targetSelect.value = response.data;
-              targetSelect.disabled = false;
-            }
-          },
-        );
-
-        chrome.runtime.sendMessage(
-          { type: "get-audio-visualizer-style-tunings" },
-          (response: {
-            ok: boolean;
-            data?: Partial<
-              Record<VisualizerStyle, Partial<VisualizerStyleTuning>>
-            >;
-          }) => {
-            if (response?.ok && response.data) {
-              styleTunings = {
-                bars: normalizeStyleTuning(response.data.bars),
-                waveform: normalizeStyleTuning(response.data.waveform),
-                circular: normalizeStyleTuning(response.data.circular),
-              };
-              setTuningControlsEnabled(true);
-              refreshTuningControls();
-            }
-          },
-        );
-      }
+      void context.runtime
+        .request<{
+          style: VisualizerStyle;
+          target: string;
+          tunings: Partial<
+            Record<VisualizerStyle, Partial<VisualizerStyleTuning>>
+          >;
+        }>({ type: "get-audio-visualizer-snapshot" })
+        .then(loadFromSnapshot);
 
       styleSelect.addEventListener("change", () => {
-        const message = {
+        void context.runtime.command({
           type: "set-audio-visualizer-style",
           style: styleSelect.value,
-        };
-        if (context) void context.runtime.command(message);
-        else chrome.runtime.sendMessage(message);
+        });
         refreshTuningControls();
       });
 
       targetSelect.addEventListener("change", () => {
-        const message = {
+        void context.runtime.command({
           type: "set-audio-visualizer-target",
           target: targetSelect.value,
-        };
-        if (context) void context.runtime.command(message);
-        else chrome.runtime.sendMessage(message);
+        });
       });
 
       colorModeSelect.addEventListener("change", () => {
@@ -263,12 +199,10 @@ export function createAudioVisualizerPopupView(
           ...styleTunings[style],
           colorMode: colorModeSelect.value as VisualizerColorMode,
         };
-        const message = {
+        void context.runtime.command({
           type: "set-audio-visualizer-color-mode",
           mode: colorModeSelect.value,
-        };
-        if (context) void context.runtime.command(message);
-        else chrome.runtime.sendMessage(message);
+        });
       });
     },
   };

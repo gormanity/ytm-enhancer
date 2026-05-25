@@ -5,31 +5,24 @@ import templateHtml from "./popup.html?raw";
 
 /** Create the auto-skip disliked songs settings popup view. */
 export function createAutoSkipDislikedPopupView(
-  context?: ModuleContext,
+  context: ModuleContext,
 ): PopupView {
   return {
     id: "auto-skip-disliked-settings",
     label: "Auto-Skip Disliked",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
-      if (context) {
-        bindModuleToggle(container, "auto-skip-disliked-toggle", {
-          get: () =>
-            context.runtime.request<boolean>({
-              type: "get-auto-skip-disliked-enabled",
-            }),
-          set: (enabled) =>
-            context.runtime.command({
-              type: "set-auto-skip-disliked-enabled",
-              enabled,
-            }),
-        });
-      } else {
-        bindModuleToggle(container, "auto-skip-disliked-toggle", {
-          getType: "get-auto-skip-disliked-enabled",
-          setType: "set-auto-skip-disliked-enabled",
-        });
-      }
+      bindModuleToggle(container, "auto-skip-disliked-toggle", {
+        get: () =>
+          context.runtime.request<boolean>({
+            type: "get-auto-skip-disliked-enabled",
+          }),
+        set: (enabled) =>
+          context.runtime.command({
+            type: "set-auto-skip-disliked-enabled",
+            enabled,
+          }),
+      });
     },
   };
 }
