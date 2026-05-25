@@ -125,9 +125,38 @@ considering the change complete unless it remains useful for future debugging.
 
 ## Shared UI Library
 
+### Module Runtime API (`src/core/`)
+
+Use the module-facing runtime API for module work:
+
+- Use `ModuleContext` capabilities instead of importing background globals or
+  browser helpers directly.
+- Use `context.ytm` for YouTube Music tab listing, selection, focus, playback
+  state, playback actions, seeking, volume, speed, quality, and content
+  broadcasts.
+- Use `context.runtime.request()` and `context.runtime.command()` for
+  module-specific popup-to-background messages.
+- Use `FeatureModule.registerHandlers()` for module-owned background handlers.
+  Keep only global policy and browser lifecycle handlers in
+  `src/background/index.ts`.
+- Use `context.state.saveValue()` for persisted module state writes from
+  background handlers.
+- Use `context.storage` only for popup-local UI persistence that is not module
+  runtime state.
+
+See [docs/module-api.md](docs/module-api.md) for the full module API reference.
+
 ### Popup Binding Helpers (`src/popup/`)
 
-Use shared helpers for standard popup controls:
+Use module-facing shared helpers for standard popup controls:
+
+- `bindModuleToggle` — checkbox get/set wiring through function clients
+- `bindModuleSelect` — select dropdown get/set wiring through function clients
+- `bindModuleRange` — range slider wiring through function clients
+- `bindModuleCheckboxGroup` — grouped checkbox field wiring
+- `bindModuleActionButton` — async action buttons with disabled-state handling
+
+Use the lower-level helpers only for legacy or compatibility paths:
 
 - `bindToggle` — checkbox get/set wiring
 - `bindSelect` — select dropdown get/set wiring
@@ -151,7 +180,11 @@ See [docs/shared-ui.md](docs/shared-ui.md) for full API reference.
 1. Create `src/modules/<module-name>/`.
 2. Implement the `FeatureModule` interface.
 3. Register the module in `src/background/index.ts`.
-4. Optionally register a popup view in `src/modules/popup-views.ts`.
-5. Use shared popup binding helpers and UI components for standard controls.
-6. Write tests in `tests/modules/<module-name>/`.
-7. No changes to existing modules should be required.
+4. Use `getPopupViews(context)` when the module needs popup UI.
+5. Use `registerHandlers(registry, context)` for module-owned background
+   messages.
+6. Use `context.ytm`, `context.runtime`, `context.state`, and
+   `context.capabilities` instead of direct global helpers where possible.
+7. Use `module-ui` helpers and shared UI components for standard controls.
+8. Write tests in `tests/modules/<module-name>/`.
+9. No changes to existing modules should be required.
