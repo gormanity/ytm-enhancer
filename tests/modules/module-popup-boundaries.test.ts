@@ -36,4 +36,17 @@ describe("module popup boundaries", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("does not call raw browser shortcut APIs from module popup views", () => {
+    const forbidden = ["chrome.commands", "chrome.tabs.create"];
+    const offenders = modulePopupSources
+      .map((path) => ({
+        path: relative(process.cwd(), path),
+        source: readFileSync(path, "utf-8"),
+      }))
+      .filter(({ source }) => forbidden.some((token) => source.includes(token)))
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+  });
 });
