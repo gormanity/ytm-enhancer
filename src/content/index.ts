@@ -14,6 +14,7 @@ import { AudioBridgeInjector } from "./audio-bridge-injector";
 import { QualityBridgeInjector } from "./quality-bridge-injector";
 import { AutoPlayController } from "./auto-play";
 import { createDevBuildRuntimeCoordinator } from "./dev-build-coordinator";
+import { installYtmTooltipDismissal } from "./ytm-tooltip-dismissal";
 import {
   DislikeObserver,
   shouldAutoSkipDislikedChange,
@@ -382,6 +383,7 @@ let dislikeObserver: DislikeObserver | null = null;
 let trackObserver: TrackObserver | null = null;
 let miniPlayerController: MiniPlayerController | null = null;
 let autoPlayController: AutoPlayController | null = null;
+let tooltipDismissalCleanup: (() => void) | null = null;
 let devBuildSuspensionReportTimer: ReturnType<typeof setInterval> | null = null;
 
 function queryInitialRuntimeState(): void {
@@ -478,6 +480,8 @@ function startContentRuntime(): void {
 
   autoPlayController = new AutoPlayController();
   autoPlayController.init();
+
+  tooltipDismissalCleanup = installYtmTooltipDismissal();
 }
 
 function stopContentRuntime(): void {
@@ -498,6 +502,8 @@ function stopContentRuntime(): void {
   miniPlayerController = null;
   autoPlayController?.destroy();
   autoPlayController = null;
+  tooltipDismissalCleanup?.();
+  tooltipDismissalCleanup = null;
 
   autoSkipDislikedEnabled = false;
 }
