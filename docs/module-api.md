@@ -63,6 +63,7 @@ export interface ModuleContext {
     get(keys: string[]): Promise<Record<string, unknown>>;
     set(items: Record<string, unknown>): Promise<void>;
   };
+  commands: ShortcutCommandClient;
   popupEvents: {
     broadcast(message: { type: string; [key: string]: unknown }): void;
   };
@@ -137,6 +138,21 @@ that are not module runtime state.
 
 Example: About uses `context.storage` for review prompt sentiment and dismiss
 state.
+
+### `commands`
+
+Popup-safe browser shortcut access. Use this instead of calling browser command
+or tab APIs directly from module popup views.
+
+```typescript
+const commands = await context.commands.getAll();
+
+if (context.commands.canEdit()) {
+  await context.commands.update("play-pause", "Alt+Shift+P");
+} else {
+  await context.commands.openShortcutsPage();
+}
+```
 
 ### `popupEvents`
 

@@ -3,6 +3,7 @@ export { EventBus } from "./events";
 export { VersionedStorage } from "./storage";
 export type { StorageArea, VersionedStorageOptions } from "./storage";
 export { detectCapabilities } from "./capabilities";
+export { createShortcutCommandClient } from "./commands";
 export { createMessageSender, createMessageHandler } from "./messaging";
 export { createRuntimeClient } from "./messaging";
 export { ActionExecutor } from "./actions";
@@ -22,6 +23,7 @@ export { findYTMTab } from "./tab-finder";
 export { relayToYTMTab } from "./relay";
 export { createYtmRuntimeClient } from "./ytm-client";
 export type { ExtensionContext } from "./extension";
+export type { ShortcutCommand, ShortcutCommandClient } from "./commands";
 export type {
   Message,
   MessageResponse,

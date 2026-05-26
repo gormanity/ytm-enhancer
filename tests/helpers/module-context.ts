@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import type { Capabilities } from "@/core/capabilities";
+import { createShortcutCommandClient } from "@/core/commands";
 import { EventBus } from "@/core/events";
 import type { Message, MessageResponse, RuntimeClient } from "@/core/messaging";
 import type { ModuleContext } from "@/core/types";
@@ -103,6 +104,7 @@ export function createTestModuleContext(
       get: vi.fn().mockResolvedValue({}),
       set: vi.fn().mockResolvedValue(undefined),
     },
+    commands: createShortcutCommandClient(),
     popupEvents: { broadcast: vi.fn() },
     ...contextOverrides,
     capabilities,

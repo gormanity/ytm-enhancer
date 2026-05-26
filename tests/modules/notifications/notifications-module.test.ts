@@ -4,6 +4,7 @@ import { NotificationsModule } from "@/modules/notifications";
 import type { ModuleContext, PlaybackState } from "@/core/types";
 import type { YtmRuntimeClient } from "@/core/ytm-client";
 import { createRuntimeClient } from "@/core/messaging";
+import { createShortcutCommandClient } from "@/core/commands";
 
 const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 
@@ -39,6 +40,7 @@ function createModuleContext(
       get: vi.fn().mockResolvedValue({}),
       set: vi.fn().mockResolvedValue(undefined),
     },
+    commands: createShortcutCommandClient(),
     popupEvents: { broadcast: vi.fn() },
     ytm: {
       listTabs: vi.fn(),

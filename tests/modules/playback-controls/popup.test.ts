@@ -3,6 +3,7 @@ import { createPlaybackControlsPopupView } from "@/modules/playback-controls/pop
 import type { ModuleContext } from "@/core/types";
 import type { YtmRuntimeClient } from "@/core/ytm-client";
 import { createRuntimeClient } from "@/core/messaging";
+import { createShortcutCommandClient } from "@/core/commands";
 
 interface RuntimeMessage {
   type: string;
@@ -42,6 +43,7 @@ function createModuleContext(
       get: vi.fn().mockResolvedValue({}),
       set: vi.fn().mockResolvedValue(undefined),
     },
+    commands: createShortcutCommandClient(),
     popupEvents: { broadcast: vi.fn() },
     ytm: {
       listTabs: vi.fn().mockResolvedValue({

@@ -2,6 +2,7 @@ import { ModuleRegistry } from "./registry";
 import { EventBus } from "./events";
 import { PopupRegistry } from "./popup-registry";
 import { detectCapabilities } from "./capabilities";
+import { createShortcutCommandClient } from "./commands";
 import type { Capabilities } from "./capabilities";
 import type { FeatureModule, ModuleContext } from "./types";
 import type { YtmRuntimeClient } from "./ytm-client";
@@ -24,6 +25,7 @@ export interface ExtensionContextOptions {
   runtime?: RuntimeClient;
   state?: ModuleContext["state"];
   storage?: ModuleContext["storage"];
+  commands?: ModuleContext["commands"];
   popupEvents?: ModuleContext["popupEvents"];
 }
 
@@ -43,6 +45,7 @@ export function createExtensionContext(
       get: async () => ({}),
       set: async () => undefined,
     },
+    commands: options.commands ?? createShortcutCommandClient(),
     popupEvents: options.popupEvents ?? { broadcast: () => undefined },
   };
 }

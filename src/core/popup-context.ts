@@ -1,6 +1,7 @@
 import { EventBus } from "./events";
 import { PopupRegistry } from "./popup-registry";
 import { detectCapabilities } from "./capabilities";
+import { createShortcutCommandClient } from "./commands";
 import { createRuntimeClient, type RuntimeClient } from "./messaging";
 import type { ModuleContext, PlaybackAction, PlaybackState } from "./types";
 import type {
@@ -99,6 +100,7 @@ export function createPopupModuleContext(): ModuleContext {
         await chrome.storage.local.set(items);
       },
     },
+    commands: createShortcutCommandClient(),
     popupEvents: {
       broadcast: () => undefined,
     },

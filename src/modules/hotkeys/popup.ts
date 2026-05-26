@@ -1,3 +1,4 @@
+import type { ShortcutCommand, ShortcutCommandClient } from "@/core/commands";
 import type { ModuleContext, PopupView } from "@/core/types";
 import { bindModuleActionButton } from "@/popup/module-ui";
 import { renderPopupTemplate } from "@/popup/template";
@@ -16,38 +17,8 @@ interface EditState {
   keyupHandler: (e: KeyboardEvent) => void;
 }
 
-interface HotkeysClient {
-  canEdit(): boolean;
-  getAll(): Promise<chrome.commands.Command[]>;
-  update(name: string, shortcut: string): Promise<void>;
-  reset(name: string): Promise<void>;
-  openShortcutsPage(): Promise<void>;
-}
-
-function createHotkeysClient(): HotkeysClient {
-  return {
-    canEdit() {
-      return typeof chrome.commands.update === "function";
-    },
-    getAll() {
-      return new Promise((resolve) => {
-        chrome.commands.getAll((commands) => resolve(commands));
-      });
-    },
-    async update(name, shortcut) {
-      await Promise.resolve(chrome.commands.update?.({ name, shortcut }));
-    },
-    async reset(name) {
-      await Promise.resolve(chrome.commands.reset?.(name));
-    },
-    async openShortcutsPage() {
-      await chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
-    },
-  };
-}
-
 /** Create the hotkeys settings popup view. */
-export function createHotkeysPopupView(_context: ModuleContext): PopupView {
+export function createHotkeysPopupView(context: ModuleContext): PopupView {
   return {
     id: "hotkeys-settings",
     label: "Hotkeys",
@@ -68,7 +39,7 @@ export function createHotkeysPopupView(_context: ModuleContext): PopupView {
       );
       if (!list || !rowTemplate || !keyTemplate || !separatorTemplate) return;
 
-      const client = createHotkeysClient();
+      const client = context.commands;
       const renderKeys = makeKeyRenderer(keyTemplate, separatorTemplate);
 
       const configActions = container.querySelector<HTMLElement>(
@@ -78,7 +49,7 @@ export function createHotkeysPopupView(_context: ModuleContext): PopupView {
         '[data-role="configure-shortcuts"]',
       );
 
-      // Firefox exposes browser.commands.update / reset; Chromium doesn't. Use
+      // Firefox exposes command editing APIs; Chromium doesn't. Use
       // the capability check to drive UI, not a brand check.
       const canEdit = client.canEdit();
       list.classList.toggle("shortcuts-list--editable", canEdit);
@@ -158,8 +129,8 @@ const KEY_TOOLTIP_LABELS: Record<string, string> = {
 
 const ARROW_SYMBOLS = new Set(["←", "→", "↑", "↓"]);
 
-// On macOS, Chrome already returns modifier symbols (⌃ ⇧ ⌥ ⌘) from
-// chrome.commands.getAll, while Firefox returns text names ("MacCtrl",
+// On macOS, Chromium already returns modifier symbols (⌃ ⇧ ⌥ ⌘) from
+// command listings, while Firefox returns text names ("MacCtrl",
 // "Command", "Alt", "Shift"). Map text → symbol so both browsers display the
 // same way on Mac.
 const MAC_MODIFIER_SYMBOLS: Record<string, string> = {
@@ -270,7 +241,7 @@ function makeKeyRenderer(
 }
 
 interface LoadOptions {
-  client: HotkeysClient;
+  client: ShortcutCommandClient;
   canEdit: boolean;
   onEdit: (row: HTMLElement, name: string) => void;
   onReset: (name: string) => void;
@@ -339,7 +310,7 @@ function loadShortcuts(
   });
 }
 
-function commandSortKey(command: chrome.commands.Command): number {
+function commandSortKey(command: ShortcutCommand): number {
   const name = command.name ?? "";
   return COMMAND_DISPLAY_RANK.get(name) ?? Number.MAX_SAFE_INTEGER;
 }
@@ -376,7 +347,7 @@ function enterEdit(
   name: string,
   renderKeys: KeyRenderer,
   refresh: () => void,
-  client: HotkeysClient,
+  client: ShortcutCommandClient,
 ): void {
   if (state.active) {
     cleanupEdit(state.active);
@@ -468,7 +439,7 @@ function showError(row: HTMLElement, message: string): void {
 function resetShortcut(
   name: string,
   refresh: () => void,
-  client: HotkeysClient,
+  client: ShortcutCommandClient,
 ): void {
   void client.reset(name).then(() => refresh());
 }

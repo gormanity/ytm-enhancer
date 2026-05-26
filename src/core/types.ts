@@ -1,4 +1,5 @@
 import type { Capabilities } from "./capabilities";
+import type { ShortcutCommandClient } from "./commands";
 import type { EventBus } from "./events";
 import type { ModuleHandlerRegistry, RuntimeClient } from "./messaging";
 import type { PopupRegistry } from "./popup-registry";
@@ -52,6 +53,7 @@ export interface ModuleContext {
     get(keys: string[]): Promise<Record<string, unknown>>;
     set(items: Record<string, unknown>): Promise<void>;
   };
+  commands: ShortcutCommandClient;
   popupEvents: {
     broadcast(message: { type: string; [key: string]: unknown }): void;
   };

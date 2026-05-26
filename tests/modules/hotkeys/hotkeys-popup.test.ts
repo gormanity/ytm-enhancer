@@ -81,6 +81,30 @@ describe("createHotkeysPopupView", () => {
     expect(actions?.classList.contains("is-hidden")).toBe(false);
   });
 
+  it("should use the injected shortcut command client", async () => {
+    const openShortcutsPage = vi.fn().mockResolvedValue(undefined);
+    const commands = {
+      canEdit: () => false,
+      getAll: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue(undefined),
+      reset: vi.fn().mockResolvedValue(undefined),
+      openShortcutsPage,
+    };
+
+    const view = createHotkeysPopupView(createTestModuleContext({ commands }));
+    const container = document.createElement("div");
+    view.render(container);
+
+    container
+      .querySelector<HTMLButtonElement>('[data-role="configure-shortcuts"]')
+      ?.click();
+
+    await vi.waitFor(() => {
+      expect(commands.getAll).toHaveBeenCalled();
+      expect(openShortcutsPage).toHaveBeenCalled();
+    });
+  });
+
   describe("modifier display on macOS", () => {
     let originalPlatform: PropertyDescriptor | undefined;
 
