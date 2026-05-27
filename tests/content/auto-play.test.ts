@@ -191,6 +191,24 @@ describe("AutoPlayController", () => {
     expect(video.pause).not.toHaveBeenCalled();
   });
 
+  it("should not suppress an initial play started from a page play button", () => {
+    turnAutoPlayOff();
+
+    const playButton = document.createElement("button");
+    playButton.setAttribute("aria-label", "Play album");
+    document.body.appendChild(playButton);
+
+    const video = createReadyVideo();
+    controller.init();
+    playButton.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true }),
+    );
+    video.dispatchEvent(new Event("play"));
+
+    expect(video.play).not.toHaveBeenCalled();
+    expect(video.pause).not.toHaveBeenCalled();
+  });
+
   it("should not suppress an initial keyboard play from the play button", () => {
     turnAutoPlayOff();
 
