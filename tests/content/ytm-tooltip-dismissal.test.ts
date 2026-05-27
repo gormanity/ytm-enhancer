@@ -24,7 +24,10 @@ describe("YTM tooltip dismissal", () => {
     dismissYtmTooltips();
 
     expect(tooltip.getAttribute("aria-hidden")).toBe("true");
-    expect(tooltip.style.display).toBe("none");
+    expect(tooltip.hasAttribute("visible")).toBe(false);
+    expect(tooltip.style.display).toBe("block");
+    expect(tooltip.style.opacity).toBe("");
+    expect(tooltip.style.pointerEvents).toBe("");
   });
 
   it("dismisses playback tooltips on any document click", () => {
