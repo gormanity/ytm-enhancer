@@ -11,6 +11,18 @@ const TIMEOUT_MS = 10_000;
 const HAVE_FUTURE_DATA = 3;
 const INITIAL_SUPPRESSION_MAX_AGE_MS = 8_000;
 const PAGE_INIT_MARKER = "ytmEnhancerAutoPlayInitialized";
+const PAGE_PLAY_BUTTON_SELECTOR = [
+  'button[aria-label^="Play" i]',
+  'button[title^="Play" i]',
+  '[role="button"][aria-label^="Play" i]',
+  '[role="button"][title^="Play" i]',
+  'yt-icon-button[aria-label^="Play" i]',
+  'yt-icon-button[title^="Play" i]',
+  'tp-yt-paper-icon-button[aria-label^="Play" i]',
+  'tp-yt-paper-icon-button[title^="Play" i]',
+  "ytmusic-play-button-renderer",
+  "a.play-all",
+].join(",");
 
 export class AutoPlayController {
   private adapter = new YTMAdapter();
@@ -408,14 +420,25 @@ export class AutoPlayController {
       if (this.eventTargetsPlayPauseButton(event)) {
         this.playFromUserIntent();
         this.cancelInitialSuppression();
+        return;
+      }
+
+      if (this.eventTargetsPagePlayButton(event)) {
+        debug("AutoPlay: canceling initial suppression for page play intent");
+        this.cancelInitialSuppression();
       }
     };
     this.suppressKeyboardHandler = (event) => {
-      if (
-        (event.key === "Enter" || event.key === " ") &&
-        this.eventTargetsPlayPauseButton(event)
-      ) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+
+      if (this.eventTargetsPlayPauseButton(event)) {
         this.playFromUserIntent();
+        this.cancelInitialSuppression();
+        return;
+      }
+
+      if (this.eventTargetsPagePlayButton(event)) {
+        debug("AutoPlay: canceling initial suppression for page play intent");
         this.cancelInitialSuppression();
       }
     };
@@ -436,6 +459,14 @@ export class AutoPlayController {
           target instanceof Element &&
           target.matches(SELECTORS.playPauseButton),
       );
+  }
+
+  private eventTargetsPagePlayButton(event: Event): boolean {
+    return event.composedPath().some((target) => {
+      if (!(target instanceof Element)) return false;
+      if (target.matches(SELECTORS.playPauseButton)) return false;
+      return target.matches(PAGE_PLAY_BUTTON_SELECTOR);
+    });
   }
 
   private playFromUserIntent(): void {
