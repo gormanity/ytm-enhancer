@@ -22,9 +22,6 @@ function hideTooltip(el: HTMLElement): void {
   el.removeAttribute("visible");
   el.removeAttribute("opened");
   el.classList.remove("visible", "shown", "showing", "active", "fade-in");
-  el.style.display = "none";
-  el.style.opacity = "0";
-  el.style.pointerEvents = "none";
 }
 
 export function dismissYtmTooltips(): void {
