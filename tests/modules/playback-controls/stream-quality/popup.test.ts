@@ -97,6 +97,36 @@ describe("stream quality popup view", () => {
     expect(select.value).toBe("3");
   });
 
+  it("should show the interaction hint until quality initializes", async () => {
+    let resolveQuality: (quality: { current: string }) => void = () => {};
+    const getStreamQuality = vi.fn(
+      () =>
+        new Promise<{ current: string }>((resolve) => {
+          resolveQuality = resolve;
+        }),
+    );
+    const context = createTestModuleContext({
+      ytm: {
+        getStreamQuality,
+      },
+    });
+    const view = createStreamQualityPopupView(context);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const hint = container.querySelector<HTMLElement>(
+      '[data-role="stream-quality-hint"]',
+    );
+    expect(hint?.classList.contains("is-hidden")).toBe(false);
+
+    resolveQuality({ current: "2" });
+
+    await vi.waitFor(() => {
+      expect(hint?.classList.contains("is-hidden")).toBe(true);
+    });
+  });
+
   it("should enable select even when current is null", async () => {
     const { context } = createStreamQualityContext({
       current: null,
@@ -110,6 +140,26 @@ describe("stream quality popup view", () => {
       const select = container.querySelector<HTMLSelectElement>("select");
       expect(select?.disabled).toBe(false);
     });
+  });
+
+  it("should keep the interaction hint visible when quality is unavailable", async () => {
+    const { context } = createStreamQualityContext({
+      current: null,
+    });
+    const view = createStreamQualityPopupView(context);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const select = container.querySelector<HTMLSelectElement>("select");
+      expect(select?.disabled).toBe(false);
+    });
+
+    const hint = container.querySelector<HTMLElement>(
+      '[data-role="stream-quality-hint"]',
+    );
+    expect(hint?.classList.contains("is-hidden")).toBe(false);
   });
 
   it("should send set-stream-quality on change", async () => {
