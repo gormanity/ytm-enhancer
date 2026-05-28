@@ -50,7 +50,6 @@ const notifications = new NotificationsModule();
 const playbackControls = new PlaybackControlsModule();
 const sleepTimer = new SleepTimerModule();
 let selectedTabId: number | null = null;
-const pipOpenTabIds = new Set<number>();
 const devBuildSuspendedTabIds = new Set<number>();
 const devBuildConflictState: DevBuildConflictState = {
   suspendedTabIds: devBuildSuspendedTabIds,
@@ -229,7 +228,7 @@ handler.on("track-changed", async (message, sender) => {
   }
   if (
     miniPlayer.isSuppressNotificationsWhilePipOpenEnabled() &&
-    pipOpenTabIds.size > 0
+    miniPlayer.hasOpenPipWindow()
   ) {
     return { ok: true };
   }
@@ -286,17 +285,6 @@ handler.on("get-dev-build-conflict-status", async () => {
       duplicateDetected: isDevBuildConflictActive(devBuildConflictState),
     },
   };
-});
-
-handler.on("pip-open-state", async (message, sender) => {
-  const tabId = sender?.tab?.id;
-  if (tabId === undefined) return { ok: false, error: "No tab ID" };
-  if (message.open === true) {
-    pipOpenTabIds.add(tabId);
-  } else {
-    pipOpenTabIds.delete(tabId);
-  }
-  return { ok: true };
 });
 
 handler.on("inject-audio-bridge", async (_message, sender) => {
@@ -380,7 +368,6 @@ void devBuildPresenceCoordinator.probeDevPresence();
 void ensureYtmContentScripts();
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  pipOpenTabIds.delete(tabId);
   context.events.emit("ytm-tab-reset", { tabId });
   updateDevBuildConflictState(() => {
     devBuildSuspendedTabIds.delete(tabId);

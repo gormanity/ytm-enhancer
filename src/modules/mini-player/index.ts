@@ -10,6 +10,9 @@ export class MiniPlayerModule implements FeatureModule {
 
   private enabled = true;
   private suppressNotificationsWhilePipOpen = false;
+  private pipOpenTabIds = new Set<number>();
+  private tabResetContext: ModuleContext | null = null;
+  private tabResetListener: ((event: { tabId: number }) => void) | null = null;
 
   init(): void {
     // No background-side setup needed; the mini player is controlled
@@ -17,7 +20,12 @@ export class MiniPlayerModule implements FeatureModule {
   }
 
   destroy(): void {
-    // Nothing to clean up on the background side.
+    this.pipOpenTabIds.clear();
+    if (this.tabResetContext && this.tabResetListener) {
+      this.tabResetContext.events.off("ytm-tab-reset", this.tabResetListener);
+    }
+    this.tabResetContext = null;
+    this.tabResetListener = null;
   }
 
   isEnabled(): boolean {
@@ -36,6 +44,10 @@ export class MiniPlayerModule implements FeatureModule {
     this.suppressNotificationsWhilePipOpen = enabled;
   }
 
+  hasOpenPipWindow(): boolean {
+    return this.pipOpenTabIds.size > 0;
+  }
+
   getPopupViews(context: ModuleContext): PopupView[] {
     return [createMiniPlayerPopupView(context)];
   }
@@ -44,6 +56,8 @@ export class MiniPlayerModule implements FeatureModule {
     registry: ModuleHandlerRegistry,
     context: ModuleContext,
   ): void {
+    this.registerLifecycleEvents(context);
+
     registry.on("get-mini-player-enabled", async () => ({
       ok: true,
       data: this.isEnabled(),
@@ -65,5 +79,24 @@ export class MiniPlayerModule implements FeatureModule {
       );
       return { ok: true };
     });
+    registry.on("pip-open-state", async (message, sender) => {
+      const tabId = sender?.tab?.id;
+      if (tabId === undefined) return { ok: false, error: "No tab ID" };
+      if (message.open === true) {
+        this.pipOpenTabIds.add(tabId);
+      } else {
+        this.pipOpenTabIds.delete(tabId);
+      }
+      return { ok: true };
+    });
+  }
+
+  private registerLifecycleEvents(context: ModuleContext): void {
+    if (this.tabResetListener) return;
+    this.tabResetListener = ({ tabId }) => {
+      this.pipOpenTabIds.delete(tabId);
+    };
+    this.tabResetContext = context;
+    context.events.on("ytm-tab-reset", this.tabResetListener);
   }
 }
