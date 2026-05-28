@@ -107,7 +107,9 @@ describe("stream quality popup view", () => {
     );
     const context = createTestModuleContext({
       ytm: {
-        getStreamQuality,
+        getStreamQuality: getStreamQuality as unknown as () => Promise<
+          string | null
+        >,
       },
     });
     const view = createStreamQualityPopupView(context);

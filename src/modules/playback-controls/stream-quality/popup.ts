@@ -4,6 +4,14 @@ import { bindModuleSelect } from "@/popup/module-ui";
 import templateHtml from "./popup.html?raw";
 import selectControlTemplateHtml from "./select-control.html?raw";
 
+function parseCurrentQuality(data: unknown): string | null {
+  if (typeof data === "string") return data;
+  if (!data || typeof data !== "object") return null;
+
+  const current = (data as { current?: unknown }).current;
+  return typeof current === "string" ? current : null;
+}
+
 function initializeStreamQualityControl(
   container: HTMLElement,
   context: ModuleContext,
@@ -15,13 +23,12 @@ function initializeStreamQualityControl(
   bindModuleSelect(container, "stream-quality-select", {
     get: async () => {
       const data = await context.ytm.getStreamQuality();
-      return (
-        (data as { current?: string | null } | null)?.current ?? data ?? "2"
-      );
+      const current = parseCurrentQuality(data);
+      hint?.classList.toggle("is-hidden", current !== null);
+      return current ?? "2";
     },
     set: (value) => context.ytm.setStreamQuality(value),
   });
-  hint?.classList.add("is-hidden");
 }
 
 export function renderStreamQualitySelectControl(
