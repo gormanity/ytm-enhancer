@@ -124,6 +124,34 @@ describe("TrackObserver", () => {
     });
   });
 
+  it("should include runtime state in track-changed messages", async () => {
+    const runtimeState = vi.fn(() => ({ pipOpen: true }));
+    const runtimeObserver = new TrackObserver(
+      getStateMock,
+      undefined,
+      runtimeState,
+    );
+    const playerBar = createPlayerBar();
+    const titleEl = createTitleElement("Song Title", playerBar);
+    createArtistElement("Artist Name", playerBar);
+    createPlayPauseButton("Pause");
+
+    const state = makeState();
+    getStateMock.mockReturnValue(state);
+
+    runtimeObserver.start();
+    titleEl.textContent = "New Song";
+    await flush();
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "track-changed",
+      state,
+      pipOpen: true,
+    });
+
+    runtimeObserver.stop();
+  });
+
   it("should not send message when track key is the same", async () => {
     const playerBar = createPlayerBar();
     const titleEl = createTitleElement("Song Title", playerBar);

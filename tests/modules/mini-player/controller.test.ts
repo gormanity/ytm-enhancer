@@ -448,6 +448,38 @@ describe("MiniPlayerController", () => {
     ).toBe(true);
   });
 
+  it("should expose document PiP open state", async () => {
+    createNativeMiniPlayerButton();
+
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
+    const pipWindow = {
+      document: pipDoc,
+      addEventListener: vi.fn(),
+    };
+    const requestWindow = vi.fn().mockResolvedValue(pipWindow);
+    vi.stubGlobal("documentPictureInPicture", { requestWindow });
+
+    controller = new MiniPlayerController();
+    await controller.init();
+
+    expect(controller.isPipOpen()).toBe(false);
+
+    (
+      document.querySelector(SELECTORS.nativeMiniPlayerButton) as HTMLElement
+    ).click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(controller.isPipOpen()).toBe(true);
+
+    const pagehideCall = (
+      pipWindow.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls.find(([event]) => event === "pagehide");
+    const pagehideHandler = pagehideCall?.[1] as (() => void) | undefined;
+    pagehideHandler?.();
+
+    expect(controller.isPipOpen()).toBe(false);
+  });
+
   it("should report native video PiP open and close state to background", async () => {
     const sendMessage = vi.fn(
       (message: unknown, callback?: (response: unknown) => void) => {
