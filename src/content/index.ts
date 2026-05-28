@@ -469,14 +469,15 @@ function startContentRuntime(): void {
   });
   dislikeObserver.start();
 
+  miniPlayerController = new MiniPlayerController(overlayManager);
+  void miniPlayerController.init();
+
   trackObserver = new TrackObserver(
     () => adapter.getPlaybackState(),
     () => dislikeObserver?.reobserve(),
+    () => ({ pipOpen: miniPlayerController?.isPipOpen() === true }),
   );
   trackObserver.start();
-
-  miniPlayerController = new MiniPlayerController(overlayManager);
-  void miniPlayerController.init();
 
   autoPlayController = new AutoPlayController();
   autoPlayController.init();

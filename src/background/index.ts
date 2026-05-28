@@ -12,10 +12,10 @@ import {
 import { DEV_BUILD_STALE_MS } from "@/runtime-messages";
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
-import type { PlaybackState } from "@/core/types";
 import { error } from "@/core/logger";
 
 import { parseSelectedTabId } from "./selected-tab";
+import { handleTrackChangedMessage } from "./track-change";
 import {
   isDevBuildConflictActive,
   isActionSuppressedForDevBuildConflict,
@@ -223,17 +223,11 @@ handler.on("dev-build-liveness-check", async () => {
 });
 
 handler.on("track-changed", async (message, sender) => {
-  if (isYTMTabSuppressed(sender?.tab?.id)) {
-    return { ok: true };
-  }
-  if (
-    miniPlayer.isSuppressNotificationsWhilePipOpenEnabled() &&
-    miniPlayer.hasOpenPipWindow()
-  ) {
-    return { ok: true };
-  }
-  notifications.handleTrackChange(message.state as PlaybackState);
-  return { ok: true };
+  return handleTrackChangedMessage(message, sender, {
+    isYTMTabSuppressed,
+    miniPlayer,
+    notifications,
+  });
 });
 
 handler.on("get-ytm-tabs", async () => {

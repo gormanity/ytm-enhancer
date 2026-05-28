@@ -48,6 +48,15 @@ export class MiniPlayerModule implements FeatureModule {
     return this.pipOpenTabIds.size > 0;
   }
 
+  syncPipOpenState(tabId: number | undefined, open: unknown): void {
+    if (tabId === undefined || typeof open !== "boolean") return;
+    if (open) {
+      this.pipOpenTabIds.add(tabId);
+    } else {
+      this.pipOpenTabIds.delete(tabId);
+    }
+  }
+
   getPopupViews(context: ModuleContext): PopupView[] {
     return [createMiniPlayerPopupView(context)];
   }
@@ -82,11 +91,7 @@ export class MiniPlayerModule implements FeatureModule {
     registry.on("pip-open-state", async (message, sender) => {
       const tabId = sender?.tab?.id;
       if (tabId === undefined) return { ok: false, error: "No tab ID" };
-      if (message.open === true) {
-        this.pipOpenTabIds.add(tabId);
-      } else {
-        this.pipOpenTabIds.delete(tabId);
-      }
+      this.syncPipOpenState(tabId, message.open);
       return { ok: true };
     });
   }

@@ -15,13 +15,16 @@ export class TrackObserver {
   private seedOnFirstCheck = false;
   private getPlaybackState: () => PlaybackState;
   private onTrackChange?: (state: PlaybackState) => void;
+  private getRuntimeState?: () => Record<string, unknown>;
 
   constructor(
     getPlaybackState: () => PlaybackState,
     onTrackChange?: (state: PlaybackState) => void,
+    getRuntimeState?: () => Record<string, unknown>,
   ) {
     this.getPlaybackState = getPlaybackState;
     this.onTrackChange = onTrackChange;
+    this.getRuntimeState = getRuntimeState;
   }
 
   start(): void {
@@ -162,7 +165,11 @@ export class TrackObserver {
 
     this.lastTrackKey = trackKey;
     try {
-      chrome.runtime.sendMessage({ type: "track-changed", state });
+      chrome.runtime.sendMessage({
+        ...(this.getRuntimeState?.() ?? {}),
+        type: "track-changed",
+        state,
+      });
     } catch {
       // Extension may have been reloaded and invalidated this content context.
     }

@@ -30,6 +30,7 @@ export class MiniPlayerController {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private observer: MutationObserver | null = null;
   private enabled = false;
+  private documentPipOpen = false;
   private messageListener: (message: { type: string; data?: unknown }) => void;
 
   constructor(overlayManager?: VisualizerOverlayManager) {
@@ -64,7 +65,12 @@ export class MiniPlayerController {
     this.stopPolling();
     this.observer?.disconnect();
     this.observer = null;
+    this.documentPipOpen = false;
     this.reportPipOpenState(false);
+  }
+
+  isPipOpen(): boolean {
+    return this.documentPipOpen || this.videoFallback.isOpen();
   }
 
   private async queryEnabled(): Promise<boolean> {
@@ -171,12 +177,14 @@ export class MiniPlayerController {
       }
 
       this.startPolling();
+      this.documentPipOpen = true;
       this.reportPipOpenState(true);
       debug("PiP: document PiP opened");
 
       pipWindow.addEventListener("pagehide", () => {
         this.stopPolling();
         this.overlayManager?.detachPip();
+        this.documentPipOpen = false;
         this.reportPipOpenState(false);
         debug("PiP: document PiP closed");
       });
