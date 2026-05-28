@@ -10,6 +10,12 @@ export function createMiniPlayerPopupView(context: ModuleContext): PopupView {
     label: "Mini Player",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
+      const resizeTip = container.querySelector<HTMLElement>(
+        '[data-role="mini-player-resize-tip"]',
+      );
+      const setMiniPlayerGuidanceVisible = (enabled: boolean) => {
+        resizeTip?.classList.toggle("is-hidden", !enabled);
+      };
 
       if (!context.capabilities.documentPip) {
         container
@@ -28,15 +34,20 @@ export function createMiniPlayerPopupView(context: ModuleContext): PopupView {
       }
 
       bindModuleToggle(container, "mini-player-enabled-toggle", {
-        get: () =>
-          context.runtime.request<boolean>({
+        get: async () => {
+          const enabled = await context.runtime.request<boolean>({
             type: "get-mini-player-enabled",
-          }),
-        set: (enabled) =>
-          context.runtime.command({
+          });
+          setMiniPlayerGuidanceVisible(enabled);
+          return enabled;
+        },
+        set: (enabled) => {
+          setMiniPlayerGuidanceVisible(enabled);
+          return context.runtime.command({
             type: "set-mini-player-enabled",
             enabled,
-          }),
+          });
+        },
       });
       bindModuleToggle(container, "mini-player-suppress-notifications-toggle", {
         get: () =>
