@@ -34,7 +34,21 @@ describe("mini player popup view", () => {
     expect(heading?.textContent).toBe("Mini Player");
   });
 
-  it("should render the resize tip", () => {
+  it("should show the resize tip when Mini Player is enabled", async () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        if ((message as { type?: string }).type === "get-mini-player-enabled") {
+          callback?.({ ok: true, data: true });
+          return;
+        }
+        if (
+          (message as { type?: string }).type ===
+          "get-mini-player-suppress-notifications"
+        ) {
+          callback?.({ ok: true, data: false });
+        }
+      },
+    );
     const view = createMiniPlayerPopupView(createTestModuleContext());
     const container = document.createElement("div");
 
@@ -46,6 +60,89 @@ describe("mini player popup view", () => {
     expect(tip?.textContent).toContain(
       "Resize the PiP window to show just the track details and controls you want.",
     );
+    await vi.waitFor(() => {
+      expect(tip?.classList.contains("is-hidden")).toBe(false);
+    });
+  });
+
+  it("should explain button behavior under the Mini Player toggle", () => {
+    const view = createMiniPlayerPopupView(createTestModuleContext());
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const tip = container.querySelector<HTMLElement>(
+      '[data-role="mini-player-button-hint"]',
+    );
+    expect(tip?.classList.contains("status-hint")).toBe(true);
+    expect(tip?.textContent?.replace(/\s+/g, " ").trim()).toContain(
+      "YouTube Music's mini-player button opens the extension PiP window while this is enabled.",
+    );
+  });
+
+  it("should hide the resize tip when Mini Player is disabled", async () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        if ((message as { type?: string }).type === "get-mini-player-enabled") {
+          callback?.({ ok: true, data: false });
+          return;
+        }
+        if (
+          (message as { type?: string }).type ===
+          "get-mini-player-suppress-notifications"
+        ) {
+          callback?.({ ok: true, data: false });
+        }
+      },
+    );
+    const view = createMiniPlayerPopupView(createTestModuleContext());
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const tip = container.querySelector<HTMLElement>(
+      '[data-role="mini-player-resize-tip"]',
+    );
+    await vi.waitFor(() => {
+      expect(tip?.classList.contains("is-hidden")).toBe(true);
+    });
+  });
+
+  it("should toggle resize tip visibility when Mini Player is toggled", async () => {
+    sendMessageMock.mockImplementation(
+      (message: unknown, callback?: (response: unknown) => void) => {
+        if ((message as { type?: string }).type === "get-mini-player-enabled") {
+          callback?.({ ok: true, data: false });
+          return;
+        }
+        if (
+          (message as { type?: string }).type ===
+          "get-mini-player-suppress-notifications"
+        ) {
+          callback?.({ ok: true, data: false });
+        }
+      },
+    );
+    const view = createMiniPlayerPopupView(createTestModuleContext());
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const toggle = container.querySelector<HTMLInputElement>(
+      '[data-role="mini-player-enabled-toggle"]',
+    )!;
+    const tip = container.querySelector<HTMLElement>(
+      '[data-role="mini-player-resize-tip"]',
+    );
+    await vi.waitFor(() => {
+      expect(toggle.disabled).toBe(false);
+      expect(tip?.classList.contains("is-hidden")).toBe(true);
+    });
+
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change"));
+
+    expect(tip?.classList.contains("is-hidden")).toBe(false);
   });
 
   it("should render a toggle switch checked when enabled", async () => {
