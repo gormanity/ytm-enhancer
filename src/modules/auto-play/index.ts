@@ -14,6 +14,8 @@ export class AutoPlayModule implements FeatureModule {
     "Automatically start playback when YouTube Music loads";
 
   private mode: AutoPlayMode = "default";
+  private policyBlockedTabIds = new Set<number>();
+  private lifecycleEventsRegistered = false;
 
   init(): void {
     // No background-side setup needed; auto-play logic runs in
@@ -22,6 +24,7 @@ export class AutoPlayModule implements FeatureModule {
 
   destroy(): void {
     this.mode = "default";
+    this.policyBlockedTabIds.clear();
   }
 
   isEnabled(): boolean {
@@ -48,6 +51,8 @@ export class AutoPlayModule implements FeatureModule {
     registry: ModuleHandlerRegistry,
     context: ModuleContext,
   ): void {
+    this.registerLifecycleEvents(context);
+
     registry.on("get-auto-play-enabled", async () => ({
       ok: true,
       data: this.isEnabled(),
@@ -56,6 +61,13 @@ export class AutoPlayModule implements FeatureModule {
       ok: true,
       data: this.getMode(),
     }));
+    registry.on("get-auto-play-status", async () => {
+      const tabState = await context.ytm.listTabs();
+      const browserAutoplayBlocked =
+        tabState.selectedTabId !== null &&
+        this.policyBlockedTabIds.has(tabState.selectedTabId);
+      return { ok: true, data: { browserAutoplayBlocked } };
+    });
     registry.on("set-auto-play-enabled", async (message) => {
       const mode: AutoPlayMode = message.enabled === true ? "on" : "off";
       await this.setModeAndPersist(mode, context, message.enabled);
@@ -68,6 +80,23 @@ export class AutoPlayModule implements FeatureModule {
       );
       return { ok: true };
     });
+    registry.on("set-auto-play-policy-blocked", async (message, sender) => {
+      const tabId = sender?.tab?.id;
+      if (tabId === undefined) return { ok: false, error: "No tab ID" };
+
+      const wasBlocked = this.policyBlockedTabIds.has(tabId);
+      if (message.blocked === true) {
+        this.policyBlockedTabIds.add(tabId);
+      } else {
+        this.policyBlockedTabIds.delete(tabId);
+      }
+
+      if (this.policyBlockedTabIds.has(tabId) !== wasBlocked) {
+        this.notifyStatusChanged(context);
+      }
+
+      return { ok: true };
+    });
   }
 
   private async setModeAndPersist(
@@ -77,13 +106,33 @@ export class AutoPlayModule implements FeatureModule {
   ): Promise<void> {
     this.setMode(mode);
     if (mode !== "on") {
-      context.events.emit("auto-play-policy-reset", undefined);
+      this.clearPolicyBlockedTabs(context);
     }
     await context.state.saveValue("auto-play.mode", mode);
     if (legacyEnabled !== undefined) {
       await context.state.saveValue("auto-play.enabled", legacyEnabled);
     }
     void context.ytm.broadcast({ type: "set-auto-play-mode", mode });
+  }
+
+  private registerLifecycleEvents(context: ModuleContext): void {
+    if (this.lifecycleEventsRegistered) return;
+    this.lifecycleEventsRegistered = true;
+    context.events.on<{ tabId: number }>("ytm-tab-reset", ({ tabId }) => {
+      if (this.policyBlockedTabIds.delete(tabId)) {
+        this.notifyStatusChanged(context);
+      }
+    });
+  }
+
+  private clearPolicyBlockedTabs(context: ModuleContext): void {
+    if (this.policyBlockedTabIds.size === 0) return;
+    this.policyBlockedTabIds.clear();
+    this.notifyStatusChanged(context);
+  }
+
+  private notifyStatusChanged(context: ModuleContext): void {
+    context.popupEvents.broadcast({ type: "auto-play-status-changed" });
   }
 }
 

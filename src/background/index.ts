@@ -51,7 +51,6 @@ const playbackControls = new PlaybackControlsModule();
 const sleepTimer = new SleepTimerModule();
 let selectedTabId: number | null = null;
 const pipOpenTabIds = new Set<number>();
-const autoPlayPolicyBlockedTabIds = new Set<number>();
 const devBuildSuspendedTabIds = new Set<number>();
 const devBuildConflictState: DevBuildConflictState = {
   suspendedTabIds: devBuildSuspendedTabIds,
@@ -91,15 +90,6 @@ const context = createExtensionContext({
   state: { saveValue: saveModuleStateValue },
   popupEvents: { broadcast: broadcastPopupMessage },
 });
-context.events.on("auto-play-policy-reset", () => {
-  if (autoPlayPolicyBlockedTabIds.size === 0) return;
-  autoPlayPolicyBlockedTabIds.clear();
-  notifyAutoPlayStatusChanged();
-});
-
-function notifyAutoPlayStatusChanged(): void {
-  broadcastPopupMessage({ type: "auto-play-status-changed" });
-}
 
 function notifyDevBuildConflictStatusChanged(): void {
   broadcastPopupMessage({ type: "dev-build-conflict-status-changed" });
@@ -273,14 +263,6 @@ handler.on("focus-ytm-tab", async (message) => {
   return { ok: true };
 });
 
-handler.on("get-auto-play-status", async () => {
-  const tabState = await ytm.listTabs();
-  const browserAutoplayBlocked =
-    tabState.selectedTabId !== null &&
-    autoPlayPolicyBlockedTabIds.has(tabState.selectedTabId);
-  return { ok: true, data: { browserAutoplayBlocked } };
-});
-
 handler.on("content-runtime-dev-build-suspension", async (message, sender) => {
   const tabId = sender?.tab?.id;
   if (tabId === undefined) return { ok: false, error: "No tab ID" };
@@ -304,25 +286,6 @@ handler.on("get-dev-build-conflict-status", async () => {
       duplicateDetected: isDevBuildConflictActive(devBuildConflictState),
     },
   };
-});
-
-handler.on("set-auto-play-policy-blocked", async (message, sender) => {
-  const tabId = sender?.tab?.id;
-  if (tabId === undefined) return { ok: false, error: "No tab ID" };
-
-  const wasBlocked = autoPlayPolicyBlockedTabIds.has(tabId);
-  if (message.blocked === true) {
-    autoPlayPolicyBlockedTabIds.add(tabId);
-  } else {
-    autoPlayPolicyBlockedTabIds.delete(tabId);
-  }
-
-  const isBlocked = autoPlayPolicyBlockedTabIds.has(tabId);
-  if (isBlocked !== wasBlocked) {
-    notifyAutoPlayStatusChanged();
-  }
-
-  return { ok: true };
 });
 
 handler.on("pip-open-state", async (message, sender) => {
@@ -418,9 +381,7 @@ void ensureYtmContentScripts();
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   pipOpenTabIds.delete(tabId);
-  if (autoPlayPolicyBlockedTabIds.delete(tabId)) {
-    notifyAutoPlayStatusChanged();
-  }
+  context.events.emit("ytm-tab-reset", { tabId });
   updateDevBuildConflictState(() => {
     devBuildSuspendedTabIds.delete(tabId);
   });
@@ -436,9 +397,7 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     (changeInfo.status === "loading" || changeInfo.url !== undefined) &&
     _tabId !== undefined
   ) {
-    if (autoPlayPolicyBlockedTabIds.delete(_tabId)) {
-      notifyAutoPlayStatusChanged();
-    }
+    context.events.emit("ytm-tab-reset", { tabId: _tabId });
     updateDevBuildConflictState(() => {
       devBuildSuspendedTabIds.delete(_tabId);
     });
