@@ -1,16 +1,14 @@
 import type { AutoPlayMode, ModuleContext, PopupView } from "@/core/types";
 import { bindModuleSelect } from "@/popup/module-ui";
 import { renderPopupTemplate } from "@/popup/template";
+import { createAutoPlayClient, type AutoPlayClient } from "./client";
 import templateHtml from "./popup.html?raw";
 
-function normalizeMode(mode: unknown): AutoPlayMode {
-  return mode === "default" || mode === "off" || mode === "on"
-    ? mode
-    : "default";
-}
-
 /** Create the auto-play settings popup view. */
-export function createAutoPlayPopupView(context: ModuleContext): PopupView {
+export function createAutoPlayPopupView(
+  context: ModuleContext,
+  client: AutoPlayClient = createAutoPlayClient(context.runtime),
+): PopupView {
   return {
     id: "auto-play-settings",
     label: "Auto-Play",
@@ -32,10 +30,8 @@ export function createAutoPlayPopupView(context: ModuleContext): PopupView {
       };
 
       const updateBlockedHint = () => {
-        void context.runtime
-          .request<{ browserAutoplayBlocked?: boolean }>({
-            type: "get-auto-play-status",
-          })
+        void client
+          .getStatus()
           .then((data) => {
             setBlockedHintVisible(data.browserAutoplayBlocked === true);
           })
@@ -43,17 +39,8 @@ export function createAutoPlayPopupView(context: ModuleContext): PopupView {
       };
 
       bindModuleSelect(container, "auto-play-mode", {
-        get: async () =>
-          normalizeMode(
-            await context.runtime.request<AutoPlayMode>({
-              type: "get-auto-play-mode",
-            }),
-          ),
-        set: (mode) =>
-          context.runtime.command({
-            type: "set-auto-play-mode",
-            mode: normalizeMode(mode),
-          }),
+        get: () => client.getMode(),
+        set: (mode) => client.setMode(mode as AutoPlayMode),
       });
 
       const modeChangeListener = () => {
@@ -67,12 +54,7 @@ export function createAutoPlayPopupView(context: ModuleContext): PopupView {
       modeSelect?.addEventListener("change", modeChangeListener);
       updateBlockedHint();
 
-      const runtimeMessageListener = (message: { type: string }) => {
-        if (message.type === "auto-play-status-changed") {
-          updateBlockedHint();
-        }
-      };
-      const unsubscribe = context.runtime.subscribe(runtimeMessageListener);
+      const unsubscribe = client.subscribeStatusChanged(updateBlockedHint);
 
       return () => {
         modeSelect?.removeEventListener("change", modeChangeListener);
