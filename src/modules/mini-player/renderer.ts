@@ -16,6 +16,7 @@ const THUMBS_UP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height
 const THUMBS_DOWN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H8c-.8 0-1.5.5-1.8 1.2l-3 7c-.1.2-.2.5-.2.8v2c0 1.1.9 2 2 2h6.3l-1 4.6v.3c0 .4.2.8.4 1.1L10 23l6.4-6.4c.4-.4.6-.9.6-1.4V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>`;
 const VOLUME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71z"/></svg>`;
 const VOLUME_MUTED_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
+const CLICK_DEDUP_WINDOW_MS = 500;
 interface AuxHandlers {
   onLike?: () => void;
   onDislike?: () => void;
@@ -626,12 +627,70 @@ export class PipWindowRenderer {
     onAction: (action: PlaybackAction) => void,
   ): HTMLButtonElement {
     const button = doc.createElement("button");
+    let pointerStartedInside = false;
+    let lastNonClickActivationAt = Number.NEGATIVE_INFINITY;
+
+    const activate = (eventType: string) => {
+      debug("PiP: control activation", { action, label, eventType });
+      onAction(action);
+    };
+    const activateFromPointer = (eventType: string) => {
+      const now = performance.now();
+      if (now - lastNonClickActivationAt < CLICK_DEDUP_WINDOW_MS) return;
+
+      lastNonClickActivationAt = now;
+      activate(eventType);
+    };
+
     setElementSvgIcon(button, svg, doc);
     button.setAttribute("data-action", action);
     button.setAttribute("aria-label", label);
+    button.addEventListener("pointerdown", (event) => {
+      pointerStartedInside = true;
+      if (
+        "pointerId" in event &&
+        typeof button.setPointerCapture === "function"
+      ) {
+        button.setPointerCapture(event.pointerId);
+      }
+      debug("PiP: control pointerdown", { action, label });
+    });
+    button.addEventListener("pointerup", (event) => {
+      if (!pointerStartedInside) return;
+      pointerStartedInside = false;
+      event.preventDefault();
+      activateFromPointer("pointerup");
+    });
+    button.addEventListener("pointercancel", () => {
+      pointerStartedInside = false;
+      debug("PiP: control pointercancel", { action, label });
+    });
+    button.addEventListener("mouseup", (event) => {
+      if (!pointerStartedInside) return;
+      pointerStartedInside = false;
+      event.preventDefault();
+      activateFromPointer("mouseup");
+    });
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+
+      event.preventDefault();
+      lastNonClickActivationAt = performance.now();
+      activate(`keydown:${event.key}`);
+    });
     button.addEventListener("click", () => {
-      debug("PiP: control click", { action, label });
-      onAction(action);
+      if (
+        performance.now() - lastNonClickActivationAt <
+        CLICK_DEDUP_WINDOW_MS
+      ) {
+        debug("PiP: control click ignored after local activation", {
+          action,
+          label,
+        });
+        return;
+      }
+
+      activate("click");
     });
     return button;
   }
