@@ -30,6 +30,35 @@ describe("createShortcutCommandClient", () => {
     ]);
   });
 
+  it("lists registered hotkey ownership metadata", async () => {
+    vi.stubGlobal("chrome", {
+      runtime: {
+        sendMessage: vi.fn((_message, cb: (response: unknown) => void) => {
+          cb({
+            ok: true,
+            data: [
+              {
+                command: "play-pause",
+                moduleId: "playback-controls",
+                moduleName: "Playback Controls",
+              },
+            ],
+          });
+        }),
+      },
+    });
+
+    await expect(
+      createShortcutCommandClient().getRegisteredCommands(),
+    ).resolves.toEqual([
+      {
+        command: "play-pause",
+        moduleId: "playback-controls",
+        moduleName: "Playback Controls",
+      },
+    ]);
+  });
+
   it("opens the browser shortcuts page", async () => {
     const create = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("chrome", {

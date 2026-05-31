@@ -1,4 +1,5 @@
 import type { ShortcutCommand, ShortcutCommandClient } from "@/core/commands";
+import type { RegisteredHotkeyCommand } from "@/core/hotkey-registry";
 import type { ModuleContext, PopupView } from "@/core/types";
 import { bindModuleActionButton } from "@/popup/module-ui";
 import { renderPopupTemplate } from "@/popup/template";
@@ -247,67 +248,126 @@ interface LoadOptions {
   onReset: (name: string) => void;
 }
 
+interface ShortcutViewModel {
+  command: ShortcutCommand;
+  owner: RegisteredHotkeyCommand | null;
+}
+
+interface ShortcutGroup {
+  moduleId: string;
+  moduleName: string;
+  shortcuts: ShortcutViewModel[];
+}
+
 function loadShortcuts(
   container: HTMLElement,
   rowTemplate: HTMLTemplateElement,
   renderKeys: KeyRenderer,
   options: LoadOptions,
 ): void {
-  void options.client.getAll().then((commands) => {
+  void Promise.all([
+    options.client.getAll(),
+    options.client.getRegisteredCommands(),
+  ]).then(([commands, registrations]) => {
     container.replaceChildren();
     const visibleCommands = commands
       .filter((cmd) => cmd.name && cmd.name !== "_execute_action")
       .sort((a, b) => commandSortKey(a) - commandSortKey(b));
+    const groups = groupCommandsByModule(visibleCommands, registrations);
 
-    for (const cmd of visibleCommands) {
-      if (!cmd.name) continue;
+    for (const group of groups) {
+      const groupEl = document.createElement("section");
+      groupEl.className = "shortcut-group";
+      groupEl.dataset.moduleId = group.moduleId;
 
-      const rowFragment = rowTemplate.content.cloneNode(
-        true,
-      ) as DocumentFragment;
-      const row =
-        rowFragment.firstElementChild instanceof HTMLDivElement
-          ? rowFragment.firstElementChild
-          : null;
-      if (!row) continue;
+      const heading = document.createElement("h3");
+      heading.className = "shortcut-group-title";
+      heading.textContent = group.moduleName;
+      groupEl.appendChild(heading);
 
-      const label = row.querySelector<HTMLElement>(".shortcut-label");
-      const keysContainer = row.querySelector<HTMLElement>(".shortcut-keys");
-      if (!label || !keysContainer) continue;
-      label.textContent = cmd.description ?? cmd.name;
+      for (const { command: cmd } of group.shortcuts) {
+        if (!cmd.name) continue;
 
-      if (cmd.shortcut) {
-        renderKeys(keysContainer, cmd.shortcut);
-      } else {
-        const empty = document.createElement("kbd");
-        empty.className = "shortcut-key";
-        empty.textContent = "Not set";
-        keysContainer.appendChild(empty);
+        const rowFragment = rowTemplate.content.cloneNode(
+          true,
+        ) as DocumentFragment;
+        const row =
+          rowFragment.firstElementChild instanceof HTMLDivElement
+            ? rowFragment.firstElementChild
+            : null;
+        if (!row) continue;
+
+        const label = row.querySelector<HTMLElement>(".shortcut-label");
+        const keysContainer = row.querySelector<HTMLElement>(".shortcut-keys");
+        if (!label || !keysContainer) continue;
+        label.textContent = cmd.description ?? cmd.name;
+
+        if (cmd.shortcut) {
+          renderKeys(keysContainer, cmd.shortcut);
+        } else {
+          const empty = document.createElement("kbd");
+          empty.className = "shortcut-key";
+          empty.textContent = "Not set";
+          keysContainer.appendChild(empty);
+        }
+
+        if (options.canEdit) {
+          const actions = row.querySelector<HTMLElement>(
+            '[data-role="shortcut-actions"]',
+          );
+          const editBtn = row.querySelector<HTMLButtonElement>(
+            '[data-role="shortcut-edit-btn"]',
+          );
+          const resetBtn = row.querySelector<HTMLButtonElement>(
+            '[data-role="shortcut-reset-btn"]',
+          );
+          const cancelBtn = row.querySelector<HTMLButtonElement>(
+            '[data-role="shortcut-cancel-btn"]',
+          );
+          actions?.classList.remove("is-hidden");
+          const name = cmd.name;
+          editBtn?.addEventListener("click", () => options.onEdit(row, name));
+          resetBtn?.addEventListener("click", () => options.onReset(name));
+          cancelBtn?.addEventListener("click", () => exitEdit(row));
+        }
+
+        groupEl.appendChild(row);
       }
 
-      if (options.canEdit) {
-        const actions = row.querySelector<HTMLElement>(
-          '[data-role="shortcut-actions"]',
-        );
-        const editBtn = row.querySelector<HTMLButtonElement>(
-          '[data-role="shortcut-edit-btn"]',
-        );
-        const resetBtn = row.querySelector<HTMLButtonElement>(
-          '[data-role="shortcut-reset-btn"]',
-        );
-        const cancelBtn = row.querySelector<HTMLButtonElement>(
-          '[data-role="shortcut-cancel-btn"]',
-        );
-        actions?.classList.remove("is-hidden");
-        const name = cmd.name;
-        editBtn?.addEventListener("click", () => options.onEdit(row, name));
-        resetBtn?.addEventListener("click", () => options.onReset(name));
-        cancelBtn?.addEventListener("click", () => exitEdit(row));
-      }
-
-      container.appendChild(row);
+      container.appendChild(groupEl);
     }
   });
+}
+
+function groupCommandsByModule(
+  commands: ShortcutCommand[],
+  registrations: RegisteredHotkeyCommand[],
+): ShortcutGroup[] {
+  const ownerByCommand = new Map(
+    registrations.map((registration) => [registration.command, registration]),
+  );
+  const groups: ShortcutGroup[] = [];
+  const groupByModule = new Map<string, ShortcutGroup>();
+
+  for (const command of commands) {
+    const name = command.name;
+    if (!name) continue;
+
+    const owner = ownerByCommand.get(name) ?? null;
+    const moduleId = owner?.moduleId ?? "other";
+    const moduleName = owner?.moduleName ?? "Other";
+    let group = groupByModule.get(moduleId);
+
+    if (!group) {
+      group = { moduleId, moduleName, shortcuts: [] };
+      groupByModule.set(moduleId, group);
+      groups.push(group);
+    }
+
+    group.shortcuts.push({ command, owner });
+  }
+
+  return groups;
 }
 
 function commandSortKey(command: ShortcutCommand): number {

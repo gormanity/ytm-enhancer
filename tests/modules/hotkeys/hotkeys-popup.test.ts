@@ -70,7 +70,7 @@ describe("createHotkeysPopupView", () => {
 
     expect(hotkeysCss).toContain("gap: 0;");
     expect(hotkeysCss).toContain("padding: 8px 0 10px;");
-    expect(hotkeysCss).toContain(".shortcuts-list .shortcut-row:first-child");
+    expect(hotkeysCss).toContain(".shortcut-group .shortcut-row:first-of-type");
     expect(hotkeysCss).toContain("padding-top: 0;");
     expect(hotkeysCss).not.toContain("padding: 12px 0;");
   });
@@ -193,19 +193,19 @@ describe("createHotkeysPopupView", () => {
       container.querySelectorAll<HTMLElement>(".shortcut-group"),
     );
     expect(
-      Array.from(groups[0].querySelectorAll<HTMLElement>(".shortcut-label")).map(
-        (el) => el.textContent,
-      ),
+      Array.from(
+        groups[0].querySelectorAll<HTMLElement>(".shortcut-label"),
+      ).map((el) => el.textContent),
     ).toEqual(["Play/pause the current track", "Skip to the next track"]);
     expect(
-      Array.from(groups[1].querySelectorAll<HTMLElement>(".shortcut-label")).map(
-        (el) => el.textContent,
-      ),
+      Array.from(
+        groups[1].querySelectorAll<HTMLElement>(".shortcut-label"),
+      ).map((el) => el.textContent),
     ).toEqual(["Focus the YouTube Music tab"]);
     expect(
-      Array.from(groups[2].querySelectorAll<HTMLElement>(".shortcut-label")).map(
-        (el) => el.textContent,
-      ),
+      Array.from(
+        groups[2].querySelectorAll<HTMLElement>(".shortcut-label"),
+      ).map((el) => el.textContent),
     ).toEqual(["Show a notification with the current track"]);
   });
 

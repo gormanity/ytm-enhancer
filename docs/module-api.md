@@ -184,6 +184,7 @@ or tab APIs directly from module popup views.
 
 ```typescript
 const commands = await context.commands.getAll();
+const registered = await context.commands.getRegisteredCommands();
 
 if (context.commands.canEdit()) {
   await context.commands.update("play-pause", "Alt+Shift+P");
@@ -191,6 +192,10 @@ if (context.commands.canEdit()) {
   await context.commands.openShortcutsPage();
 }
 ```
+
+`getRegisteredCommands()` returns background hotkey ownership metadata, grouped
+from `FeatureModule.registerHotkeys()` calls. Use it only for command inventory
+or display; command behavior still belongs in each module's hotkey handler.
 
 ### `popupEvents`
 
@@ -456,13 +461,18 @@ registerHandlers(registry, context) {
 
 ```typescript
 export interface HotkeyHandlerRegistry {
-  register(command: string, handler: CommandHandler): void;
+  register(
+    command: string,
+    handler: CommandHandler,
+    metadata?: HotkeyRegistrationMetadata,
+  ): void;
 }
 ```
 
 Commands must also be declared in each browser manifest under `"commands"`. The
-Hotkeys popup reads browser command metadata with `chrome.commands.getAll()`, so
-newly declared commands appear there automatically.
+Hotkeys popup reads browser command metadata with `chrome.commands.getAll()` and
+ownership metadata from the background registry, so newly declared commands
+appear under the module that registered them.
 
 ```typescript
 registerHotkeys(registry, context) {

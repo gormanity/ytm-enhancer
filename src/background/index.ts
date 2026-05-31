@@ -219,6 +219,11 @@ handler.on("dev-build-liveness-check", async () => {
   return { ok: true };
 });
 
+handler.on("get-registered-hotkeys", async () => ({
+  ok: true,
+  data: hotkeyRegistry.listRegistrations(),
+}));
+
 handler.on("track-changed", async (message, sender) => {
   return handleTrackChangedMessage(message, sender, {
     isYTMTabSuppressed,

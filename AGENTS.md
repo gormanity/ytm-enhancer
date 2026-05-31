@@ -144,6 +144,9 @@ Use the module-facing runtime API for module work:
   when a `ModuleContext` is not available.
 - Use `context.commands` for browser shortcut listings, edits, resets, and
   opening the browser shortcuts page.
+- Use `context.commands.getRegisteredCommands()` when popup UI needs to display
+  command ownership metadata. The ownership source is
+  `FeatureModule.registerHotkeys()`, not a duplicate popup map.
 - Use `context.extension` for extension metadata and packaged asset URLs, such
   as the manifest version or notification icons.
 - Use `context.alarms` for module-owned alarm scheduling and clearing.

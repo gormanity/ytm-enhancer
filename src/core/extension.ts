@@ -7,7 +7,11 @@ import { createAlarmSchedulerClient } from "./alarm-registry";
 import { createNotificationClient } from "./notifications";
 import type { Capabilities } from "./capabilities";
 import type { FeatureModule, ModuleContext } from "./types";
-import type { HotkeyHandlerRegistry } from "./hotkey-registry";
+import type {
+  CommandHandler,
+  HotkeyHandlerRegistry,
+  HotkeyRegistrationMetadata,
+} from "./hotkey-registry";
 import type { AlarmHandlerRegistry } from "./alarm-registry";
 import type { NotificationClickHandlerRegistry } from "./notifications";
 import type { YtmRuntimeClient } from "./ytm-client";
@@ -121,7 +125,19 @@ export function registerModuleHotkeys(
   registry: HotkeyHandlerRegistry,
 ): void {
   for (const module of modules) {
-    module.registerHotkeys?.(registry, context);
+    const moduleRegistry: HotkeyHandlerRegistry = {
+      register(
+        command: string,
+        handler: CommandHandler,
+        metadata?: HotkeyRegistrationMetadata,
+      ): void {
+        registry.register(command, handler, {
+          moduleId: metadata?.moduleId ?? module.id,
+          moduleName: metadata?.moduleName ?? module.name,
+        });
+      },
+    };
+    module.registerHotkeys?.(moduleRegistry, context);
   }
 }
 

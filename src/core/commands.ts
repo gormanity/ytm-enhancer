@@ -1,8 +1,12 @@
+import type { MessageResponse } from "./messaging";
+import type { RegisteredHotkeyCommand } from "./hotkey-registry";
+
 export type ShortcutCommand = chrome.commands.Command;
 
 export interface ShortcutCommandClient {
   canEdit(): boolean;
   getAll(): Promise<ShortcutCommand[]>;
+  getRegisteredCommands(): Promise<RegisteredHotkeyCommand[]>;
   update(name: string, shortcut: string): Promise<void>;
   reset(name: string): Promise<void>;
   openShortcutsPage(): Promise<void>;
@@ -10,6 +14,35 @@ export interface ShortcutCommandClient {
 
 function getChromeApi(): typeof chrome | null {
   return typeof chrome === "undefined" ? null : chrome;
+}
+
+function sendRuntimeMessage(message: {
+  type: string;
+}): Promise<MessageResponse | null> {
+  const api = getChromeApi();
+  if (typeof api?.runtime?.sendMessage !== "function") {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (response?: MessageResponse): void => {
+      if (settled) return;
+      settled = true;
+      resolve(response ?? null);
+    };
+
+    try {
+      const result = api.runtime.sendMessage(message, settle) as
+        | Promise<MessageResponse | undefined>
+        | undefined;
+      if (result && typeof result.then === "function") {
+        result.then(settle).catch(() => resolve(null));
+      }
+    } catch {
+      resolve(null);
+    }
+  });
 }
 
 export function createShortcutCommandClient(): ShortcutCommandClient {
@@ -26,6 +59,14 @@ export function createShortcutCommandClient(): ShortcutCommandClient {
       return new Promise((resolve) => {
         api.commands.getAll((commands) => resolve(commands));
       });
+    },
+
+    async getRegisteredCommands() {
+      const response = await sendRuntimeMessage({
+        type: "get-registered-hotkeys",
+      });
+      if (!response?.ok || !Array.isArray(response.data)) return [];
+      return response.data as RegisteredHotkeyCommand[];
     },
 
     async update(name, shortcut) {

@@ -30,7 +30,12 @@ export type {
   NotificationClient,
   NotificationOptions,
 } from "./notifications";
-export type { CommandHandler, HotkeyHandlerRegistry } from "./hotkey-registry";
+export type {
+  CommandHandler,
+  HotkeyHandlerRegistry,
+  HotkeyRegistrationMetadata,
+  RegisteredHotkeyCommand,
+} from "./hotkey-registry";
 export { PopupRegistry } from "./popup-registry";
 export {
   createExtensionContext,

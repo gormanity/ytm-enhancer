@@ -12,7 +12,9 @@ which routes to the registered handler.
 
 The background script owns only the browser listener and dispatch call. Feature
 modules own the command behavior. `HotkeysModule` owns the popup view that shows
-configured shortcuts from `chrome.commands.getAll()`.
+configured shortcuts from `chrome.commands.getAll()`. The popup also asks the
+background for the registered command owners, so shortcuts are grouped by the
+module that registered each handler.
 
 ## Adding a New Hotkey
 
@@ -65,8 +67,10 @@ async.
 - Run `pnpm run check` — all tests pass.
 - Build both targets: `pnpm run build:chrome` and `pnpm run build:firefox`.
 - Load the extension and verify the shortcut works.
-- The hotkeys popup should display the new shortcut automatically (it reads from
-  `chrome.commands.getAll()`).
+- The hotkeys popup should display the new shortcut automatically in the owning
+  module's group. It merges browser command metadata from
+  `chrome.commands.getAll()` with ownership metadata from
+  `FeatureModule.registerHotkeys()`.
 
 ## API Reference
 
@@ -78,15 +82,24 @@ import { HotkeyRegistry } from "@/core/hotkey-registry";
 const registry = new HotkeyRegistry();
 ```
 
-#### `register(command, handler)`
+#### `register(command, handler, metadata?)`
 
 Register a handler for a command string. Throws if the command is already
-registered.
+registered. `registerModuleHotkeys()` automatically supplies module ownership
+metadata when modules call `registry.register()` from `registerHotkeys()`.
 
 ```typescript
 registry.register("play-pause", async (command) => {
   // handle the command
 });
+```
+
+#### `listRegistrations()`
+
+Return the registered command ownership metadata used by the Hotkeys popup.
+
+```typescript
+const registrations = registry.listRegistrations();
 ```
 
 #### `dispatch(command)`
