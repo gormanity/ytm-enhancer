@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MiniPlayerController } from "@/modules/mini-player/controller";
+import { PipWindowRenderer } from "@/modules/mini-player/renderer";
 import { YTMAdapter } from "@/adapter";
 import { SELECTORS } from "@/adapter/selectors";
 import type { RuntimeClient } from "@/core/messaging";
 import type { DocumentPipClient } from "@/core/document-pip";
+import type { PlaybackState } from "@/core/types";
 
 type MessageListener = (
   message: unknown,
@@ -68,6 +70,24 @@ function createDocumentPipClient(
   return {
     isSupported: vi.fn(() => true),
     requestWindow: vi.fn(),
+    ...overrides,
+  };
+}
+
+function createPlaybackState(
+  overrides: Partial<PlaybackState> = {},
+): PlaybackState {
+  return {
+    title: "Test Song",
+    artist: "Test Artist",
+    album: "Test Album",
+    year: 2026,
+    artworkUrl: null,
+    isPlaying: false,
+    progress: 10,
+    duration: 200,
+    isShuffling: false,
+    repeatMode: "off",
     ...overrides,
   };
 }
@@ -553,6 +573,114 @@ describe("MiniPlayerController", () => {
     pagehideHandler?.();
 
     expect(controller.isPipOpen()).toBe(false);
+  });
+
+  it("should refresh PiP state immediately and shortly after PiP actions", async () => {
+    createNativeMiniPlayerButton();
+
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
+    const pipWindow = {
+      document: pipDoc,
+      addEventListener: vi.fn(),
+    };
+    const requestWindow = vi.fn().mockResolvedValue(pipWindow);
+    vi.stubGlobal("documentPictureInPicture", { requestWindow });
+
+    vi.spyOn(YTMAdapter.prototype, "getPlaybackState").mockReturnValue(
+      createPlaybackState(),
+    );
+    vi.spyOn(YTMAdapter.prototype, "getVolume").mockReturnValue(0.7);
+    vi.spyOn(YTMAdapter.prototype, "isCurrentTrackLiked").mockReturnValue(
+      false,
+    );
+    vi.spyOn(YTMAdapter.prototype, "isCurrentTrackDisliked").mockReturnValue(
+      false,
+    );
+    const executeSpy = vi
+      .spyOn(YTMAdapter.prototype, "executeAction")
+      .mockImplementation(() => undefined);
+    const updateSpy = vi.spyOn(PipWindowRenderer.prototype, "update");
+    const updateAuxSpy = vi.spyOn(
+      PipWindowRenderer.prototype,
+      "updateAuxState",
+    );
+
+    controller = new MiniPlayerController();
+    await controller.init();
+    (
+      document.querySelector(SELECTORS.nativeMiniPlayerButton) as HTMLElement
+    ).click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    updateSpy.mockClear();
+    updateAuxSpy.mockClear();
+
+    const playPauseButton = pipDoc.querySelector<HTMLButtonElement>(
+      '[data-action="togglePlay"]',
+    );
+    playPauseButton?.click();
+
+    expect(executeSpy).toHaveBeenCalledWith("togglePlay");
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    expect(updateAuxSpy).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(149);
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(updateSpy).toHaveBeenCalledTimes(2);
+    expect(updateAuxSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("should refresh PiP state from media events while open", async () => {
+    createNativeMiniPlayerButton();
+
+    const video = document.createElement("video");
+    video.className = "html5-main-video";
+    document.body.appendChild(video);
+
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
+    const pipWindow = {
+      document: pipDoc,
+      addEventListener: vi.fn(),
+    };
+    const requestWindow = vi.fn().mockResolvedValue(pipWindow);
+    vi.stubGlobal("documentPictureInPicture", { requestWindow });
+
+    vi.spyOn(YTMAdapter.prototype, "getPlaybackState").mockReturnValue(
+      createPlaybackState({ isPlaying: true }),
+    );
+    vi.spyOn(YTMAdapter.prototype, "getVolume").mockReturnValue(0.7);
+    vi.spyOn(YTMAdapter.prototype, "isCurrentTrackLiked").mockReturnValue(
+      false,
+    );
+    vi.spyOn(YTMAdapter.prototype, "isCurrentTrackDisliked").mockReturnValue(
+      false,
+    );
+    const updateSpy = vi.spyOn(PipWindowRenderer.prototype, "update");
+
+    controller = new MiniPlayerController();
+    await controller.init();
+    (
+      document.querySelector(SELECTORS.nativeMiniPlayerButton) as HTMLElement
+    ).click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    updateSpy.mockClear();
+    video.dispatchEvent(new Event("pause"));
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+
+    const pagehideCall = (
+      pipWindow.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls.find(([event]) => event === "pagehide");
+    const pagehideHandler = pagehideCall?.[1] as (() => void) | undefined;
+    pagehideHandler?.();
+
+    updateSpy.mockClear();
+    video.dispatchEvent(new Event("play"));
+
+    expect(updateSpy).not.toHaveBeenCalled();
   });
 
   it("should report native video PiP open and close state to background", async () => {
