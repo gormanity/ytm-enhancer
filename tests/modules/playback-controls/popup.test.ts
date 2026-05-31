@@ -510,4 +510,8 @@ describe("playback controls popup view", () => {
     expect(POPUP_CSS).toContain("width: 36px;");
     expect(POPUP_CSS).toContain("height: 36px;");
   });
+
+  it("does not give active now-playing controls a persistent background", () => {
+    expect(POPUP_CSS).not.toContain("background: rgba(255, 0, 0, 0.12);");
+  });
 });
