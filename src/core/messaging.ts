@@ -35,6 +35,58 @@ export interface ModuleHandlerRegistry {
   on(type: string, handler: MessageHandler): void;
 }
 
+function getRuntimeLastError(): Error | null {
+  if (
+    typeof chrome === "undefined" ||
+    typeof chrome.runtime?.lastError?.message !== "string"
+  ) {
+    return null;
+  }
+
+  return new Error(chrome.runtime.lastError.message);
+}
+
+function sendRuntimeMessage(message: Message): Promise<MessageResponse> {
+  if (
+    typeof chrome === "undefined" ||
+    typeof chrome.runtime?.sendMessage !== "function"
+  ) {
+    return Promise.resolve({ ok: false, error: "Runtime unavailable" });
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (response: MessageResponse | undefined): void => {
+      if (settled) return;
+      settled = true;
+
+      const lastError = getRuntimeLastError();
+      if (lastError) {
+        reject(lastError);
+        return;
+      }
+
+      resolve(response ?? { ok: false, error: "No runtime response" });
+    };
+    const fail = (err: unknown): void => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    try {
+      const result = chrome.runtime.sendMessage(message, settle) as
+        | Promise<MessageResponse | undefined>
+        | undefined;
+      if (result && typeof result.then === "function") {
+        result.then(settle).catch(fail);
+      }
+    } catch (err) {
+      fail(err);
+    }
+  });
+}
+
 /** Create a function for sending messages to background or tabs. */
 export function createMessageSender() {
   return async (
@@ -51,17 +103,13 @@ export function createMessageSender() {
 export function createRuntimeClient(): RuntimeClient {
   return {
     async request<TData = unknown>(message: Message): Promise<TData> {
-      const response = (await chrome.runtime.sendMessage(
-        message,
-      )) as MessageResponse;
+      const response = await sendRuntimeMessage(message);
       if (!response.ok) throw new Error(response.error);
       return response.data as TData;
     },
 
     async command(message: Message): Promise<void> {
-      const response = (await chrome.runtime.sendMessage(
-        message,
-      )) as MessageResponse;
+      const response = await sendRuntimeMessage(message);
       if (!response.ok) throw new Error(response.error);
     },
 

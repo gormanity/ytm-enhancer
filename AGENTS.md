@@ -136,6 +136,8 @@ Use the module-facing runtime API for module work:
   broadcasts.
 - Use `context.runtime.request()` and `context.runtime.command()` for
   module-specific popup-to-background messages.
+- Use `createRuntimeClient()` for module content/controller runtime messaging
+  when a `ModuleContext` is not available.
 - Use `context.commands` for browser shortcut listings, edits, resets, and
   opening the browser shortcuts page.
 - Use `context.extension` for extension metadata and packaged asset URLs, such

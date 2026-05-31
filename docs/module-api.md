@@ -309,6 +309,10 @@ envelope and throw on `{ ok: false }`.
 Use `subscribe()` for popup refresh events. Always call the returned cleanup
 function from the popup view cleanup path when a view installs a listener.
 
+Content-side module controllers that cannot receive `ModuleContext` should
+accept an injected `RuntimeClient`, defaulting to `createRuntimeClient()`,
+instead of calling `chrome.runtime.sendMessage()` directly.
+
 ### `extension`
 
 Extension metadata and asset URL helpers. Use this instead of calling

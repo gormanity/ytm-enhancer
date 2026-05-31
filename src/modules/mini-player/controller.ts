@@ -6,6 +6,7 @@ import { PipButton } from "./pip-button";
 import { PipWindowRenderer } from "./renderer";
 import { VideoPipFallback } from "./video-fallback";
 import { debug } from "@/core/logger";
+import { createRuntimeClient, type RuntimeClient } from "@/core/messaging";
 import {
   addRuntimeMessageListener,
   removeRuntimeMessageListener,
@@ -31,10 +32,15 @@ export class MiniPlayerController {
   private observer: MutationObserver | null = null;
   private enabled = false;
   private documentPipOpen = false;
+  private runtime: RuntimeClient;
   private messageListener: (message: { type: string; data?: unknown }) => void;
 
-  constructor(overlayManager?: VisualizerOverlayManager) {
+  constructor(
+    overlayManager?: VisualizerOverlayManager,
+    runtime: RuntimeClient = createRuntimeClient(),
+  ) {
     this.overlayManager = overlayManager ?? null;
+    this.runtime = runtime;
     this.messageListener = (message) => {
       if (message.type !== "set-mini-player-enabled") return;
       const newEnabled = message.data === true;
@@ -74,22 +80,10 @@ export class MiniPlayerController {
   }
 
   private async queryEnabled(): Promise<boolean> {
-    return new Promise((resolve) => {
-      try {
-        this.sendRuntimeMessage(
-          { type: "get-mini-player-enabled" },
-          (response: { ok?: boolean; data?: boolean }) => {
-            if (chrome.runtime.lastError || !response?.ok) {
-              resolve(false);
-              return;
-            }
-            resolve(response.data === true);
-          },
-        );
-      } catch {
-        resolve(false);
-      }
-    });
+    return this.runtime
+      .request<boolean>({ type: "get-mini-player-enabled" })
+      .then((enabled) => enabled === true)
+      .catch(() => false);
   }
 
   private tryInjectButton(): void {
@@ -215,27 +209,9 @@ export class MiniPlayerController {
     }
   }
 
-  private sendRuntimeMessage<TResponse = unknown>(
-    message: unknown,
-    callback?: (response: TResponse) => void,
-  ): void {
-    if (!chrome.runtime?.id) {
-      callback?.({ ok: false } as TResponse);
-      return;
-    }
-
-    try {
-      if (callback) {
-        chrome.runtime.sendMessage(message, callback);
-      } else {
-        chrome.runtime.sendMessage(message);
-      }
-    } catch {
-      callback?.({ ok: false } as TResponse);
-    }
-  }
-
   private reportPipOpenState(open: boolean): void {
-    this.sendRuntimeMessage({ type: "pip-open-state", open });
+    void this.runtime
+      .command({ type: "pip-open-state", open })
+      .catch(() => undefined);
   }
 }
