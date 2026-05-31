@@ -11,10 +11,6 @@ import {
   type DocumentPipClient,
 } from "@/core/document-pip";
 import { createRuntimeClient, type RuntimeClient } from "@/core/messaging";
-import {
-  addRuntimeMessageListener,
-  removeRuntimeMessageListener,
-} from "@/core/runtime-listener";
 
 const POLL_INTERVAL_MS = 1000;
 const DOCUMENT_PIP_WIDTH = 480;
@@ -34,6 +30,7 @@ export class MiniPlayerController {
   private documentPipOpen = false;
   private runtime: RuntimeClient;
   private documentPip: DocumentPipClient;
+  private unsubscribeRuntime: (() => void) | null = null;
   private messageListener: (message: { type: string; data?: unknown }) => void;
 
   constructor(
@@ -61,7 +58,7 @@ export class MiniPlayerController {
   }
 
   async init(): Promise<void> {
-    addRuntimeMessageListener(this.messageListener);
+    this.unsubscribeRuntime = this.runtime.subscribe(this.messageListener);
     this.enabled = await this.queryEnabled();
     if (!this.enabled || !this.documentPip.isSupported()) return;
 
@@ -69,7 +66,8 @@ export class MiniPlayerController {
   }
 
   destroy(): void {
-    removeRuntimeMessageListener(this.messageListener);
+    this.unsubscribeRuntime?.();
+    this.unsubscribeRuntime = null;
     this.pipButton.remove();
     this.stopPolling();
     this.observer?.disconnect();
