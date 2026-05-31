@@ -7,6 +7,17 @@ import {
   updateDevBuildSuspendedTab,
 } from "@/background/dev-build-conflict";
 
+function deferred(): {
+  promise: Promise<void>;
+  resolve: () => void;
+} {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 describe("dev build conflict background helpers", () => {
   it("tracks whether a tab suspension state changed", () => {
     const suspendedTabIds = new Set<number>();
@@ -53,8 +64,9 @@ describe("dev build conflict background helpers", () => {
     });
   });
 
-  it("sets a disabled browser action indicator for production builds", () => {
-    const setIcon = vi.fn(() => Promise.resolve());
+  it("sets a disabled browser action indicator for production builds", async () => {
+    const pendingSetIcon = deferred();
+    const setIcon = vi.fn(() => pendingSetIcon.promise);
     const setTitle = vi.fn(() => Promise.resolve());
     const setBadgeText = vi.fn(() => Promise.resolve());
     const setBadgeBackgroundColor = vi.fn(() => Promise.resolve());
@@ -67,7 +79,7 @@ describe("dev build conflict background helpers", () => {
       },
     });
 
-    setActionDevBuildConflictIndicator(true, false);
+    const indicatorPromise = setActionDevBuildConflictIndicator(true, false);
 
     expect(setIcon).toHaveBeenCalledWith({
       path: {
@@ -83,9 +95,20 @@ describe("dev build conflict background helpers", () => {
     expect(setBadgeBackgroundColor).toHaveBeenCalledWith({
       color: "#555555",
     });
+
+    let settled = false;
+    void indicatorPromise.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    pendingSetIcon.resolve();
+    await indicatorPromise;
+    expect(settled).toBe(true);
   });
 
-  it("does not set the browser action indicator for dev builds", () => {
+  it("does not set the browser action indicator for dev builds", async () => {
     const setIcon = vi.fn(() => Promise.resolve());
     const setTitle = vi.fn(() => Promise.resolve());
     const setBadgeText = vi.fn(() => Promise.resolve());
@@ -99,7 +122,7 @@ describe("dev build conflict background helpers", () => {
       },
     });
 
-    setActionDevBuildConflictIndicator(true, true);
+    await setActionDevBuildConflictIndicator(true, true);
 
     expect(setIcon).not.toHaveBeenCalled();
     expect(setTitle).not.toHaveBeenCalled();

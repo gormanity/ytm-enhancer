@@ -48,30 +48,24 @@ export function isActionSuppressedForDevBuildConflict(
   );
 }
 
-export function setActionDevBuildConflictIndicator(
+export async function setActionDevBuildConflictIndicator(
   disabled: boolean,
   isDevBuild: boolean,
-): void {
+): Promise<void> {
   if (isDevBuild || typeof chrome.action !== "object") return;
 
-  void chrome.action
-    .setIcon({ path: getActionIconPath(disabled) })
-    .catch(() => undefined);
-  void chrome.action
-    .setTitle({
+  await Promise.allSettled([
+    chrome.action.setIcon({ path: getActionIconPath(disabled) }),
+    chrome.action.setTitle({
       title: disabled
         ? "YTM Enhancer disabled while the dev build is active"
         : "YTM Enhancer",
-    })
-    .catch(() => undefined);
-  void chrome.action
-    .setBadgeText({
+    }),
+    chrome.action.setBadgeText({
       text: disabled ? "OFF" : "",
-    })
-    .catch(() => undefined);
-  void chrome.action
-    .setBadgeBackgroundColor({
+    }),
+    chrome.action.setBadgeBackgroundColor({
       color: "#555555",
-    })
-    .catch(() => undefined);
+    }),
+  ]);
 }

@@ -108,40 +108,40 @@ const context = createExtensionContext({
   popupEvents: { broadcast: broadcastPopupMessage },
 });
 
-function notifyDevBuildConflictStatusChanged(): void {
+async function notifyDevBuildConflictStatusChanged(): Promise<void> {
   broadcastPopupMessage({ type: "dev-build-conflict-status-changed" });
-  setActionDevBuildConflictIndicator(
+  await setActionDevBuildConflictIndicator(
     isDevBuildConflictActive(devBuildConflictState),
     __DEV__,
   );
 }
 
-function updateDevBuildConflictState(
+async function updateDevBuildConflictState(
   update: () => void,
   forceNotify = false,
-): void {
+): Promise<void> {
   const wasDuplicateDisabled = isDevBuildConflictActive(devBuildConflictState);
   update();
   const isDuplicateDisabled = isDevBuildConflictActive(devBuildConflictState);
   if (forceNotify || isDuplicateDisabled !== wasDuplicateDisabled) {
-    notifyDevBuildConflictStatusChanged();
+    await notifyDevBuildConflictStatusChanged();
   }
 }
 
-function setExternalDevBuildPresent(present: boolean): void {
-  updateDevBuildConflictState(() => {
+async function setExternalDevBuildPresent(present: boolean): Promise<void> {
+  await updateDevBuildConflictState(() => {
     devBuildConflictState.externalDevBuildPresent = present;
   });
 }
 
-function markExternalDevBuildPresent(): void {
-  setExternalDevBuildPresent(true);
+async function markExternalDevBuildPresent(): Promise<void> {
+  await setExternalDevBuildPresent(true);
   if (externalDevBuildStaleTimer !== null) {
     clearTimeout(externalDevBuildStaleTimer);
   }
   externalDevBuildStaleTimer = setTimeout(() => {
     externalDevBuildStaleTimer = null;
-    setExternalDevBuildPresent(false);
+    void setExternalDevBuildPresent(false);
   }, DEV_BUILD_STALE_MS);
 }
 
@@ -262,7 +262,7 @@ handler.on("content-runtime-dev-build-suspension", async (message, sender) => {
   const tabId = sender?.tab?.id;
   if (tabId === undefined) return { ok: false, error: "No tab ID" };
 
-  updateDevBuildConflictState(() => {
+  await updateDevBuildConflictState(() => {
     updateDevBuildSuspendedTab(
       devBuildSuspendedTabIds,
       tabId,
@@ -354,7 +354,7 @@ void ensureYtmContentScripts();
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   context.events.emit("ytm-tab-reset", { tabId });
-  updateDevBuildConflictState(() => {
+  void updateDevBuildConflictState(() => {
     devBuildSuspendedTabIds.delete(tabId);
   });
   notifyYtmTabsChanged();
@@ -370,7 +370,7 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     _tabId !== undefined
   ) {
     context.events.emit("ytm-tab-reset", { tabId: _tabId });
-    updateDevBuildConflictState(() => {
+    void updateDevBuildConflictState(() => {
       devBuildSuspendedTabIds.delete(_tabId);
     });
   }

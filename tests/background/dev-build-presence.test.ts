@@ -14,6 +14,17 @@ type ExternalListener = (
   sendResponse: (response?: unknown) => void,
 ) => boolean | void;
 
+function deferred(): {
+  promise: Promise<void>;
+  resolve: () => void;
+} {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 function createRuntime() {
   let externalListener: ExternalListener | null = null;
   const runtime = {
@@ -39,12 +50,15 @@ function createRuntime() {
     dispatchExternal(
       message: unknown,
       sender: chrome.runtime.MessageSender,
-    ): unknown {
-      let response: unknown;
-      externalListener?.(message, sender, (value) => {
-        response = value;
+    ): { listenerResult: boolean | void; response: unknown } {
+      const result: { listenerResult: boolean | void; response: unknown } = {
+        listenerResult: undefined,
+        response: undefined,
+      };
+      result.listenerResult = externalListener?.(message, sender, (value) => {
+        result.response = value;
       });
-      return response;
+      return result;
     },
   };
 }
@@ -101,7 +115,7 @@ describe("dev build cross-extension presence coordinator", () => {
         { type: DEV_BUILD_PRESENCE_MESSAGE },
         { id: "not-the-dev-build" },
       ),
-    ).toBeUndefined();
+    ).toEqual({ listenerResult: false, response: undefined });
     expect(onDevPresent).not.toHaveBeenCalled();
 
     expect(
@@ -109,12 +123,35 @@ describe("dev build cross-extension presence coordinator", () => {
         { type: DEV_BUILD_PRESENCE_MESSAGE },
         { id: CHROMIUM_LOCAL_DEV_EXTENSION_ID },
       ),
-    ).toEqual({ ok: true });
+    ).toEqual({ listenerResult: false, response: { ok: true } });
     expect(onDevPresent).toHaveBeenCalledOnce();
+  });
+
+  it("keeps prod presence responses open until async state handling finishes", async () => {
+    const { runtime, dispatchExternal } = createRuntime();
+    const pendingDevPresence = deferred();
+    const onDevPresent = vi.fn(() => pendingDevPresence.promise);
+    const coordinator = createDevBuildPresenceCoordinator({
+      isDevBuild: false,
+      runtime,
+      onDevPresent,
+    });
+    coordinator.registerExternalListener();
+
+    const result = dispatchExternal(
+      { type: DEV_BUILD_PRESENCE_MESSAGE },
+      { id: CHROMIUM_LOCAL_DEV_EXTENSION_ID },
+    );
+
+    expect(result).toEqual({ listenerResult: true, response: undefined });
+    pendingDevPresence.resolve();
+    await Promise.resolve();
+    expect(result.response).toEqual({ ok: true });
   });
 
   it("prod probes dev presence before reporting status", async () => {
     const { runtime } = createRuntime();
+    const pendingDevPresence = deferred();
     runtime.sendMessage.mockImplementation(
       (
         _extensionId: string,
@@ -124,14 +161,15 @@ describe("dev build cross-extension presence coordinator", () => {
         callback?.({ ok: true });
       },
     );
-    const onDevPresent = vi.fn();
+    const onDevPresent = vi.fn(() => pendingDevPresence.promise);
     const coordinator = createDevBuildPresenceCoordinator({
       isDevBuild: false,
       runtime,
       onDevPresent,
     });
 
-    await coordinator.probeDevPresence();
+    const presencePromise = coordinator.probeDevPresence();
+    await Promise.resolve();
 
     expect(runtime.sendMessage).toHaveBeenCalledWith(
       CHROMIUM_LOCAL_DEV_EXTENSION_ID,
@@ -139,6 +177,17 @@ describe("dev build cross-extension presence coordinator", () => {
       expect.any(Function),
     );
     expect(onDevPresent).toHaveBeenCalledOnce();
+
+    let settled = false;
+    void presencePromise.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    pendingDevPresence.resolve();
+    await presencePromise;
+    expect(settled).toBe(true);
   });
 
   it("dev responds only to known production IDs", () => {
@@ -155,18 +204,18 @@ describe("dev build cross-extension presence coordinator", () => {
         { type: DEV_BUILD_PRESENCE_REQUEST_MESSAGE },
         { id: "unknown-prod-build" },
       ),
-    ).toBeUndefined();
+    ).toEqual({ listenerResult: false, response: undefined });
     expect(
       dispatchExternal(
         { type: DEV_BUILD_PRESENCE_REQUEST_MESSAGE },
         { id: CHROMIUM_LOCAL_PROD_EXTENSION_ID },
       ),
-    ).toEqual({ ok: true });
+    ).toEqual({ listenerResult: false, response: { ok: true } });
     expect(
       dispatchExternal(
         { type: DEV_BUILD_PRESENCE_REQUEST_MESSAGE },
         { id: CHROMIUM_STORE_PROD_EXTENSION_ID },
       ),
-    ).toEqual({ ok: true });
+    ).toEqual({ listenerResult: false, response: { ok: true } });
   });
 });

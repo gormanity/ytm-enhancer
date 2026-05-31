@@ -33,7 +33,7 @@ export interface DevBuildPresenceRuntime {
 export interface DevBuildPresenceCoordinatorOptions {
   isDevBuild: boolean;
   runtime: DevBuildPresenceRuntime;
-  onDevPresent: () => void;
+  onDevPresent: () => void | Promise<void>;
   heartbeatMs?: number;
 }
 
@@ -64,6 +64,12 @@ export function createDevBuildPresenceCoordinator({
     }
   };
 
+  const isPromiseLike = (value: unknown): value is PromiseLike<void> =>
+    typeof value === "object" &&
+    value !== null &&
+    "then" in value &&
+    typeof (value as { then?: unknown }).then === "function";
+
   return {
     startDevHeartbeat(): void {
       if (!isDevBuild || heartbeatTimer !== null) return;
@@ -80,10 +86,16 @@ export function createDevBuildPresenceCoordinator({
           { type: DEV_BUILD_PRESENCE_REQUEST_MESSAGE },
           (response?: unknown) => {
             const presenceResponse = response as { ok?: boolean } | undefined;
-            if (!runtime.lastError && presenceResponse?.ok === true) {
-              onDevPresent();
+            if (runtime.lastError || presenceResponse?.ok !== true) {
+              resolve();
+              return;
             }
-            resolve();
+
+            try {
+              Promise.resolve(onDevPresent()).then(resolve, resolve);
+            } catch {
+              resolve();
+            }
           },
         );
       });
@@ -111,7 +123,26 @@ export function createDevBuildPresenceCoordinator({
         if (sender.id !== CHROMIUM_LOCAL_DEV_EXTENSION_ID) return false;
         if (!isDevBuildPresenceMessage(message)) return false;
 
-        onDevPresent();
+        let result: void | Promise<void>;
+        try {
+          result = onDevPresent();
+        } catch {
+          sendResponse({ ok: false });
+          return false;
+        }
+
+        if (isPromiseLike(result)) {
+          result.then(
+            () => {
+              sendResponse({ ok: true });
+            },
+            () => {
+              sendResponse({ ok: false });
+            },
+          );
+          return true;
+        }
+
         sendResponse({ ok: true });
         return false;
       });
