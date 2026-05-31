@@ -4,13 +4,15 @@ This document covers the module-facing runtime API. Use it when adding or
 refactoring modules so feature code stays behind stable typed capabilities
 instead of importing background helpers or calling raw runtime messages.
 
-The API has four layers:
+The API has six layers:
 
 1. `FeatureModule` and `ModuleContext` define module lifecycle and capabilities.
 2. `YtmRuntimeClient` defines the typed surface for YouTube Music tabs.
 3. `HotkeyRegistry` defines browser command dispatch owned by modules.
 4. `AlarmRegistry` defines browser alarm dispatch owned by modules.
-5. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
+5. `NotificationClickRegistry` defines notification click dispatch owned by
+   modules.
+6. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
 
 ## Module Lifecycle
 
@@ -37,6 +39,10 @@ export interface FeatureModule {
     context: ModuleContext,
   ): void;
   registerAlarms?(registry: AlarmHandlerRegistry, context: ModuleContext): void;
+  registerNotificationClicks?(
+    registry: NotificationClickHandlerRegistry,
+    context: ModuleContext,
+  ): void;
 }
 ```
 
@@ -60,6 +66,11 @@ Use `registerAlarms(registry, context)` for module-owned browser alarm handlers.
 The background script owns the `chrome.alarms.onAlarm` listener, but feature
 modules own the alarm behavior.
 
+Use `registerNotificationClicks(registry, context)` for module-owned browser
+notification click handlers. The background script owns the
+`chrome.notifications.onClicked` listener, but feature modules own the click
+behavior.
+
 ## Module Context
 
 `ModuleContext` is the only capability bundle modules should need.
@@ -81,6 +92,7 @@ export interface ModuleContext {
   extension: ExtensionMetadataClient;
   commands: ShortcutCommandClient;
   alarms: AlarmSchedulerClient;
+  notifications: NotificationClient;
   popupEvents: {
     broadcast(message: { type: string; [key: string]: unknown }): void;
   };
@@ -317,6 +329,22 @@ await context.alarms.create("sleep-timer", { when: endAt });
 await context.alarms.clear("sleep-timer");
 ```
 
+### `notifications`
+
+Browser notification creation and clearing. Use this instead of calling
+`chrome.notifications` from module code.
+
+```typescript
+await context.notifications.create("now-playing", {
+  type: "basic",
+  title: "Now Playing",
+  message: "Artist Name",
+  iconUrl: context.extension.getUrl("icon48.png"),
+});
+
+await context.notifications.clear("now-playing");
+```
+
 ## Module Handler Registry
 
 `registerHandlers()` receives a `ModuleHandlerRegistry`.
@@ -391,6 +419,27 @@ Use `context.alarms` for scheduling and clearing those alarms.
 registerAlarms(registry, context) {
   registry.register("my-module-alarm", async () => {
     await context.ytm.executePlaybackAction("pause");
+  });
+}
+```
+
+## Module Notification Click Registry
+
+`registerNotificationClicks()` receives a `NotificationClickHandlerRegistry`.
+
+```typescript
+export interface NotificationClickHandlerRegistry {
+  register(id: string, handler: NotificationClickHandler): void;
+}
+```
+
+Use `registerNotificationClicks()` for behavior that should run when a browser
+notification is clicked.
+
+```typescript
+registerNotificationClicks(registry, context) {
+  registry.register("now-playing", async () => {
+    await context.ytm.focusTab();
   });
 }
 ```
@@ -492,10 +541,12 @@ Background should keep only global responsibilities:
 5. Add `registerHandlers(registry, context)` for module-owned messages.
 6. Add `registerHotkeys(registry, context)` for module-owned browser commands.
 7. Add `registerAlarms(registry, context)` for module-owned browser alarms.
-8. Persist module state through `context.state.saveValue()`.
-9. Use `context.ytm` for YTM tab and playback behavior.
-10. Use `context.runtime` and `module-ui` helpers in popup views.
-11. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
+8. Add `registerNotificationClicks(registry, context)` for module-owned browser
+   notification click handlers.
+9. Persist module state through `context.state.saveValue()`.
+10. Use `context.ytm` for YTM tab and playback behavior.
+11. Use `context.runtime` and `module-ui` helpers in popup views.
+12. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
 
 ## Testing
 

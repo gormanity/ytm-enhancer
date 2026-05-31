@@ -54,6 +54,10 @@ function createModuleContext(
       create: vi.fn().mockResolvedValue(undefined),
       clear: vi.fn().mockResolvedValue(true),
     },
+    notifications: {
+      create: vi.fn().mockResolvedValue("notification-id"),
+      clear: vi.fn().mockResolvedValue(true),
+    },
     popupEvents: { broadcast: vi.fn() },
     ytm: {
       listTabs: vi.fn().mockResolvedValue({

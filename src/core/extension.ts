@@ -4,10 +4,12 @@ import { PopupRegistry } from "./popup-registry";
 import { detectCapabilities } from "./capabilities";
 import { createShortcutCommandClient } from "./commands";
 import { createAlarmSchedulerClient } from "./alarm-registry";
+import { createNotificationClient } from "./notifications";
 import type { Capabilities } from "./capabilities";
 import type { FeatureModule, ModuleContext } from "./types";
 import type { HotkeyHandlerRegistry } from "./hotkey-registry";
 import type { AlarmHandlerRegistry } from "./alarm-registry";
+import type { NotificationClickHandlerRegistry } from "./notifications";
 import type { YtmRuntimeClient } from "./ytm-client";
 import {
   createRuntimeClient,
@@ -31,6 +33,7 @@ export interface ExtensionContextOptions {
   extension?: ModuleContext["extension"];
   commands?: ModuleContext["commands"];
   alarms?: ModuleContext["alarms"];
+  notifications?: ModuleContext["notifications"];
   popupEvents?: ModuleContext["popupEvents"];
 }
 
@@ -76,6 +79,7 @@ export function createExtensionContext(
     },
     commands: options.commands ?? createShortcutCommandClient(),
     alarms: options.alarms ?? createAlarmSchedulerClient(),
+    notifications: options.notifications ?? createNotificationClient(),
     popupEvents: options.popupEvents ?? { broadcast: () => undefined },
   };
 }
@@ -129,5 +133,16 @@ export function registerModuleAlarms(
 ): void {
   for (const module of modules) {
     module.registerAlarms?.(registry, context);
+  }
+}
+
+/** Register browser notification click handlers owned by feature modules. */
+export function registerModuleNotificationClicks(
+  context: ExtensionContext,
+  modules: FeatureModule[],
+  registry: NotificationClickHandlerRegistry,
+): void {
+  for (const module of modules) {
+    module.registerNotificationClicks?.(registry, context);
   }
 }

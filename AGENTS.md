@@ -141,6 +141,8 @@ Use the module-facing runtime API for module work:
 - Use `context.extension` for extension metadata and packaged asset URLs, such
   as the manifest version or notification icons.
 - Use `context.alarms` for module-owned alarm scheduling and clearing.
+- Use `context.notifications` for module-owned browser notification creation and
+  clearing.
 - Use `FeatureModule.registerHandlers()` for module-owned background handlers.
   Keep only global policy and browser lifecycle handlers in
   `src/background/index.ts`.
@@ -148,6 +150,9 @@ Use the module-facing runtime API for module work:
   handlers. Keep `chrome.commands.onCommand` dispatch in core/background.
 - Use `FeatureModule.registerAlarms()` for module-owned browser alarm handlers.
   Keep `chrome.alarms.onAlarm` dispatch in core/background.
+- Use `FeatureModule.registerNotificationClicks()` for module-owned browser
+  notification click handlers. Keep `chrome.notifications.onClicked` dispatch in
+  core/background.
 - Use `context.state.saveValue()` for persisted module state writes from
   background handlers.
 - Use `context.storage` only for popup-local UI persistence that is not module
@@ -196,8 +201,11 @@ See [docs/shared-ui.md](docs/shared-ui.md) for full API reference.
    handlers.
 7. Use `registerAlarms(registry, context)` for module-owned browser alarm
    handlers.
-8. Use `context.ytm`, `context.runtime`, `context.state`, `context.alarms`, and
-   `context.capabilities` instead of direct global helpers where possible.
-9. Use `module-ui` helpers and shared UI components for standard controls.
-10. Write tests in `tests/modules/<module-name>/`.
-11. No changes to existing modules should be required.
+8. Use `registerNotificationClicks(registry, context)` for module-owned browser
+   notification click handlers.
+9. Use `context.ytm`, `context.runtime`, `context.state`, `context.alarms`,
+   `context.notifications`, and `context.capabilities` instead of direct global
+   helpers where possible.
+10. Use `module-ui` helpers and shared UI components for standard controls.
+11. Write tests in `tests/modules/<module-name>/`.
+12. No changes to existing modules should be required.

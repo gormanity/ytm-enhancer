@@ -3,6 +3,7 @@ import { PopupRegistry } from "./popup-registry";
 import { detectCapabilities } from "./capabilities";
 import { createShortcutCommandClient } from "./commands";
 import { createAlarmSchedulerClient } from "./alarm-registry";
+import { createNotificationClient } from "./notifications";
 import { createRuntimeClient, type RuntimeClient } from "./messaging";
 import type { ModuleContext, PlaybackAction, PlaybackState } from "./types";
 import type {
@@ -127,6 +128,7 @@ export function createPopupModuleContext(): ModuleContext {
     },
     commands: createShortcutCommandClient(),
     alarms: createAlarmSchedulerClient(),
+    notifications: createNotificationClient(),
     popupEvents: {
       broadcast: () => undefined,
     },

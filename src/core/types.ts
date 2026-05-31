@@ -7,6 +7,10 @@ import type { ShortcutCommandClient } from "./commands";
 import type { EventBus } from "./events";
 import type { HotkeyHandlerRegistry } from "./hotkey-registry";
 import type { ModuleHandlerRegistry, RuntimeClient } from "./messaging";
+import type {
+  NotificationClickHandlerRegistry,
+  NotificationClient,
+} from "./notifications";
 import type { PopupRegistry } from "./popup-registry";
 import type { YtmRuntimeClient } from "./ytm-client";
 
@@ -66,6 +70,7 @@ export interface ModuleContext {
   extension: ExtensionMetadataClient;
   commands: ShortcutCommandClient;
   alarms: AlarmSchedulerClient;
+  notifications: NotificationClient;
   popupEvents: {
     broadcast(message: { type: string; [key: string]: unknown }): void;
   };
@@ -106,4 +111,10 @@ export interface FeatureModule {
 
   /** Optional browser alarm handlers this module owns. */
   registerAlarms?(registry: AlarmHandlerRegistry, context: ModuleContext): void;
+
+  /** Optional browser notification click handlers this module owns. */
+  registerNotificationClicks?(
+    registry: NotificationClickHandlerRegistry,
+    context: ModuleContext,
+  ): void;
 }

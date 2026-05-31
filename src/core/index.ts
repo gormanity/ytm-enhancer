@@ -8,6 +8,10 @@ export { createMessageSender, createMessageHandler } from "./messaging";
 export { createRuntimeClient } from "./messaging";
 export { ActionExecutor } from "./actions";
 export { AlarmRegistry, createAlarmSchedulerClient } from "./alarm-registry";
+export {
+  NotificationClickRegistry,
+  createNotificationClient,
+} from "./notifications";
 export { HotkeyRegistry } from "./hotkey-registry";
 export type {
   AlarmEvent,
@@ -16,6 +20,12 @@ export type {
   AlarmInfo,
   AlarmSchedulerClient,
 } from "./alarm-registry";
+export type {
+  NotificationClickHandler,
+  NotificationClickHandlerRegistry,
+  NotificationClient,
+  NotificationOptions,
+} from "./notifications";
 export type { CommandHandler, HotkeyHandlerRegistry } from "./hotkey-registry";
 export { PopupRegistry } from "./popup-registry";
 export {
@@ -24,6 +34,7 @@ export {
   registerModuleAlarms,
   registerModuleHandlers,
   registerModuleHotkeys,
+  registerModuleNotificationClicks,
 } from "./extension";
 export {
   createPopupModuleContext,

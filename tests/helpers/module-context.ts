@@ -113,6 +113,10 @@ export function createTestModuleContext(
       create: vi.fn().mockResolvedValue(undefined),
       clear: vi.fn().mockResolvedValue(true),
     },
+    notifications: {
+      create: vi.fn().mockResolvedValue("notification-id"),
+      clear: vi.fn().mockResolvedValue(true),
+    },
     popupEvents: { broadcast: vi.fn() },
     ...contextOverrides,
     capabilities,

@@ -175,7 +175,7 @@ export class SleepTimerModule implements FeatureModule {
         hour: "numeric",
         minute: "2-digit",
       });
-      await chrome.notifications.create({
+      await this.context?.notifications.create({
         type: "basic",
         iconUrl: "icon48.png",
         title: "Sleep Timer",

@@ -68,6 +68,42 @@ function createModuleContext(
       create: vi.fn().mockResolvedValue(undefined),
       clear: vi.fn().mockResolvedValue(true),
     },
+    notifications: {
+      create: vi.fn(
+        async (
+          idOrOptions:
+            | string
+            | {
+                type: "basic";
+                title: string;
+                message: string;
+                iconUrl: string;
+              },
+          maybeOptions?: {
+            type: "basic";
+            title: string;
+            message: string;
+            iconUrl: string;
+          },
+        ) => {
+          if (typeof idOrOptions === "string") {
+            chrome.notifications.create(
+              idOrOptions,
+              maybeOptions!,
+              () => undefined,
+            );
+            return idOrOptions;
+          }
+
+          chrome.notifications.create(idOrOptions, () => undefined);
+          return "notification-id";
+        },
+      ),
+      clear: vi.fn(async (id: string) => {
+        chrome.notifications.clear(id);
+        return true;
+      }),
+    },
     popupEvents: { broadcast: vi.fn() },
     ytm: {
       listTabs: vi.fn(),
@@ -138,6 +174,7 @@ describe("NotificationsModule", () => {
     });
 
     module = new NotificationsModule();
+    module.init(createModuleContext());
   });
 
   afterEach(() => {
@@ -205,7 +242,9 @@ describe("NotificationsModule", () => {
   });
 
   it("should omit silent on Firefox because it prevents notifications from appearing", () => {
-    vi.stubGlobal("browser", { runtime: {} });
+    const context = createModuleContext();
+    context.capabilities.runtime = "firefox";
+    module.init(context);
 
     module.handleTrackChange(makeState());
     flushNotificationDelay();

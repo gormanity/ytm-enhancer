@@ -8,6 +8,10 @@ import { createNotificationsPopupView } from "./popup";
 import { debug, error } from "@/core/logger";
 import type { HotkeyHandlerRegistry } from "@/core/hotkey-registry";
 import type { ModuleHandlerRegistry } from "@/core/messaging";
+import type {
+  NotificationClickHandlerRegistry,
+  NotificationOptions,
+} from "@/core/notifications";
 
 const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 const FALLBACK_ICON = "icon48.png";
@@ -37,15 +41,6 @@ function getNotificationArtworkUrl(artworkUrl: string): string {
   return artworkUrl.replace(/=w\d+-h\d+/, "=w256-h256");
 }
 
-function isFirefoxRuntime(): boolean {
-  const maybeBrowser = (globalThis as { browser?: unknown }).browser;
-  return (
-    typeof maybeBrowser === "object" &&
-    maybeBrowser !== null &&
-    typeof (maybeBrowser as { runtime?: unknown }).runtime === "object"
-  );
-}
-
 export class NotificationsModule implements FeatureModule {
   readonly id = "notifications";
   readonly name = "Notifications";
@@ -55,26 +50,15 @@ export class NotificationsModule implements FeatureModule {
   private notifyOnUnpause = false;
   private fields: NotificationFields = { ...DEFAULT_FIELDS };
   private lastTrackKey: string | null = null;
-  private clickListener: ((id: string) => void) | null = null;
   private context: ModuleContext | null = null;
 
   init(context?: ModuleContext): void {
     this.context = context ?? null;
-    const listener = (id: string): void => {
-      if (id !== NOTIFICATION_ID) return;
-      void this.focusYtmTab();
-    };
-    this.clickListener = listener;
-    chrome.notifications.onClicked.addListener(listener);
   }
 
   destroy(): void {
     this.lastTrackKey = null;
     this.context = null;
-    if (this.clickListener) {
-      chrome.notifications.onClicked.removeListener(this.clickListener);
-      this.clickListener = null;
-    }
   }
 
   private async focusYtmTab(): Promise<void> {
@@ -156,6 +140,8 @@ export class NotificationsModule implements FeatureModule {
     registry: HotkeyHandlerRegistry,
     context: ModuleContext,
   ): void {
+    this.context = context;
+
     registry.register("remind-me", async () => {
       try {
         const state = await context.ytm.getPlaybackState();
@@ -163,6 +149,16 @@ export class NotificationsModule implements FeatureModule {
       } catch {
         // Tab may not have the content script loaded.
       }
+    });
+  }
+
+  registerNotificationClicks(
+    registry: NotificationClickHandlerRegistry,
+    context: ModuleContext,
+  ): void {
+    this.context = context;
+    registry.register(NOTIFICATION_ID, async () => {
+      await this.focusYtmTab();
     });
   }
 
@@ -201,12 +197,9 @@ export class NotificationsModule implements FeatureModule {
 
   /** Clear the active now-playing notification if one is visible. */
   clearCurrent(): void {
-    const clearResult = chrome.notifications.clear(NOTIFICATION_ID) as
-      | Promise<unknown>
-      | undefined;
-    if (clearResult && typeof clearResult.then === "function") {
-      clearResult.catch(() => {});
-    }
+    void this.context?.notifications
+      .clear(NOTIFICATION_ID)
+      .catch(() => undefined);
   }
 
   private showNotification(state: PlaybackState): void {
@@ -230,13 +223,13 @@ export class NotificationsModule implements FeatureModule {
         ? getNotificationArtworkUrl(state.artworkUrl)
         : this.getExtensionUrl(FALLBACK_ICON);
 
-    const options: chrome.notifications.NotificationCreateOptions = {
+    const options: NotificationOptions = {
       type: "basic",
       title: notificationTitle,
       message: notificationMessage,
       iconUrl,
     };
-    if (!isFirefoxRuntime()) {
+    if (this.context?.capabilities.runtime !== "firefox") {
       // YTM Enhancer fires a notification on every track change, so the
       // OS chime quickly becomes noise. Suppress it where the option is
       // supported.
@@ -254,30 +247,17 @@ export class NotificationsModule implements FeatureModule {
     this.clearCurrent();
 
     setTimeout(() => {
-      const createResult = chrome.notifications.create(
-        NOTIFICATION_ID,
-        options,
-        (id) => {
-          if (chrome.runtime.lastError) {
-            error(
-              "Notifications: create failed:",
-              chrome.runtime.lastError.message,
-            );
-          } else {
-            debug("Notifications: created:", id);
-          }
-        },
-      ) as Promise<string> | undefined;
-      if (createResult && typeof createResult.then === "function") {
-        createResult
-          .then((id) => debug("Notifications: created:", id))
-          .catch((e: unknown) =>
-            error(
-              "Notifications: create rejected:",
-              e instanceof Error ? e.message : String(e),
-            ),
-          );
-      }
+      void this.context?.notifications
+        .create(NOTIFICATION_ID, options)
+        .then((id) => {
+          if (id) debug("Notifications: created:", id);
+        })
+        .catch((e: unknown) =>
+          error(
+            "Notifications: create rejected:",
+            e instanceof Error ? e.message : String(e),
+          ),
+        );
     }, 150);
   }
 
