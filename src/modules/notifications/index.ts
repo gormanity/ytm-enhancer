@@ -77,12 +77,7 @@ export class NotificationsModule implements FeatureModule {
   }
 
   private async focusYtmTab(): Promise<void> {
-    const clearResult = chrome.notifications.clear(NOTIFICATION_ID) as
-      | Promise<unknown>
-      | undefined;
-    if (clearResult && typeof clearResult.then === "function") {
-      clearResult.catch(() => {});
-    }
+    this.clearCurrent();
     await Promise.resolve(this.context?.ytm.focusTab()).catch(() => undefined);
   }
 
@@ -187,6 +182,16 @@ export class NotificationsModule implements FeatureModule {
     });
   }
 
+  /** Clear the active now-playing notification if one is visible. */
+  clearCurrent(): void {
+    const clearResult = chrome.notifications.clear(NOTIFICATION_ID) as
+      | Promise<unknown>
+      | undefined;
+    if (clearResult && typeof clearResult.then === "function") {
+      clearResult.catch(() => {});
+    }
+  }
+
   private showNotification(state: PlaybackState): void {
     const notificationTitle =
       this.fields.title && state.title ? state.title : "Now Playing";
@@ -229,12 +234,7 @@ export class NotificationsModule implements FeatureModule {
     // Promise from clear() and does not reliably invoke a passed callback,
     // which broke notifications entirely. Fire-and-forget the clear and
     // schedule create on its own timer.
-    const clearResult = chrome.notifications.clear(NOTIFICATION_ID) as
-      | Promise<unknown>
-      | undefined;
-    if (clearResult && typeof clearResult.then === "function") {
-      clearResult.catch(() => {});
-    }
+    this.clearCurrent();
 
     setTimeout(() => {
       const createResult = chrome.notifications.create(

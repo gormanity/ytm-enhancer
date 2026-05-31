@@ -8,6 +8,7 @@ interface TrackChangeMiniPlayer {
 }
 
 interface TrackChangeNotifications {
+  clearCurrent(): void;
   handleTrackChange(state: PlaybackState): void;
 }
 
@@ -28,10 +29,12 @@ export function handleTrackChangedMessage(
   }
 
   dependencies.miniPlayer.syncPipOpenState(tabId, message.pipOpen);
+  const messageReportsPipOpen = message.pipOpen === true;
   if (
     dependencies.miniPlayer.isSuppressNotificationsWhilePipOpenEnabled() &&
-    dependencies.miniPlayer.hasOpenPipWindow()
+    (messageReportsPipOpen || dependencies.miniPlayer.hasOpenPipWindow())
   ) {
+    dependencies.notifications.clearCurrent();
     return { ok: true };
   }
 
