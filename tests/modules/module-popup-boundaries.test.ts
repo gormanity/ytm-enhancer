@@ -70,6 +70,18 @@ describe("module popup boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("does not import raw runtime listener helpers from feature modules", () => {
+    const offenders = moduleSources
+      .map((path) => ({
+        path: relative(process.cwd(), path),
+        source: readFileSync(path, "utf-8"),
+      }))
+      .filter(({ source }) => source.includes("@/core/runtime-listener"))
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+  });
+
   it("does not call raw browser shortcut APIs from module popup views", () => {
     const forbidden = ["chrome.commands", "chrome.tabs.create"];
     const offenders = modulePopupSources

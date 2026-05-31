@@ -57,7 +57,7 @@ function createRuntimeClient(
   return {
     request: vi.fn().mockResolvedValue(true),
     command: vi.fn().mockResolvedValue(undefined),
-    subscribe: vi.fn(),
+    subscribe: vi.fn(() => vi.fn()),
     ...overrides,
   };
 }
@@ -590,6 +590,37 @@ describe("MiniPlayerController", () => {
       open: false,
     });
     expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("should subscribe to toggle messages through an injected runtime client", async () => {
+    let subscribed: Parameters<RuntimeClient["subscribe"]>[0] | undefined;
+    const unsubscribe = vi.fn();
+    const runtime = createRuntimeClient({
+      subscribe: vi.fn((listener) => {
+        subscribed = listener;
+        return unsubscribe;
+      }),
+    });
+    const nativeButton = createNativeMiniPlayerButton();
+
+    controller = new MiniPlayerController(undefined, runtime);
+    await controller.init();
+
+    expect(runtime.subscribe).toHaveBeenCalledWith(expect.any(Function));
+    expect(chrome.runtime.onMessage.addListener).not.toHaveBeenCalled();
+
+    const removeSpy = vi.spyOn(nativeButton, "removeEventListener");
+    subscribed?.(
+      { type: "set-mini-player-enabled", data: false },
+      {} as chrome.runtime.MessageSender,
+    );
+
+    expect(removeSpy).toHaveBeenCalledWith("click", expect.any(Function), true);
+
+    controller.destroy();
+
+    expect(unsubscribe).toHaveBeenCalled();
+    expect(chrome.runtime.onMessage.removeListener).not.toHaveBeenCalled();
   });
 
   it("should remove button when disabled via toggle message", async () => {
