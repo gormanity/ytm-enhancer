@@ -341,14 +341,14 @@ h3 {
 .shortcuts-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
 .shortcut-row {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 0;
+  padding: 8px 0 10px;
   border-bottom: 1px solid var(--border-color);
 }
 
