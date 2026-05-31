@@ -134,7 +134,9 @@ runtime broadcasts.
 ### `runtime`
 
 Popup-safe background messaging. Use this for module-specific requests that are
-not part of the generic YTM tab/playback API.
+not part of the generic YTM tab/playback API. Popup views should usually wrap
+these messages in a small module-local client such as
+`src/modules/example/client.ts`, then bind controls to that client.
 
 ```typescript
 const enabled = await context.runtime.request<boolean>({
@@ -494,16 +496,10 @@ export function createExamplePopupView(context?: ModuleContext): PopupView {
       renderPopupTemplate(container, templateHtml);
       if (!context) return;
 
+      const client = createExampleClient(context.runtime);
       bindModuleToggle(container, "example-toggle", {
-        get: () =>
-          context.runtime.request<boolean>({
-            type: "get-example-enabled",
-          }),
-        set: (enabled) =>
-          context.runtime.command({
-            type: "set-example-enabled",
-            enabled,
-          }),
+        get: () => client.isEnabled(),
+        set: (enabled) => client.setEnabled(enabled),
       });
     },
   };
@@ -525,19 +521,14 @@ Use `src/popup/module-ui.ts` for module-facing popup controls.
 - `createStatusMessage()` for simple status text.
 - `createActionRow()` for a labeled async action row.
 
-Prefer function-based bindings with clients or context capabilities:
+Prefer function-based bindings with module clients or context capabilities:
 
 ```typescript
+const client = createMiniPlayerClient(context.runtime);
+
 bindModuleToggle(container, "mini-player-toggle", {
-  get: () =>
-    context.runtime.request<boolean>({
-      type: "get-mini-player-enabled",
-    }),
-  set: (enabled) =>
-    context.runtime.command({
-      type: "set-mini-player-enabled",
-      enabled,
-    }),
+  get: () => client.isEnabled(),
+  set: (enabled) => client.setEnabled(enabled),
 });
 ```
 
@@ -583,8 +574,9 @@ Background should keep only global responsibilities:
 9. Add `syncContentState(context)` when restored settings need content sync.
 10. Persist module state through `context.state.saveValue()`.
 11. Use `context.ytm` for YTM tab and playback behavior.
-12. Use `context.runtime` and `module-ui` helpers in popup views.
-13. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
+12. Wrap module-specific popup messages in a module-local client.
+13. Use `context.runtime` and `module-ui` helpers in popup views.
+14. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
 
 ## Testing
 

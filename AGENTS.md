@@ -135,7 +135,8 @@ Use the module-facing runtime API for module work:
   state, playback actions, seeking, volume, speed, quality, and content
   broadcasts.
 - Use `context.runtime.request()` and `context.runtime.command()` for
-  module-specific popup-to-background messages.
+  module-specific popup-to-background messages, preferably behind a small
+  module-local client in `src/modules/<module-name>/client.ts`.
 - Use `createRuntimeClient()` for module content/controller runtime messaging
   when a `ModuleContext` is not available.
 - Use `context.commands` for browser shortcut listings, edits, resets, and
@@ -210,9 +211,10 @@ See [docs/shared-ui.md](docs/shared-ui.md) for full API reference.
 8. Use `registerNotificationClicks(registry, context)` for module-owned browser
    notification click handlers.
 9. Use `syncContentState(context)` when restored settings need content sync.
-10. Use `context.ytm`, `context.runtime`, `context.state`, `context.alarms`,
+10. Wrap module-specific popup messages in a module-local client.
+11. Use `context.ytm`, `context.runtime`, `context.state`, `context.alarms`,
     `context.notifications`, and `context.capabilities` instead of direct global
     helpers where possible.
-11. Use `module-ui` helpers and shared UI components for standard controls.
-12. Write tests in `tests/modules/<module-name>/`.
-13. No changes to existing modules should be required.
+12. Use `module-ui` helpers and shared UI components for standard controls.
+13. Write tests in `tests/modules/<module-name>/`.
+14. No changes to existing modules should be required.
