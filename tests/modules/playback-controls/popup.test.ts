@@ -460,4 +460,45 @@ describe("playback controls popup view", () => {
 
     cleanup?.();
   });
+
+  it("renders shuffle state and sends shuffle action through the YTM client", async () => {
+    const executePlaybackAction = vi.fn().mockResolvedValue(undefined);
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({
+        listTabs: vi.fn().mockResolvedValue({ tabs: [], selectedTabId: null }),
+        getPlaybackState: vi.fn().mockResolvedValue({
+          title: "Track A",
+          artist: "Artist A",
+          album: null,
+          year: null,
+          artworkUrl: null,
+          isPlaying: true,
+          progress: 0,
+          duration: 0,
+          isShuffling: true,
+        }),
+        executePlaybackAction,
+      }),
+    );
+    const container = document.createElement("div");
+    const cleanup = view.render(container);
+
+    const shuffleButton = await vi.waitFor(() => {
+      const button = container.querySelector<HTMLButtonElement>(
+        '[data-role="quick-now-playing-shuffle"]',
+      );
+      expect(button).not.toBeNull();
+      return button!;
+    });
+
+    expect(shuffleButton.classList.contains("active")).toBe(true);
+    expect(shuffleButton.getAttribute("aria-pressed")).toBe("true");
+    expect(shuffleButton.title).toBe("Shuffle on");
+
+    shuffleButton.click();
+
+    expect(executePlaybackAction).toHaveBeenCalledWith("shuffle");
+
+    cleanup?.();
+  });
 });
