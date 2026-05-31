@@ -504,11 +504,15 @@ describe("playback controls popup view", () => {
     cleanup?.();
   });
 
-  it("keeps now-playing control buttons in a compact fixed-width row", () => {
-    expect(POPUP_CSS).toContain("grid-template-columns: repeat(5, 36px);");
+  it("distributes now-playing controls across the seek bar width", () => {
+    expect(POPUP_CSS).toContain(
+      "grid-template-columns: repeat(5, minmax(0, 1fr));",
+    );
+    expect(POPUP_CSS).toContain("width: 100%;");
     expect(POPUP_CSS).toContain(".quick-now-playing-controls .icon-btn");
-    expect(POPUP_CSS).toContain("width: 36px;");
-    expect(POPUP_CSS).toContain("height: 36px;");
+    expect(POPUP_CSS).toContain("justify-self: center;");
+    expect(POPUP_CSS).toContain("width: 32px;");
+    expect(POPUP_CSS).toContain("height: 32px;");
   });
 
   it("does not give active now-playing controls a persistent background", () => {
