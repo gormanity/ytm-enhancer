@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAutoSkipDislikedPopupView } from "@/modules/auto-skip-disliked/popup";
+import type { AutoSkipDislikedClient } from "@/modules/auto-skip-disliked/client";
 import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("auto-skip-disliked popup view", () => {
@@ -100,5 +101,36 @@ describe("auto-skip-disliked popup view", () => {
       type: "set-auto-skip-disliked-enabled",
       enabled: true,
     });
+  });
+
+  it("should bind through the injected module client", async () => {
+    const client: AutoSkipDislikedClient = {
+      isEnabled: vi.fn().mockResolvedValue(false),
+      setEnabled: vi.fn().mockResolvedValue(undefined),
+    };
+    const view = createAutoSkipDislikedPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const toggle = container.querySelector<HTMLInputElement>(
+        'input[type="checkbox"]',
+      );
+      expect(toggle?.disabled).toBe(false);
+    });
+
+    const toggle = container.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )!;
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change"));
+
+    expect(client.isEnabled).toHaveBeenCalled();
+    expect(client.setEnabled).toHaveBeenCalledWith(true);
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 });
