@@ -352,6 +352,10 @@ h3 {
   border-bottom: 1px solid var(--border-color);
 }
 
+.shortcuts-list .shortcut-row:first-child {
+  padding-top: 0;
+}
+
 .shortcuts-list--editable .shortcut-row:last-child {
   border-bottom: none;
 }
