@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import { createPlaybackControlsPopupView } from "@/modules/playback-controls/popup";
 import type { ModuleContext } from "@/core/types";
 import type { YtmRuntimeClient } from "@/core/ytm-client";
@@ -14,6 +15,7 @@ interface RuntimeMessage {
 
 const GOOD_ARTWORK_DATA_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0x8AAAAASUVORK5CYII=";
+const POPUP_CSS = readFileSync("src/popup/index.css", "utf8");
 
 class MockImage {
   onload: ((this: GlobalEventHandlers, ev: Event) => unknown) | null = null;
@@ -500,5 +502,12 @@ describe("playback controls popup view", () => {
     expect(executePlaybackAction).toHaveBeenCalledWith("shuffle");
 
     cleanup?.();
+  });
+
+  it("keeps now-playing control buttons in a compact fixed-width row", () => {
+    expect(POPUP_CSS).toContain("grid-template-columns: repeat(5, 36px);");
+    expect(POPUP_CSS).toContain(".quick-now-playing-controls .icon-btn");
+    expect(POPUP_CSS).toContain("width: 36px;");
+    expect(POPUP_CSS).toContain("height: 36px;");
   });
 });
