@@ -1,15 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createTestModuleContext } from "../../helpers/module-context";
 import { HotkeysModule } from "@/modules/hotkeys";
-import type { ModuleContext } from "@/core/types";
-
-interface TestHotkeyRegistry {
-  register: ReturnType<typeof vi.fn>;
-}
-
-interface TestHotkeyModule {
-  registerHotkeys?(registry: TestHotkeyRegistry, context: ModuleContext): void;
-}
 
 describe("HotkeysModule", () => {
   let module: HotkeysModule;
@@ -43,23 +34,7 @@ describe("HotkeysModule", () => {
     expect(views[0].id).toBe("hotkeys-settings");
   });
 
-  it("should register the focus-tab command through the module registry", async () => {
-    const focusTab = vi.fn().mockResolvedValue(undefined);
-    const context = createTestModuleContext({ ytm: { focusTab } });
-    const registry: TestHotkeyRegistry = { register: vi.fn() };
-
-    (module as TestHotkeyModule).registerHotkeys?.(registry, context);
-
-    expect(registry.register).toHaveBeenCalledWith(
-      "focus-ytm-tab",
-      expect.any(Function),
-    );
-
-    const handler = registry.register.mock.calls[0]?.[1] as
-      | (() => Promise<void>)
-      | undefined;
-    await handler?.();
-
-    expect(focusTab).toHaveBeenCalled();
+  it("should leave hotkey behavior ownership to feature modules", () => {
+    expect("registerHotkeys" in module).toBe(false);
   });
 });

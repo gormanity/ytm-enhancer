@@ -6,10 +6,6 @@ const backgroundSource = readFileSync(
   resolve(process.cwd(), "src/background/index.ts"),
   "utf-8",
 );
-const hotkeysModuleSource = readFileSync(
-  resolve(process.cwd(), "src/modules/hotkeys/index.ts"),
-  "utf-8",
-);
 const notificationsModuleSource = readFileSync(
   resolve(process.cwd(), "src/modules/notifications/index.ts"),
   "utf-8",
@@ -35,7 +31,6 @@ describe("dev build conflict command guards", () => {
     expect(backgroundSource).toContain(
       "isActionSuppressedForDevBuildConflict(devBuildConflictState, tabId)",
     );
-    expect(hotkeysModuleSource).toContain("context.ytm.focusTab()");
     expect(notificationsModuleSource).toContain(
       "context.ytm.getPlaybackState()",
     );
@@ -45,6 +40,7 @@ describe("dev build conflict command guards", () => {
     expect(playbackControlsModuleSource).toContain(
       "playbackController.executeAction(action)",
     );
+    expect(playbackControlsModuleSource).toContain("context.ytm.focusTab()");
     expect(handlerBody("focus-ytm-tab")).toContain(
       "ytm.focusTab(requestedTabId)",
     );

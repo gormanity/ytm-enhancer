@@ -61,6 +61,7 @@ describe("PlaybackControlsModule", () => {
 
   it("should register playback command hotkeys through the module registry", async () => {
     const executePlaybackAction = vi.fn().mockResolvedValue(undefined);
+    const focusTab = vi.fn().mockResolvedValue(undefined);
     const getPlaybackState = vi.fn().mockResolvedValue({
       title: "Track A",
       artist: "Artist A",
@@ -72,7 +73,7 @@ describe("PlaybackControlsModule", () => {
       duration: 0,
     });
     const context = createTestModuleContext({
-      ytm: { executePlaybackAction, getPlaybackState },
+      ytm: { executePlaybackAction, focusTab, getPlaybackState },
     });
     const registry: TestHotkeyRegistry = { register: vi.fn() };
 
@@ -89,15 +90,18 @@ describe("PlaybackControlsModule", () => {
       "play-pause",
       "next-track",
       "previous-track",
+      "focus-ytm-tab",
     ]);
 
     await handlers.get("play-pause")?.("play-pause");
     await handlers.get("next-track")?.("next-track");
     await handlers.get("previous-track")?.("previous-track");
+    await handlers.get("focus-ytm-tab")?.("focus-ytm-tab");
 
     expect(executePlaybackAction).toHaveBeenNthCalledWith(1, "togglePlay");
     expect(executePlaybackAction).toHaveBeenNthCalledWith(2, "next");
     expect(executePlaybackAction).toHaveBeenNthCalledWith(3, "previous");
+    expect(focusTab).toHaveBeenCalled();
     await vi.waitFor(() => {
       expect(getPlaybackState).toHaveBeenCalledTimes(3);
     });

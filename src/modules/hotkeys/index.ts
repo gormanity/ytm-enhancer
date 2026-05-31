@@ -1,5 +1,4 @@
 import type { FeatureModule, ModuleContext, PopupView } from "@/core/types";
-import type { HotkeyHandlerRegistry } from "@/core/hotkey-registry";
 import { createHotkeysPopupView } from "./popup";
 
 export class HotkeysModule implements FeatureModule {
@@ -22,14 +21,5 @@ export class HotkeysModule implements FeatureModule {
 
   getPopupViews(context: ModuleContext): PopupView[] {
     return [createHotkeysPopupView(context)];
-  }
-
-  registerHotkeys(
-    registry: HotkeyHandlerRegistry,
-    context: ModuleContext,
-  ): void {
-    registry.register("focus-ytm-tab", async () => {
-      await context.ytm.focusTab().catch(() => undefined);
-    });
   }
 }

@@ -64,5 +64,9 @@ export class PlaybackControlsModule implements FeatureModule {
         }
       });
     }
+
+    registry.register("focus-ytm-tab", async () => {
+      await context.ytm.focusTab().catch(() => undefined);
+    });
   }
 }

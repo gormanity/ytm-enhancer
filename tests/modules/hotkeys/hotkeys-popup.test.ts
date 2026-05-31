@@ -160,8 +160,8 @@ describe("createHotkeysPopupView", () => {
         },
         {
           command: "focus-ytm-tab",
-          moduleId: "hotkeys",
-          moduleName: "Hotkeys",
+          moduleId: "playback-controls",
+          moduleName: "Playback Controls",
         },
         {
           command: "remind-me",
@@ -182,11 +182,7 @@ describe("createHotkeysPopupView", () => {
       const headings = Array.from(
         container.querySelectorAll<HTMLElement>(".shortcut-group-title"),
       ).map((el) => el.textContent);
-      expect(headings).toEqual([
-        "Playback Controls",
-        "Hotkeys",
-        "Notifications",
-      ]);
+      expect(headings).toEqual(["Playback Controls", "Notifications"]);
     });
 
     const groups = Array.from(
@@ -196,15 +192,14 @@ describe("createHotkeysPopupView", () => {
       Array.from(
         groups[0].querySelectorAll<HTMLElement>(".shortcut-label"),
       ).map((el) => el.textContent),
-    ).toEqual(["Play/pause the current track", "Skip to the next track"]);
+    ).toEqual([
+      "Play/pause the current track",
+      "Skip to the next track",
+      "Focus the YouTube Music tab",
+    ]);
     expect(
       Array.from(
         groups[1].querySelectorAll<HTMLElement>(".shortcut-label"),
-      ).map((el) => el.textContent),
-    ).toEqual(["Focus the YouTube Music tab"]);
-    expect(
-      Array.from(
-        groups[2].querySelectorAll<HTMLElement>(".shortcut-label"),
       ).map((el) => el.textContent),
     ).toEqual(["Show a notification with the current track"]);
   });
