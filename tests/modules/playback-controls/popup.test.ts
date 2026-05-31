@@ -45,6 +45,7 @@ function createModuleContext(
       get: vi.fn().mockResolvedValue({}),
       set: vi.fn().mockResolvedValue(undefined),
     },
+    extension: { getVersion: vi.fn(() => "0.0.0") },
     commands: createShortcutCommandClient(),
     popupEvents: { broadcast: vi.fn() },
     ytm: {

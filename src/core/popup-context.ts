@@ -10,6 +10,16 @@ import type {
   YtmTarget,
 } from "./ytm-client";
 
+function getRuntimeManifestVersion(): string {
+  if (
+    typeof chrome === "undefined" ||
+    typeof chrome.runtime?.getManifest !== "function"
+  ) {
+    return "0.0.0";
+  }
+  return chrome.runtime.getManifest().version;
+}
+
 function targetPayload(target?: YtmTarget): Record<string, unknown> {
   if (!target || target.kind === "selected") return {};
   if (target.kind === "tab") return { tabId: target.tabId };
@@ -99,6 +109,9 @@ export function createPopupModuleContext(): ModuleContext {
       async set(items) {
         await chrome.storage.local.set(items);
       },
+    },
+    extension: {
+      getVersion: getRuntimeManifestVersion,
     },
     commands: createShortcutCommandClient(),
     popupEvents: {

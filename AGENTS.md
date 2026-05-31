@@ -138,6 +138,7 @@ Use the module-facing runtime API for module work:
   module-specific popup-to-background messages.
 - Use `context.commands` for browser shortcut listings, edits, resets, and
   opening the browser shortcuts page.
+- Use `context.extension` for extension metadata such as the manifest version.
 - Use `FeatureModule.registerHandlers()` for module-owned background handlers.
   Keep only global policy and browser lifecycle handlers in
   `src/background/index.ts`.

@@ -42,6 +42,7 @@ export type {
 } from "./ytm-client";
 export type {
   FeatureModule,
+  ExtensionMetadataClient,
   AutoPlayMode,
   PlaybackState,
   PlaybackAction,

@@ -26,8 +26,19 @@ export interface ExtensionContextOptions {
   runtime?: RuntimeClient;
   state?: ModuleContext["state"];
   storage?: ModuleContext["storage"];
+  extension?: ModuleContext["extension"];
   commands?: ModuleContext["commands"];
   popupEvents?: ModuleContext["popupEvents"];
+}
+
+function getRuntimeManifestVersion(): string {
+  if (
+    typeof chrome === "undefined" ||
+    typeof chrome.runtime?.getManifest !== "function"
+  ) {
+    return "0.0.0";
+  }
+  return chrome.runtime.getManifest().version;
 }
 
 /** Create and initialize the extension context. */
@@ -45,6 +56,9 @@ export function createExtensionContext(
     storage: options.storage ?? {
       get: async () => ({}),
       set: async () => undefined,
+    },
+    extension: options.extension ?? {
+      getVersion: getRuntimeManifestVersion,
     },
     commands: options.commands ?? createShortcutCommandClient(),
     popupEvents: options.popupEvents ?? { broadcast: () => undefined },

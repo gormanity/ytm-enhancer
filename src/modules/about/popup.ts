@@ -68,8 +68,9 @@ export function createAboutPopupView(context: ModuleContext): PopupView {
         '[data-role="about-version"]',
       );
       if (versionEl) {
-        const manifest = chrome.runtime.getManifest();
-        versionEl.textContent = getBuildVersionLabel(manifest.version);
+        versionEl.textContent = getBuildVersionLabel(
+          context.extension.getVersion(),
+        );
       }
 
       const timestampEl = container.querySelector<HTMLElement>(

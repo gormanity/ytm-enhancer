@@ -40,6 +40,10 @@ export interface PopupView {
   render: (container: HTMLElement) => void | (() => void);
 }
 
+export interface ExtensionMetadataClient {
+  getVersion(): string;
+}
+
 /** Stable runtime capabilities provided to feature modules. */
 export interface ModuleContext {
   events: EventBus;
@@ -54,6 +58,7 @@ export interface ModuleContext {
     get(keys: string[]): Promise<Record<string, unknown>>;
     set(items: Record<string, unknown>): Promise<void>;
   };
+  extension: ExtensionMetadataClient;
   commands: ShortcutCommandClient;
   popupEvents: {
     broadcast(message: { type: string; [key: string]: unknown }): void;

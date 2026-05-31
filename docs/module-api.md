@@ -72,6 +72,7 @@ export interface ModuleContext {
     get(keys: string[]): Promise<Record<string, unknown>>;
     set(items: Record<string, unknown>): Promise<void>;
   };
+  extension: ExtensionMetadataClient;
   commands: ShortcutCommandClient;
   popupEvents: {
     broadcast(message: { type: string; [key: string]: unknown }): void;
@@ -288,6 +289,15 @@ envelope and throw on `{ ok: false }`.
 
 Use `subscribe()` for popup refresh events. Always call the returned cleanup
 function from the popup view cleanup path when a view installs a listener.
+
+### `extension`
+
+Extension metadata. Use this instead of calling `chrome.runtime.getManifest()`
+from module popup code.
+
+```typescript
+const version = context.extension.getVersion();
+```
 
 ## Module Handler Registry
 
