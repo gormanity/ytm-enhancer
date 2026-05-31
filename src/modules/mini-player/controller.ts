@@ -51,6 +51,7 @@ export class MiniPlayerController {
   private documentPip: DocumentPipClient;
   private unsubscribeRuntime: (() => void) | null = null;
   private messageListener: (message: { type: string; data?: unknown }) => void;
+  private pipActionSequence = 0;
 
   constructor(
     overlayManager?: VisualizerOverlayManager,
@@ -230,8 +231,20 @@ export class MiniPlayerController {
   }
 
   private handlePipAction(action: PlaybackAction): void {
-    void this.runPipMutation(() =>
-      this.runtime.command({ type: "playback-action", action }),
+    const traceId = this.createPipTraceId(action);
+    debug("PiP: action requested", {
+      traceId,
+      action,
+      before: this.getPlaybackDebugState(),
+    });
+
+    void this.runPipMutation(traceId, action, () =>
+      this.runtime.command({
+        type: "playback-action",
+        action,
+        source: "mini-player-pip",
+        traceId,
+      }),
     );
   }
 
@@ -255,14 +268,52 @@ export class MiniPlayerController {
     this.refreshAfterPipMutation();
   }
 
-  private async runPipMutation(operation: () => Promise<void>): Promise<void> {
+  private async runPipMutation(
+    traceId: string,
+    label: string,
+    operation: () => Promise<void>,
+  ): Promise<void> {
+    const startedAt = performance.now();
     try {
       await operation();
-    } catch {
+      debug("PiP: action command completed", {
+        traceId,
+        label,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+    } catch (err) {
+      debug("PiP: action command failed", {
+        traceId,
+        label,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        error: err instanceof Error ? err.message : String(err),
+      });
       // The next poll will re-sync the PiP window if the runtime route fails.
     } finally {
       this.refreshAfterPipMutation();
+      debug("PiP: action refresh scheduled", {
+        traceId,
+        label,
+        after: this.getPlaybackDebugState(),
+      });
     }
+  }
+
+  private createPipTraceId(action: string): string {
+    this.pipActionSequence += 1;
+    return `pip-${Date.now()}-${this.pipActionSequence}-${action}`;
+  }
+
+  private getPlaybackDebugState(): Record<string, unknown> {
+    const state = this.adapter.getPlaybackState();
+    return {
+      title: state.title,
+      isPlaying: state.isPlaying,
+      progress: Math.round(state.progress),
+      duration: Math.round(state.duration),
+      isShuffling: state.isShuffling,
+      repeatMode: state.repeatMode,
+    };
   }
 
   private refreshAfterPipMutation(): void {

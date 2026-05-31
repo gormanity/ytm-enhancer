@@ -1,6 +1,7 @@
 import type { MessageResponse } from "./messaging";
 import type { PlaybackAction, PlaybackState } from "./types";
 import { findAllYTMTabs, findYTMTab } from "./tab-finder";
+import { debug } from "./logger";
 
 const CONNECTION_ERROR =
   "Could not establish connection. Receiving end does not exist.";
@@ -143,8 +144,33 @@ export function createYtmRuntimeClient(
     message: Record<string, unknown>,
     target?: YtmTarget,
   ): Promise<void> => {
+    const startedAt = performance.now();
     const tab = await resolveTargetTab(target);
-    await sendToTab(tab.id!, message);
+    debug("YTMClient: relay start", {
+      type: message.type,
+      action: message.action,
+      target: target ?? { kind: "selected" },
+      tabId: tab.id ?? null,
+    });
+
+    try {
+      await sendToTab(tab.id!, message);
+      debug("YTMClient: relay completed", {
+        type: message.type,
+        action: message.action,
+        tabId: tab.id ?? null,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+    } catch (err) {
+      debug("YTMClient: relay failed", {
+        type: message.type,
+        action: message.action,
+        tabId: tab.id ?? null,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   };
 
   return {

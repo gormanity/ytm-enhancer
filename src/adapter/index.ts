@@ -118,43 +118,71 @@ export class YTMAdapter {
   }
 
   executeAction(action: PlaybackAction): void {
+    const before = this.getPlaybackDebugSnapshot();
+    let result = "no-op";
+
     switch (action) {
       case "togglePlay":
-        if (!this.clickLoadedPlayerBarPlayPause()) {
-          this.clickFirstPlayButtonWhenPlayerBarClosed();
-        }
+        result = this.clickLoadedPlayerBarPlayPause()
+          ? "player-bar-toggle"
+          : this.clickFirstPlayButtonWhenPlayerBarClosed()
+            ? "page-play-toggle"
+            : "no-clickable-toggle-target";
         break;
 
       case "play":
         if (!this.isPlaying()) {
-          if (!this.clickLoadedPlayerBarPlayPause()) {
-            this.clickFirstPlayButtonWhenPlayerBarClosed();
-          }
+          result = this.clickLoadedPlayerBarPlayPause()
+            ? "player-bar-play"
+            : this.clickFirstPlayButtonWhenPlayerBarClosed()
+              ? "page-play"
+              : "no-clickable-play-target";
+        } else {
+          result = "already-playing";
         }
         break;
 
       case "pause":
         if (this.isPlaying()) {
-          this.clickButton(SELECTORS.playPauseButton);
+          result = this.clickButton(SELECTORS.playPauseButton)
+            ? "player-bar-pause"
+            : "no-clickable-pause-target";
+        } else {
+          result = "already-paused";
         }
         break;
 
       case "next":
-        this.clickButton(SELECTORS.nextButton);
+        result = this.clickButton(SELECTORS.nextButton)
+          ? "next"
+          : "no-clickable-next-target";
         break;
 
       case "previous":
-        this.clickButton(SELECTORS.previousButton);
+        result = this.clickButton(SELECTORS.previousButton)
+          ? "previous"
+          : "no-clickable-previous-target";
         break;
 
       case "shuffle":
-        this.clickButton(SELECTORS.shuffleButton);
+        result = this.clickButton(SELECTORS.shuffleButton)
+          ? "shuffle"
+          : "no-clickable-shuffle-target";
         break;
 
       case "repeat":
-        this.clickButton(SELECTORS.repeatButton);
+        result = this.clickButton(SELECTORS.repeatButton)
+          ? "repeat"
+          : "no-clickable-repeat-target";
         break;
     }
+
+    debug("PlaybackAction: adapter executed", {
+      action,
+      result,
+      before,
+      after: this.getPlaybackDebugSnapshot(),
+    });
   }
 
   clickQuickPicksPlayAll(): boolean {
@@ -331,15 +359,34 @@ export class YTMAdapter {
     return el?.getAttribute("title")?.toLowerCase() === "pause";
   }
 
-  private clickButton(selector: string): void {
+  private clickButton(selector: string): boolean {
     const el = this.findClickableElement(selector);
-    if (el) this.activateClick(el);
+    if (!el) {
+      debug("PlaybackAction: no clickable element found", {
+        selector,
+        matches: document.querySelectorAll(selector).length,
+      });
+      return false;
+    }
+    this.activateClick(el);
+    return true;
   }
 
   private clickLoadedPlayerBarPlayPause(): boolean {
     const el = document.querySelector<HTMLElement>(SELECTORS.playPauseButton);
-    if (!el || this.getNotClickableReason(el)) return false;
-    if (!this.hasLoadedPlayerBarTrack()) return false;
+    if (!el) {
+      debug("PlaybackAction: player bar play/pause missing");
+      return false;
+    }
+    const reason = this.getNotClickableReason(el);
+    if (reason) {
+      debug("PlaybackAction: player bar play/pause not clickable", { reason });
+      return false;
+    }
+    if (!this.hasLoadedPlayerBarTrack()) {
+      debug("PlaybackAction: player bar has no loaded track");
+      return false;
+    }
 
     this.activateClick(el);
     return true;
@@ -411,6 +458,31 @@ export class YTMAdapter {
     }
 
     return null;
+  }
+
+  private getPlaybackDebugSnapshot(): Record<string, unknown> {
+    const titleEl = document.querySelector(SELECTORS.trackTitle);
+    const playPauseEl = document.querySelector<HTMLElement>(
+      SELECTORS.playPauseButton,
+    );
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+
+    return {
+      title: titleEl?.textContent?.trim() ?? null,
+      isPlaying: this.isPlaying(),
+      playPauseTitle: playPauseEl?.getAttribute("title") ?? null,
+      playPauseState: playPauseEl
+        ? (this.getNotClickableReason(playPauseEl) ?? "clickable")
+        : "missing",
+      videoPaused: video?.paused ?? null,
+      videoReadyState: video?.readyState ?? null,
+      videoCurrentTime:
+        video && Number.isFinite(video.currentTime)
+          ? Math.round(video.currentTime)
+          : null,
+    };
   }
 
   private activateClick(el: HTMLElement): void {

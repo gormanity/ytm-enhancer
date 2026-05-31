@@ -25,19 +25,57 @@ import { debug } from "@/core/logger";
 const adapter = new YTMAdapter();
 const handler = createMessageHandler();
 
+function summarizePlaybackState() {
+  const state = adapter.getPlaybackState();
+  return {
+    title: state.title,
+    isPlaying: state.isPlaying,
+    progress: Math.round(state.progress),
+    duration: Math.round(state.duration),
+    isShuffling: state.isShuffling,
+    repeatMode: state.repeatMode,
+  };
+}
+
 handler.on("playback-action", async (message) => {
+  const traceId =
+    typeof message.traceId === "string" ? message.traceId : undefined;
+  const source =
+    typeof message.source === "string" ? message.source : "unknown";
+
   if (message.action === "seekTo") {
     if (typeof message.time !== "number") {
       return { ok: false, error: "Invalid seek time" };
     }
-    debug("playback-action: seekTo", message.time);
+    debug("PlaybackAction: content seek", {
+      traceId,
+      source,
+      time: message.time,
+      before: summarizePlaybackState(),
+    });
     adapter.seekTo(message.time);
+    debug("PlaybackAction: content seek applied", {
+      traceId,
+      source,
+      after: summarizePlaybackState(),
+    });
     return { ok: true };
   }
 
   const action = message.action as PlaybackAction;
-  debug("playback-action:", action);
+  debug("PlaybackAction: content received", {
+    traceId,
+    source,
+    action,
+    before: summarizePlaybackState(),
+  });
   adapter.executeAction(action);
+  debug("PlaybackAction: content dispatched", {
+    traceId,
+    source,
+    action,
+    after: summarizePlaybackState(),
+  });
   return { ok: true };
 });
 

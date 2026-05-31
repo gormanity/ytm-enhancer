@@ -615,10 +615,14 @@ describe("MiniPlayerController", () => {
     );
     playPauseButton?.click();
 
-    expect(runtime.command).toHaveBeenCalledWith({
-      type: "playback-action",
-      action: "togglePlay",
-    });
+    expect(runtime.command).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "playback-action",
+        action: "togglePlay",
+        source: "mini-player-pip",
+        traceId: expect.stringMatching(/^pip-\d+-\d+-togglePlay$/),
+      }),
+    );
     expect(executeSpy).not.toHaveBeenCalled();
   });
 
