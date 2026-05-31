@@ -6,7 +6,6 @@ export { detectCapabilities } from "./capabilities";
 export { createShortcutCommandClient } from "./commands";
 export { createMessageSender, createMessageHandler } from "./messaging";
 export { createRuntimeClient } from "./messaging";
-export { ActionExecutor } from "./actions";
 export { AlarmRegistry, createAlarmSchedulerClient } from "./alarm-registry";
 export { createDocumentPipClient } from "./document-pip";
 export {
@@ -42,8 +41,6 @@ export {
   createPopupModuleContext,
   createPopupYtmRuntimeClient,
 } from "./popup-context";
-export { findYTMTab } from "./tab-finder";
-export { relayToYTMTab } from "./relay";
 export { createYtmRuntimeClient } from "./ytm-client";
 export type { ExtensionContext } from "./extension";
 export type { ShortcutCommand, ShortcutCommandClient } from "./commands";
