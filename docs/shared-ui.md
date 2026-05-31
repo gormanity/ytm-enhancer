@@ -22,17 +22,12 @@ of embedding raw `chrome.runtime.sendMessage` calls.
 
 ```typescript
 import { bindModuleToggle } from "@/popup/module-ui";
+import { createMiniPlayerClient } from "@/modules/mini-player/client";
 
+const client = createMiniPlayerClient(context.runtime);
 bindModuleToggle(container, "mini-player-toggle", {
-  get: () =>
-    context.runtime.request<boolean>({
-      type: "get-mini-player-enabled",
-    }),
-  set: (enabled) =>
-    context.runtime.command({
-      type: "set-mini-player-enabled",
-      enabled,
-    }),
+  get: () => client.isEnabled(),
+  set: (enabled) => client.setEnabled(enabled),
 });
 ```
 

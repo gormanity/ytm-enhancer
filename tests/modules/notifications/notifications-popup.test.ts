@@ -356,7 +356,10 @@ describe("notifications popup view", () => {
       setFields: vi.fn().mockResolvedValue(undefined),
       preview: vi.fn().mockResolvedValue(undefined),
     };
-    const view = createNotificationsPopupView(createTestModuleContext(), client);
+    const view = createNotificationsPopupView(
+      createTestModuleContext(),
+      client,
+    );
     const container = document.createElement("div");
 
     view.render(container);

@@ -6,10 +6,7 @@ import {
   bindModuleCheckboxGroup,
   bindModuleToggle,
 } from "@/popup/module-ui";
-import {
-  createNotificationsClient,
-  type NotificationsClient,
-} from "./client";
+import { createNotificationsClient, type NotificationsClient } from "./client";
 import templateHtml from "./popup.html?raw";
 
 const FIELD_KEYS: Array<keyof NotificationFields> = [

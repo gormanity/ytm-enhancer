@@ -102,8 +102,7 @@ describe("SleepTimerClient", () => {
 
   it("should subscribe to state changes", () => {
     const runtime = createRuntime();
-    let runtimeListener: (message: { type?: string }) => void = () =>
-      undefined;
+    let runtimeListener: (message: { type?: string }) => void = () => undefined;
     vi.mocked(runtime.subscribe).mockImplementation((listener) => {
       runtimeListener = listener as (message: { type?: string }) => void;
       return vi.fn();

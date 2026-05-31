@@ -44,8 +44,7 @@ export function createSleepTimerClient(
         }),
       );
     },
-    setMode: (mode) =>
-      runtime.command({ type: "set-sleep-timer-mode", mode }),
+    setMode: (mode) => runtime.command({ type: "set-sleep-timer-mode", mode }),
     subscribeStateChanged(listener) {
       return runtime.subscribe((message: { type?: string }) => {
         if (message.type === "sleep-timer-state-changed") {

@@ -48,7 +48,12 @@ describe("AudioVisualizerClient", () => {
           opacity: 0.8,
           colorMode: "artwork-adaptive",
         },
-        circular: { intensity: 1, thickness: 1, opacity: 1, colorMode: "white" },
+        circular: {
+          intensity: 1,
+          thickness: 1,
+          opacity: 1,
+          colorMode: "white",
+        },
       },
     });
     const client = createAudioVisualizerClient(runtime);

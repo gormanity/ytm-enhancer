@@ -4,16 +4,17 @@ This document covers the module-facing runtime API. Use it when adding or
 refactoring modules so feature code stays behind stable typed capabilities
 instead of importing background helpers or calling raw runtime messages.
 
-The API has six layers:
+The API has eight layers:
 
 1. `FeatureModule` and `ModuleContext` define module lifecycle and capabilities.
 2. `YtmRuntimeClient` defines the typed surface for YouTube Music tabs.
-3. `HotkeyRegistry` defines browser command dispatch owned by modules.
-4. `AlarmRegistry` defines browser alarm dispatch owned by modules.
-5. `NotificationClickRegistry` defines notification click dispatch owned by
+3. `RuntimeClient` plus module-local clients define module message access.
+4. `HotkeyRegistry` defines browser command dispatch owned by modules.
+5. `AlarmRegistry` defines browser alarm dispatch owned by modules.
+6. `NotificationClickRegistry` defines notification click dispatch owned by
    modules.
-6. Browser capability clients define typed access for content-side browser APIs.
-7. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
+7. Browser capability clients define typed access for content-side browser APIs.
+8. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
 
 ## Module Lifecycle
 
@@ -30,7 +31,7 @@ export interface FeatureModule {
   isEnabled(): boolean;
   setEnabled(enabled: boolean): void;
 
-  getPopupViews?(context?: ModuleContext): PopupView[];
+  getPopupViews?(context: ModuleContext): PopupView[];
   registerHandlers?(
     registry: ModuleHandlerRegistry,
     context: ModuleContext,
@@ -317,6 +318,20 @@ envelope and throw on `{ ok: false }`.
 Use `subscribe()` for popup refresh events. Always call the returned cleanup
 function from the popup view cleanup path when a view installs a listener.
 
+Module popup views should not inline module-owned message names. Put them behind
+a small client in `src/modules/<module-name>/client.ts`, then inject that client
+into the popup view for tests.
+
+```typescript
+export function createExampleClient(runtime: RuntimeClient) {
+  return {
+    isEnabled: () => runtime.request<boolean>({ type: "get-example-enabled" }),
+    setEnabled: (enabled: boolean) =>
+      runtime.command({ type: "set-example-enabled", enabled }),
+  };
+}
+```
+
 Content-side module controllers that cannot receive `ModuleContext` should
 accept an injected `RuntimeClient`, defaulting to `createRuntimeClient()`,
 instead of calling `chrome.runtime.sendMessage()` directly.
@@ -488,15 +503,16 @@ Popup views are still template-driven. Keep module-specific markup in
 `popup.html` and wire behavior in `popup.ts`.
 
 ```typescript
-export function createExamplePopupView(context?: ModuleContext): PopupView {
+export function createExamplePopupView(
+  context: ModuleContext,
+  client = createExampleClient(context.runtime),
+): PopupView {
   return {
     id: "example-settings",
     label: "Example",
     render(container) {
       renderPopupTemplate(container, templateHtml);
-      if (!context) return;
 
-      const client = createExampleClient(context.runtime);
       bindModuleToggle(container, "example-toggle", {
         get: () => client.isEnabled(),
         set: (enabled) => client.setEnabled(enabled),
@@ -506,8 +522,8 @@ export function createExamplePopupView(context?: ModuleContext): PopupView {
 }
 ```
 
-The optional context argument keeps direct unit tests simple, but the actual
-popup path passes a real popup context from `getAllPopupViews()`.
+The optional client argument keeps unit tests focused while the actual popup
+path passes a real popup context from `getAllPopupViews()`.
 
 ## Module UI Helpers
 
@@ -575,7 +591,7 @@ Background should keep only global responsibilities:
 10. Persist module state through `context.state.saveValue()`.
 11. Use `context.ytm` for YTM tab and playback behavior.
 12. Wrap module-specific popup messages in a module-local client.
-13. Use `context.runtime` and `module-ui` helpers in popup views.
+13. Use module clients and `module-ui` helpers in popup views.
 14. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
 
 ## Testing
