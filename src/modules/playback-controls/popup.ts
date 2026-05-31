@@ -12,6 +12,8 @@ const PLAY_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+const SHUFFLE_SVG =
+  '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.45 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>';
 const REPEAT_SVG =
   '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>';
 const REPEAT_ONE_SVG =
@@ -20,6 +22,7 @@ const PLAYBACK_STATE_POLL_INTERVAL_MS = 1000;
 
 let playIconTemplate: SVGElement | null | undefined;
 let pauseIconTemplate: SVGElement | null | undefined;
+let shuffleIconTemplate: SVGElement | null | undefined;
 let repeatIconTemplate: SVGElement | null | undefined;
 let repeatOneIconTemplate: SVGElement | null | undefined;
 
@@ -35,6 +38,13 @@ function getPauseIconTemplate(): SVGElement | null {
     pauseIconTemplate = createSvgIconTemplate(PAUSE_SVG);
   }
   return pauseIconTemplate;
+}
+
+function getShuffleIconTemplate(): SVGElement | null {
+  if (shuffleIconTemplate === undefined) {
+    shuffleIconTemplate = createSvgIconTemplate(SHUFFLE_SVG);
+  }
+  return shuffleIconTemplate;
 }
 
 function getRepeatIconTemplate(
@@ -78,6 +88,7 @@ interface NowPlayingElements {
   title: HTMLElement;
   artist: HTMLElement;
   controls: HTMLElement;
+  shuffleButton: HTMLButtonElement;
   prevButton: HTMLButtonElement;
   playButton: HTMLButtonElement;
   nextButton: HTMLButtonElement;
@@ -117,6 +128,9 @@ export function createPlaybackControlsPopupView(
       const controls = container.querySelector<HTMLElement>(
         '[data-role="quick-now-playing-controls"]',
       );
+      const shuffleButton = container.querySelector<HTMLButtonElement>(
+        '[data-role="quick-now-playing-shuffle"]',
+      );
       const prevButton = container.querySelector<HTMLButtonElement>(
         '[data-role="quick-now-playing-prev"]',
       );
@@ -146,6 +160,7 @@ export function createPlaybackControlsPopupView(
         !title ||
         !artist ||
         !controls ||
+        !shuffleButton ||
         !prevButton ||
         !playButton ||
         !nextButton ||
@@ -167,6 +182,7 @@ export function createPlaybackControlsPopupView(
             title,
             artist,
             controls,
+            shuffleButton,
             prevButton,
             playButton,
             nextButton,
@@ -396,6 +412,7 @@ function renderCompactNowPlaying(
     title,
     artist,
     controls,
+    shuffleButton,
     prevButton,
     playButton,
     nextButton,
@@ -409,11 +426,12 @@ function renderCompactNowPlaying(
   };
 
   const executeAction = (
-    action: "previous" | "togglePlay" | "next" | "repeat",
+    action: "shuffle" | "previous" | "togglePlay" | "next" | "repeat",
   ) => {
     void context.ytm.executePlaybackAction(action);
   };
 
+  shuffleButton.onclick = () => executeAction("shuffle");
   prevButton.onclick = () => executeAction("previous");
   playButton.onclick = () => executeAction("togglePlay");
   nextButton.onclick = () => executeAction("next");
@@ -456,6 +474,16 @@ function renderCompactNowPlaying(
           playButton,
           state.isPlaying ? getPauseIconTemplate() : getPlayIconTemplate(),
         );
+        const shuffleLabel = state.isShuffling ? "Shuffle on" : "Shuffle off";
+        setButtonSvgIcon(shuffleButton, getShuffleIconTemplate());
+        shuffleButton.classList.toggle("active", state.isShuffling === true);
+        shuffleButton.setAttribute(
+          "aria-pressed",
+          state.isShuffling === true ? "true" : "false",
+        );
+        shuffleButton.setAttribute("aria-label", shuffleLabel);
+        shuffleButton.title = shuffleLabel;
+
         const repeatMode = state.repeatMode ?? "off";
         const repeatLabel = getRepeatLabel(repeatMode);
         setButtonSvgIcon(repeatButton, getRepeatIconTemplate(repeatMode));
