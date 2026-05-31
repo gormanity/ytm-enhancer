@@ -13,8 +13,25 @@ import {
 import { createRuntimeClient, type RuntimeClient } from "@/core/messaging";
 
 const POLL_INTERVAL_MS = 1000;
+const DELAYED_REFRESH_MS = 150;
 const DOCUMENT_PIP_WIDTH = 480;
 const DOCUMENT_PIP_HEIGHT = 180;
+const MEDIA_REFRESH_EVENTS = [
+  "play",
+  "pause",
+  "timeupdate",
+  "durationchange",
+  "loadedmetadata",
+  "volumechange",
+  "ratechange",
+  "seeked",
+] as const;
+
+interface MediaRefreshListener {
+  target: HTMLMediaElement;
+  type: (typeof MEDIA_REFRESH_EVENTS)[number];
+  listener: EventListener;
+}
 
 export class MiniPlayerController {
   private adapter = new YTMAdapter();
@@ -25,6 +42,8 @@ export class MiniPlayerController {
   });
   private overlayManager: VisualizerOverlayManager | null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private delayedRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private mediaRefreshListeners: MediaRefreshListener[] = [];
   private observer: MutationObserver | null = null;
   private enabled = false;
   private documentPipOpen = false;
@@ -70,6 +89,8 @@ export class MiniPlayerController {
     this.unsubscribeRuntime = null;
     this.pipButton.remove();
     this.stopPolling();
+    this.clearDelayedRefresh();
+    this.detachMediaRefreshListeners();
     this.observer?.disconnect();
     this.observer = null;
     this.documentPipOpen = false;
@@ -151,15 +172,16 @@ export class MiniPlayerController {
         pipDoc,
         state,
         (action: PlaybackAction) => {
-          this.adapter.executeAction(action);
+          this.handlePipAction(action);
         },
         (time: number) => {
-          this.adapter.seekTo(time);
+          this.handlePipSeek(time);
         },
         {
-          onLike: () => this.adapter.toggleLike(),
-          onDislike: () => this.adapter.toggleDislike(),
-          onVolumeChange: (volume: number) => this.adapter.setVolume(volume),
+          onLike: () => this.handlePipLike(),
+          onDislike: () => this.handlePipDislike(),
+          onVolumeChange: (volume: number) =>
+            this.handlePipVolumeChange(volume),
           volume: this.adapter.getVolume(),
           isLiked: this.adapter.isCurrentTrackLiked(),
           isDisliked: this.adapter.isCurrentTrackDisliked(),
@@ -171,13 +193,16 @@ export class MiniPlayerController {
         this.overlayManager.attachToPip(artworkContainer);
       }
 
-      this.startPolling();
       this.documentPipOpen = true;
+      this.attachMediaRefreshListeners();
+      this.startPolling();
       this.reportPipOpenState(true);
       debug("PiP: document PiP opened");
 
       pipWindow.addEventListener("pagehide", () => {
         this.stopPolling();
+        this.clearDelayedRefresh();
+        this.detachMediaRefreshListeners();
         this.overlayManager?.detachPip();
         this.documentPipOpen = false;
         this.reportPipOpenState(false);
@@ -193,13 +218,7 @@ export class MiniPlayerController {
   private startPolling(): void {
     this.stopPolling();
     this.pollTimer = setInterval(() => {
-      const state = this.adapter.getPlaybackState();
-      this.renderer.update(state);
-      this.renderer.updateAuxState(
-        this.adapter.getVolume(),
-        this.adapter.isCurrentTrackLiked(),
-        this.adapter.isCurrentTrackDisliked(),
-      );
+      this.refreshPipState();
     }, POLL_INTERVAL_MS);
   }
 
@@ -208,6 +227,88 @@ export class MiniPlayerController {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
+  }
+
+  private handlePipAction(action: PlaybackAction): void {
+    this.adapter.executeAction(action);
+    this.refreshAfterPipMutation();
+  }
+
+  private handlePipSeek(time: number): void {
+    this.adapter.seekTo(time);
+    this.refreshAfterPipMutation();
+  }
+
+  private handlePipLike(): void {
+    this.adapter.toggleLike();
+    this.refreshAfterPipMutation();
+  }
+
+  private handlePipDislike(): void {
+    this.adapter.toggleDislike();
+    this.refreshAfterPipMutation();
+  }
+
+  private handlePipVolumeChange(volume: number): void {
+    this.adapter.setVolume(volume);
+    this.refreshAfterPipMutation();
+  }
+
+  private refreshAfterPipMutation(): void {
+    this.refreshPipState();
+    this.scheduleDelayedRefresh();
+  }
+
+  private scheduleDelayedRefresh(): void {
+    this.clearDelayedRefresh();
+    this.delayedRefreshTimer = setTimeout(() => {
+      this.delayedRefreshTimer = null;
+      this.refreshPipState();
+    }, DELAYED_REFRESH_MS);
+  }
+
+  private clearDelayedRefresh(): void {
+    if (this.delayedRefreshTimer !== null) {
+      clearTimeout(this.delayedRefreshTimer);
+      this.delayedRefreshTimer = null;
+    }
+  }
+
+  private refreshPipState(): void {
+    if (!this.documentPipOpen) return;
+
+    const state = this.adapter.getPlaybackState();
+    this.renderer.update(state);
+    this.renderer.updateAuxState(
+      this.adapter.getVolume(),
+      this.adapter.isCurrentTrackLiked(),
+      this.adapter.isCurrentTrackDisliked(),
+    );
+  }
+
+  private attachMediaRefreshListeners(): void {
+    this.detachMediaRefreshListeners();
+
+    const media = document.querySelector<HTMLMediaElement>(
+      SELECTORS.videoElement,
+    );
+    if (!media) return;
+
+    const listener: EventListener = () => {
+      this.refreshPipState();
+    };
+
+    for (const type of MEDIA_REFRESH_EVENTS) {
+      media.addEventListener(type, listener);
+      this.mediaRefreshListeners.push({ target: media, type, listener });
+    }
+  }
+
+  private detachMediaRefreshListeners(): void {
+    for (const { target, type, listener } of this.mediaRefreshListeners) {
+      target.removeEventListener(type, listener);
+    }
+    this.mediaRefreshListeners = [];
   }
 
   private reportPipOpenState(open: boolean): void {
