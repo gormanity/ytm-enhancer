@@ -3,18 +3,25 @@ import { renderPopupTemplate } from "@/popup/template";
 import { bindModuleToggle } from "@/popup/module-ui";
 import { createRangeSlider } from "@/ui/range-slider";
 import {
+  createAudioVisualizerClient,
+  type AudioVisualizerClient,
+  type AudioVisualizerSnapshot,
+} from "./client";
+import {
   type VisualizerColorMode,
   DEFAULT_VISUALIZER_STYLE_TUNING,
   DEFAULT_VISUALIZER_STYLE_TUNINGS,
   type VisualizerStyle,
   type VisualizerStyleTuning,
   type VisualizerStyleTunings,
+  type VisualizerTarget,
 } from "./styles";
 import templateHtml from "./popup.html?raw";
 
 /** Create the audio visualizer settings popup view. */
 export function createAudioVisualizerPopupView(
   context: ModuleContext,
+  client: AudioVisualizerClient = createAudioVisualizerClient(context.runtime),
 ): PopupView {
   return {
     id: "audio-visualizer-settings",
@@ -23,15 +30,8 @@ export function createAudioVisualizerPopupView(
       renderPopupTemplate(container, templateHtml);
 
       bindModuleToggle(container, "audio-visualizer-enabled-toggle", {
-        get: () =>
-          context.runtime.request<boolean>({
-            type: "get-audio-visualizer-enabled",
-          }),
-        set: (enabled) =>
-          context.runtime.command({
-            type: "set-audio-visualizer-enabled",
-            enabled,
-          }),
+        get: () => client.isEnabled(),
+        set: (enabled) => client.setEnabled(enabled),
       });
 
       const styleSelect = container.querySelector<HTMLSelectElement>(
@@ -141,20 +141,10 @@ export function createAudioVisualizerPopupView(
           colorMode: styleTunings[style].colorMode,
         };
         styleTunings[style] = tuning;
-        void context.runtime.command({
-          type: "set-audio-visualizer-style-tuning",
-          style,
-          tuning,
-        });
+        void client.setStyleTuning(style, tuning);
       }
 
-      const loadFromSnapshot = (snapshot: {
-        style: VisualizerStyle;
-        target: string;
-        tunings: Partial<
-          Record<VisualizerStyle, Partial<VisualizerStyleTuning>>
-        >;
-      }) => {
+      const loadFromSnapshot = (snapshot: AudioVisualizerSnapshot) => {
         styleSelect.value = snapshot.style;
         targetSelect.value = snapshot.target;
         styleTunings = {
@@ -168,29 +158,15 @@ export function createAudioVisualizerPopupView(
         refreshTuningControls();
       };
 
-      void context.runtime
-        .request<{
-          style: VisualizerStyle;
-          target: string;
-          tunings: Partial<
-            Record<VisualizerStyle, Partial<VisualizerStyleTuning>>
-          >;
-        }>({ type: "get-audio-visualizer-snapshot" })
-        .then(loadFromSnapshot);
+      void client.getSnapshot().then(loadFromSnapshot);
 
       styleSelect.addEventListener("change", () => {
-        void context.runtime.command({
-          type: "set-audio-visualizer-style",
-          style: styleSelect.value,
-        });
+        void client.setStyle(styleSelect.value as VisualizerStyle);
         refreshTuningControls();
       });
 
       targetSelect.addEventListener("change", () => {
-        void context.runtime.command({
-          type: "set-audio-visualizer-target",
-          target: targetSelect.value,
-        });
+        void client.setTarget(targetSelect.value as VisualizerTarget);
       });
 
       colorModeSelect.addEventListener("change", () => {
@@ -199,10 +175,7 @@ export function createAudioVisualizerPopupView(
           ...styleTunings[style],
           colorMode: colorModeSelect.value as VisualizerColorMode,
         };
-        void context.runtime.command({
-          type: "set-audio-visualizer-color-mode",
-          mode: colorModeSelect.value,
-        });
+        void client.setColorMode(colorModeSelect.value as VisualizerColorMode);
       });
     },
   };
