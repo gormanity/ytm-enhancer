@@ -419,4 +419,45 @@ describe("playback controls popup view", () => {
 
     cleanup?.();
   });
+
+  it("renders repeat mode state and sends repeat action through the YTM client", async () => {
+    const executePlaybackAction = vi.fn().mockResolvedValue(undefined);
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({
+        listTabs: vi.fn().mockResolvedValue({ tabs: [], selectedTabId: null }),
+        getPlaybackState: vi.fn().mockResolvedValue({
+          title: "Track A",
+          artist: "Artist A",
+          album: null,
+          year: null,
+          artworkUrl: null,
+          isPlaying: true,
+          progress: 0,
+          duration: 0,
+          repeatMode: "one",
+        }),
+        executePlaybackAction,
+      }),
+    );
+    const container = document.createElement("div");
+    const cleanup = view.render(container);
+
+    const repeatButton = await vi.waitFor(() => {
+      const button = container.querySelector<HTMLButtonElement>(
+        '[data-role="quick-now-playing-repeat"]',
+      );
+      expect(button).not.toBeNull();
+      return button!;
+    });
+
+    expect(repeatButton.classList.contains("active")).toBe(true);
+    expect(repeatButton.getAttribute("aria-pressed")).toBe("true");
+    expect(repeatButton.title).toBe("Repeat one");
+
+    repeatButton.click();
+
+    expect(executePlaybackAction).toHaveBeenCalledWith("repeat");
+
+    cleanup?.();
+  });
 });
