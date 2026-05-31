@@ -118,71 +118,43 @@ export class YTMAdapter {
   }
 
   executeAction(action: PlaybackAction): void {
-    const before = this.getPlaybackDebugSnapshot();
-    let result = "no-op";
-
     switch (action) {
       case "togglePlay":
-        result = this.clickLoadedPlayerBarPlayPause()
-          ? "player-bar-toggle"
-          : this.clickFirstPlayButtonWhenPlayerBarClosed()
-            ? "page-play-toggle"
-            : "no-clickable-toggle-target";
+        if (!this.clickLoadedPlayerBarPlayPause()) {
+          this.clickFirstPlayButtonWhenPlayerBarClosed();
+        }
         break;
 
       case "play":
         if (!this.isPlaying()) {
-          result = this.clickLoadedPlayerBarPlayPause()
-            ? "player-bar-play"
-            : this.clickFirstPlayButtonWhenPlayerBarClosed()
-              ? "page-play"
-              : "no-clickable-play-target";
-        } else {
-          result = "already-playing";
+          if (!this.clickLoadedPlayerBarPlayPause()) {
+            this.clickFirstPlayButtonWhenPlayerBarClosed();
+          }
         }
         break;
 
       case "pause":
         if (this.isPlaying()) {
-          result = this.clickButton(SELECTORS.playPauseButton)
-            ? "player-bar-pause"
-            : "no-clickable-pause-target";
-        } else {
-          result = "already-paused";
+          this.clickButton(SELECTORS.playPauseButton);
         }
         break;
 
       case "next":
-        result = this.clickButton(SELECTORS.nextButton)
-          ? "next"
-          : "no-clickable-next-target";
+        this.clickButton(SELECTORS.nextButton);
         break;
 
       case "previous":
-        result = this.clickButton(SELECTORS.previousButton)
-          ? "previous"
-          : "no-clickable-previous-target";
+        this.clickButton(SELECTORS.previousButton);
         break;
 
       case "shuffle":
-        result = this.clickButton(SELECTORS.shuffleButton)
-          ? "shuffle"
-          : "no-clickable-shuffle-target";
+        this.clickButton(SELECTORS.shuffleButton);
         break;
 
       case "repeat":
-        result = this.clickButton(SELECTORS.repeatButton)
-          ? "repeat"
-          : "no-clickable-repeat-target";
+        this.clickButton(SELECTORS.repeatButton);
         break;
     }
-
-    debug("PlaybackAction: adapter executed", {
-      action,
-      result,
-      before,
-      after: this.getPlaybackDebugSnapshot(),
-    });
   }
 
   clickQuickPicksPlayAll(): boolean {
@@ -460,42 +432,8 @@ export class YTMAdapter {
     return null;
   }
 
-  private getPlaybackDebugSnapshot(): Record<string, unknown> {
-    const titleEl = document.querySelector(SELECTORS.trackTitle);
-    const playPauseEl = document.querySelector<HTMLElement>(
-      SELECTORS.playPauseButton,
-    );
-    const video = document.querySelector<HTMLVideoElement>(
-      SELECTORS.videoElement,
-    );
-
-    return {
-      title: titleEl?.textContent?.trim() ?? null,
-      isPlaying: this.isPlaying(),
-      playPauseTitle: playPauseEl?.getAttribute("title") ?? null,
-      playPauseState: playPauseEl
-        ? (this.getNotClickableReason(playPauseEl) ?? "clickable")
-        : "missing",
-      videoPaused: video?.paused ?? null,
-      videoReadyState: video?.readyState ?? null,
-      videoCurrentTime:
-        video && Number.isFinite(video.currentTime)
-          ? Math.round(video.currentTime)
-          : null,
-    };
-  }
-
   private activateClick(el: HTMLElement): void {
     const target = this.findActivationTarget(el);
-    debug("AutoPlay: activating page play target", {
-      candidateTag: el.tagName.toLowerCase(),
-      targetTag: target.tagName.toLowerCase(),
-      targetAriaLabel: target.getAttribute("aria-label"),
-      targetTitle: target.getAttribute("title"),
-      targetRole: target.getAttribute("role"),
-      targetClassName: target.className,
-    });
-
     const view = target.ownerDocument.defaultView ?? window;
 
     for (const type of ["pointerdown", "mousedown", "mouseup", "click"]) {

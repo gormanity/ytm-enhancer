@@ -3,7 +3,6 @@ import { setElementSvgIcon } from "@/core/svg-icon";
 import type { ProgressBarComponent } from "@/ui/progress-bar";
 import { createProgressBar } from "@/ui/progress-bar";
 import progressBarCss from "@/ui/progress-bar.css?raw";
-import { debug } from "@/core/logger";
 
 const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 const PAUSE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>`;
@@ -630,16 +629,15 @@ export class PipWindowRenderer {
     let pointerStartedInside = false;
     let lastNonClickActivationAt = Number.NEGATIVE_INFINITY;
 
-    const activate = (eventType: string) => {
-      debug("PiP: control activation", { action, label, eventType });
+    const activate = () => {
       onAction(action);
     };
-    const activateFromPointer = (eventType: string) => {
+    const activateFromPointer = () => {
       const now = performance.now();
       if (now - lastNonClickActivationAt < CLICK_DEDUP_WINDOW_MS) return;
 
       lastNonClickActivationAt = now;
-      activate(eventType);
+      activate();
     };
 
     setElementSvgIcon(button, svg, doc);
@@ -653,44 +651,38 @@ export class PipWindowRenderer {
       ) {
         button.setPointerCapture(event.pointerId);
       }
-      debug("PiP: control pointerdown", { action, label });
     });
     button.addEventListener("pointerup", (event) => {
       if (!pointerStartedInside) return;
       pointerStartedInside = false;
       event.preventDefault();
-      activateFromPointer("pointerup");
+      activateFromPointer();
     });
     button.addEventListener("pointercancel", () => {
       pointerStartedInside = false;
-      debug("PiP: control pointercancel", { action, label });
     });
     button.addEventListener("mouseup", (event) => {
       if (!pointerStartedInside) return;
       pointerStartedInside = false;
       event.preventDefault();
-      activateFromPointer("mouseup");
+      activateFromPointer();
     });
     button.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
 
       event.preventDefault();
       lastNonClickActivationAt = performance.now();
-      activate(`keydown:${event.key}`);
+      activate();
     });
     button.addEventListener("click", () => {
       if (
         performance.now() - lastNonClickActivationAt <
         CLICK_DEDUP_WINDOW_MS
       ) {
-        debug("PiP: control click ignored after local activation", {
-          action,
-          label,
-        });
         return;
       }
 
-      activate("click");
+      activate();
     });
     return button;
   }

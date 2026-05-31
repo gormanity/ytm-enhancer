@@ -146,21 +146,9 @@ export function createYtmRuntimeClient(
   ): Promise<void> => {
     const startedAt = performance.now();
     const tab = await resolveTargetTab(target);
-    debug("YTMClient: relay start", {
-      type: message.type,
-      action: message.action,
-      target: target ?? { kind: "selected" },
-      tabId: tab.id ?? null,
-    });
 
     try {
       await sendToTab(tab.id!, message);
-      debug("YTMClient: relay completed", {
-        type: message.type,
-        action: message.action,
-        tabId: tab.id ?? null,
-        elapsedMs: Math.round(performance.now() - startedAt),
-      });
     } catch (err) {
       debug("YTMClient: relay failed", {
         type: message.type,
