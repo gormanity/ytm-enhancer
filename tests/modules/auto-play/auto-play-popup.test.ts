@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAutoPlayPopupView } from "@/modules/auto-play/popup";
+import type { AutoPlayClient } from "@/modules/auto-play/client";
 import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("auto-play popup view", () => {
@@ -204,5 +205,40 @@ describe("auto-play popup view", () => {
       { type: "get-auto-play-status" },
       expect.any(Function),
     );
+  });
+
+  it("should bind through the injected module client", async () => {
+    let statusChanged: () => void = () => undefined;
+    const client: AutoPlayClient = {
+      getMode: vi.fn().mockResolvedValue("default"),
+      setMode: vi.fn().mockResolvedValue(undefined),
+      getStatus: vi.fn().mockResolvedValue({ browserAutoplayBlocked: false }),
+      subscribeStatusChanged: vi.fn((listener) => {
+        statusChanged = listener;
+        return vi.fn();
+      }),
+    };
+    const view = createAutoPlayPopupView(createTestModuleContext(), client);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const select = container.querySelector<HTMLSelectElement>("select");
+      expect(select?.disabled).toBe(false);
+    });
+
+    const select = container.querySelector<HTMLSelectElement>("select")!;
+    select.value = "on";
+    select.dispatchEvent(new Event("change"));
+    statusChanged();
+
+    expect(client.getMode).toHaveBeenCalled();
+    expect(client.setMode).toHaveBeenCalledWith("on");
+    expect(client.getStatus).toHaveBeenCalledTimes(3);
+    expect(client.subscribeStatusChanged).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 });
