@@ -833,14 +833,22 @@ select:focus {
 }
 
 .quick-now-playing-controls {
-  display: flex;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(5, 36px);
+  justify-content: center;
+  gap: 6px;
   margin-top: 8px;
   align-items: center;
 }
 
+.quick-now-playing-controls .icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
 .quick-now-playing-btn-padded {
-  padding: 6px;
+  padding: 0;
 }
 
 .quick-now-playing-progress {
