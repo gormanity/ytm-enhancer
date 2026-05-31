@@ -6,6 +6,10 @@ import {
   bindModuleCheckboxGroup,
   bindModuleToggle,
 } from "@/popup/module-ui";
+import {
+  createNotificationsClient,
+  type NotificationsClient,
+} from "./client";
 import templateHtml from "./popup.html?raw";
 
 const FIELD_KEYS: Array<keyof NotificationFields> = [
@@ -19,6 +23,7 @@ const FIELD_KEYS: Array<keyof NotificationFields> = [
 /** Create the notifications settings popup view. */
 export function createNotificationsPopupView(
   context: ModuleContext,
+  client: NotificationsClient = createNotificationsClient(context.runtime),
 ): PopupView {
   return {
     id: "notifications-settings",
@@ -27,26 +32,12 @@ export function createNotificationsPopupView(
       renderPopupTemplate(container, templateHtml);
 
       bindModuleToggle(container, "notifications-toggle", {
-        get: () =>
-          context.runtime.request<boolean>({
-            type: "get-notifications-enabled",
-          }),
-        set: (enabled) =>
-          context.runtime.command({
-            type: "set-notifications-enabled",
-            enabled,
-          }),
+        get: () => client.isEnabled(),
+        set: (enabled) => client.setEnabled(enabled),
       });
       bindModuleToggle(container, "notifications-unpause-toggle", {
-        get: () =>
-          context.runtime.request<boolean>({
-            type: "get-notify-on-unpause",
-          }),
-        set: (enabled) =>
-          context.runtime.command({
-            type: "set-notify-on-unpause",
-            enabled,
-          }),
+        get: () => client.getNotifyOnUnpause(),
+        set: (enabled) => client.setNotifyOnUnpause(enabled),
       });
 
       // Firefox doesn't support the WebExtensions `silent` notification
@@ -69,21 +60,14 @@ export function createNotificationsPopupView(
           FIELD_KEYS.map((key) => [key, `notifications-field-${key}`]),
         ) as Record<keyof NotificationFields, string>,
         {
-          get: () =>
-            context.runtime.request<NotificationFields>({
-              type: "get-notification-fields",
-            }),
-          set: (fields) =>
-            context.runtime.command({
-              type: "set-notification-fields",
-              fields,
-            }),
+          get: () => client.getFields(),
+          set: (fields) => client.setFields(fields),
         },
       );
 
       // Preview section
       bindModuleActionButton(container, "notifications-preview-btn", () =>
-        context.runtime.command({ type: "preview-notification" }),
+        client.preview(),
       );
     },
   };
