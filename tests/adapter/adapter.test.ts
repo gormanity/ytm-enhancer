@@ -287,7 +287,8 @@ describe("YTMAdapter", () => {
     it("should click the play/pause button for togglePlay", () => {
       const button = document.createElement("tp-yt-paper-icon-button");
       button.id = "play-pause-button";
-      button.click = vi.fn();
+      const click = vi.fn();
+      button.addEventListener("click", click);
       makeVisible(button);
       document.body.appendChild(button);
 
@@ -298,7 +299,7 @@ describe("YTMAdapter", () => {
 
       adapter.executeAction("togglePlay");
 
-      expect(button.click).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
     });
 
     it("should click a page play button for togglePlay when the player bar is unavailable", () => {
@@ -322,7 +323,8 @@ describe("YTMAdapter", () => {
       const button = document.createElement("tp-yt-paper-icon-button");
       button.id = "play-pause-button";
       button.setAttribute("title", "Play");
-      button.click = vi.fn();
+      const click = vi.fn();
+      button.addEventListener("click", click);
       makeVisible(button);
       document.body.appendChild(button);
 
@@ -333,7 +335,7 @@ describe("YTMAdapter", () => {
 
       adapter.executeAction("play");
 
-      expect(button.click).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
     });
 
     it("should not click play if already playing", () => {
@@ -351,23 +353,69 @@ describe("YTMAdapter", () => {
     it("should click the next button for next", () => {
       const button = document.createElement("tp-yt-paper-icon-button");
       button.className = "next-button";
-      button.click = vi.fn();
+      const click = vi.fn();
+      button.addEventListener("click", click);
+      makeVisible(button);
       document.body.appendChild(button);
 
       adapter.executeAction("next");
 
-      expect(button.click).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
+    });
+
+    it("should activate the first clickable matching transport button", () => {
+      const hiddenButton = document.createElement("tp-yt-paper-icon-button");
+      hiddenButton.className = "next-button";
+      const hiddenClick = vi.fn();
+      hiddenButton.addEventListener("click", hiddenClick);
+      document.body.appendChild(hiddenButton);
+
+      const visibleButton = document.createElement("tp-yt-paper-icon-button");
+      visibleButton.className = "next-button";
+      const events: string[] = [];
+      for (const type of ["pointerdown", "mousedown", "mouseup", "click"]) {
+        visibleButton.addEventListener(type, () => events.push(type));
+      }
+      makeVisible(visibleButton);
+      document.body.appendChild(visibleButton);
+
+      adapter.executeAction("next");
+
+      expect(hiddenClick).not.toHaveBeenCalled();
+      expect(events).toEqual(["pointerdown", "mousedown", "mouseup", "click"]);
+    });
+
+    it("should activate loaded player bar play/pause with pointer events", () => {
+      const button = document.createElement("tp-yt-paper-icon-button");
+      button.id = "play-pause-button";
+      const events: string[] = [];
+      for (const type of ["pointerdown", "mousedown", "mouseup", "click"]) {
+        button.addEventListener(type, () => events.push(type));
+      }
+      makeVisible(button);
+      document.body.appendChild(button);
+
+      const trackTitle = document.createElement("yt-formatted-string");
+      trackTitle.className = "title style-scope ytmusic-player-bar";
+      trackTitle.textContent = "Loaded Track";
+      document.body.appendChild(trackTitle);
+
+      adapter.executeAction("togglePlay");
+
+      expect(events).toEqual(["pointerdown", "mousedown", "mouseup", "click"]);
     });
 
     it("should click the previous button for previous", () => {
       const button = document.createElement("tp-yt-paper-icon-button");
       button.className = "previous-button";
-      button.click = vi.fn();
+      const click = vi.fn();
+      button.addEventListener("click", click);
+      makeVisible(button);
       document.body.appendChild(button);
 
       adapter.executeAction("previous");
 
-      expect(button.click).toHaveBeenCalled();
+      expect(click).toHaveBeenCalled();
     });
   });
 
