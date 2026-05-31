@@ -338,25 +338,39 @@ h3 {
 }
 
 /* Hotkeys */
-.shortcuts-list {
+.hotkeys-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  margin-bottom: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .shortcut-group {
   display: flex;
   flex-direction: column;
   gap: 0;
-}
-
-.shortcut-group + .shortcut-group {
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: #0f0f0f;
 }
 
 .shortcut-group-title {
-  margin: 0 0 6px;
+  margin: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  background: #151515;
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
@@ -369,22 +383,21 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 0 10px;
+  padding: 9px 10px 10px;
   border-bottom: 1px solid var(--border-color);
-}
-
-.shortcut-group .shortcut-row:first-of-type {
-  padding-top: 0;
 }
 
 .shortcut-group .shortcut-row:last-child {
   border-bottom: none;
 }
 
-.shortcuts-list + .panel-actions {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border-color);
+.hotkeys-card .panel-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 2px 0 0;
+  padding: 18px 0 0;
+  background: linear-gradient(180deg, rgba(3, 3, 3, 0), var(--bg-color) 48%);
 }
 
 .shortcut-label {

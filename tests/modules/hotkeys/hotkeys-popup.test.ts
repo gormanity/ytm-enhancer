@@ -30,6 +30,7 @@ describe("createHotkeysPopupView", () => {
     const heading = container.querySelector("h2");
     expect(heading).not.toBeNull();
     expect(heading?.textContent).toBe("Keyboard Shortcuts");
+    expect(container.querySelector(".hotkeys-card")).not.toBeNull();
   });
 
   it("should render current shortcut bindings", async () => {
@@ -62,18 +63,20 @@ describe("createHotkeysPopupView", () => {
     });
   });
 
-  it("keeps shortcut rows compact without extra top spacing", () => {
+  it("renders shortcut groups as module table blocks", () => {
     const hotkeysCss = POPUP_CSS.slice(
-      POPUP_CSS.indexOf(".shortcuts-list {"),
+      POPUP_CSS.indexOf(".hotkeys-card {"),
       POPUP_CSS.indexOf(".shortcut-label {"),
     );
 
-    expect(hotkeysCss).toContain("gap: 0;");
-    expect(hotkeysCss).toContain("padding: 8px 0 10px;");
-    expect(hotkeysCss).toContain(".shortcut-group .shortcut-row:first-of-type");
-    expect(hotkeysCss).toContain("padding-top: 0;");
-    expect(hotkeysCss).toContain(".shortcuts-list + .panel-actions");
-    expect(hotkeysCss).toContain("border-top: 1px solid var(--border-color);");
+    expect(hotkeysCss).toContain("border: 0;");
+    expect(hotkeysCss).toContain("border: 1px solid var(--border-color);");
+    expect(hotkeysCss).toContain("border-radius: 6px;");
+    expect(hotkeysCss).toContain("overflow: hidden;");
+    expect(hotkeysCss).toContain("position: sticky;");
+    expect(hotkeysCss).toContain("bottom: 0;");
+    expect(hotkeysCss).toContain("background: linear-gradient(");
+    expect(hotkeysCss).not.toContain(".shortcut-group + .shortcut-group");
     expect(hotkeysCss).not.toContain("padding: 12px 0;");
   });
 
