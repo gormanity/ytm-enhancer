@@ -575,7 +575,7 @@ describe("MiniPlayerController", () => {
     expect(controller.isPipOpen()).toBe(false);
   });
 
-  it("should refresh PiP state immediately and shortly after PiP actions", async () => {
+  it("should send PiP playback actions through the runtime API", async () => {
     createNativeMiniPlayerButton();
 
     const pipDoc = document.implementation.createHTMLDocument("PiP");
@@ -585,6 +585,9 @@ describe("MiniPlayerController", () => {
     };
     const requestWindow = vi.fn().mockResolvedValue(pipWindow);
     vi.stubGlobal("documentPictureInPicture", { requestWindow });
+    const runtime = createRuntimeClient({
+      command: vi.fn().mockResolvedValue(undefined),
+    });
 
     vi.spyOn(YTMAdapter.prototype, "getPlaybackState").mockReturnValue(
       createPlaybackState(),
@@ -599,13 +602,63 @@ describe("MiniPlayerController", () => {
     const executeSpy = vi
       .spyOn(YTMAdapter.prototype, "executeAction")
       .mockImplementation(() => undefined);
+
+    controller = new MiniPlayerController(undefined, runtime);
+    await controller.init();
+    (
+      document.querySelector(SELECTORS.nativeMiniPlayerButton) as HTMLElement
+    ).click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const playPauseButton = pipDoc.querySelector<HTMLButtonElement>(
+      '[data-action="togglePlay"]',
+    );
+    playPauseButton?.click();
+
+    expect(runtime.command).toHaveBeenCalledWith({
+      type: "playback-action",
+      action: "togglePlay",
+    });
+    expect(executeSpy).not.toHaveBeenCalled();
+  });
+
+  it("should refresh PiP state after runtime playback actions complete", async () => {
+    createNativeMiniPlayerButton();
+
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
+    const pipWindow = {
+      document: pipDoc,
+      addEventListener: vi.fn(),
+    };
+    const requestWindow = vi.fn().mockResolvedValue(pipWindow);
+    vi.stubGlobal("documentPictureInPicture", { requestWindow });
+    let resolveCommand: (() => void) | undefined;
+    const runtime = createRuntimeClient({
+      command: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveCommand = resolve;
+          }),
+      ),
+    });
+
+    vi.spyOn(YTMAdapter.prototype, "getPlaybackState").mockReturnValue(
+      createPlaybackState(),
+    );
+    vi.spyOn(YTMAdapter.prototype, "getVolume").mockReturnValue(0.7);
+    vi.spyOn(YTMAdapter.prototype, "isCurrentTrackLiked").mockReturnValue(
+      false,
+    );
+    vi.spyOn(YTMAdapter.prototype, "isCurrentTrackDisliked").mockReturnValue(
+      false,
+    );
     const updateSpy = vi.spyOn(PipWindowRenderer.prototype, "update");
     const updateAuxSpy = vi.spyOn(
       PipWindowRenderer.prototype,
       "updateAuxState",
     );
 
-    controller = new MiniPlayerController();
+    controller = new MiniPlayerController(undefined, runtime);
     await controller.init();
     (
       document.querySelector(SELECTORS.nativeMiniPlayerButton) as HTMLElement
@@ -620,7 +673,12 @@ describe("MiniPlayerController", () => {
     );
     playPauseButton?.click();
 
-    expect(executeSpy).toHaveBeenCalledWith("togglePlay");
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(updateAuxSpy).not.toHaveBeenCalled();
+
+    resolveCommand?.();
+    await vi.advanceTimersByTimeAsync(0);
+
     expect(updateSpy).toHaveBeenCalledTimes(1);
     expect(updateAuxSpy).toHaveBeenCalledTimes(1);
 
