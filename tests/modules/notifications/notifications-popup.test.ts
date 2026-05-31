@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createNotificationsPopupView } from "@/modules/notifications/popup";
+import type { NotificationsClient } from "@/modules/notifications/client";
 import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("notifications popup view", () => {
@@ -337,5 +338,67 @@ describe("notifications popup view", () => {
       expect(labels[3]?.textContent).toBe("Year");
       expect(labels[4]?.textContent).toBe("Artwork");
     });
+  });
+
+  it("should bind controls through the injected module client", async () => {
+    const client: NotificationsClient = {
+      isEnabled: vi.fn().mockResolvedValue(true),
+      setEnabled: vi.fn().mockResolvedValue(undefined),
+      getNotifyOnUnpause: vi.fn().mockResolvedValue(false),
+      setNotifyOnUnpause: vi.fn().mockResolvedValue(undefined),
+      getFields: vi.fn().mockResolvedValue({
+        title: true,
+        artist: true,
+        album: false,
+        year: false,
+        artwork: true,
+      }),
+      setFields: vi.fn().mockResolvedValue(undefined),
+      preview: vi.fn().mockResolvedValue(undefined),
+    };
+    const view = createNotificationsPopupView(createTestModuleContext(), client);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const checkboxes = container.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"]',
+      );
+      expect(checkboxes[0]?.disabled).toBe(false);
+      expect(checkboxes[1]?.disabled).toBe(false);
+      expect(checkboxes[4]?.disabled).toBe(false);
+    });
+
+    const checkboxes = container.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    checkboxes[0]!.checked = false;
+    checkboxes[0]!.dispatchEvent(new Event("change"));
+    checkboxes[1]!.checked = true;
+    checkboxes[1]!.dispatchEvent(new Event("change"));
+    checkboxes[4]!.checked = true;
+    checkboxes[4]!.dispatchEvent(new Event("change"));
+
+    container
+      .querySelector<HTMLButtonElement>(
+        '[data-role="notifications-preview-btn"]',
+      )!
+      .click();
+
+    expect(client.isEnabled).toHaveBeenCalled();
+    expect(client.setEnabled).toHaveBeenCalledWith(false);
+    expect(client.getNotifyOnUnpause).toHaveBeenCalled();
+    expect(client.setNotifyOnUnpause).toHaveBeenCalledWith(true);
+    expect(client.getFields).toHaveBeenCalled();
+    expect(client.setFields).toHaveBeenCalledWith({
+      title: true,
+      artist: true,
+      album: true,
+      year: false,
+      artwork: true,
+    });
+    expect(client.preview).toHaveBeenCalled();
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 });
