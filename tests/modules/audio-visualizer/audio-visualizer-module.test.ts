@@ -109,4 +109,41 @@ describe("AudioVisualizerModule", () => {
     expect(() => mod.init()).not.toThrow();
     expect(() => mod.destroy()).not.toThrow();
   });
+
+  it("should sync restored settings through the YTM runtime API", async () => {
+    const context = createTestModuleContext();
+    const mod = new AudioVisualizerModule();
+    mod.setEnabled(false);
+    mod.setStyle("waveform");
+    mod.setTarget("pip-only");
+    mod.setStyleTuning("waveform", {
+      intensity: 1.5,
+      thickness: 1.25,
+      opacity: 0.75,
+      colorMode: "artwork-adaptive",
+    });
+
+    await mod.syncContentState!(context);
+
+    expect(context.ytm.broadcast).toHaveBeenNthCalledWith(1, {
+      type: "set-audio-visualizer-enabled",
+      enabled: false,
+    });
+    expect(context.ytm.broadcast).toHaveBeenNthCalledWith(2, {
+      type: "set-audio-visualizer-style",
+      style: "waveform",
+    });
+    expect(context.ytm.broadcast).toHaveBeenNthCalledWith(3, {
+      type: "set-audio-visualizer-target",
+      target: "pip-only",
+    });
+    expect(context.ytm.broadcast).toHaveBeenNthCalledWith(4, {
+      type: "set-audio-visualizer-style-tunings",
+      tunings: mod.getStyleTunings(),
+    });
+    expect(context.ytm.broadcast).toHaveBeenNthCalledWith(5, {
+      type: "set-audio-visualizer-color-mode",
+      mode: "artwork-adaptive",
+    });
+  });
 });

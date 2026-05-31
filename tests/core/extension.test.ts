@@ -6,6 +6,7 @@ import {
   registerModuleHotkeys,
   registerModuleAlarms,
   registerModuleNotificationClicks,
+  syncModuleContentState,
 } from "@/core/extension";
 import type { FeatureModule, PopupView, ModuleContext } from "@/core/types";
 import type { YtmRuntimeClient } from "@/core/ytm-client";
@@ -125,6 +126,30 @@ describe("registerModuleNotificationClicks", () => {
       registry,
       ctx,
     );
+  });
+});
+
+describe("syncModuleContentState", () => {
+  it("should invoke module-owned content sync hooks", async () => {
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
+    const syncContentState = vi.fn().mockResolvedValue(undefined);
+    const module = {
+      ...createMockModule("test"),
+      syncContentState,
+    };
+
+    await syncModuleContentState(ctx, [module]);
+
+    expect(syncContentState).toHaveBeenCalledWith(ctx satisfies ModuleContext);
+  });
+
+  it("should skip modules without content sync hooks", async () => {
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
+    const module = createMockModule("test");
+
+    await expect(
+      syncModuleContentState(ctx, [module]),
+    ).resolves.toBeUndefined();
   });
 });
 
