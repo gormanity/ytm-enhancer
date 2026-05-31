@@ -368,15 +368,13 @@ h3 {
 
 .shortcut-group-title {
   margin: 0;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color);
-  background: #151515;
+  padding: 10px 10px 0;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: 0.5px;
 }
 
 .shortcut-row {

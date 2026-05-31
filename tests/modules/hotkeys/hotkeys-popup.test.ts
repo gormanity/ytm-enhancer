@@ -73,9 +73,13 @@ describe("createHotkeysPopupView", () => {
     expect(hotkeysCss).toContain("border: 1px solid var(--border-color);");
     expect(hotkeysCss).toContain("border-radius: 6px;");
     expect(hotkeysCss).toContain("overflow: hidden;");
+    expect(hotkeysCss).toContain("padding: 10px 10px 0;");
     expect(hotkeysCss).toContain("position: sticky;");
     expect(hotkeysCss).toContain("bottom: 0;");
     expect(hotkeysCss).toContain("background: linear-gradient(");
+    expect(hotkeysCss).not.toContain(
+      "border-bottom: 1px solid var(--border-color);\n  background: #151515;",
+    );
     expect(hotkeysCss).not.toContain(".shortcut-group + .shortcut-group");
     expect(hotkeysCss).not.toContain("padding: 12px 0;");
   });
