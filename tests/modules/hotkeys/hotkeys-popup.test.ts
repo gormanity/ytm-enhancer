@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
 import { createHotkeysPopupView } from "@/modules/hotkeys/popup";
 import { createTestModuleContext } from "../../helpers/module-context";
+
+const POPUP_CSS = readFileSync("src/popup/index.css", "utf8");
 
 describe("createHotkeysPopupView", () => {
   beforeEach(() => {
@@ -57,6 +60,17 @@ describe("createHotkeysPopupView", () => {
       const shortcuts = container.querySelectorAll(".shortcut-row");
       expect(shortcuts.length).toBeGreaterThanOrEqual(2);
     });
+  });
+
+  it("keeps shortcut rows compact without extra top spacing", () => {
+    const hotkeysCss = POPUP_CSS.slice(
+      POPUP_CSS.indexOf(".shortcuts-list {"),
+      POPUP_CSS.indexOf(".shortcut-label {"),
+    );
+
+    expect(hotkeysCss).toContain("gap: 0;");
+    expect(hotkeysCss).toContain("padding: 8px 0 10px;");
+    expect(hotkeysCss).not.toContain("padding: 12px 0;");
   });
 
   it("should expose a Configure Shortcuts button on Chromium", () => {
