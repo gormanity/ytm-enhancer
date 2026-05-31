@@ -390,12 +390,8 @@ h3 {
 }
 
 .hotkeys-card .panel-actions {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  margin: 2px 0 0;
-  padding: 18px 0 0;
-  background: linear-gradient(180deg, rgba(3, 3, 3, 0), var(--bg-color) 48%);
+  margin: 0;
+  padding: 0;
 }
 
 .shortcut-label {
