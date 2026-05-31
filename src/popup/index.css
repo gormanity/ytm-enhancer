@@ -537,6 +537,11 @@ select:focus {
   transform: scale(0.95);
 }
 
+.icon-btn.active {
+  color: var(--accent-color);
+  background: rgba(255, 0, 0, 0.12);
+}
+
 /* About View */
 .about-version-row {
   display: flex;

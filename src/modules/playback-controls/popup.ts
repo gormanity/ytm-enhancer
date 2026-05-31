@@ -12,10 +12,16 @@ const PLAY_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const PAUSE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+const REPEAT_SVG =
+  '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>';
+const REPEAT_ONE_SVG =
+  '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>';
 const PLAYBACK_STATE_POLL_INTERVAL_MS = 1000;
 
 let playIconTemplate: SVGElement | null | undefined;
 let pauseIconTemplate: SVGElement | null | undefined;
+let repeatIconTemplate: SVGElement | null | undefined;
+let repeatOneIconTemplate: SVGElement | null | undefined;
 
 function getPlayIconTemplate(): SVGElement | null {
   if (playIconTemplate === undefined) {
@@ -29,6 +35,33 @@ function getPauseIconTemplate(): SVGElement | null {
     pauseIconTemplate = createSvgIconTemplate(PAUSE_SVG);
   }
   return pauseIconTemplate;
+}
+
+function getRepeatIconTemplate(
+  repeatMode: PlaybackState["repeatMode"],
+): SVGElement | null {
+  if (repeatMode === "one") {
+    if (repeatOneIconTemplate === undefined) {
+      repeatOneIconTemplate = createSvgIconTemplate(REPEAT_ONE_SVG);
+    }
+    return repeatOneIconTemplate;
+  }
+
+  if (repeatIconTemplate === undefined) {
+    repeatIconTemplate = createSvgIconTemplate(REPEAT_SVG);
+  }
+  return repeatIconTemplate;
+}
+
+function getRepeatLabel(repeatMode: PlaybackState["repeatMode"]): string {
+  switch (repeatMode) {
+    case "all":
+      return "Repeat all";
+    case "one":
+      return "Repeat one";
+    default:
+      return "Repeat off";
+  }
 }
 
 interface YtmTabSummary {
@@ -48,6 +81,7 @@ interface NowPlayingElements {
   prevButton: HTMLButtonElement;
   playButton: HTMLButtonElement;
   nextButton: HTMLButtonElement;
+  repeatButton: HTMLButtonElement;
   progressSlot: HTMLElement;
 }
 
@@ -92,6 +126,9 @@ export function createPlaybackControlsPopupView(
       const nextButton = container.querySelector<HTMLButtonElement>(
         '[data-role="quick-now-playing-next"]',
       );
+      const repeatButton = container.querySelector<HTMLButtonElement>(
+        '[data-role="quick-now-playing-repeat"]',
+      );
       const progressSlot = container.querySelector<HTMLElement>(
         '[data-role="quick-now-playing-progress"]',
       );
@@ -112,6 +149,7 @@ export function createPlaybackControlsPopupView(
         !prevButton ||
         !playButton ||
         !nextButton ||
+        !repeatButton ||
         !progressSlot ||
         !speedSlot ||
         !qualitySlot
@@ -132,6 +170,7 @@ export function createPlaybackControlsPopupView(
             prevButton,
             playButton,
             nextButton,
+            repeatButton,
             progressSlot,
           },
           context,
@@ -360,6 +399,7 @@ function renderCompactNowPlaying(
     prevButton,
     playButton,
     nextButton,
+    repeatButton,
     progressSlot,
   } = elements;
 
@@ -368,13 +408,16 @@ function renderCompactNowPlaying(
     artwork.classList.add("is-hidden");
   };
 
-  const executeAction = (action: "previous" | "togglePlay" | "next") => {
+  const executeAction = (
+    action: "previous" | "togglePlay" | "next" | "repeat",
+  ) => {
     void context.ytm.executePlaybackAction(action);
   };
 
   prevButton.onclick = () => executeAction("previous");
   playButton.onclick = () => executeAction("togglePlay");
   nextButton.onclick = () => executeAction("next");
+  repeatButton.onclick = () => executeAction("repeat");
 
   const progressBar = createProgressBar({
     onSeek: (time) => {
@@ -413,6 +456,16 @@ function renderCompactNowPlaying(
           playButton,
           state.isPlaying ? getPauseIconTemplate() : getPlayIconTemplate(),
         );
+        const repeatMode = state.repeatMode ?? "off";
+        const repeatLabel = getRepeatLabel(repeatMode);
+        setButtonSvgIcon(repeatButton, getRepeatIconTemplate(repeatMode));
+        repeatButton.classList.toggle("active", repeatMode !== "off");
+        repeatButton.setAttribute(
+          "aria-pressed",
+          repeatMode !== "off" ? "true" : "false",
+        );
+        repeatButton.setAttribute("aria-label", repeatLabel);
+        repeatButton.title = repeatLabel;
       } else {
         artwork.classList.add("is-hidden");
         controls.classList.add("is-hidden");
