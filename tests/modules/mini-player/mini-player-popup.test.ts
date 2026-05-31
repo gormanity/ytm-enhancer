@@ -71,9 +71,15 @@ describe("mini player popup view", () => {
 
     view.render(container);
 
+    const toggle = container.querySelector<HTMLInputElement>(
+      '[data-role="mini-player-enabled-toggle"]',
+    );
     const tip = container.querySelector<HTMLElement>(
       '[data-role="mini-player-button-hint"]',
     );
+    const toggleRow = toggle?.closest(".card-row");
+
+    expect(toggleRow?.contains(tip)).toBe(true);
     expect(tip?.classList.contains("status-hint")).toBe(true);
     expect(tip?.textContent?.replace(/\s+/g, " ").trim()).toContain(
       "YouTube Music's mini-player button opens the extension PiP window while this is enabled.",

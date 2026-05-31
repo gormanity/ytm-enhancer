@@ -312,6 +312,18 @@ h3 {
   font-size: 14px;
 }
 
+.card-row-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-row-copy .status-hint {
+  display: block;
+  margin-top: 0;
+}
+
 .field-row {
   display: flex;
   justify-content: space-between;
