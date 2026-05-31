@@ -25,6 +25,18 @@ describe("module popup boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("does not call raw extension runtime APIs from module popup views", () => {
+    const offenders = modulePopupSources
+      .map((path) => ({
+        path: relative(process.cwd(), path),
+        source: readFileSync(path, "utf-8"),
+      }))
+      .filter(({ source }) => source.includes("chrome.runtime"))
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+  });
+
   it("uses ModuleContext runtime subscriptions instead of raw listener helpers", () => {
     const offenders = modulePopupSources
       .map((path) => ({
