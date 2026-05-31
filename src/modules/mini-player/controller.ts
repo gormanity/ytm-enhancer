@@ -230,8 +230,9 @@ export class MiniPlayerController {
   }
 
   private handlePipAction(action: PlaybackAction): void {
-    this.adapter.executeAction(action);
-    this.refreshAfterPipMutation();
+    void this.runPipMutation(() =>
+      this.runtime.command({ type: "playback-action", action }),
+    );
   }
 
   private handlePipSeek(time: number): void {
@@ -252,6 +253,16 @@ export class MiniPlayerController {
   private handlePipVolumeChange(volume: number): void {
     this.adapter.setVolume(volume);
     this.refreshAfterPipMutation();
+  }
+
+  private async runPipMutation(operation: () => Promise<void>): Promise<void> {
+    try {
+      await operation();
+    } catch {
+      // The next poll will re-sync the PiP window if the runtime route fails.
+    } finally {
+      this.refreshAfterPipMutation();
+    }
   }
 
   private refreshAfterPipMutation(): void {

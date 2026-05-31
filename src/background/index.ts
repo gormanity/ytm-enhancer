@@ -12,12 +12,12 @@ import {
   registerModuleNotificationClicks,
   type FeatureModule,
   type AutoPlayMode,
-  type PlaybackAction,
 } from "@/core";
 import { DEV_BUILD_STALE_MS } from "@/runtime-messages";
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import { error } from "@/core/logger";
+import { handlePlaybackActionMessage } from "./playback-action";
 
 import { parseSelectedTabId } from "./selected-tab";
 import { handleTrackChangedMessage } from "./track-change";
@@ -336,20 +336,9 @@ handler.on("get-playback-state", async () => {
   return { ok: true, data: await ytm.getPlaybackState() };
 });
 
-handler.on("playback-action", async (message) => {
-  if (message.action === "seekTo") {
-    if (typeof message.time !== "number") {
-      return { ok: false, error: "Invalid seek time" };
-    }
-    void ytm.seekTo(message.time).catch(() => undefined);
-    return { ok: true };
-  }
-
-  void ytm
-    .executePlaybackAction(message.action as PlaybackAction)
-    .catch(() => undefined);
-  return { ok: true };
-});
+handler.on("playback-action", async (message, sender) =>
+  handlePlaybackActionMessage(message, sender, ytm),
+);
 
 handler.start();
 devBuildPresenceCoordinator.registerExternalListener();
