@@ -332,8 +332,8 @@ export class YTMAdapter {
   }
 
   private clickButton(selector: string): void {
-    const el = document.querySelector(selector) as HTMLElement | null;
-    el?.click();
+    const el = this.findClickableElement(selector);
+    if (el) this.activateClick(el);
   }
 
   private clickLoadedPlayerBarPlayPause(): boolean {
@@ -341,7 +341,7 @@ export class YTMAdapter {
     if (!el || this.getNotClickableReason(el)) return false;
     if (!this.hasLoadedPlayerBarTrack()) return false;
 
-    el.click();
+    this.activateClick(el);
     return true;
   }
 
@@ -401,6 +401,16 @@ export class YTMAdapter {
 
     const timeInfo = document.querySelector(SELECTORS.timeInfo);
     return Boolean(timeInfo?.textContent?.trim());
+  }
+
+  private findClickableElement(selector: string): HTMLElement | null {
+    const elements = document.querySelectorAll<HTMLElement>(selector);
+
+    for (const el of elements) {
+      if (!this.getNotClickableReason(el)) return el;
+    }
+
+    return null;
   }
 
   private activateClick(el: HTMLElement): void {
