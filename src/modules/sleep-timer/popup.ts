@@ -1,6 +1,12 @@
 import type { ModuleContext, PopupView } from "@/core/types";
 import { renderPopupTemplate } from "@/popup/template";
 import { bindModuleToggle } from "@/popup/module-ui";
+import {
+  createSleepTimerClient,
+  type SleepTimerClient,
+  type SleepTimerMode,
+  type SleepTimerState,
+} from "./client";
 import templateHtml from "./popup.html?raw";
 
 const PRESET_MINUTES = [15, 30, 45, 60];
@@ -10,15 +16,6 @@ const ABSOLUTE_TIME_STORAGE_KEY = "sleep-timer.absolute-time";
 const PAUSED_AT_LAST_SEEN_KEY = "sleep-timer.last-paused-at-seen";
 const PAUSED_AT_EPHEMERAL_MS = 30 * 60 * 1000;
 const COUNTDOWN_UPDATE_INTERVAL_MS = 1000;
-
-type TimerMode = "duration" | "absolute";
-
-interface SleepTimerState {
-  active: boolean;
-  remainingMs: number;
-  endAt: number | null;
-  lastPausedAt: number | null;
-}
 
 function formatRemaining(remainingMs: number): string {
   const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
@@ -169,7 +166,10 @@ function persistAbsoluteTime(value: string): void {
 }
 
 /** Create the sleep timer settings popup view. */
-export function createSleepTimerPopupView(context: ModuleContext): PopupView {
+export function createSleepTimerPopupView(
+  context: ModuleContext,
+  client: SleepTimerClient = createSleepTimerClient(context.runtime),
+): PopupView {
   return {
     id: "sleep-timer-settings",
     label: "Sleep Timer",
@@ -253,7 +253,7 @@ export function createSleepTimerPopupView(context: ModuleContext): PopupView {
       }
 
       let selectedPresetMinutes: number | null = 30;
-      let mode: TimerMode = "duration";
+      let mode: SleepTimerMode = "duration";
       const initialMinutes = parseHhMmToMinutes(
         hoursInput.value,
         minutesInput.value,
@@ -289,7 +289,6 @@ export function createSleepTimerPopupView(context: ModuleContext): PopupView {
       }
 
       let activeEndAt: number | null = null;
-      let countdownTimer: number | null = null;
 
       const clampAndPadSegment = (
         input: HTMLInputElement,
@@ -404,16 +403,9 @@ export function createSleepTimerPopupView(context: ModuleContext): PopupView {
       };
 
       const queryState = () => {
-        void context.runtime
-          .request<SleepTimerState>({ type: "get-sleep-timer-state" })
-          .then(applyState);
+        void client.getState().then(applyState);
       };
-      const runtimeMessageListener = (message: { type?: string }) => {
-        if (message.type === "sleep-timer-state-changed") {
-          queryState();
-        }
-      };
-      const unsubscribe = context.runtime.subscribe(runtimeMessageListener);
+      const unsubscribe = client.subscribeStateChanged(queryState);
 
       const updateCountdown = () => {
         if (activeEndAt === null) return;
@@ -432,51 +424,37 @@ export function createSleepTimerPopupView(context: ModuleContext): PopupView {
         const durationMs = getDurationMs();
         if (durationMs === null) return;
         startBtn.disabled = true;
-        void context.runtime
-          .command({ type: "start-sleep-timer", durationMs })
-          .finally(() => {
-            updateStartEnabled();
-            queryState();
-          });
+        void client.start(durationMs).finally(() => {
+          updateStartEnabled();
+          queryState();
+        });
       });
 
       cancelBtn.addEventListener("click", () => {
         cancelBtn.disabled = true;
-        void context.runtime
-          .command({ type: "cancel-sleep-timer" })
-          .finally(() => {
-            queryState();
-          });
+        void client.cancel().finally(() => {
+          queryState();
+        });
       });
 
       bindModuleToggle(container, "sleep-notification-toggle", {
-        get: () =>
-          context.runtime.request<boolean>({
-            type: "get-sleep-timer-notify-enabled",
-          }),
-        set: (enabled) =>
-          context.runtime.command({
-            type: "set-sleep-timer-notify-enabled",
-            enabled,
-          }),
+        get: () => client.getNotifyOnEnd(),
+        set: (enabled) => client.setNotifyOnEnd(enabled),
       });
 
-      void context.runtime
-        .request<string>({ type: "get-sleep-timer-mode" })
-        .then((data) => {
-          mode = data === "absolute" ? "absolute" : "duration";
-          modeSelect.value = mode;
-          updateModeVisibility();
-          updateStartEnabled();
-        });
+      void client.getMode().then((data) => {
+        mode = data === "absolute" ? "absolute" : "duration";
+        modeSelect.value = mode;
+        updateModeVisibility();
+        updateStartEnabled();
+      });
 
       modeSelect.addEventListener("change", () => {
         mode = modeSelect.value === "absolute" ? "absolute" : "duration";
         updateModeVisibility();
         updateStartEnabled();
-        void context.runtime.command({ type: "set-sleep-timer-mode", mode });
+        void client.setMode(mode);
       });
-
       hoursInput.addEventListener("input", () => {
         if (hoursInput.value.length >= 2) {
           minutesInput.focus();
@@ -509,39 +487,34 @@ export function createSleepTimerPopupView(context: ModuleContext): PopupView {
         updateStartEnabled();
       });
 
-      hoursInput.addEventListener("blur", () =>
-        clampAndPadSegment(hoursInput, 0, 99),
-      );
-      minutesInput.addEventListener("blur", () =>
-        clampAndPadSegment(minutesInput, 0, 59),
-      );
-      hoursInput.addEventListener("blur", () =>
-        persistDurationSegments(hoursInput.value, minutesInput.value),
-      );
-      minutesInput.addEventListener("blur", () =>
-        persistDurationSegments(hoursInput.value, minutesInput.value),
-      );
+      hoursInput.addEventListener("blur", () => {
+        clampAndPadSegment(hoursInput, 0, 99);
+        persistDurationSegments(hoursInput.value, minutesInput.value);
+        updateStartEnabled();
+      });
+      minutesInput.addEventListener("blur", () => {
+        clampAndPadSegment(minutesInput, 0, 59);
+        persistDurationSegments(hoursInput.value, minutesInput.value);
+        updateStartEnabled();
+      });
       hoursInput.addEventListener("keydown", (event) =>
         handleArrowAdjust(event, hoursInput, 0, 99),
       );
       minutesInput.addEventListener("keydown", (event) =>
         handleArrowAdjust(event, minutesInput, 0, 59),
       );
-
-      updateModeVisibility();
       refreshPresetStyles();
+      updateModeVisibility();
       updateStartEnabled();
       queryState();
-      countdownTimer = window.setInterval(
+      const updateInterval = window.setInterval(
         updateCountdown,
         COUNTDOWN_UPDATE_INTERVAL_MS,
       );
 
       return () => {
         unsubscribe();
-        if (countdownTimer !== null) {
-          clearInterval(countdownTimer);
-        }
+        window.clearInterval(updateInterval);
       };
     },
   };
