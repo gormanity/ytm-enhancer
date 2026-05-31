@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSleepTimerPopupView } from "@/modules/sleep-timer/popup";
+import type { SleepTimerClient } from "@/modules/sleep-timer/client";
 import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("sleep timer popup view", () => {
@@ -609,5 +610,74 @@ describe("sleep timer popup view", () => {
       '[data-role="sleep-absolute-input"]',
     )!;
     expect(absoluteInputB.value).toBe("07:45");
+  });
+
+  it("should bind actions through the injected module client", async () => {
+    const client: SleepTimerClient = {
+      getState: vi.fn().mockResolvedValue({
+        active: true,
+        remainingMs: 60_000,
+        endAt: Date.now() + 60_000,
+        lastPausedAt: null,
+      }),
+      start: vi.fn().mockResolvedValue(undefined),
+      cancel: vi.fn().mockResolvedValue(undefined),
+      getNotifyOnEnd: vi.fn().mockResolvedValue(true),
+      setNotifyOnEnd: vi.fn().mockResolvedValue(undefined),
+      getMode: vi.fn().mockResolvedValue("duration"),
+      setMode: vi.fn().mockResolvedValue(undefined),
+      subscribeStateChanged: vi.fn(() => vi.fn()),
+    };
+    const view = createSleepTimerPopupView(createTestModuleContext(), client);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      expect(
+        container.querySelector<HTMLButtonElement>(
+          '[data-role="sleep-start-btn"]',
+        )?.disabled,
+      ).toBe(false);
+      expect(
+        container.querySelector<HTMLButtonElement>(
+          '[data-role="sleep-cancel-btn"]',
+        )?.disabled,
+      ).toBe(false);
+      expect(
+        Array.from(container.querySelectorAll<HTMLInputElement>("input")).find(
+          (input) => input.type === "checkbox",
+        )?.disabled,
+      ).toBe(false);
+    });
+
+    container
+      .querySelector<HTMLButtonElement>('[data-role="sleep-start-btn"]')!
+      .click();
+    container
+      .querySelector<HTMLButtonElement>('[data-role="sleep-cancel-btn"]')!
+      .click();
+
+    const notificationToggle = Array.from(
+      container.querySelectorAll<HTMLInputElement>("input"),
+    ).find((input) => input.type === "checkbox")!;
+    notificationToggle.checked = false;
+    notificationToggle.dispatchEvent(new Event("change"));
+
+    const modeSelect = container.querySelector<HTMLSelectElement>("select")!;
+    modeSelect.value = "absolute";
+    modeSelect.dispatchEvent(new Event("change"));
+
+    expect(client.getState).toHaveBeenCalled();
+    expect(client.start).toHaveBeenCalledWith(30 * 60 * 1000);
+    expect(client.cancel).toHaveBeenCalled();
+    expect(client.getNotifyOnEnd).toHaveBeenCalled();
+    expect(client.setNotifyOnEnd).toHaveBeenCalledWith(false);
+    expect(client.getMode).toHaveBeenCalled();
+    expect(client.setMode).toHaveBeenCalledWith("absolute");
+    expect(client.subscribeStateChanged).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 });
