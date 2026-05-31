@@ -6,14 +6,18 @@ const backgroundSource = readFileSync(
   resolve(process.cwd(), "src/background/index.ts"),
   "utf-8",
 );
-
-function registeredHotkeyBody(command: string): string {
-  const pattern = new RegExp(
-    `hotkeyRegistry\\.register\\("${command}", async \\(\\) => \\{([\\s\\S]*?)\\n\\}\\);`,
-  );
-  const match = backgroundSource.match(pattern);
-  return match?.[1] ?? "";
-}
+const hotkeysModuleSource = readFileSync(
+  resolve(process.cwd(), "src/modules/hotkeys/index.ts"),
+  "utf-8",
+);
+const notificationsModuleSource = readFileSync(
+  resolve(process.cwd(), "src/modules/notifications/index.ts"),
+  "utf-8",
+);
+const playbackControlsModuleSource = readFileSync(
+  resolve(process.cwd(), "src/modules/playback-controls/index.ts"),
+  "utf-8",
+);
 
 function handlerBody(type: string): string {
   const start = backgroundSource.indexOf(`handler.on("${type}"`);
@@ -31,9 +35,12 @@ describe("dev build conflict command guards", () => {
     expect(backgroundSource).toContain(
       "isActionSuppressedForDevBuildConflict(devBuildConflictState, tabId)",
     );
-    expect(registeredHotkeyBody("focus-ytm-tab")).toContain("ytm.focusTab()");
-    expect(registeredHotkeyBody("remind-me")).toContain(
-      "ytm.getPlaybackState()",
+    expect(hotkeysModuleSource).toContain("context.ytm.focusTab()");
+    expect(notificationsModuleSource).toContain(
+      "context.ytm.getPlaybackState()",
+    );
+    expect(playbackControlsModuleSource).toContain(
+      "context.ytm.executePlaybackAction(action)",
     );
     expect(handlerBody("focus-ytm-tab")).toContain(
       "ytm.focusTab(requestedTabId)",

@@ -8,12 +8,13 @@ export { createMessageSender, createMessageHandler } from "./messaging";
 export { createRuntimeClient } from "./messaging";
 export { ActionExecutor } from "./actions";
 export { HotkeyRegistry } from "./hotkey-registry";
-export type { CommandHandler } from "./hotkey-registry";
+export type { CommandHandler, HotkeyHandlerRegistry } from "./hotkey-registry";
 export { PopupRegistry } from "./popup-registry";
 export {
   createExtensionContext,
   initializeModules,
   registerModuleHandlers,
+  registerModuleHotkeys,
 } from "./extension";
 export {
   createPopupModuleContext,

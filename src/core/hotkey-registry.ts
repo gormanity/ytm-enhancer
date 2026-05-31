@@ -1,6 +1,10 @@
 export type CommandHandler = (command: string) => void | Promise<void>;
 
-export class HotkeyRegistry {
+export interface HotkeyHandlerRegistry {
+  register(command: string, handler: CommandHandler): void;
+}
+
+export class HotkeyRegistry implements HotkeyHandlerRegistry {
   private handlers = new Map<string, CommandHandler>();
 
   register(command: string, handler: CommandHandler): void {

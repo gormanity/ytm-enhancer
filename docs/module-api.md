@@ -4,11 +4,12 @@ This document covers the module-facing runtime API. Use it when adding or
 refactoring modules so feature code stays behind stable typed capabilities
 instead of importing background helpers or calling raw runtime messages.
 
-The API has three layers:
+The API has four layers:
 
 1. `FeatureModule` and `ModuleContext` define module lifecycle and capabilities.
 2. `YtmRuntimeClient` defines the typed surface for YouTube Music tabs.
-3. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
+3. `HotkeyRegistry` defines browser command dispatch owned by modules.
+4. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
 
 ## Module Lifecycle
 
@@ -30,6 +31,10 @@ export interface FeatureModule {
     registry: ModuleHandlerRegistry,
     context: ModuleContext,
   ): void;
+  registerHotkeys?(
+    registry: HotkeyHandlerRegistry,
+    context: ModuleContext,
+  ): void;
 }
 ```
 
@@ -44,6 +49,10 @@ path receives a popup context from `createPopupModuleContext()`.
 Use `registerHandlers(registry, context)` for module-owned background message
 handlers. Keep global policy and browser lifecycle handlers in
 `src/background/index.ts`.
+
+Use `registerHotkeys(registry, context)` for module-owned browser command
+handlers. The background script owns the `chrome.commands.onCommand` listener,
+but feature modules own the command behavior.
 
 ## Module Context
 
@@ -315,6 +324,28 @@ registerHandlers(registry, context) {
 }
 ```
 
+## Module Hotkey Registry
+
+`registerHotkeys()` receives a `HotkeyHandlerRegistry`.
+
+```typescript
+export interface HotkeyHandlerRegistry {
+  register(command: string, handler: CommandHandler): void;
+}
+```
+
+Commands must also be declared in each browser manifest under `"commands"`. The
+Hotkeys popup reads browser command metadata with `chrome.commands.getAll()`, so
+newly declared commands appear there automatically.
+
+```typescript
+registerHotkeys(registry, context) {
+  registry.register("my-command", async () => {
+    await context.ytm.focusTab();
+  });
+}
+```
+
 ## Popup Views
 
 Popup views are still template-driven. Keep module-specific markup in
@@ -410,10 +441,11 @@ Background should keep only global responsibilities:
 3. Register the module in `src/background/index.ts`.
 4. Add `getPopupViews(context)` when the module needs popup UI.
 5. Add `registerHandlers(registry, context)` for module-owned messages.
-6. Persist module state through `context.state.saveValue()`.
-7. Use `context.ytm` for YTM tab and playback behavior.
-8. Use `context.runtime` and `module-ui` helpers in popup views.
-9. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
+6. Add `registerHotkeys(registry, context)` for module-owned browser commands.
+7. Persist module state through `context.state.saveValue()`.
+8. Use `context.ytm` for YTM tab and playback behavior.
+9. Use `context.runtime` and `module-ui` helpers in popup views.
+10. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
 
 ## Testing
 

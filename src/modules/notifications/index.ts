@@ -6,6 +6,7 @@ import type {
 } from "@/core/types";
 import { createNotificationsPopupView } from "./popup";
 import { debug, error } from "@/core/logger";
+import type { HotkeyHandlerRegistry } from "@/core/hotkey-registry";
 import type { ModuleHandlerRegistry } from "@/core/messaging";
 
 const NOTIFICATION_ID = "ytm-enhancer-now-playing";
@@ -146,6 +147,20 @@ export class NotificationsModule implements FeatureModule {
     registry.on("preview-notification", async () => {
       this.triggerPreview();
       return { ok: true };
+    });
+  }
+
+  registerHotkeys(
+    registry: HotkeyHandlerRegistry,
+    context: ModuleContext,
+  ): void {
+    registry.register("remind-me", async () => {
+      try {
+        const state = await context.ytm.getPlaybackState();
+        this.showReminder(state);
+      } catch {
+        // Tab may not have the content script loaded.
+      }
     });
   }
 

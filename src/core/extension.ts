@@ -5,6 +5,7 @@ import { detectCapabilities } from "./capabilities";
 import { createShortcutCommandClient } from "./commands";
 import type { Capabilities } from "./capabilities";
 import type { FeatureModule, ModuleContext } from "./types";
+import type { HotkeyHandlerRegistry } from "./hotkey-registry";
 import type { YtmRuntimeClient } from "./ytm-client";
 import {
   createRuntimeClient,
@@ -77,5 +78,16 @@ export function registerModuleHandlers(
 ): void {
   for (const module of modules) {
     module.registerHandlers?.(registry, context);
+  }
+}
+
+/** Register browser command hotkeys owned by feature modules. */
+export function registerModuleHotkeys(
+  context: ExtensionContext,
+  modules: FeatureModule[],
+  registry: HotkeyHandlerRegistry,
+): void {
+  for (const module of modules) {
+    module.registerHotkeys?.(registry, context);
   }
 }

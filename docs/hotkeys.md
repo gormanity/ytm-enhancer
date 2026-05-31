@@ -5,13 +5,14 @@ and dispatched from `chrome.commands.onCommand` in the background script.
 
 ## Architecture
 
-`HotkeyRegistry` is a central registry where any module or the background script
-can register command handlers. The background script's
+`HotkeyRegistry` is a central registry where modules register command handlers
+through `FeatureModule.registerHotkeys()`. The background script's
 `chrome.commands.onCommand` listener calls `hotkeyRegistry.dispatch(command)`,
 which routes to the registered handler.
 
-`HotkeysModule` is display-only — it shows configured shortcuts in the popup but
-does not dispatch commands.
+The background script owns only the browser listener and dispatch call. Feature
+modules own the command behavior. `HotkeysModule` owns the popup view that shows
+configured shortcuts from `chrome.commands.getAll()`.
 
 ## Adding a New Hotkey
 
@@ -39,17 +40,17 @@ Add an entry under `"commands"` in each browser manifest:
 Chrome limits extensions to four keyboard shortcuts by default. Users can assign
 additional shortcuts manually via `chrome://extensions/shortcuts`.
 
-### 2. Register a Handler in the Background Script
+### 2. Register a Handler in the Owning Module
 
-In `src/background/index.ts`, call `hotkeyRegistry.register()` with the command
-name matching the manifest key:
+In the module that owns the behavior, implement `registerHotkeys()` and call
+`registry.register()` with the command name matching the manifest key:
 
 ```typescript
-hotkeyRegistry.register("my-command", async () => {
-  const tab = await findYTMTab(selectedTabId);
-  if (!tab?.id) return;
-  // Perform the action
-});
+registerHotkeys(registry, context) {
+  registry.register("my-command", async () => {
+    await context.ytm.executePlaybackAction("togglePlay");
+  });
+}
 ```
 
 Handlers receive the command string as their argument and can be synchronous or
@@ -117,4 +118,4 @@ type CommandHandler = (command: string) => void | Promise<void>;
 | `focus-ytm-tab`  | Focus the YouTube Music tab              |
 | `remind-me`      | Show notification with the current track |
 
-All handlers are registered in `src/background/index.ts`.
+Handlers are registered by the modules that own the behavior.

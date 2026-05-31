@@ -141,6 +141,8 @@ Use the module-facing runtime API for module work:
 - Use `FeatureModule.registerHandlers()` for module-owned background handlers.
   Keep only global policy and browser lifecycle handlers in
   `src/background/index.ts`.
+- Use `FeatureModule.registerHotkeys()` for module-owned browser command
+  handlers. Keep `chrome.commands.onCommand` dispatch in core/background.
 - Use `context.state.saveValue()` for persisted module state writes from
   background handlers.
 - Use `context.storage` only for popup-local UI persistence that is not module
@@ -185,8 +187,10 @@ See [docs/shared-ui.md](docs/shared-ui.md) for full API reference.
 4. Use `getPopupViews(context)` when the module needs popup UI.
 5. Use `registerHandlers(registry, context)` for module-owned background
    messages.
-6. Use `context.ytm`, `context.runtime`, `context.state`, and
+6. Use `registerHotkeys(registry, context)` for module-owned browser command
+   handlers.
+7. Use `context.ytm`, `context.runtime`, `context.state`, and
    `context.capabilities` instead of direct global helpers where possible.
-7. Use `module-ui` helpers and shared UI components for standard controls.
-8. Write tests in `tests/modules/<module-name>/`.
-9. No changes to existing modules should be required.
+8. Use `module-ui` helpers and shared UI components for standard controls.
+9. Write tests in `tests/modules/<module-name>/`.
+10. No changes to existing modules should be required.

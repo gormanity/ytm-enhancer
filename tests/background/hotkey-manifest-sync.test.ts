@@ -3,6 +3,9 @@ import chromeManifest from "../../src/manifests/chrome.json";
 import firefoxManifest from "../../src/manifests/firefox.json";
 import edgeManifest from "../../src/manifests/edge.json";
 import backgroundSource from "../../src/background/index.ts?raw";
+import hotkeysModuleSource from "../../src/modules/hotkeys/index.ts?raw";
+import notificationsModuleSource from "../../src/modules/notifications/index.ts?raw";
+import playbackControlsModuleSource from "../../src/modules/playback-controls/index.ts?raw";
 
 function getManifestCommands(manifest: Record<string, unknown>): string[] {
   const commands = manifest.commands as Record<string, unknown> | undefined;
@@ -19,22 +22,28 @@ const expectedCommandOrder = [
 
 function getRegisteredCommands(): string[] {
   const commands = new Set<string>();
+  const sources = [
+    backgroundSource,
+    hotkeysModuleSource,
+    notificationsModuleSource,
+    playbackControlsModuleSource,
+  ];
 
-  // Match direct hotkeyRegistry.register("command-name", ...) calls
-  const directPattern = /hotkeyRegistry\.register\("([^"]+)"/g;
-  let match;
-  while ((match = directPattern.exec(backgroundSource)) !== null) {
-    commands.add(match[1]);
-  }
+  for (const source of sources) {
+    const directPattern = /\.register\("([^"]+)"/g;
+    let match;
+    while ((match = directPattern.exec(source)) !== null) {
+      commands.add(match[1]);
+    }
 
-  // Match COMMAND_ACTION_MAP keys: "command-name": "action"
-  const mapPattern = /COMMAND_ACTION_MAP[^}]*\{([^}]+)\}/s;
-  const mapMatch = mapPattern.exec(backgroundSource);
-  if (mapMatch) {
-    const keyPattern = /"([^"]+)":/g;
-    let keyMatch;
-    while ((keyMatch = keyPattern.exec(mapMatch[1])) !== null) {
-      commands.add(keyMatch[1]);
+    const mapPattern = /COMMAND_ACTION_MAP[^}]*\{([^}]+)\}/s;
+    const mapMatch = mapPattern.exec(source);
+    if (mapMatch) {
+      const keyPattern = /"([^"]+)":/g;
+      let keyMatch;
+      while ((keyMatch = keyPattern.exec(mapMatch[1])) !== null) {
+        commands.add(keyMatch[1]);
+      }
     }
   }
 

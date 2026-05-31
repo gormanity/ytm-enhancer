@@ -1,6 +1,7 @@
 import type { Capabilities } from "./capabilities";
 import type { ShortcutCommandClient } from "./commands";
 import type { EventBus } from "./events";
+import type { HotkeyHandlerRegistry } from "./hotkey-registry";
 import type { ModuleHandlerRegistry, RuntimeClient } from "./messaging";
 import type { PopupRegistry } from "./popup-registry";
 import type { YtmRuntimeClient } from "./ytm-client";
@@ -83,6 +84,12 @@ export interface FeatureModule {
   /** Optional background message handlers this module owns. */
   registerHandlers?(
     registry: ModuleHandlerRegistry,
+    context: ModuleContext,
+  ): void;
+
+  /** Optional browser command hotkeys this module owns. */
+  registerHotkeys?(
+    registry: HotkeyHandlerRegistry,
     context: ModuleContext,
   ): void;
 }

@@ -5,6 +5,7 @@ import {
   HotkeyRegistry,
   initializeModules,
   registerModuleHandlers,
+  registerModuleHotkeys,
   type FeatureModule,
   type AutoPlayMode,
   type PlaybackAction,
@@ -49,6 +50,16 @@ const miniPlayer = new MiniPlayerModule();
 const notifications = new NotificationsModule();
 const playbackControls = new PlaybackControlsModule();
 const sleepTimer = new SleepTimerModule();
+const modules: FeatureModule[] = [
+  autoPlay,
+  autoSkipDisliked,
+  audioVisualizer,
+  hotkeys,
+  miniPlayer,
+  notifications,
+  playbackControls,
+  sleepTimer,
+];
 let selectedTabId: number | null = null;
 const devBuildSuspendedTabIds = new Set<number>();
 const devBuildConflictState: DevBuildConflictState = {
@@ -168,34 +179,7 @@ async function ensureYtmContentScripts(): Promise<void> {
   );
 }
 
-const COMMAND_ACTION_MAP: Record<string, PlaybackAction> = {
-  "play-pause": "togglePlay",
-  "next-track": "next",
-  "previous-track": "previous",
-};
-
-for (const [cmd, action] of Object.entries(COMMAND_ACTION_MAP)) {
-  hotkeyRegistry.register(cmd, async () => {
-    try {
-      await ytm.executePlaybackAction(action);
-    } catch (err) {
-      error("Hotkey action failed:", err);
-    }
-  });
-}
-
-hotkeyRegistry.register("focus-ytm-tab", async () => {
-  await ytm.focusTab().catch(() => undefined);
-});
-
-hotkeyRegistry.register("remind-me", async () => {
-  try {
-    const state = await ytm.getPlaybackState();
-    notifications.showReminder(state);
-  } catch {
-    // Tab may not have the content script loaded.
-  }
-});
+registerModuleHotkeys(context, modules, hotkeyRegistry);
 
 // Chrome MV3 service workers require event listeners to be registered
 // synchronously at the top level of the script, during the first turn
@@ -465,17 +449,6 @@ async function restoreModuleState(): Promise<void> {
     mode: state["sleep-timer.mode"] === "absolute" ? "absolute" : "duration",
   });
 }
-
-const modules: FeatureModule[] = [
-  autoPlay,
-  autoSkipDisliked,
-  audioVisualizer,
-  hotkeys,
-  miniPlayer,
-  notifications,
-  playbackControls,
-  sleepTimer,
-];
 
 registerModuleHandlers(context, modules, handler);
 
