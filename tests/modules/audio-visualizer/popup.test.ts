@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAudioVisualizerPopupView } from "@/modules/audio-visualizer/popup";
+import type { AudioVisualizerClient } from "@/modules/audio-visualizer/client";
 import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("audio visualizer popup view", () => {
@@ -334,5 +335,89 @@ describe("audio visualizer popup view", () => {
       type: "set-audio-visualizer-color-mode",
       mode: "monochrome-dim",
     });
+  });
+
+  it("should bind controls through the injected module client", async () => {
+    const client: AudioVisualizerClient = {
+      isEnabled: vi.fn().mockResolvedValue(true),
+      setEnabled: vi.fn().mockResolvedValue(undefined),
+      getSnapshot: vi.fn().mockResolvedValue({
+        enabled: true,
+        style: "bars",
+        target: "auto",
+        tunings: {
+          bars: { intensity: 1, thickness: 1, opacity: 1, colorMode: "white" },
+          waveform: {
+            intensity: 1,
+            thickness: 1,
+            opacity: 1,
+            colorMode: "white",
+          },
+          circular: {
+            intensity: 1,
+            thickness: 1,
+            opacity: 1,
+            colorMode: "white",
+          },
+        },
+      }),
+      setStyle: vi.fn().mockResolvedValue(undefined),
+      setTarget: vi.fn().mockResolvedValue(undefined),
+      setStyleTuning: vi.fn().mockResolvedValue(undefined),
+      setColorMode: vi.fn().mockResolvedValue(undefined),
+    };
+    const view = createAudioVisualizerPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const toggle = container.querySelector<HTMLInputElement>(
+        'input[type="checkbox"]',
+      );
+      expect(toggle?.disabled).toBe(false);
+      expect(getStyleSelect(container)?.disabled).toBe(false);
+    });
+
+    const toggle = container.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )!;
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change"));
+
+    const styleSelect = getStyleSelect(container)!;
+    styleSelect.value = "circular";
+    styleSelect.dispatchEvent(new Event("change"));
+
+    const targetSelect = getTargetSelect(container)!;
+    targetSelect.value = "all";
+    targetSelect.dispatchEvent(new Event("change"));
+
+    const ranges = container.querySelectorAll<HTMLInputElement>(
+      'input[type="range"]',
+    );
+    ranges[0].value = "140";
+    ranges[0].dispatchEvent(new Event("input"));
+
+    const colorModeSelect = getColorModeSelect(container)!;
+    colorModeSelect.value = "monochrome-dim";
+    colorModeSelect.dispatchEvent(new Event("change"));
+
+    expect(client.isEnabled).toHaveBeenCalled();
+    expect(client.getSnapshot).toHaveBeenCalled();
+    expect(client.setEnabled).toHaveBeenCalledWith(false);
+    expect(client.setStyle).toHaveBeenCalledWith("circular");
+    expect(client.setTarget).toHaveBeenCalledWith("all");
+    expect(client.setStyleTuning).toHaveBeenCalledWith("circular", {
+      intensity: 1.4,
+      thickness: 1,
+      opacity: 1,
+      colorMode: "white",
+    });
+    expect(client.setColorMode).toHaveBeenCalledWith("monochrome-dim");
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 });
