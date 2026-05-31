@@ -92,6 +92,45 @@ describe("PipWindowRenderer", () => {
     expect(onAction).toHaveBeenCalledWith("previous");
   });
 
+  it("should fire onAction from pointerup without waiting for click synthesis", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const nextBtn = doc.querySelector<HTMLButtonElement>(
+      '[data-action="next"]',
+    );
+    nextBtn!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    nextBtn!.dispatchEvent(new Event("pointerup", { bubbles: true }));
+
+    expect(onAction).toHaveBeenCalledWith("next");
+  });
+
+  it("should not double-fire when pointerup is followed by click", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const nextBtn = doc.querySelector<HTMLButtonElement>(
+      '[data-action="next"]',
+    );
+    nextBtn!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    nextBtn!.dispatchEvent(new Event("pointerup", { bubbles: true }));
+    nextBtn!.click();
+
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith("next");
+  });
+
+  it("should fire onAction from keyboard activation", () => {
+    renderer.build(doc, makeState(), onAction);
+
+    const playPauseBtn = doc.querySelector<HTMLButtonElement>(
+      '[data-action="togglePlay"]',
+    );
+    playPauseBtn!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+
+    expect(onAction).toHaveBeenCalledWith("togglePlay");
+  });
+
   it("should update title and artist on state change", () => {
     renderer.build(doc, makeState(), onAction);
 
