@@ -41,6 +41,16 @@ function getRuntimeManifestVersion(): string {
   return chrome.runtime.getManifest().version;
 }
 
+function getRuntimeUrl(path: string): string {
+  if (
+    typeof chrome === "undefined" ||
+    typeof chrome.runtime?.getURL !== "function"
+  ) {
+    return path;
+  }
+  return chrome.runtime.getURL(path);
+}
+
 /** Create and initialize the extension context. */
 export function createExtensionContext(
   options: ExtensionContextOptions,
@@ -59,6 +69,7 @@ export function createExtensionContext(
     },
     extension: options.extension ?? {
       getVersion: getRuntimeManifestVersion,
+      getUrl: getRuntimeUrl,
     },
     commands: options.commands ?? createShortcutCommandClient(),
     popupEvents: options.popupEvents ?? { broadcast: () => undefined },

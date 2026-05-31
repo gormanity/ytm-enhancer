@@ -20,6 +20,16 @@ function getRuntimeManifestVersion(): string {
   return chrome.runtime.getManifest().version;
 }
 
+function getRuntimeUrl(path: string): string {
+  if (
+    typeof chrome === "undefined" ||
+    typeof chrome.runtime?.getURL !== "function"
+  ) {
+    return path;
+  }
+  return chrome.runtime.getURL(path);
+}
+
 function targetPayload(target?: YtmTarget): Record<string, unknown> {
   if (!target || target.kind === "selected") return {};
   if (target.kind === "tab") return { tabId: target.tabId };
@@ -112,6 +122,7 @@ export function createPopupModuleContext(): ModuleContext {
     },
     extension: {
       getVersion: getRuntimeManifestVersion,
+      getUrl: getRuntimeUrl,
     },
     commands: createShortcutCommandClient(),
     popupEvents: {

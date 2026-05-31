@@ -114,6 +114,8 @@ export class NotificationsModule implements FeatureModule {
     registry: ModuleHandlerRegistry,
     context: ModuleContext,
   ): void {
+    this.context = context;
+
     registry.on("get-notifications-enabled", async () => ({
       ok: true,
       data: this.isEnabled(),
@@ -190,7 +192,7 @@ export class NotificationsModule implements FeatureModule {
       artist: "Example Artist",
       album: "Demo Album",
       year: 2026,
-      artworkUrl: chrome.runtime.getURL(PREVIEW_ARTWORK),
+      artworkUrl: this.getExtensionUrl(PREVIEW_ARTWORK),
       isPlaying: true,
       progress: 0.5,
       duration: 180,
@@ -226,7 +228,7 @@ export class NotificationsModule implements FeatureModule {
     const iconUrl =
       this.fields.artwork && state.artworkUrl
         ? getNotificationArtworkUrl(state.artworkUrl)
-        : chrome.runtime.getURL(FALLBACK_ICON);
+        : this.getExtensionUrl(FALLBACK_ICON);
 
     const options: chrome.notifications.NotificationCreateOptions = {
       type: "basic",
@@ -277,5 +279,9 @@ export class NotificationsModule implements FeatureModule {
           );
       }
     }, 150);
+  }
+
+  private getExtensionUrl(path: string): string {
+    return this.context?.extension.getUrl(path) ?? path;
   }
 }

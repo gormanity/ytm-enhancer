@@ -106,6 +106,7 @@ export function createTestModuleContext(
     },
     extension: {
       getVersion: vi.fn(() => "0.0.0"),
+      getUrl: vi.fn((path: string) => `chrome-extension://fake-id/${path}`),
     },
     commands: createShortcutCommandClient(),
     popupEvents: { broadcast: vi.fn() },

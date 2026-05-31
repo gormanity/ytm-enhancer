@@ -9,6 +9,7 @@ describe("createAboutPopupView", () => {
     return createTestModuleContext({
       extension: {
         getVersion: () => "1.2.3",
+        getUrl: (path: string) => `chrome-extension://fake-id/${path}`,
       },
       storage: {
         get: vi.fn((keys: string[]) =>

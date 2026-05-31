@@ -45,7 +45,10 @@ function createModuleContext(
       get: vi.fn().mockResolvedValue({}),
       set: vi.fn().mockResolvedValue(undefined),
     },
-    extension: { getVersion: vi.fn(() => "0.0.0") },
+    extension: {
+      getVersion: vi.fn(() => "0.0.0"),
+      getUrl: vi.fn((path: string) => `chrome-extension://fake-id/${path}`),
+    },
     commands: createShortcutCommandClient(),
     popupEvents: { broadcast: vi.fn() },
     ytm: {

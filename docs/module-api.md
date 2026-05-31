@@ -292,11 +292,12 @@ function from the popup view cleanup path when a view installs a listener.
 
 ### `extension`
 
-Extension metadata. Use this instead of calling `chrome.runtime.getManifest()`
-from module popup code.
+Extension metadata and asset URL helpers. Use this instead of calling
+`chrome.runtime.getManifest()` or `chrome.runtime.getURL()` from module code.
 
 ```typescript
 const version = context.extension.getVersion();
+const iconUrl = context.extension.getUrl("icon48.png");
 ```
 
 ## Module Handler Registry

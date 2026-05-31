@@ -42,6 +42,7 @@ export interface PopupView {
 
 export interface ExtensionMetadataClient {
   getVersion(): string;
+  getUrl(path: string): string;
 }
 
 /** Stable runtime capabilities provided to feature modules. */
