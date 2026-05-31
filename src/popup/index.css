@@ -539,7 +539,6 @@ select:focus {
 
 .icon-btn.active {
   color: var(--accent-color);
-  background: rgba(255, 0, 0, 0.12);
 }
 
 /* About View */
