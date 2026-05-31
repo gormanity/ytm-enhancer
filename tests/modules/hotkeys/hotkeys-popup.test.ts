@@ -70,6 +70,8 @@ describe("createHotkeysPopupView", () => {
 
     expect(hotkeysCss).toContain("gap: 0;");
     expect(hotkeysCss).toContain("padding: 8px 0 10px;");
+    expect(hotkeysCss).toContain(".shortcuts-list .shortcut-row:first-child");
+    expect(hotkeysCss).toContain("padding-top: 0;");
     expect(hotkeysCss).not.toContain("padding: 12px 0;");
   });
 
