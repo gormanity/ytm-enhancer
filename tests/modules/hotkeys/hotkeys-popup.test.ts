@@ -72,6 +72,8 @@ describe("createHotkeysPopupView", () => {
     expect(hotkeysCss).toContain("padding: 8px 0 10px;");
     expect(hotkeysCss).toContain(".shortcut-group .shortcut-row:first-of-type");
     expect(hotkeysCss).toContain("padding-top: 0;");
+    expect(hotkeysCss).toContain(".shortcuts-list + .panel-actions");
+    expect(hotkeysCss).toContain("border-top: 1px solid var(--border-color);");
     expect(hotkeysCss).not.toContain("padding: 12px 0;");
   });
 
