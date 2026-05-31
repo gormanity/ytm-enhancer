@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MiniPlayerController } from "@/modules/mini-player/controller";
 import { YTMAdapter } from "@/adapter";
 import { SELECTORS } from "@/adapter/selectors";
+import type { RuntimeClient } from "@/core/messaging";
 
 type MessageListener = (
   message: unknown,
@@ -49,6 +50,17 @@ function createNativeMiniPlayerButton(): HTMLElement {
   return button;
 }
 
+function createRuntimeClient(
+  overrides: Partial<RuntimeClient> = {},
+): RuntimeClient {
+  return {
+    request: vi.fn().mockResolvedValue(true),
+    command: vi.fn().mockResolvedValue(undefined),
+    subscribe: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe("MiniPlayerController", () => {
   let controller: MiniPlayerController;
 
@@ -81,6 +93,21 @@ describe("MiniPlayerController", () => {
       { type: "get-mini-player-enabled" },
       expect.any(Function),
     );
+  });
+
+  it("should query enabled state through an injected runtime client", async () => {
+    const runtime = createRuntimeClient({
+      request: vi.fn().mockResolvedValue(true),
+    });
+
+    createNativeMiniPlayerButton();
+    controller = new MiniPlayerController(undefined, runtime);
+    await controller.init();
+
+    expect(runtime.request).toHaveBeenCalledWith({
+      type: "get-mini-player-enabled",
+    });
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
   });
 
   it("should hijack native button when enabled and button exists", async () => {
@@ -399,15 +426,7 @@ describe("MiniPlayerController", () => {
   });
 
   it("should report document PiP open and close state to background", async () => {
-    const sendMessage = vi.fn(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        if ((message as { type?: string }).type === "get-mini-player-enabled") {
-          callback?.({ ok: true, data: true });
-        }
-      },
-    );
-    stubChrome({ sendMessage });
-
+    const runtime = createRuntimeClient();
     createNativeMiniPlayerButton();
 
     const pipDoc = document.implementation.createHTMLDocument("PiP");
@@ -418,20 +437,17 @@ describe("MiniPlayerController", () => {
     const requestWindow = vi.fn().mockResolvedValue(pipWindow);
     vi.stubGlobal("documentPictureInPicture", { requestWindow });
 
-    controller = new MiniPlayerController();
+    controller = new MiniPlayerController(undefined, runtime);
     await controller.init();
     (
       document.querySelector(SELECTORS.nativeMiniPlayerButton) as HTMLElement
     ).click();
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(
-      sendMessage.mock.calls.some(
-        ([message]) =>
-          (message as { type?: string; open?: boolean }).type ===
-            "pip-open-state" && (message as { open?: boolean }).open === true,
-      ),
-    ).toBe(true);
+    expect(runtime.command).toHaveBeenCalledWith({
+      type: "pip-open-state",
+      open: true,
+    });
 
     const pagehideCall = (
       pipWindow.addEventListener as ReturnType<typeof vi.fn>
@@ -439,13 +455,11 @@ describe("MiniPlayerController", () => {
     const pagehideHandler = pagehideCall?.[1] as (() => void) | undefined;
     pagehideHandler?.();
 
-    expect(
-      sendMessage.mock.calls.some(
-        ([message]) =>
-          (message as { type?: string; open?: boolean }).type ===
-            "pip-open-state" && (message as { open?: boolean }).open === false,
-      ),
-    ).toBe(true);
+    expect(runtime.command).toHaveBeenCalledWith({
+      type: "pip-open-state",
+      open: false,
+    });
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
   });
 
   it("should expose document PiP open state", async () => {
@@ -481,14 +495,7 @@ describe("MiniPlayerController", () => {
   });
 
   it("should report native video PiP open and close state to background", async () => {
-    const sendMessage = vi.fn(
-      (message: unknown, callback?: (response: unknown) => void) => {
-        if ((message as { type?: string }).type === "get-mini-player-enabled") {
-          callback?.({ ok: true, data: true });
-        }
-      },
-    );
-    stubChrome({ sendMessage });
+    const runtime = createRuntimeClient();
     vi.spyOn(YTMAdapter.prototype, "isVideoMode").mockReturnValue(true);
 
     const nativeButton = createNativeMiniPlayerButton();
@@ -505,28 +512,23 @@ describe("MiniPlayerController", () => {
       return original(sel);
     });
 
-    controller = new MiniPlayerController();
+    controller = new MiniPlayerController(undefined, runtime);
     await controller.init();
     nativeButton.click();
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(
-      sendMessage.mock.calls.some(
-        ([message]) =>
-          (message as { type?: string; open?: boolean }).type ===
-            "pip-open-state" && (message as { open?: boolean }).open === true,
-      ),
-    ).toBe(true);
+    expect(runtime.command).toHaveBeenCalledWith({
+      type: "pip-open-state",
+      open: true,
+    });
 
     video.dispatchEvent(new Event("leavepictureinpicture"));
 
-    expect(
-      sendMessage.mock.calls.some(
-        ([message]) =>
-          (message as { type?: string; open?: boolean }).type ===
-            "pip-open-state" && (message as { open?: boolean }).open === false,
-      ),
-    ).toBe(true);
+    expect(runtime.command).toHaveBeenCalledWith({
+      type: "pip-open-state",
+      open: false,
+    });
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
   });
 
   it("should remove button when disabled via toggle message", async () => {
