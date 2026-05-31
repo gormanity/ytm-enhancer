@@ -118,4 +118,16 @@ describe("module popup boundaries", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("does not call raw Document PiP APIs from feature modules", () => {
+    const offenders = moduleSources
+      .map((path) => ({
+        path: relative(process.cwd(), path),
+        source: readFileSync(path, "utf-8"),
+      }))
+      .filter(({ source }) => source.includes("documentPictureInPicture"))
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+  });
 });

@@ -3,6 +3,7 @@ import { MiniPlayerController } from "@/modules/mini-player/controller";
 import { YTMAdapter } from "@/adapter";
 import { SELECTORS } from "@/adapter/selectors";
 import type { RuntimeClient } from "@/core/messaging";
+import type { DocumentPipClient } from "@/core/document-pip";
 
 type MessageListener = (
   message: unknown,
@@ -57,6 +58,16 @@ function createRuntimeClient(
     request: vi.fn().mockResolvedValue(true),
     command: vi.fn().mockResolvedValue(undefined),
     subscribe: vi.fn(),
+    ...overrides,
+  };
+}
+
+function createDocumentPipClient(
+  overrides: Partial<DocumentPipClient> = {},
+): DocumentPipClient {
+  return {
+    isSupported: vi.fn(() => true),
+    requestWindow: vi.fn(),
     ...overrides,
   };
 }
@@ -174,6 +185,21 @@ describe("MiniPlayerController", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("should use injected Document PiP support before hijacking", async () => {
+    const runtime = createRuntimeClient();
+    const documentPip = createDocumentPipClient({
+      isSupported: vi.fn(() => false),
+    });
+    const nativeButton = createNativeMiniPlayerButton();
+    const spy = vi.spyOn(nativeButton, "addEventListener");
+
+    controller = new MiniPlayerController(undefined, runtime, documentPip);
+    await controller.init();
+
+    expect(documentPip.isSupported).toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("should not re-enable Mini Player when Document PiP is unavailable", async () => {
     vi.stubGlobal("documentPictureInPicture", undefined);
     const nativeButton = createNativeMiniPlayerButton();
@@ -220,6 +246,41 @@ describe("MiniPlayerController", () => {
       width: 480,
       height: 180,
     });
+  });
+
+  it("should request Document PiP through the injected client", async () => {
+    createNativeMiniPlayerButton();
+
+    const pipDoc = document.implementation.createHTMLDocument("PiP");
+    const pipWindow = {
+      document: pipDoc,
+      addEventListener: vi.fn(),
+    };
+    const documentPip = createDocumentPipClient({
+      requestWindow: vi.fn().mockResolvedValue(pipWindow),
+    });
+    const runtime = createRuntimeClient();
+
+    controller = new MiniPlayerController(undefined, runtime, documentPip);
+    await controller.init();
+
+    const nativeButton = document.querySelector(
+      SELECTORS.nativeMiniPlayerButton,
+    ) as HTMLElement;
+    nativeButton.click();
+
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(documentPip.requestWindow).toHaveBeenCalledWith({
+      width: 480,
+      height: 180,
+    });
+    const globalRequestWindow = (
+      globalThis as unknown as {
+        documentPictureInPicture?: { requestWindow: ReturnType<typeof vi.fn> };
+      }
+    ).documentPictureInPicture?.requestWindow;
+    expect(globalRequestWindow).not.toHaveBeenCalled();
   });
 
   it("should prefer native video PiP in video mode", async () => {
