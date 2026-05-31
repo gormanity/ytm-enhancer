@@ -36,6 +36,7 @@ export {
   registerModuleHandlers,
   registerModuleHotkeys,
   registerModuleNotificationClicks,
+  syncModuleContentState,
 } from "./extension";
 export {
   createPopupModuleContext,

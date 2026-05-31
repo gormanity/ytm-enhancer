@@ -155,6 +155,8 @@ Use the module-facing runtime API for module work:
 - Use `FeatureModule.registerNotificationClicks()` for module-owned browser
   notification click handlers. Keep `chrome.notifications.onClicked` dispatch in
   core/background.
+- Use `FeatureModule.syncContentState()` when restored module settings must be
+  replayed to existing content runtimes after startup.
 - Use `context.state.saveValue()` for persisted module state writes from
   background handlers.
 - Use `context.storage` only for popup-local UI persistence that is not module
@@ -207,9 +209,10 @@ See [docs/shared-ui.md](docs/shared-ui.md) for full API reference.
    handlers.
 8. Use `registerNotificationClicks(registry, context)` for module-owned browser
    notification click handlers.
-9. Use `context.ytm`, `context.runtime`, `context.state`, `context.alarms`,
-   `context.notifications`, and `context.capabilities` instead of direct global
-   helpers where possible.
-10. Use `module-ui` helpers and shared UI components for standard controls.
-11. Write tests in `tests/modules/<module-name>/`.
-12. No changes to existing modules should be required.
+9. Use `syncContentState(context)` when restored settings need content sync.
+10. Use `context.ytm`, `context.runtime`, `context.state`, `context.alarms`,
+    `context.notifications`, and `context.capabilities` instead of direct global
+    helpers where possible.
+11. Use `module-ui` helpers and shared UI components for standard controls.
+12. Write tests in `tests/modules/<module-name>/`.
+13. No changes to existing modules should be required.

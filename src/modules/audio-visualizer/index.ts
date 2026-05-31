@@ -138,6 +138,36 @@ export class AudioVisualizerModule implements FeatureModule {
     return [createAudioVisualizerPopupView(context)];
   }
 
+  async syncContentState(context: ModuleContext): Promise<void> {
+    const tunings = this.getStyleTunings();
+    const messages: Record<string, unknown>[] = [
+      {
+        type: "set-audio-visualizer-enabled",
+        enabled: this.isEnabled(),
+      },
+      {
+        type: "set-audio-visualizer-style",
+        style: this.getStyle(),
+      },
+      {
+        type: "set-audio-visualizer-target",
+        target: this.getTarget(),
+      },
+      {
+        type: "set-audio-visualizer-style-tunings",
+        tunings,
+      },
+      {
+        type: "set-audio-visualizer-color-mode",
+        mode: this.getColorMode(),
+      },
+    ];
+
+    for (const message of messages) {
+      await context.ytm.broadcast(message);
+    }
+  }
+
   registerHandlers(
     registry: ModuleHandlerRegistry,
     context: ModuleContext,

@@ -146,3 +146,13 @@ export function registerModuleNotificationClicks(
     module.registerNotificationClicks?.(registry, context);
   }
 }
+
+/** Sync restored module state to content runtimes through module-owned hooks. */
+export async function syncModuleContentState(
+  context: ExtensionContext,
+  modules: FeatureModule[],
+): Promise<void> {
+  for (const module of modules) {
+    await module.syncContentState?.(context);
+  }
+}

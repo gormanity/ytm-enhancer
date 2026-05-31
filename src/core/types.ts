@@ -117,4 +117,7 @@ export interface FeatureModule {
     registry: NotificationClickHandlerRegistry,
     context: ModuleContext,
   ): void;
+
+  /** Optional content-runtime state sync after persisted module state restores. */
+  syncContentState?(context: ModuleContext): void | Promise<void>;
 }

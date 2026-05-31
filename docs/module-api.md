@@ -44,6 +44,7 @@ export interface FeatureModule {
     registry: NotificationClickHandlerRegistry,
     context: ModuleContext,
   ): void;
+  syncContentState?(context: ModuleContext): void | Promise<void>;
 }
 ```
 
@@ -71,6 +72,10 @@ Use `registerNotificationClicks(registry, context)` for module-owned browser
 notification click handlers. The background script owns the
 `chrome.notifications.onClicked` listener, but feature modules own the click
 behavior.
+
+Use `syncContentState(context)` when restored background state must be replayed
+to existing content runtimes after startup. The background script calls this
+hook after persisted state is restored and module initialization completes.
 
 ## Module Context
 
@@ -552,6 +557,7 @@ Module-owned code should live with the module:
 - module-specific in-memory state;
 - module-specific timer or listener lifecycle;
 - module-specific content broadcast payloads.
+- module-specific restored-state sync to content runtimes.
 
 Background should keep only global responsibilities:
 
@@ -574,10 +580,11 @@ Background should keep only global responsibilities:
 7. Add `registerAlarms(registry, context)` for module-owned browser alarms.
 8. Add `registerNotificationClicks(registry, context)` for module-owned browser
    notification click handlers.
-9. Persist module state through `context.state.saveValue()`.
-10. Use `context.ytm` for YTM tab and playback behavior.
-11. Use `context.runtime` and `module-ui` helpers in popup views.
-12. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
+9. Add `syncContentState(context)` when restored settings need content sync.
+10. Persist module state through `context.state.saveValue()`.
+11. Use `context.ytm` for YTM tab and playback behavior.
+12. Use `context.runtime` and `module-ui` helpers in popup views.
+13. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
 
 ## Testing
 
