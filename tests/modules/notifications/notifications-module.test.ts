@@ -48,7 +48,10 @@ function createModuleContext(
       get: vi.fn().mockResolvedValue({}),
       set: vi.fn().mockResolvedValue(undefined),
     },
-    extension: { getVersion: vi.fn(() => "0.0.0") },
+    extension: {
+      getVersion: vi.fn(() => "0.0.0"),
+      getUrl: vi.fn((path: string) => `context-extension://${path}`),
+    },
     commands: createShortcutCommandClient(),
     popupEvents: { broadcast: vi.fn() },
     ytm: {
@@ -292,13 +295,15 @@ describe("NotificationsModule", () => {
   });
 
   it("should use fallback icon when artworkUrl is null", () => {
+    module.init(createModuleContext());
+
     module.handleTrackChange(makeState({ artworkUrl: null }));
     flushNotificationDelay();
 
     expect(createMock).toHaveBeenCalledWith(
       NOTIFICATION_ID,
       expect.objectContaining({
-        iconUrl: "chrome-extension://fake-id/icon48.png",
+        iconUrl: "context-extension://icon48.png",
       }),
       expect.any(Function),
     );
@@ -329,6 +334,8 @@ describe("NotificationsModule", () => {
   });
 
   it("should use dedicated preview artwork for test notifications", () => {
+    module.init(createModuleContext());
+
     module.triggerPreview();
     flushNotificationDelay();
 
@@ -336,13 +343,15 @@ describe("NotificationsModule", () => {
       NOTIFICATION_ID,
       expect.objectContaining({
         title: "Test Track",
-        iconUrl: "chrome-extension://fake-id/preview-artwork.png",
+        iconUrl: "context-extension://preview-artwork.png",
       }),
       expect.any(Function),
     );
   });
 
   it("should use fallback icon for preview when artwork field is disabled", () => {
+    module.init(createModuleContext());
+
     module.setFields({
       title: true,
       artist: true,
@@ -357,7 +366,7 @@ describe("NotificationsModule", () => {
     expect(createMock).toHaveBeenCalledWith(
       NOTIFICATION_ID,
       expect.objectContaining({
-        iconUrl: "chrome-extension://fake-id/icon48.png",
+        iconUrl: "context-extension://icon48.png",
       }),
       expect.any(Function),
     );
@@ -511,6 +520,8 @@ describe("NotificationsModule", () => {
     });
 
     it("should use fallback icon when artwork field is disabled", () => {
+      module.init(createModuleContext());
+
       module.setFields({
         title: true,
         artist: true,
@@ -525,7 +536,7 @@ describe("NotificationsModule", () => {
       expect(createMock).toHaveBeenCalledWith(
         NOTIFICATION_ID,
         expect.objectContaining({
-          iconUrl: "chrome-extension://fake-id/icon48.png",
+          iconUrl: "context-extension://icon48.png",
         }),
         expect.any(Function),
       );

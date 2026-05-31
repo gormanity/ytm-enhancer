@@ -10,7 +10,16 @@ function findPopupSources(dir: string): string[] {
   });
 }
 
+function findModuleSources(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return findModuleSources(path);
+    return entry.isFile() && entry.name.endsWith(".ts") ? [path] : [];
+  });
+}
+
 const modulePopupSources = findPopupSources(join(process.cwd(), "src/modules"));
+const moduleSources = findModuleSources(join(process.cwd(), "src/modules"));
 
 describe("module popup boundaries", () => {
   it("does not call raw runtime messaging from module popup views", () => {
@@ -57,6 +66,18 @@ describe("module popup boundaries", () => {
         source: readFileSync(path, "utf-8"),
       }))
       .filter(({ source }) => forbidden.some((token) => source.includes(token)))
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("does not call raw extension asset URL APIs from feature modules", () => {
+    const offenders = moduleSources
+      .map((path) => ({
+        path: relative(process.cwd(), path),
+        source: readFileSync(path, "utf-8"),
+      }))
+      .filter(({ source }) => source.includes("chrome.runtime.getURL"))
       .map(({ path }) => path);
 
     expect(offenders).toEqual([]);
