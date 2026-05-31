@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMiniPlayerPopupView } from "@/modules/mini-player/popup";
+import type { MiniPlayerClient } from "@/modules/mini-player/client";
 import { createTestModuleContext } from "../../helpers/module-context";
 
 describe("mini player popup view", () => {
@@ -307,5 +308,45 @@ describe("mini player popup view", () => {
       type: "set-mini-player-suppress-notifications",
       enabled: true,
     });
+  });
+
+  it("should bind toggles through the injected module client", async () => {
+    const client: MiniPlayerClient = {
+      isEnabled: vi.fn().mockResolvedValue(false),
+      setEnabled: vi.fn().mockResolvedValue(undefined),
+      getSuppressNotifications: vi.fn().mockResolvedValue(false),
+      setSuppressNotifications: vi.fn().mockResolvedValue(undefined),
+    };
+    const view = createMiniPlayerPopupView(createTestModuleContext(), client);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const tip = container.querySelector<HTMLElement>(
+      '[data-role="mini-player-resize-tip"]',
+    );
+    await vi.waitFor(() => {
+      const toggles = container.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"]',
+      );
+      expect(toggles[0]?.disabled).toBe(false);
+      expect(toggles[1]?.disabled).toBe(false);
+      expect(tip?.classList.contains("is-hidden")).toBe(true);
+    });
+
+    const toggles = container.querySelectorAll<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    toggles[0]!.checked = true;
+    toggles[0]!.dispatchEvent(new Event("change"));
+    toggles[1]!.checked = true;
+    toggles[1]!.dispatchEvent(new Event("change"));
+
+    expect(client.isEnabled).toHaveBeenCalled();
+    expect(client.setEnabled).toHaveBeenCalledWith(true);
+    expect(client.getSuppressNotifications).toHaveBeenCalled();
+    expect(client.setSuppressNotifications).toHaveBeenCalledWith(true);
+    expect(tip?.classList.contains("is-hidden")).toBe(false);
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 });
