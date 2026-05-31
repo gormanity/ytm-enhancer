@@ -3,9 +3,11 @@ import { EventBus } from "./events";
 import { PopupRegistry } from "./popup-registry";
 import { detectCapabilities } from "./capabilities";
 import { createShortcutCommandClient } from "./commands";
+import { createAlarmSchedulerClient } from "./alarm-registry";
 import type { Capabilities } from "./capabilities";
 import type { FeatureModule, ModuleContext } from "./types";
 import type { HotkeyHandlerRegistry } from "./hotkey-registry";
+import type { AlarmHandlerRegistry } from "./alarm-registry";
 import type { YtmRuntimeClient } from "./ytm-client";
 import {
   createRuntimeClient,
@@ -28,6 +30,7 @@ export interface ExtensionContextOptions {
   storage?: ModuleContext["storage"];
   extension?: ModuleContext["extension"];
   commands?: ModuleContext["commands"];
+  alarms?: ModuleContext["alarms"];
   popupEvents?: ModuleContext["popupEvents"];
 }
 
@@ -72,6 +75,7 @@ export function createExtensionContext(
       getUrl: getRuntimeUrl,
     },
     commands: options.commands ?? createShortcutCommandClient(),
+    alarms: options.alarms ?? createAlarmSchedulerClient(),
     popupEvents: options.popupEvents ?? { broadcast: () => undefined },
   };
 }
@@ -114,5 +118,16 @@ export function registerModuleHotkeys(
 ): void {
   for (const module of modules) {
     module.registerHotkeys?.(registry, context);
+  }
+}
+
+/** Register browser alarm handlers owned by feature modules. */
+export function registerModuleAlarms(
+  context: ExtensionContext,
+  modules: FeatureModule[],
+  registry: AlarmHandlerRegistry,
+): void {
+  for (const module of modules) {
+    module.registerAlarms?.(registry, context);
   }
 }

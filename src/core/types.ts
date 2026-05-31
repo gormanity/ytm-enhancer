@@ -1,3 +1,7 @@
+import type {
+  AlarmHandlerRegistry,
+  AlarmSchedulerClient,
+} from "./alarm-registry";
 import type { Capabilities } from "./capabilities";
 import type { ShortcutCommandClient } from "./commands";
 import type { EventBus } from "./events";
@@ -61,6 +65,7 @@ export interface ModuleContext {
   };
   extension: ExtensionMetadataClient;
   commands: ShortcutCommandClient;
+  alarms: AlarmSchedulerClient;
   popupEvents: {
     broadcast(message: { type: string; [key: string]: unknown }): void;
   };
@@ -98,4 +103,7 @@ export interface FeatureModule {
     registry: HotkeyHandlerRegistry,
     context: ModuleContext,
   ): void;
+
+  /** Optional browser alarm handlers this module owns. */
+  registerAlarms?(registry: AlarmHandlerRegistry, context: ModuleContext): void;
 }

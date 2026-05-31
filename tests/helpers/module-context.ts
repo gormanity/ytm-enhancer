@@ -109,6 +109,10 @@ export function createTestModuleContext(
       getUrl: vi.fn((path: string) => `chrome-extension://fake-id/${path}`),
     },
     commands: createShortcutCommandClient(),
+    alarms: {
+      create: vi.fn().mockResolvedValue(undefined),
+      clear: vi.fn().mockResolvedValue(true),
+    },
     popupEvents: { broadcast: vi.fn() },
     ...contextOverrides,
     capabilities,

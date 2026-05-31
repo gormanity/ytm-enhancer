@@ -7,12 +7,21 @@ export { createShortcutCommandClient } from "./commands";
 export { createMessageSender, createMessageHandler } from "./messaging";
 export { createRuntimeClient } from "./messaging";
 export { ActionExecutor } from "./actions";
+export { AlarmRegistry, createAlarmSchedulerClient } from "./alarm-registry";
 export { HotkeyRegistry } from "./hotkey-registry";
+export type {
+  AlarmEvent,
+  AlarmHandler,
+  AlarmHandlerRegistry,
+  AlarmInfo,
+  AlarmSchedulerClient,
+} from "./alarm-registry";
 export type { CommandHandler, HotkeyHandlerRegistry } from "./hotkey-registry";
 export { PopupRegistry } from "./popup-registry";
 export {
   createExtensionContext,
   initializeModules,
+  registerModuleAlarms,
   registerModuleHandlers,
   registerModuleHotkeys,
 } from "./extension";

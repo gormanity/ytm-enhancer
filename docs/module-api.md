@@ -9,7 +9,8 @@ The API has four layers:
 1. `FeatureModule` and `ModuleContext` define module lifecycle and capabilities.
 2. `YtmRuntimeClient` defines the typed surface for YouTube Music tabs.
 3. `HotkeyRegistry` defines browser command dispatch owned by modules.
-4. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
+4. `AlarmRegistry` defines browser alarm dispatch owned by modules.
+5. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
 
 ## Module Lifecycle
 
@@ -35,6 +36,7 @@ export interface FeatureModule {
     registry: HotkeyHandlerRegistry,
     context: ModuleContext,
   ): void;
+  registerAlarms?(registry: AlarmHandlerRegistry, context: ModuleContext): void;
 }
 ```
 
@@ -53,6 +55,10 @@ handlers. Keep global policy and browser lifecycle handlers in
 Use `registerHotkeys(registry, context)` for module-owned browser command
 handlers. The background script owns the `chrome.commands.onCommand` listener,
 but feature modules own the command behavior.
+
+Use `registerAlarms(registry, context)` for module-owned browser alarm handlers.
+The background script owns the `chrome.alarms.onAlarm` listener, but feature
+modules own the alarm behavior.
 
 ## Module Context
 
@@ -74,6 +80,7 @@ export interface ModuleContext {
   };
   extension: ExtensionMetadataClient;
   commands: ShortcutCommandClient;
+  alarms: AlarmSchedulerClient;
   popupEvents: {
     broadcast(message: { type: string; [key: string]: unknown }): void;
   };
@@ -300,6 +307,16 @@ const version = context.extension.getVersion();
 const iconUrl = context.extension.getUrl("icon48.png");
 ```
 
+### `alarms`
+
+Browser alarm scheduling. Use this instead of calling `chrome.alarms` from
+module code.
+
+```typescript
+await context.alarms.create("sleep-timer", { when: endAt });
+await context.alarms.clear("sleep-timer");
+```
+
 ## Module Handler Registry
 
 `registerHandlers()` receives a `ModuleHandlerRegistry`.
@@ -353,6 +370,27 @@ newly declared commands appear there automatically.
 registerHotkeys(registry, context) {
   registry.register("my-command", async () => {
     await context.ytm.focusTab();
+  });
+}
+```
+
+## Module Alarm Registry
+
+`registerAlarms()` receives an `AlarmHandlerRegistry`.
+
+```typescript
+export interface AlarmHandlerRegistry {
+  register(name: string, handler: AlarmHandler): void;
+}
+```
+
+Use `registerAlarms()` for behavior that should run when a browser alarm fires.
+Use `context.alarms` for scheduling and clearing those alarms.
+
+```typescript
+registerAlarms(registry, context) {
+  registry.register("my-module-alarm", async () => {
+    await context.ytm.executePlaybackAction("pause");
   });
 }
 ```
@@ -453,10 +491,11 @@ Background should keep only global responsibilities:
 4. Add `getPopupViews(context)` when the module needs popup UI.
 5. Add `registerHandlers(registry, context)` for module-owned messages.
 6. Add `registerHotkeys(registry, context)` for module-owned browser commands.
-7. Persist module state through `context.state.saveValue()`.
-8. Use `context.ytm` for YTM tab and playback behavior.
-9. Use `context.runtime` and `module-ui` helpers in popup views.
-10. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
+7. Add `registerAlarms(registry, context)` for module-owned browser alarms.
+8. Persist module state through `context.state.saveValue()`.
+9. Use `context.ytm` for YTM tab and playback behavior.
+10. Use `context.runtime` and `module-ui` helpers in popup views.
+11. Add focused tests for lifecycle, handlers, popup wiring, and broadcasts.
 
 ## Testing
 

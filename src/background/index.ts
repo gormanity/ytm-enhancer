@@ -1,9 +1,11 @@
 import {
   createExtensionContext,
+  AlarmRegistry,
   createMessageHandler,
   createYtmRuntimeClient,
   HotkeyRegistry,
   initializeModules,
+  registerModuleAlarms,
   registerModuleHandlers,
   registerModuleHotkeys,
   type FeatureModule,
@@ -42,6 +44,7 @@ import { PlaybackControlsModule } from "@/modules/playback-controls";
 import { SleepTimerModule } from "@/modules/sleep-timer";
 
 const hotkeyRegistry = new HotkeyRegistry();
+const alarmRegistry = new AlarmRegistry();
 const autoPlay = new AutoPlayModule();
 const autoSkipDisliked = new AutoSkipDislikedModule();
 const audioVisualizer = new AudioVisualizerModule();
@@ -180,6 +183,7 @@ async function ensureYtmContentScripts(): Promise<void> {
 }
 
 registerModuleHotkeys(context, modules, hotkeyRegistry);
+registerModuleAlarms(context, modules, alarmRegistry);
 
 // Chrome MV3 service workers require event listeners to be registered
 // synchronously at the top level of the script, during the first turn
@@ -197,7 +201,7 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  void sleepTimer.handleAlarm(alarm);
+  void alarmRegistry.dispatch(alarm);
 });
 
 const handler = createMessageHandler();

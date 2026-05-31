@@ -53,6 +53,10 @@ function createModuleContext(
       getUrl: vi.fn((path: string) => `context-extension://${path}`),
     },
     commands: createShortcutCommandClient(),
+    alarms: {
+      create: vi.fn().mockResolvedValue(undefined),
+      clear: vi.fn().mockResolvedValue(true),
+    },
     popupEvents: { broadcast: vi.fn() },
     ytm: {
       listTabs: vi.fn(),

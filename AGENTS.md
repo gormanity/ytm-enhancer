@@ -140,11 +140,14 @@ Use the module-facing runtime API for module work:
   opening the browser shortcuts page.
 - Use `context.extension` for extension metadata and packaged asset URLs, such
   as the manifest version or notification icons.
+- Use `context.alarms` for module-owned alarm scheduling and clearing.
 - Use `FeatureModule.registerHandlers()` for module-owned background handlers.
   Keep only global policy and browser lifecycle handlers in
   `src/background/index.ts`.
 - Use `FeatureModule.registerHotkeys()` for module-owned browser command
   handlers. Keep `chrome.commands.onCommand` dispatch in core/background.
+- Use `FeatureModule.registerAlarms()` for module-owned browser alarm handlers.
+  Keep `chrome.alarms.onAlarm` dispatch in core/background.
 - Use `context.state.saveValue()` for persisted module state writes from
   background handlers.
 - Use `context.storage` only for popup-local UI persistence that is not module
@@ -191,8 +194,10 @@ See [docs/shared-ui.md](docs/shared-ui.md) for full API reference.
    messages.
 6. Use `registerHotkeys(registry, context)` for module-owned browser command
    handlers.
-7. Use `context.ytm`, `context.runtime`, `context.state`, and
+7. Use `registerAlarms(registry, context)` for module-owned browser alarm
+   handlers.
+8. Use `context.ytm`, `context.runtime`, `context.state`, `context.alarms`, and
    `context.capabilities` instead of direct global helpers where possible.
-8. Use `module-ui` helpers and shared UI components for standard controls.
-9. Write tests in `tests/modules/<module-name>/`.
-10. No changes to existing modules should be required.
+9. Use `module-ui` helpers and shared UI components for standard controls.
+10. Write tests in `tests/modules/<module-name>/`.
+11. No changes to existing modules should be required.

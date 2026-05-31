@@ -1,4 +1,5 @@
 import type { FeatureModule, ModuleContext, PopupView } from "@/core/types";
+import type { AlarmEvent, AlarmHandlerRegistry } from "@/core/alarm-registry";
 import type { ModuleHandlerRegistry } from "@/core/messaging";
 import { createSleepTimerPopupView } from "./popup";
 
@@ -45,8 +46,10 @@ export class SleepTimerModule implements FeatureModule {
 
   registerHandlers(
     registry: ModuleHandlerRegistry,
-    _context: ModuleContext,
+    context: ModuleContext,
   ): void {
+    this.context = context;
+
     registry.on("get-sleep-timer-state", async () => ({
       ok: true,
       data: this.getState(),
@@ -83,6 +86,13 @@ export class SleepTimerModule implements FeatureModule {
     });
   }
 
+  registerAlarms(registry: AlarmHandlerRegistry, context: ModuleContext): void {
+    this.context = context;
+    registry.register(SLEEP_TIMER_ALARM, async (alarm) => {
+      await this.handleAlarm(alarm);
+    });
+  }
+
   async restore(state: {
     endAt: number | null;
     lastPausedAt: number | null;
@@ -95,12 +105,14 @@ export class SleepTimerModule implements FeatureModule {
 
     if (state.endAt !== null && state.endAt > Date.now()) {
       this.endAt = state.endAt;
-      await chrome.alarms.create(SLEEP_TIMER_ALARM, { when: state.endAt });
+      await this.context?.alarms.create(SLEEP_TIMER_ALARM, {
+        when: state.endAt,
+      });
       return;
     }
 
     this.endAt = null;
-    await chrome.alarms.clear(SLEEP_TIMER_ALARM);
+    await this.context?.alarms.clear(SLEEP_TIMER_ALARM);
     await this.save("sleep-timer.endAt", null);
   }
 
@@ -136,8 +148,8 @@ export class SleepTimerModule implements FeatureModule {
     const endAt = Date.now() + durationMs;
     this.endAt = endAt;
     this.lastPausedAt = null;
-    await chrome.alarms.clear(SLEEP_TIMER_ALARM);
-    await chrome.alarms.create(SLEEP_TIMER_ALARM, { when: endAt });
+    await this.context?.alarms.clear(SLEEP_TIMER_ALARM);
+    await this.context?.alarms.create(SLEEP_TIMER_ALARM, { when: endAt });
     await this.save("sleep-timer.endAt", endAt);
     await this.save("sleep-timer.lastPausedAt", null);
     this.notifyStateChanged();
@@ -145,12 +157,12 @@ export class SleepTimerModule implements FeatureModule {
 
   async cancel(): Promise<void> {
     this.endAt = null;
-    await chrome.alarms.clear(SLEEP_TIMER_ALARM);
+    await this.context?.alarms.clear(SLEEP_TIMER_ALARM);
     await this.save("sleep-timer.endAt", null);
     this.notifyStateChanged();
   }
 
-  async handleAlarm(alarm: chrome.alarms.Alarm): Promise<boolean> {
+  async handleAlarm(alarm: AlarmEvent): Promise<boolean> {
     if (alarm.name !== SLEEP_TIMER_ALARM) return false;
 
     this.lastPausedAt = Date.now();
