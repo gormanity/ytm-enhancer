@@ -73,6 +73,7 @@ describe("createHotkeysPopupView", () => {
     expect(hotkeysCss).toContain("border: 1px solid var(--border-color);");
     expect(hotkeysCss).toContain("border-radius: 6px;");
     expect(hotkeysCss).toContain("overflow: hidden;");
+    expect(hotkeysCss).toContain("margin: 0 0 12px;");
     expect(hotkeysCss).toContain("padding: 10px 10px 0;");
     expect(hotkeysCss).toContain(".hotkeys-card .panel-actions");
     expect(hotkeysCss).toContain("margin: 0;");
