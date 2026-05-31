@@ -1,6 +1,7 @@
 import { SELECTORS } from "@/adapter/selectors";
 import { YTMAdapter } from "@/adapter";
 import type { PlaybackAction } from "@/core/types";
+import type { PlaybackState } from "@/core/types";
 import type { VisualizerOverlayManager } from "@/modules/audio-visualizer/overlay-manager";
 import { PipButton } from "./pip-button";
 import { PipWindowRenderer } from "./renderer";
@@ -11,6 +12,10 @@ import {
   type DocumentPipClient,
 } from "@/core/document-pip";
 import { createRuntimeClient, type RuntimeClient } from "@/core/messaging";
+import {
+  createPlaybackController,
+  type PlaybackController,
+} from "@/core/playback-controller";
 
 const POLL_INTERVAL_MS = 1000;
 const DELAYED_REFRESH_MS = 150;
@@ -27,12 +32,6 @@ const MEDIA_REFRESH_EVENTS = [
   "seeked",
 ] as const;
 
-interface MediaRefreshListener {
-  target: HTMLMediaElement;
-  type: (typeof MEDIA_REFRESH_EVENTS)[number];
-  listener: EventListener;
-}
-
 export class MiniPlayerController {
   private adapter = new YTMAdapter();
   private pipButton = new PipButton(() => this.handlePipClick());
@@ -41,9 +40,8 @@ export class MiniPlayerController {
     this.reportPipOpenState(open);
   });
   private overlayManager: VisualizerOverlayManager | null;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
-  private delayedRefreshTimer: ReturnType<typeof setTimeout> | null = null;
-  private mediaRefreshListeners: MediaRefreshListener[] = [];
+  private playbackController: PlaybackController | null = null;
+  private unsubscribePlayback: (() => void) | null = null;
   private observer: MutationObserver | null = null;
   private enabled = false;
   private documentPipOpen = false;
@@ -89,9 +87,7 @@ export class MiniPlayerController {
     this.unsubscribeRuntime?.();
     this.unsubscribeRuntime = null;
     this.pipButton.remove();
-    this.stopPolling();
-    this.clearDelayedRefresh();
-    this.detachMediaRefreshListeners();
+    this.stopPlaybackController();
     this.observer?.disconnect();
     this.observer = null;
     this.documentPipOpen = false;
@@ -195,15 +191,12 @@ export class MiniPlayerController {
       }
 
       this.documentPipOpen = true;
-      this.attachMediaRefreshListeners();
-      this.startPolling();
+      this.startPlaybackController();
       this.reportPipOpenState(true);
       debug("PiP: document PiP opened");
 
       pipWindow.addEventListener("pagehide", () => {
-        this.stopPolling();
-        this.clearDelayedRefresh();
-        this.detachMediaRefreshListeners();
+        this.stopPlaybackController();
         this.overlayManager?.detachPip();
         this.documentPipOpen = false;
         this.reportPipOpenState(false);
@@ -216,71 +209,31 @@ export class MiniPlayerController {
     }
   }
 
-  private startPolling(): void {
-    this.stopPolling();
-    this.pollTimer = setInterval(() => {
-      this.refreshPipState();
-    }, POLL_INTERVAL_MS);
-  }
-
-  private stopPolling(): void {
-    if (this.pollTimer !== null) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-    }
-  }
-
   private handlePipAction(action: PlaybackAction): void {
-    const traceId = this.createPipTraceId(action);
-    void this.runPipMutation(traceId, action, () =>
-      this.runtime.command({
-        type: "playback-action",
-        action,
-        source: "mini-player-pip",
-        traceId,
-      }),
-    );
+    void this.playbackController?.executeAction(action).catch(() => undefined);
   }
 
   private handlePipSeek(time: number): void {
+    if (this.playbackController) {
+      void this.playbackController.seekTo(time);
+      return;
+    }
     this.adapter.seekTo(time);
-    this.refreshAfterPipMutation();
   }
 
   private handlePipLike(): void {
     this.adapter.toggleLike();
-    this.refreshAfterPipMutation();
+    this.playbackController?.refreshAfterMutation();
   }
 
   private handlePipDislike(): void {
     this.adapter.toggleDislike();
-    this.refreshAfterPipMutation();
+    this.playbackController?.refreshAfterMutation();
   }
 
   private handlePipVolumeChange(volume: number): void {
     this.adapter.setVolume(volume);
-    this.refreshAfterPipMutation();
-  }
-
-  private async runPipMutation(
-    traceId: string,
-    label: string,
-    operation: () => Promise<void>,
-  ): Promise<void> {
-    const startedAt = performance.now();
-    try {
-      await operation();
-    } catch (err) {
-      debug("PiP: action command failed", {
-        traceId,
-        label,
-        elapsedMs: Math.round(performance.now() - startedAt),
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // The next poll will re-sync the PiP window if the runtime route fails.
-    } finally {
-      this.refreshAfterPipMutation();
-    }
+    this.playbackController?.refreshAfterMutation();
   }
 
   private createPipTraceId(action: string): string {
@@ -288,30 +241,8 @@ export class MiniPlayerController {
     return `pip-${Date.now()}-${this.pipActionSequence}-${action}`;
   }
 
-  private refreshAfterPipMutation(): void {
-    this.refreshPipState();
-    this.scheduleDelayedRefresh();
-  }
-
-  private scheduleDelayedRefresh(): void {
-    this.clearDelayedRefresh();
-    this.delayedRefreshTimer = setTimeout(() => {
-      this.delayedRefreshTimer = null;
-      this.refreshPipState();
-    }, DELAYED_REFRESH_MS);
-  }
-
-  private clearDelayedRefresh(): void {
-    if (this.delayedRefreshTimer !== null) {
-      clearTimeout(this.delayedRefreshTimer);
-      this.delayedRefreshTimer = null;
-    }
-  }
-
-  private refreshPipState(): void {
+  private renderPipState(state: PlaybackState): void {
     if (!this.documentPipOpen) return;
-
-    const state = this.adapter.getPlaybackState();
     this.renderer.update(state);
     this.renderer.updateAuxState(
       this.adapter.getVolume(),
@@ -320,29 +251,76 @@ export class MiniPlayerController {
     );
   }
 
-  private attachMediaRefreshListeners(): void {
-    this.detachMediaRefreshListeners();
+  private startPlaybackController(): void {
+    this.stopPlaybackController();
 
-    const media = document.querySelector<HTMLMediaElement>(
-      SELECTORS.videoElement,
+    const playbackController = createPlaybackController(
+      {
+        getPlaybackState: () => this.adapter.getPlaybackState(),
+        executePlaybackAction: (action) =>
+          this.executePipPlaybackAction(action),
+        seekTo: (time) => this.adapter.seekTo(time),
+        subscribeToStateChanges: (listener) =>
+          this.subscribeToMediaRefreshEvents(listener),
+      },
+      {
+        pollIntervalMs: POLL_INTERVAL_MS,
+        delayedRefreshMs: DELAYED_REFRESH_MS,
+      },
     );
-    if (!media) return;
+    this.playbackController = playbackController;
+    this.unsubscribePlayback = playbackController.subscribe((snapshot) => {
+      if (snapshot.ok) this.renderPipState(snapshot.data);
+    });
+    playbackController.start();
+  }
 
-    const listener: EventListener = () => {
-      this.refreshPipState();
-    };
+  private stopPlaybackController(): void {
+    this.unsubscribePlayback?.();
+    this.unsubscribePlayback = null;
+    this.playbackController?.destroy();
+    this.playbackController = null;
+  }
 
-    for (const type of MEDIA_REFRESH_EVENTS) {
-      media.addEventListener(type, listener);
-      this.mediaRefreshListeners.push({ target: media, type, listener });
+  private async executePipPlaybackAction(
+    action: PlaybackAction,
+  ): Promise<void> {
+    const traceId = this.createPipTraceId(action);
+    const startedAt = performance.now();
+
+    try {
+      await this.runtime.command({
+        type: "playback-action",
+        action,
+        source: "mini-player-pip",
+        traceId,
+      });
+    } catch (err) {
+      debug("PiP: action command failed", {
+        traceId,
+        label: action,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
     }
   }
 
-  private detachMediaRefreshListeners(): void {
-    for (const { target, type, listener } of this.mediaRefreshListeners) {
-      target.removeEventListener(type, listener);
+  private subscribeToMediaRefreshEvents(listener: () => void): () => void {
+    const media = document.querySelector<HTMLMediaElement>(
+      SELECTORS.videoElement,
+    );
+    if (!media) return () => undefined;
+
+    for (const type of MEDIA_REFRESH_EVENTS) {
+      media.addEventListener(type, listener);
     }
-    this.mediaRefreshListeners = [];
+
+    return () => {
+      for (const type of MEDIA_REFRESH_EVENTS) {
+        media.removeEventListener(type, listener);
+      }
+    };
   }
 
   private reportPipOpenState(open: boolean): void {

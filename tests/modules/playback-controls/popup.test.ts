@@ -566,7 +566,7 @@ describe("playback controls popup view", () => {
         expect(executePlaybackAction).toHaveBeenCalledWith("togglePlay");
         expect(getPlaybackState).toHaveBeenCalledTimes(2);
       },
-      { timeout: 50 },
+      { timeout: 250 },
     );
 
     cleanup?.();

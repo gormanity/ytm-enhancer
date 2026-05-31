@@ -47,8 +47,12 @@ In the module that owns the behavior, implement `registerHotkeys()` and call
 
 ```typescript
 registerHotkeys(registry, context) {
+  const playback = createPlaybackController(
+    createYtmPlaybackDriver(context.ytm),
+  );
+
   registry.register("my-command", async () => {
-    await context.ytm.executePlaybackAction("togglePlay");
+    await playback.executeAction("togglePlay");
   });
 }
 ```

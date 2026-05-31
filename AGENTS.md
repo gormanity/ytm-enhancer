@@ -134,6 +134,9 @@ Use the module-facing runtime API for module work:
 - Use `context.ytm` for YouTube Music tab listing, selection, focus, playback
   state, playback actions, seeking, volume, speed, quality, and content
   broadcasts.
+- Use `createPlaybackController()` with `createYtmPlaybackDriver()` for UI
+  surfaces or hotkeys that issue playback actions, seek, and then need shared
+  immediate/delayed refresh behavior.
 - Use `context.runtime.request()` and `context.runtime.command()` for
   module-specific popup-to-background messages, preferably behind a small
   module-local client in `src/modules/<module-name>/client.ts`.

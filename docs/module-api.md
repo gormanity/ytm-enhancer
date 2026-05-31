@@ -271,12 +271,29 @@ await context.ytm.focusTab();
 
 ### Playback UI
 
-Use the dedicated methods for common controls.
+Use `createPlaybackController()` for playback control surfaces such as the popup
+Quick Controls, Mini Player PiP controls, or playback hotkeys. The controller
+centralizes immediate refresh, delayed follow-up refresh, optional event-driven
+refresh, and polling fallback.
 
 ```typescript
-const playback = await context.ytm.getPlaybackState();
-await context.ytm.executePlaybackAction("togglePlay");
-await context.ytm.seekTo(playback.progress + 10);
+const playback = createPlaybackController(createYtmPlaybackDriver(context.ytm));
+
+playback.subscribe((snapshot) => {
+  if (snapshot.ok) {
+    renderNowPlaying(snapshot.data);
+  }
+});
+
+playback.start();
+await playback.executeAction("togglePlay");
+await playback.seekTo(120);
+```
+
+Use the dedicated `YtmRuntimeClient` methods directly for one-off background
+actions that do not own a playback UI surface.
+
+```typescript
 await context.ytm.setVolume(0.75);
 await context.ytm.setPlaybackSpeed(1.25);
 await context.ytm.setStreamQuality("2");

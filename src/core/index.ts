@@ -6,6 +6,10 @@ export { detectCapabilities } from "./capabilities";
 export { createShortcutCommandClient } from "./commands";
 export { createMessageSender, createMessageHandler } from "./messaging";
 export { createRuntimeClient } from "./messaging";
+export {
+  createPlaybackController,
+  createYtmPlaybackDriver,
+} from "./playback-controller";
 export { AlarmRegistry, createAlarmSchedulerClient } from "./alarm-registry";
 export { createDocumentPipClient } from "./document-pip";
 export {
@@ -51,6 +55,13 @@ export type {
   RuntimeClient,
   SendOptions,
 } from "./messaging";
+export type {
+  PlaybackControlDriver,
+  PlaybackController,
+  PlaybackControllerListener,
+  PlaybackControllerOptions,
+  PlaybackControllerSnapshot,
+} from "./playback-controller";
 export type { Capabilities, BrowserRuntime } from "./capabilities";
 export type {
   DocumentPipClient,

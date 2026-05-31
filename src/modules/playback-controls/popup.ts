@@ -1,4 +1,9 @@
 import type { ModuleContext, PopupView, PlaybackState } from "@/core/types";
+import {
+  createPlaybackController,
+  createYtmPlaybackDriver,
+  type PlaybackControllerSnapshot,
+} from "@/core/playback-controller";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
 import { bindModuleRange } from "@/popup/module-ui";
@@ -425,10 +430,15 @@ function renderCompactNowPlaying(
     artwork.classList.add("is-hidden");
   };
 
+  const playbackController = createPlaybackController(
+    createYtmPlaybackDriver(context.ytm),
+    { pollIntervalMs: PLAYBACK_STATE_POLL_INTERVAL_MS },
+  );
+
   const executeAction = (
     action: "shuffle" | "previous" | "togglePlay" | "next" | "repeat",
   ) => {
-    void context.ytm.executePlaybackAction(action);
+    void playbackController.executeAction(action);
   };
 
   shuffleButton.onclick = () => executeAction("shuffle");
@@ -439,84 +449,77 @@ function renderCompactNowPlaying(
 
   const progressBar = createProgressBar({
     onSeek: (time) => {
-      void context.ytm.seekTo(time);
+      void playbackController.seekTo(time);
     },
   });
   progressSlot.replaceChildren(progressBar.element);
 
-  const update = () => {
-    const handleResponse = (
-      response: { ok: boolean; data?: PlaybackState; error?: string } | null,
-    ) => {
-      if (response?.ok && response.data) {
-        const state = response.data;
-        const hasTrack = Boolean(state.title && state.artist);
+  const handleSnapshot = (snapshot: PlaybackControllerSnapshot) => {
+    if (snapshot.ok) {
+      const state = snapshot.data;
+      const hasTrack = Boolean(state.title && state.artist);
 
-        if (hasTrack && state.artworkUrl) {
-          artwork.src = state.artworkUrl;
-          artwork.classList.remove("is-hidden");
-        } else {
-          artwork.removeAttribute("src");
-          artwork.classList.add("is-hidden");
-        }
-        title.textContent = state.title || "No track loaded";
-        artist.textContent = state.artist || "Start playback to see details";
-        controls.classList.toggle("is-hidden", !hasTrack);
-
-        if (hasTrack && state.duration > 0) {
-          progressBar.setProgress(state.progress, state.duration);
-          progressSlot.classList.remove("is-hidden");
-        } else {
-          progressSlot.classList.add("is-hidden");
-        }
-
-        setButtonSvgIcon(
-          playButton,
-          state.isPlaying ? getPauseIconTemplate() : getPlayIconTemplate(),
-        );
-        const shuffleLabel = state.isShuffling ? "Shuffle on" : "Shuffle off";
-        setButtonSvgIcon(shuffleButton, getShuffleIconTemplate());
-        shuffleButton.classList.toggle("active", state.isShuffling === true);
-        shuffleButton.setAttribute(
-          "aria-pressed",
-          state.isShuffling === true ? "true" : "false",
-        );
-        shuffleButton.setAttribute("aria-label", shuffleLabel);
-        shuffleButton.title = shuffleLabel;
-
-        const repeatMode = state.repeatMode ?? "off";
-        const repeatLabel = getRepeatLabel(repeatMode);
-        setButtonSvgIcon(repeatButton, getRepeatIconTemplate(repeatMode));
-        repeatButton.classList.toggle("active", repeatMode !== "off");
-        repeatButton.setAttribute(
-          "aria-pressed",
-          repeatMode !== "off" ? "true" : "false",
-        );
-        repeatButton.setAttribute("aria-label", repeatLabel);
-        repeatButton.title = repeatLabel;
+      if (hasTrack && state.artworkUrl) {
+        artwork.src = state.artworkUrl;
+        artwork.classList.remove("is-hidden");
       } else {
+        artwork.removeAttribute("src");
         artwork.classList.add("is-hidden");
-        controls.classList.add("is-hidden");
-        progressSlot.classList.add("is-hidden");
-        if (response?.error === "No YTM tab") {
-          title.textContent = "YouTube Music not found";
-          artist.textContent = "Open YTM to get started";
-        } else {
-          title.textContent = "No music playing";
-          artist.textContent = "Waiting for playback...";
-        }
       }
-    };
-    void context.ytm
-      .getPlaybackState()
-      .then((state) => handleResponse({ ok: true, data: state }))
-      .catch((err: Error) => handleResponse({ ok: false, error: err.message }));
+      title.textContent = state.title || "No track loaded";
+      artist.textContent = state.artist || "Start playback to see details";
+      controls.classList.toggle("is-hidden", !hasTrack);
+
+      if (hasTrack && state.duration > 0) {
+        progressBar.setProgress(state.progress, state.duration);
+        progressSlot.classList.remove("is-hidden");
+      } else {
+        progressSlot.classList.add("is-hidden");
+      }
+
+      setButtonSvgIcon(
+        playButton,
+        state.isPlaying ? getPauseIconTemplate() : getPlayIconTemplate(),
+      );
+      const shuffleLabel = state.isShuffling ? "Shuffle on" : "Shuffle off";
+      setButtonSvgIcon(shuffleButton, getShuffleIconTemplate());
+      shuffleButton.classList.toggle("active", state.isShuffling === true);
+      shuffleButton.setAttribute(
+        "aria-pressed",
+        state.isShuffling === true ? "true" : "false",
+      );
+      shuffleButton.setAttribute("aria-label", shuffleLabel);
+      shuffleButton.title = shuffleLabel;
+
+      const repeatMode = state.repeatMode ?? "off";
+      const repeatLabel = getRepeatLabel(repeatMode);
+      setButtonSvgIcon(repeatButton, getRepeatIconTemplate(repeatMode));
+      repeatButton.classList.toggle("active", repeatMode !== "off");
+      repeatButton.setAttribute(
+        "aria-pressed",
+        repeatMode !== "off" ? "true" : "false",
+      );
+      repeatButton.setAttribute("aria-label", repeatLabel);
+      repeatButton.title = repeatLabel;
+    } else {
+      artwork.classList.add("is-hidden");
+      controls.classList.add("is-hidden");
+      progressSlot.classList.add("is-hidden");
+      if (snapshot.error === "No YTM tab") {
+        title.textContent = "YouTube Music not found";
+        artist.textContent = "Open YTM to get started";
+      } else {
+        title.textContent = "No music playing";
+        artist.textContent = "Waiting for playback...";
+      }
+    }
   };
 
-  update();
-  const pollId = window.setInterval(update, PLAYBACK_STATE_POLL_INTERVAL_MS);
+  const unsubscribePlayback = playbackController.subscribe(handleSnapshot);
+  playbackController.start();
   return () => {
+    unsubscribePlayback();
+    playbackController.destroy();
     progressBar.destroy();
-    window.clearInterval(pollId);
   };
 }

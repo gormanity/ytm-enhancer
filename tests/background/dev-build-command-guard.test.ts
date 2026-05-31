@@ -40,7 +40,10 @@ describe("dev build conflict command guards", () => {
       "context.ytm.getPlaybackState()",
     );
     expect(playbackControlsModuleSource).toContain(
-      "context.ytm.executePlaybackAction(action)",
+      "createYtmPlaybackDriver(context.ytm)",
+    );
+    expect(playbackControlsModuleSource).toContain(
+      "playbackController.executeAction(action)",
     );
     expect(handlerBody("focus-ytm-tab")).toContain(
       "ytm.focusTab(requestedTabId)",
