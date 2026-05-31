@@ -92,7 +92,29 @@ describe("registerModuleHotkeys", () => {
 
     registerModuleHotkeys(ctx, [module], registry);
 
-    expect(module.registerHotkeys).toHaveBeenCalledWith(registry, ctx);
+    expect(module.registerHotkeys).toHaveBeenCalledWith(
+      expect.objectContaining({ register: expect.any(Function) }),
+      ctx,
+    );
+  });
+
+  it("should annotate hotkey registrations with the owning module", async () => {
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
+    const registry = { register: vi.fn() };
+    const handler = vi.fn();
+    const module = {
+      ...createMockModule("test"),
+      registerHotkeys: vi.fn((hotkeys) => {
+        hotkeys.register("test-command", handler);
+      }),
+    };
+
+    registerModuleHotkeys(ctx, [module], registry);
+
+    expect(registry.register).toHaveBeenCalledWith("test-command", handler, {
+      moduleId: "test",
+      moduleName: "Module test",
+    });
   });
 });
 

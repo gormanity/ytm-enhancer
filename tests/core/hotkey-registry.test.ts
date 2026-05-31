@@ -49,4 +49,30 @@ describe("HotkeyRegistry", () => {
 
     expect(handler).toHaveBeenCalledWith("next-track");
   });
+
+  it("should list registered commands with module ownership metadata", () => {
+    const registry = new HotkeyRegistry();
+
+    registry.register("play-pause", vi.fn(), {
+      moduleId: "playback-controls",
+      moduleName: "Playback Controls",
+    });
+    registry.register("remind-me", vi.fn(), {
+      moduleId: "notifications",
+      moduleName: "Notifications",
+    });
+
+    expect(registry.listRegistrations()).toEqual([
+      {
+        command: "play-pause",
+        moduleId: "playback-controls",
+        moduleName: "Playback Controls",
+      },
+      {
+        command: "remind-me",
+        moduleId: "notifications",
+        moduleName: "Notifications",
+      },
+    ]);
+  });
 });

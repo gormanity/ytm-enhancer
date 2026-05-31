@@ -102,6 +102,7 @@ describe("createHotkeysPopupView", () => {
     const commands = {
       canEdit: () => false,
       getAll: vi.fn().mockResolvedValue([]),
+      getRegisteredCommands: vi.fn().mockResolvedValue([]),
       update: vi.fn().mockResolvedValue(undefined),
       reset: vi.fn().mockResolvedValue(undefined),
       openShortcutsPage,
@@ -119,6 +120,93 @@ describe("createHotkeysPopupView", () => {
       expect(commands.getAll).toHaveBeenCalled();
       expect(openShortcutsPage).toHaveBeenCalled();
     });
+  });
+
+  it("groups shortcut rows by the module that registered each hotkey", async () => {
+    const commands = {
+      canEdit: () => false,
+      getAll: vi.fn().mockResolvedValue([
+        {
+          name: "remind-me",
+          shortcut: "Alt+Shift+R",
+          description: "Show a notification with the current track",
+        },
+        {
+          name: "next-track",
+          shortcut: "Alt+Shift+N",
+          description: "Skip to the next track",
+        },
+        {
+          name: "focus-ytm-tab",
+          shortcut: "Alt+Shift+Y",
+          description: "Focus the YouTube Music tab",
+        },
+        {
+          name: "play-pause",
+          shortcut: "Alt+Shift+P",
+          description: "Play/pause the current track",
+        },
+      ]),
+      getRegisteredCommands: vi.fn().mockResolvedValue([
+        {
+          command: "play-pause",
+          moduleId: "playback-controls",
+          moduleName: "Playback Controls",
+        },
+        {
+          command: "next-track",
+          moduleId: "playback-controls",
+          moduleName: "Playback Controls",
+        },
+        {
+          command: "focus-ytm-tab",
+          moduleId: "hotkeys",
+          moduleName: "Hotkeys",
+        },
+        {
+          command: "remind-me",
+          moduleId: "notifications",
+          moduleName: "Notifications",
+        },
+      ]),
+      update: vi.fn().mockResolvedValue(undefined),
+      reset: vi.fn().mockResolvedValue(undefined),
+      openShortcutsPage: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const view = createHotkeysPopupView(createTestModuleContext({ commands }));
+    const container = document.createElement("div");
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const headings = Array.from(
+        container.querySelectorAll<HTMLElement>(".shortcut-group-title"),
+      ).map((el) => el.textContent);
+      expect(headings).toEqual([
+        "Playback Controls",
+        "Hotkeys",
+        "Notifications",
+      ]);
+    });
+
+    const groups = Array.from(
+      container.querySelectorAll<HTMLElement>(".shortcut-group"),
+    );
+    expect(
+      Array.from(groups[0].querySelectorAll<HTMLElement>(".shortcut-label")).map(
+        (el) => el.textContent,
+      ),
+    ).toEqual(["Play/pause the current track", "Skip to the next track"]);
+    expect(
+      Array.from(groups[1].querySelectorAll<HTMLElement>(".shortcut-label")).map(
+        (el) => el.textContent,
+      ),
+    ).toEqual(["Focus the YouTube Music tab"]);
+    expect(
+      Array.from(groups[2].querySelectorAll<HTMLElement>(".shortcut-label")).map(
+        (el) => el.textContent,
+      ),
+    ).toEqual(["Show a notification with the current track"]);
   });
 
   describe("modifier display on macOS", () => {
