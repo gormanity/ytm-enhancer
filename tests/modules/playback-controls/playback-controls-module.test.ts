@@ -61,8 +61,18 @@ describe("PlaybackControlsModule", () => {
 
   it("should register playback command hotkeys through the module registry", async () => {
     const executePlaybackAction = vi.fn().mockResolvedValue(undefined);
+    const getPlaybackState = vi.fn().mockResolvedValue({
+      title: "Track A",
+      artist: "Artist A",
+      album: null,
+      year: null,
+      artworkUrl: null,
+      isPlaying: false,
+      progress: 0,
+      duration: 0,
+    });
     const context = createTestModuleContext({
-      ytm: { executePlaybackAction },
+      ytm: { executePlaybackAction, getPlaybackState },
     });
     const registry: TestHotkeyRegistry = { register: vi.fn() };
 
@@ -88,5 +98,8 @@ describe("PlaybackControlsModule", () => {
     expect(executePlaybackAction).toHaveBeenNthCalledWith(1, "togglePlay");
     expect(executePlaybackAction).toHaveBeenNthCalledWith(2, "next");
     expect(executePlaybackAction).toHaveBeenNthCalledWith(3, "previous");
+    await vi.waitFor(() => {
+      expect(getPlaybackState).toHaveBeenCalledTimes(3);
+    });
   });
 });

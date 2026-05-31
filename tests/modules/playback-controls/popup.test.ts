@@ -516,6 +516,62 @@ describe("playback controls popup view", () => {
     cleanup?.();
   });
 
+  it("refreshes now-playing state immediately after playback actions", async () => {
+    const executePlaybackAction = vi.fn().mockResolvedValue(undefined);
+    const getPlaybackState = vi
+      .fn()
+      .mockResolvedValueOnce({
+        title: "Track A",
+        artist: "Artist A",
+        album: null,
+        year: null,
+        artworkUrl: null,
+        isPlaying: false,
+        progress: 0,
+        duration: 0,
+      })
+      .mockResolvedValueOnce({
+        title: "Track A",
+        artist: "Artist A",
+        album: null,
+        year: null,
+        artworkUrl: null,
+        isPlaying: true,
+        progress: 1,
+        duration: 200,
+      });
+    const view = createPlaybackControlsPopupView(
+      createModuleContext({
+        listTabs: vi.fn().mockResolvedValue({ tabs: [], selectedTabId: null }),
+        getPlaybackState,
+        executePlaybackAction,
+      }),
+    );
+    const container = document.createElement("div");
+    const cleanup = view.render(container);
+
+    const playButton = await vi.waitFor(() => {
+      const button = container.querySelector<HTMLButtonElement>(
+        '[data-role="quick-now-playing-play"]',
+      );
+      expect(button).not.toBeNull();
+      expect(getPlaybackState).toHaveBeenCalledTimes(1);
+      return button!;
+    });
+
+    playButton.click();
+
+    await vi.waitFor(
+      () => {
+        expect(executePlaybackAction).toHaveBeenCalledWith("togglePlay");
+        expect(getPlaybackState).toHaveBeenCalledTimes(2);
+      },
+      { timeout: 50 },
+    );
+
+    cleanup?.();
+  });
+
   it("distributes now-playing controls across the seek bar width", () => {
     expect(POPUP_CSS).toContain(
       "grid-template-columns: repeat(5, minmax(0, 1fr));",
