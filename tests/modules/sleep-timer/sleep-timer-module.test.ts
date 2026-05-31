@@ -119,7 +119,11 @@ describe("SleepTimerModule", () => {
 
   it("should register its alarm handler with the module alarm registry", async () => {
     const ytm = createYtmClient();
-    const context = createExtensionContext({ ytm });
+    const notifications = {
+      create: vi.fn().mockResolvedValue("sleep-timer"),
+      clear: vi.fn().mockResolvedValue(true),
+    };
+    const context = { ...createExtensionContext({ ytm }), notifications };
     module.init(context);
     const registry = { register: vi.fn() };
 
@@ -136,5 +140,9 @@ describe("SleepTimerModule", () => {
     await handler({ name: "sleep-timer" });
 
     expect(ytm.executePlaybackAction).toHaveBeenCalledWith("pause");
+    expect(notifications.create).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Sleep Timer" }),
+    );
+    expect(chrome.notifications.create).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,17 @@ interface TestHotkeyModule {
   registerHotkeys?(registry: TestHotkeyRegistry, context: ModuleContext): void;
 }
 
+interface TestNotificationClickRegistry {
+  register: ReturnType<typeof vi.fn>;
+}
+
+interface TestNotificationClickModule {
+  registerNotificationClicks?(
+    registry: TestNotificationClickRegistry,
+    context: ModuleContext,
+  ): void;
+}
+
 function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
   return {
     title: "Song Title",
@@ -160,6 +171,26 @@ describe("NotificationsModule", () => {
       },
       expect.any(Function),
     );
+  });
+
+  it("should use the injected notification client when track changes", () => {
+    const notifications = {
+      create: vi.fn().mockResolvedValue(NOTIFICATION_ID),
+      clear: vi.fn().mockResolvedValue(true),
+    };
+    const context = { ...createModuleContext(), notifications };
+    module.init(context);
+
+    module.handleTrackChange(makeState({ title: "Injected Client Song" }));
+    flushNotificationDelay();
+
+    expect(notifications.clear).toHaveBeenCalledWith(NOTIFICATION_ID);
+    expect(notifications.create).toHaveBeenCalledWith(
+      NOTIFICATION_ID,
+      expect.objectContaining({ title: "Injected Client Song" }),
+    );
+    expect(createMock).not.toHaveBeenCalled();
+    expect(clearMock).not.toHaveBeenCalled();
   });
 
   it("should mark notifications silent so the OS does not chime each track", () => {
@@ -677,67 +708,74 @@ describe("NotificationsModule", () => {
   });
 
   describe("click-to-focus", () => {
-    it("should register an onClicked listener during init", () => {
-      module.init(createModuleContext());
-      expect(onClickedAddListener).toHaveBeenCalledWith(expect.any(Function));
-    });
-
-    it("should remove the onClicked listener on destroy", () => {
-      module.init(createModuleContext());
-      const listener = onClickedAddListener.mock.calls[0][0];
-      module.destroy();
-      expect(onClickedRemoveListener).toHaveBeenCalledWith(listener);
-    });
-
-    it("should focus the YTM tab through context when our notification is clicked", async () => {
+    it("should register a module-owned notification click handler", async () => {
       const focusTab = vi.fn().mockResolvedValue(undefined);
-      module.init(createModuleContext({ focusTab }));
-      const listener = onClickedAddListener.mock.calls[0][0] as (
-        id: string,
-      ) => void;
+      const notifications = {
+        create: vi.fn().mockResolvedValue(NOTIFICATION_ID),
+        clear: vi.fn().mockResolvedValue(true),
+      };
+      const context = { ...createModuleContext({ focusTab }), notifications };
+      const registry: TestNotificationClickRegistry = { register: vi.fn() };
 
-      listener(NOTIFICATION_ID);
+      (module as TestNotificationClickModule).registerNotificationClicks?.(
+        registry,
+        context,
+      );
+
+      expect(registry.register).toHaveBeenCalledWith(
+        NOTIFICATION_ID,
+        expect.any(Function),
+      );
+
+      const handler = registry.register.mock.calls[0]?.[1] as (
+        id: string,
+      ) => Promise<void>;
+
+      await handler(NOTIFICATION_ID);
+
+      expect(notifications.clear).toHaveBeenCalledWith(NOTIFICATION_ID);
       await vi.waitFor(() => {
         expect(focusTab).toHaveBeenCalled();
       });
     });
 
     it("should clear the notification after click so the toast disappears", async () => {
-      module.init(createModuleContext());
-      const listener = onClickedAddListener.mock.calls[0][0] as (
+      const notifications = {
+        create: vi.fn().mockResolvedValue(NOTIFICATION_ID),
+        clear: vi.fn().mockResolvedValue(true),
+      };
+      const context = { ...createModuleContext(), notifications };
+      const registry: TestNotificationClickRegistry = { register: vi.fn() };
+
+      (module as TestNotificationClickModule).registerNotificationClicks?.(
+        registry,
+        context,
+      );
+
+      const handler = registry.register.mock.calls[0]?.[1] as (
         id: string,
-      ) => void;
-      clearMock.mockClear();
+      ) => Promise<void>;
 
-      listener(NOTIFICATION_ID);
-      await vi.waitFor(() => {
-        expect(clearMock).toHaveBeenCalledWith(NOTIFICATION_ID);
-      });
-    });
+      await handler(NOTIFICATION_ID);
 
-    it("should ignore clicks for unrelated notification ids", () => {
-      const focusTab = vi.fn();
-      module.init(createModuleContext({ focusTab }));
-      const listener = onClickedAddListener.mock.calls[0][0] as (
-        id: string,
-      ) => void;
-
-      listener("some-other-notification");
-
-      expect(focusTab).not.toHaveBeenCalled();
-      expect(tabsQuery).not.toHaveBeenCalled();
-      expect(tabsUpdate).not.toHaveBeenCalled();
-      expect(windowsUpdate).not.toHaveBeenCalled();
+      expect(notifications.clear).toHaveBeenCalledWith(NOTIFICATION_ID);
     });
 
     it("should ignore focus failures from the context YTM client", async () => {
       const focusTab = vi.fn().mockRejectedValue(new Error("No YTM tab"));
-      module.init(createModuleContext({ focusTab }));
-      const listener = onClickedAddListener.mock.calls[0][0] as (
-        id: string,
-      ) => void;
+      const context = createModuleContext({ focusTab });
+      const registry: TestNotificationClickRegistry = { register: vi.fn() };
 
-      listener(NOTIFICATION_ID);
+      (module as TestNotificationClickModule).registerNotificationClicks?.(
+        registry,
+        context,
+      );
+
+      const handler = registry.register.mock.calls[0]?.[1] as (
+        id: string,
+      ) => Promise<void>;
+
+      await handler(NOTIFICATION_ID);
       await vi.waitFor(() => {
         expect(focusTab).toHaveBeenCalled();
       });
