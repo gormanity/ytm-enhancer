@@ -82,4 +82,16 @@ describe("module popup boundaries", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("does not call raw alarm APIs from feature modules", () => {
+    const offenders = moduleSources
+      .map((path) => ({
+        path: relative(process.cwd(), path),
+        source: readFileSync(path, "utf-8"),
+      }))
+      .filter(({ source }) => source.includes("chrome.alarms"))
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+  });
 });

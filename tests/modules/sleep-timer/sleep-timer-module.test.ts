@@ -74,9 +74,14 @@ describe("SleepTimerModule", () => {
 
   it("should register timer handlers and persist starts", async () => {
     const state = { saveValue: vi.fn().mockResolvedValue(undefined) };
+    const alarms = {
+      create: vi.fn().mockResolvedValue(undefined),
+      clear: vi.fn().mockResolvedValue(true),
+    };
     const context = createExtensionContext({
       ytm: createYtmClient(),
       state,
+      alarms,
     });
     module.init(context);
     const handlers = new Map<
@@ -98,10 +103,11 @@ describe("SleepTimerModule", () => {
       {},
     )) as MessageResponse;
 
-    expect(chrome.alarms.create).toHaveBeenCalledWith(
+    expect(alarms.create).toHaveBeenCalledWith(
       "sleep-timer",
       expect.objectContaining({ when: expect.any(Number) }),
     );
+    expect(chrome.alarms.create).not.toHaveBeenCalled();
     expect(state.saveValue).toHaveBeenCalledWith(
       "sleep-timer.endAt",
       expect.any(Number),
@@ -109,5 +115,26 @@ describe("SleepTimerModule", () => {
     expect(
       stateResponse.ok && (stateResponse.data as { active: boolean }).active,
     ).toBe(true);
+  });
+
+  it("should register its alarm handler with the module alarm registry", async () => {
+    const ytm = createYtmClient();
+    const context = createExtensionContext({ ytm });
+    module.init(context);
+    const registry = { register: vi.fn() };
+
+    module.registerAlarms?.(registry, context);
+
+    expect(registry.register).toHaveBeenCalledWith(
+      "sleep-timer",
+      expect.any(Function),
+    );
+
+    const handler = registry.register.mock.calls[0]?.[1] as (alarm: {
+      name: string;
+    }) => Promise<void>;
+    await handler({ name: "sleep-timer" });
+
+    expect(ytm.executePlaybackAction).toHaveBeenCalledWith("pause");
   });
 });

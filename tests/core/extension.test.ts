@@ -4,6 +4,7 @@ import {
   initializeModules,
   registerModuleHandlers,
   registerModuleHotkeys,
+  registerModuleAlarms,
 } from "@/core/extension";
 import type { FeatureModule, PopupView, ModuleContext } from "@/core/types";
 import type { YtmRuntimeClient } from "@/core/ytm-client";
@@ -90,6 +91,21 @@ describe("registerModuleHotkeys", () => {
     registerModuleHotkeys(ctx, [module], registry);
 
     expect(module.registerHotkeys).toHaveBeenCalledWith(registry, ctx);
+  });
+});
+
+describe("registerModuleAlarms", () => {
+  it("should register alarm handlers owned by modules", async () => {
+    const ctx = createExtensionContext({ ytm: createMockYtmClient() });
+    const registry = { register: vi.fn() };
+    const module = {
+      ...createMockModule("test"),
+      registerAlarms: vi.fn(),
+    };
+
+    registerModuleAlarms(ctx, [module], registry);
+
+    expect(module.registerAlarms).toHaveBeenCalledWith(registry, ctx);
   });
 });
 
