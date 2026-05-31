@@ -159,6 +159,8 @@ Use the module-facing runtime API for module work:
   background handlers.
 - Use `context.storage` only for popup-local UI persistence that is not module
   runtime state.
+- Use injected core browser clients, such as `createDocumentPipClient()`, for
+  content-side module controllers that cannot receive `ModuleContext`.
 
 See [docs/module-api.md](docs/module-api.md) for the full module API reference.
 

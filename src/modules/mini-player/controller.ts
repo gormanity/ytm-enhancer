@@ -6,6 +6,10 @@ import { PipButton } from "./pip-button";
 import { PipWindowRenderer } from "./renderer";
 import { VideoPipFallback } from "./video-fallback";
 import { debug } from "@/core/logger";
+import {
+  createDocumentPipClient,
+  type DocumentPipClient,
+} from "@/core/document-pip";
 import { createRuntimeClient, type RuntimeClient } from "@/core/messaging";
 import {
   addRuntimeMessageListener,
@@ -15,10 +19,6 @@ import {
 const POLL_INTERVAL_MS = 1000;
 const DOCUMENT_PIP_WIDTH = 480;
 const DOCUMENT_PIP_HEIGHT = 180;
-
-function hasDocumentPipSupport(): boolean {
-  return typeof documentPictureInPicture !== "undefined";
-}
 
 export class MiniPlayerController {
   private adapter = new YTMAdapter();
@@ -33,21 +33,24 @@ export class MiniPlayerController {
   private enabled = false;
   private documentPipOpen = false;
   private runtime: RuntimeClient;
+  private documentPip: DocumentPipClient;
   private messageListener: (message: { type: string; data?: unknown }) => void;
 
   constructor(
     overlayManager?: VisualizerOverlayManager,
     runtime: RuntimeClient = createRuntimeClient(),
+    documentPip: DocumentPipClient = createDocumentPipClient(),
   ) {
     this.overlayManager = overlayManager ?? null;
     this.runtime = runtime;
+    this.documentPip = documentPip;
     this.messageListener = (message) => {
       if (message.type !== "set-mini-player-enabled") return;
       const newEnabled = message.data === true;
       if (newEnabled === this.enabled) return;
 
       this.enabled = newEnabled;
-      if (newEnabled && hasDocumentPipSupport()) {
+      if (newEnabled && this.documentPip.isSupported()) {
         this.tryInjectButton();
       } else {
         this.pipButton.remove();
@@ -60,7 +63,7 @@ export class MiniPlayerController {
   async init(): Promise<void> {
     addRuntimeMessageListener(this.messageListener);
     this.enabled = await this.queryEnabled();
-    if (!this.enabled || !hasDocumentPipSupport()) return;
+    if (!this.enabled || !this.documentPip.isSupported()) return;
 
     this.tryInjectButton();
   }
@@ -135,10 +138,10 @@ export class MiniPlayerController {
   }
 
   private async openDocumentPip(): Promise<boolean> {
-    if (!hasDocumentPipSupport()) return false;
+    if (!this.documentPip.isSupported()) return false;
 
     try {
-      const pipWindow = await documentPictureInPicture.requestWindow({
+      const pipWindow = await this.documentPip.requestWindow({
         width: DOCUMENT_PIP_WIDTH,
         height: DOCUMENT_PIP_HEIGHT,
       });

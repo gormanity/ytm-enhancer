@@ -8,6 +8,7 @@ export { createMessageSender, createMessageHandler } from "./messaging";
 export { createRuntimeClient } from "./messaging";
 export { ActionExecutor } from "./actions";
 export { AlarmRegistry, createAlarmSchedulerClient } from "./alarm-registry";
+export { createDocumentPipClient } from "./document-pip";
 export {
   NotificationClickRegistry,
   createNotificationClient,
@@ -53,6 +54,10 @@ export type {
   SendOptions,
 } from "./messaging";
 export type { Capabilities, BrowserRuntime } from "./capabilities";
+export type {
+  DocumentPipClient,
+  DocumentPipWindowRequest,
+} from "./document-pip";
 export type {
   YtmRuntimeClient,
   YtmRuntimeClientOptions,

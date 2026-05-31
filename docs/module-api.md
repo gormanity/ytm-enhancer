@@ -12,7 +12,8 @@ The API has six layers:
 4. `AlarmRegistry` defines browser alarm dispatch owned by modules.
 5. `NotificationClickRegistry` defines notification click dispatch owned by
    modules.
-6. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
+6. Browser capability clients define typed access for content-side browser APIs.
+7. Popup helpers in `src/popup/module-ui.ts` define shared control wiring.
 
 ## Module Lifecycle
 
@@ -312,6 +313,32 @@ function from the popup view cleanup path when a view installs a listener.
 Content-side module controllers that cannot receive `ModuleContext` should
 accept an injected `RuntimeClient`, defaulting to `createRuntimeClient()`,
 instead of calling `chrome.runtime.sendMessage()` directly.
+
+## Browser Capability Clients
+
+Content-side module controllers should use injected core clients for browser
+APIs when `ModuleContext` is unavailable.
+
+`DocumentPipClient` lives in `src/core/document-pip.ts`.
+
+```typescript
+export interface DocumentPipClient {
+  isSupported(): boolean;
+  requestWindow(options?: DocumentPipWindowRequest): Promise<Window>;
+}
+```
+
+Use it instead of calling `documentPictureInPicture` directly from module code.
+
+```typescript
+constructor(
+  runtime: RuntimeClient = createRuntimeClient(),
+  documentPip: DocumentPipClient = createDocumentPipClient(),
+) {
+  this.runtime = runtime;
+  this.documentPip = documentPip;
+}
+```
 
 ### `extension`
 
