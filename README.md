@@ -31,30 +31,50 @@ fully-featured listening experience, this extension is for you.
 
 - Adds missing quality-of-life features from other media players
 - Improves daily listening flow with fewer clicks and better controls
-- Keep YouTube Music in your browser - without compromises
+- Keeps YouTube Music in your browser without replacing the native app
 - Manage multiple YouTube Music tabs, effortlessly switching and controlling
   playback
 - Private by design: no analytics, no tracking, and no external backend
   services.
 - Supports all major browsers: Chrome, Edge, and Firefox
 
-## Current Modules
+## Install
 
-| Feature                                                                                          | Why You Want It                                                                  |
-| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| <img src="src/assets/module-icons/quick-settings.svg" width="18" alt="" /> **Playback Controls** | Control playback, switch tabs, and manage now playing from one panel.            |
-| <img src="src/assets/module-icons/auto-play.svg" width="18" alt="" /> **Auto Play**              | Open YouTube Music and have playback start automatically when you are ready.     |
-| <img src="src/assets/module-icons/auto-skip.svg" width="18" alt="" /> **Auto Skip Disliked**     | Automatically skip disliked tracks so your playlists stay great start to finish. |
-| <img src="src/assets/module-icons/visualizer.svg" width="18" alt="" /> **Audio Visualizer**      | Add responsive visualizer overlays and tune the look to match your setup.        |
-| <img src="src/assets/module-icons/hotkeys.svg" width="18" alt="" /> **Hotkeys**                  | Control playback from any app or jump back to YouTube Music instantly.           |
-| <img src="src/assets/module-icons/mini-player.svg" width="18" alt="" /> **Mini Player**          | Keep controls and now playing visible in a compact PiP view while multitasking.  |
-| <img src="src/assets/module-icons/notifications.svg" width="18" alt="" /> **Notifications**      | Get desktop updates on track changes and playback resumption with custom detail. |
-| <img src="src/assets/module-icons/sleep-timer.svg" width="18" alt="" /> **Sleep Timer**          | Stop playback by duration or clock time so your queue does not run all night.    |
+Install YTM Enhancer from your browser's extension store:
 
-## Installation
+| Browser | Store                                                                                                                     |
+| ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Chrome  | [Chrome Web Store](https://chromewebstore.google.com/detail/ytm-enhancer/bilcedjabgiedoamakekncokccabdccp)                |
+| Edge    | [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/ytm-enhancer/gamefnibdabclmkngggcjghpbhjmajkm) |
+| Firefox | [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ytm-enhancer/)                                           |
 
-YTM Enhancer currently installs from source (manual load). Browser web store
-listings are coming soon.
+## Feature Highlights
+
+| Feature                                                                                             | Why You Want It                                                                                                         |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| <img src="src/assets/module-icons/playback-controls.svg" width="18" alt="" /> **Playback Controls** | Control playback, switch YTM tabs, seek, adjust volume, change speed/quality, and toggle shuffle/repeat from one panel. |
+| <img src="src/assets/module-icons/auto-play.svg" width="18" alt="" /> **Auto Play**                 | Open YouTube Music and have playback start automatically when browser policy allows it.                                 |
+| <img src="src/assets/module-icons/auto-skip.svg" width="18" alt="" /> **Auto Skip Disliked**        | Automatically skip disliked tracks so your playlists stay great start to finish.                                        |
+| <img src="src/assets/module-icons/visualizer.svg" width="18" alt="" /> **Audio Visualizer**         | Add responsive visualizer overlays and tune style, color, surface, and intensity.                                       |
+| <img src="src/assets/module-icons/hotkeys.svg" width="18" alt="" /> **Hotkeys**                     | Control playback, focus YouTube Music, or trigger module actions from any app.                                          |
+| <img src="src/assets/module-icons/mini-player.svg" width="18" alt="" /> **Mini Player**             | Open a compact Picture-in-Picture control window while multitasking.                                                    |
+| <img src="src/assets/module-icons/notifications.svg" width="18" alt="" /> **Notifications**         | Get desktop updates on track changes and playback resumption with custom detail.                                        |
+| <img src="src/assets/module-icons/sleep-timer.svg" width="18" alt="" /> **Sleep Timer**             | Stop playback by duration or clock time so your queue does not run all night.                                           |
+| <img src="src/assets/module-icons/about.svg" width="18" alt="" /> **About**                         | Find version details, support links, privacy information, and store pages.                                              |
+
+## Browser Compatibility Notes
+
+Mini Player's extension PiP window depends on the experimental
+[Document Picture-in-Picture API](https://developer.mozilla.org/en-US/docs/Web/API/Document_Picture-in-Picture_API).
+When that API is unavailable, YTM Enhancer disables the extension PiP controls
+or falls back to native video PiP where practical.
+
+Firefox users may need to enable `dom.documentpip.enabled` from `about:config`
+before the full Mini Player experience is available.
+
+## Manual Developer Load
+
+Use manual loading when developing or testing a local build.
 
 ### Prerequisites
 
@@ -105,14 +125,6 @@ listings are coming soon.
 
 </details>
 
-### Browser Compatibility Notes
-
-Mini Player depends on the experimental
-[Document Picture-in-Picture API](https://developer.mozilla.org/en-US/docs/Web/API/Document_Picture-in-Picture_API).
-MDN lists experimental Firefox support beginning in Firefox 151. Firefox users
-must enable `dom.documentpip.enabled` from `about:config` before Mini Player is
-available.
-
 ## Privacy
 
 YTM Enhancer is private by design. It has no analytics, no tracking, and no
@@ -135,29 +147,47 @@ privacy guarantees.
 
 ## Development
 
-YTM Enhancer is actively developed and already includes a broad module set.
+YTM Enhancer is built as a modular WebExtension. New feature work should live in
+module-owned code and use the shared runtime APIs and popup UI helpers.
 
-The architecture is designed so new features can be added as modules without
-rewriting existing modules.
+Start with:
 
-### Contributing
+- [PROJECT.md](PROJECT.md) for project architecture, scope, and design
+  principles
+- [CONTRIBUTING.md](CONTRIBUTING.md) for contribution workflow
+- [docs/module-api.md](docs/module-api.md) for module runtime APIs
+- [docs/shared-ui.md](docs/shared-ui.md) for popup bindings and shared UI
+  components
+- [docs/hotkeys.md](docs/hotkeys.md) for module-owned shortcut registration
 
-Contributions are encouraged.
+### Common Commands
 
-If you want to help:
+| Task                          | Command              |
+| ----------------------------- | -------------------- |
+| Install dependencies          | `pnpm install`       |
+| Format                        | `pnpm run format`    |
+| Lint                          | `pnpm run lint`      |
+| Typecheck                     | `pnpm run typecheck` |
+| Test                          | `pnpm run test`      |
+| CI-equivalent check           | `pnpm run check`     |
+| Dev build for local optesting | `pnpm run dev:build` |
+| Production build              | `pnpm run build`     |
+| Package store zips            | `pnpm run package`   |
 
-- Open an issue for bugs, UX problems, or feature requests.
-- Open a PR for fixes and improvements.
-
-See [CONTRIBUTING.md](/CONTRIBUTING.md) for details on the module contribution
-workflow.
-
-### Development Builds
+### Watch Builds
 
 - Chrome watch build: `pnpm run dev:chrome`
 - Edge watch build: `pnpm run dev:edge`
 - Firefox watch build: `pnpm run dev:firefox`
 
-### License
+### Contributing
+
+Contributions are encouraged. Open an issue for bugs, UX problems, or feature
+requests, or open a focused PR with tests and verification notes.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details on the module contribution
+workflow.
+
+## License
 
 MIT. See [LICENSE](LICENSE).
