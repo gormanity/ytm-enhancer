@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createTestModuleContext } from "../../helpers/module-context";
 import { PlaybackControlsModule } from "@/modules/playback-controls";
+import type { ModuleContext } from "@/core/types";
+
+interface TestHotkeyRegistry {
+  register: ReturnType<typeof vi.fn>;
+}
+
+interface TestHotkeyModule {
+  registerHotkeys?(registry: TestHotkeyRegistry, context: ModuleContext): void;
+}
 
 describe("PlaybackControlsModule", () => {
   let module: PlaybackControlsModule;
@@ -48,5 +57,36 @@ describe("PlaybackControlsModule", () => {
   it("should init and destroy without errors", () => {
     expect(() => module.init()).not.toThrow();
     expect(() => module.destroy()).not.toThrow();
+  });
+
+  it("should register playback command hotkeys through the module registry", async () => {
+    const executePlaybackAction = vi.fn().mockResolvedValue(undefined);
+    const context = createTestModuleContext({
+      ytm: { executePlaybackAction },
+    });
+    const registry: TestHotkeyRegistry = { register: vi.fn() };
+
+    (module as TestHotkeyModule).registerHotkeys?.(registry, context);
+
+    const handlers = new Map<string, (command: string) => Promise<void>>(
+      registry.register.mock.calls.map(([command, handler]) => [
+        command as string,
+        handler as (command: string) => Promise<void>,
+      ]),
+    );
+
+    expect([...handlers.keys()]).toEqual([
+      "play-pause",
+      "next-track",
+      "previous-track",
+    ]);
+
+    await handlers.get("play-pause")?.("play-pause");
+    await handlers.get("next-track")?.("next-track");
+    await handlers.get("previous-track")?.("previous-track");
+
+    expect(executePlaybackAction).toHaveBeenNthCalledWith(1, "togglePlay");
+    expect(executePlaybackAction).toHaveBeenNthCalledWith(2, "next");
+    expect(executePlaybackAction).toHaveBeenNthCalledWith(3, "previous");
   });
 });

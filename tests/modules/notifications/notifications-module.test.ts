@@ -8,6 +8,14 @@ import { createShortcutCommandClient } from "@/core/commands";
 
 const NOTIFICATION_ID = "ytm-enhancer-now-playing";
 
+interface TestHotkeyRegistry {
+  register: ReturnType<typeof vi.fn>;
+}
+
+interface TestHotkeyModule {
+  registerHotkeys?(registry: TestHotkeyRegistry, context: ModuleContext): void;
+}
+
 function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
   return {
     title: "Song Title",
@@ -564,6 +572,33 @@ describe("NotificationsModule", () => {
   });
 
   describe("showReminder", () => {
+    it("should register the reminder hotkey through the module registry", async () => {
+      const state = makeState({ title: "Reminder Song" });
+      const getPlaybackState = vi.fn().mockResolvedValue(state);
+      const context = createModuleContext({ getPlaybackState });
+      const registry: TestHotkeyRegistry = { register: vi.fn() };
+
+      (module as TestHotkeyModule).registerHotkeys?.(registry, context);
+
+      expect(registry.register).toHaveBeenCalledWith(
+        "remind-me",
+        expect.any(Function),
+      );
+
+      const handler = registry.register.mock.calls[0]?.[1] as
+        | (() => Promise<void>)
+        | undefined;
+      await handler?.();
+      flushNotificationDelay();
+
+      expect(getPlaybackState).toHaveBeenCalled();
+      expect(createMock).toHaveBeenCalledWith(
+        NOTIFICATION_ID,
+        expect.objectContaining({ title: "Reminder Song" }),
+        expect.any(Function),
+      );
+    });
+
     it("should show a notification regardless of enabled state", () => {
       module.setEnabled(false);
 
