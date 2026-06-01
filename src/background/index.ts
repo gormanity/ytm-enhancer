@@ -29,7 +29,10 @@ import {
   updateDevBuildSuspendedTab,
   type DevBuildConflictState,
 } from "./dev-build-conflict";
-import { createDevBuildPresenceCoordinator } from "./dev-build-presence";
+import {
+  createDevBuildPresenceCoordinator,
+  forwardHotkeyCommandToDevBuild,
+} from "./dev-build-presence";
 import { AutoPlayModule } from "@/modules/auto-play";
 import { AutoSkipDislikedModule } from "@/modules/auto-skip-disliked";
 import { AudioVisualizerModule } from "@/modules/audio-visualizer";
@@ -149,6 +152,12 @@ const devBuildPresenceCoordinator = createDevBuildPresenceCoordinator({
   isDevBuild: __DEV__,
   runtime: chrome.runtime,
   onDevPresent: markExternalDevBuildPresent,
+  onForwardedHotkeyCommand: async (command) => {
+    if (!hotkeyRegistry.has(command)) {
+      throw new Error(`Unknown forwarded hotkey command: ${command}`);
+    }
+    await hotkeyRegistry.dispatch(command);
+  },
 });
 
 function isAutoPlayMode(value: unknown): value is AutoPlayMode {
@@ -186,6 +195,21 @@ async function ensureYtmContentScripts(): Promise<void> {
   );
 }
 
+async function handleBrowserCommand(command: string): Promise<void> {
+  if (!__DEV__) {
+    await devBuildPresenceCoordinator.probeDevPresence();
+    if (isDevBuildConflictActive(devBuildConflictState)) {
+      const forwarded = await forwardHotkeyCommandToDevBuild(
+        chrome.runtime,
+        command,
+      );
+      if (forwarded) return;
+    }
+  }
+
+  await hotkeyRegistry.dispatch(command);
+}
+
 registerModuleHotkeys(context, modules, hotkeyRegistry);
 registerModuleAlarms(context, modules, alarmRegistry);
 registerModuleNotificationClicks(context, modules, notificationClickRegistry);
@@ -194,7 +218,7 @@ registerModuleNotificationClicks(context, modules, notificationClickRegistry);
 // synchronously at the top level of the script, during the first turn
 // of the event loop. Registering inside an async init() is too late.
 chrome.commands.onCommand.addListener((command: string) => {
-  void hotkeyRegistry.dispatch(command);
+  void handleBrowserCommand(command);
 });
 
 chrome.runtime.onInstalled.addListener(() => {

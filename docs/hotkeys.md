@@ -42,6 +42,17 @@ Add an entry under `"commands"` in each browser manifest:
 Chrome limits extensions to four keyboard shortcuts by default. Users can assign
 additional shortcuts manually via `chrome://extensions/shortcuts`.
 
+## Dev/Prod Coexistence
+
+Chrome only activates one extension command for a shortcut. If the dev and prod
+builds both claim the same shortcut, one build is left unbound.
+
+To avoid Chrome Sync clearing the production shortcuts on other devices, Chrome
+dev builds remove the manifest `suggested_key` values. Keep the standard
+shortcuts assigned to the production extension. When the dev build is present,
+the production background forwards those command events to the dev build, and
+the dev build dispatches them through the same module hotkey registry.
+
 ### 2. Register a Handler in the Owning Module
 
 In the module that owns the behavior, implement `registerHotkeys()` and call

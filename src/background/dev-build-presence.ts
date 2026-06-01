@@ -1,9 +1,11 @@
 import {
   CHROMIUM_LOCAL_DEV_EXTENSION_ID,
   CHROMIUM_PROD_EXTENSION_IDS,
+  DEV_BUILD_HOTKEY_COMMAND_MESSAGE,
   DEV_BUILD_PING_INTERVAL_MS,
   DEV_BUILD_PRESENCE_MESSAGE,
   DEV_BUILD_PRESENCE_REQUEST_MESSAGE,
+  isDevBuildHotkeyCommandMessage,
   isDevBuildPresenceMessage,
   isDevBuildPresenceRequestMessage,
 } from "@/runtime-messages";
@@ -34,6 +36,7 @@ export interface DevBuildPresenceCoordinatorOptions {
   isDevBuild: boolean;
   runtime: DevBuildPresenceRuntime;
   onDevPresent: () => void | Promise<void>;
+  onForwardedHotkeyCommand?: (command: string) => void | Promise<void>;
   heartbeatMs?: number;
 }
 
@@ -43,10 +46,31 @@ export interface DevBuildPresenceCoordinator {
   registerExternalListener: () => void;
 }
 
+export function forwardHotkeyCommandToDevBuild(
+  runtime: Pick<DevBuildPresenceRuntime, "lastError" | "sendMessage">,
+  command: string,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      runtime.sendMessage(
+        CHROMIUM_LOCAL_DEV_EXTENSION_ID,
+        { type: DEV_BUILD_HOTKEY_COMMAND_MESSAGE, command },
+        (response?: unknown) => {
+          const forwardedResponse = response as { ok?: boolean } | undefined;
+          resolve(!runtime.lastError && forwardedResponse?.ok === true);
+        },
+      );
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
 export function createDevBuildPresenceCoordinator({
   isDevBuild,
   runtime,
   onDevPresent,
+  onForwardedHotkeyCommand,
   heartbeatMs = DEV_BUILD_PING_INTERVAL_MS,
 }: DevBuildPresenceCoordinatorOptions): DevBuildPresenceCoordinator {
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -114,9 +138,42 @@ export function createDevBuildPresenceCoordinator({
           ) {
             return false;
           }
-          if (!isDevBuildPresenceRequestMessage(message)) return false;
 
-          sendResponse({ ok: true });
+          if (isDevBuildPresenceRequestMessage(message)) {
+            sendResponse({ ok: true });
+            return false;
+          }
+
+          if (isDevBuildHotkeyCommandMessage(message)) {
+            if (!onForwardedHotkeyCommand) {
+              sendResponse({ ok: false });
+              return false;
+            }
+
+            let result: void | Promise<void>;
+            try {
+              result = onForwardedHotkeyCommand(message.command);
+            } catch {
+              sendResponse({ ok: false });
+              return false;
+            }
+
+            if (isPromiseLike(result)) {
+              result.then(
+                () => {
+                  sendResponse({ ok: true });
+                },
+                () => {
+                  sendResponse({ ok: false });
+                },
+              );
+              return true;
+            }
+
+            sendResponse({ ok: true });
+            return false;
+          }
+
           return false;
         }
 

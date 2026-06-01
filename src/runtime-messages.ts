@@ -1,6 +1,8 @@
 export const DEV_BUILD_PRESENCE_MESSAGE = "ytm-enhancer:dev-build-presence";
 export const DEV_BUILD_PRESENCE_REQUEST_MESSAGE =
   "ytm-enhancer:get-dev-build-presence";
+export const DEV_BUILD_HOTKEY_COMMAND_MESSAGE =
+  "ytm-enhancer:forward-hotkey-command";
 export const DEV_BUILD_PING_INTERVAL_MS = 1000;
 export const DEV_BUILD_STALE_MS = 3500;
 
@@ -28,6 +30,11 @@ export interface DevBuildPresenceRequestMessage {
   type: typeof DEV_BUILD_PRESENCE_REQUEST_MESSAGE;
 }
 
+export interface DevBuildHotkeyCommandMessage {
+  type: typeof DEV_BUILD_HOTKEY_COMMAND_MESSAGE;
+  command: string;
+}
+
 export function isDevBuildPresenceMessage(
   message: unknown,
 ): message is DevBuildPresenceMessage {
@@ -47,5 +54,18 @@ export function isDevBuildPresenceRequestMessage(
     message !== null &&
     (message as Partial<DevBuildPresenceRequestMessage>).type ===
       DEV_BUILD_PRESENCE_REQUEST_MESSAGE
+  );
+}
+
+export function isDevBuildHotkeyCommandMessage(
+  message: unknown,
+): message is DevBuildHotkeyCommandMessage {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    (message as Partial<DevBuildHotkeyCommandMessage>).type ===
+      DEV_BUILD_HOTKEY_COMMAND_MESSAGE &&
+    typeof (message as Partial<DevBuildHotkeyCommandMessage>).command ===
+      "string"
   );
 }

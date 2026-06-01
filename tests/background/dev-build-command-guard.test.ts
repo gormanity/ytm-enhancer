@@ -53,8 +53,8 @@ describe("dev build conflict command guards", () => {
     expect(backgroundSource).toContain(
       "await devBuildPresenceCoordinator.probeDevPresence()",
     );
-    expect(backgroundSource).toContain(
-      "await forwardHotkeyCommandToDevBuild(chrome.runtime, command)",
+    expect(backgroundSource).toMatch(
+      /await forwardHotkeyCommandToDevBuild\(\s*chrome\.runtime,\s*command,?\s*\)/,
     );
     expect(backgroundSource).toContain("void handleBrowserCommand(command)");
   });
