@@ -11,7 +11,7 @@ const outputDir = resolve(root, "dist", "store-assets");
 const canonicalCopy = resolve(storeDir, "STORE.md");
 
 const ASSET_SIZES = new Map([
-  ["01-quick-settings", { width: 1280, height: 800 }],
+  ["01-playback-controls", { width: 1280, height: 800 }],
   ["02-mini-player", { width: 1280, height: 800 }],
   ["03-visualizer", { width: 1280, height: 800 }],
   ["04-sleep-timer", { width: 1280, height: 800 }],
