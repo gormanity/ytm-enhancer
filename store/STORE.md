@@ -10,13 +10,14 @@ the shared sections unless a browser-specific requirement forces different copy.
 
 ### Detailed Description
 
-YTM Enhancer upgrades YouTube Music in your browser with smarter playback
-controls, automation, notifications, keyboard shortcuts, Picture-in-Picture
-controls, and visual enhancements, without forcing you into a replacement app or
-wrapper.
+YTM Enhancer supercharges YouTube Music to make it the best browser-based media
+player.
 
-If you love YouTube Music but want a more fully featured browser listening
-experience, this extension is for you.
+It upgrades YouTube Music in your browser with smarter controls, automation, and
+visual enhancements, without forcing you into a replacement app or wrapper.
+
+If you love the ubiquity of YouTube Music's service but want a more
+fully-featured listening experience, this extension is for you.
 
 ### Key Features
 
