@@ -46,6 +46,19 @@ describe("dev build conflict command guards", () => {
     );
   });
 
+  it("routes browser commands through dev-build forwarding before local dispatch", () => {
+    expect(backgroundSource).toContain(
+      "async function handleBrowserCommand(command: string)",
+    );
+    expect(backgroundSource).toContain(
+      "await devBuildPresenceCoordinator.probeDevPresence()",
+    );
+    expect(backgroundSource).toContain(
+      "await forwardHotkeyCommandToDevBuild(chrome.runtime, command)",
+    );
+    expect(backgroundSource).toContain("void handleBrowserCommand(command)");
+  });
+
   it("routes direct content queries through the guarded runtime client", () => {
     expect(handlerBody("get-ytm-tab-artwork")).toContain("ytm.getTabArtwork");
     expect(handlerBody("get-stream-quality")).toContain("ytm.getStreamQuality");

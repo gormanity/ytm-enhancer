@@ -4,6 +4,7 @@ import {
   CHROMIUM_LOCAL_DEV_EXTENSION_ID,
   CHROMIUM_LOCAL_PROD_EXTENSION_ID,
   CHROMIUM_STORE_PROD_EXTENSION_ID,
+  DEV_BUILD_HOTKEY_COMMAND_MESSAGE,
   DEV_BUILD_PRESENCE_MESSAGE,
   DEV_BUILD_PRESENCE_REQUEST_MESSAGE,
 } from "@/runtime-messages";
@@ -217,5 +218,35 @@ describe("dev build cross-extension presence coordinator", () => {
         { id: CHROMIUM_STORE_PROD_EXTENSION_ID },
       ),
     ).toEqual({ listenerResult: false, response: { ok: true } });
+  });
+
+  it("dev accepts forwarded hotkey commands only from known production IDs", async () => {
+    const { runtime, dispatchExternal } = createRuntime();
+    const onForwardedHotkeyCommand = vi.fn().mockResolvedValue(undefined);
+    const coordinator = createDevBuildPresenceCoordinator({
+      isDevBuild: true,
+      runtime,
+      onDevPresent: vi.fn(),
+      onForwardedHotkeyCommand,
+    });
+    coordinator.registerExternalListener();
+
+    expect(
+      dispatchExternal(
+        { type: DEV_BUILD_HOTKEY_COMMAND_MESSAGE, command: "play-pause" },
+        { id: "unknown-prod-build" },
+      ),
+    ).toEqual({ listenerResult: false, response: undefined });
+    expect(onForwardedHotkeyCommand).not.toHaveBeenCalled();
+
+    const result = dispatchExternal(
+      { type: DEV_BUILD_HOTKEY_COMMAND_MESSAGE, command: "play-pause" },
+      { id: CHROMIUM_LOCAL_PROD_EXTENSION_ID },
+    );
+
+    expect(result).toEqual({ listenerResult: true, response: undefined });
+    await Promise.resolve();
+    expect(result.response).toEqual({ ok: true });
+    expect(onForwardedHotkeyCommand).toHaveBeenCalledWith("play-pause");
   });
 });

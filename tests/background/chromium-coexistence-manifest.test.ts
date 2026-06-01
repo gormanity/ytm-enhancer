@@ -56,4 +56,54 @@ describe("Chromium coexistence manifest fields", () => {
       },
     });
   });
+
+  it("leaves Chrome dev command shortcuts unbound for prod shortcut forwarding", () => {
+    const devManifest: Record<string, unknown> = {
+      commands: {
+        "play-pause": {
+          suggested_key: {
+            default: "Alt+Shift+P",
+          },
+          description: "Play/pause the current track",
+        },
+        "remind-me": {
+          description: "Show a notification with the current track",
+        },
+      },
+    };
+    const prodManifest: Record<string, unknown> = {
+      commands: {
+        "play-pause": {
+          suggested_key: {
+            default: "Alt+Shift+P",
+          },
+          description: "Play/pause the current track",
+        },
+      },
+    };
+
+    applyChromiumCoexistenceManifestFields(devManifest, "chrome", true);
+    applyChromiumCoexistenceManifestFields(prodManifest, "chrome", false);
+
+    expect(devManifest.commands).toMatchObject({
+      "play-pause": {
+        description: "Play/pause the current track",
+      },
+      "remind-me": {
+        description: "Show a notification with the current track",
+      },
+    });
+    expect(devManifest.commands).not.toMatchObject({
+      "play-pause": {
+        suggested_key: expect.anything(),
+      },
+    });
+    expect(prodManifest.commands).toMatchObject({
+      "play-pause": {
+        suggested_key: {
+          default: "Alt+Shift+P",
+        },
+      },
+    });
+  });
 });
