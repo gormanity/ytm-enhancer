@@ -10,22 +10,24 @@ the shared sections unless a browser-specific requirement forces different copy.
 
 ### Detailed Description
 
-YTM Enhancer upgrades YouTube Music in your browser with smarter controls,
-automation, and visual enhancements, without forcing you into a replacement app
-or wrapper.
+YTM Enhancer upgrades YouTube Music in your browser with smarter playback
+controls, automation, notifications, keyboard shortcuts, Picture-in-Picture
+controls, and visual enhancements, without forcing you into a replacement app or
+wrapper.
 
 If you love YouTube Music but want a more fully featured browser listening
 experience, this extension is for you.
 
 ### Key Features
 
-- Playback Controls: one panel for playback control, tab switching, and now
-  playing details
-- Autoplay: optionally start playback automatically when YouTube Music loads
+- Playback Controls: control playback, switch YouTube Music tabs, seek, adjust
+  volume, change speed/quality, and toggle shuffle/repeat from one panel
+- Auto Play: optionally start playback automatically when YouTube Music loads
 - Auto Skip Disliked: automatically skip disliked tracks when they appear
 - Audio Visualizer: configurable visualizer overlays
-- Hotkeys: playback and focus shortcuts
-- Mini Player: compact Picture-in-Picture controls while multitasking
+- Hotkeys: playback, tab focus, and module action shortcuts
+- Mini Player: compact extension Picture-in-Picture control window while
+  multitasking
 - Notifications: track-change and playback-resumed desktop notifications
 - Sleep Timer: stop playback by duration or clock time
 
@@ -68,8 +70,9 @@ Public URL: `https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md`
 ### Single Purpose Statement
 
 YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` by adding
-optional playback controls, automation features, and interface improvements for
-the browser listening experience.
+optional playback controls, tab switching, automation, notifications, keyboard
+shortcuts, Picture-in-Picture controls, and interface improvements for the
+browser listening experience.
 
 ---
 
@@ -94,8 +97,8 @@ the browser listening experience.
 #### Single Purpose Description
 
 YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` with
-optional playback controls, automation, notifications, keyboard shortcuts, and
-Picture-in-Picture interface improvements.
+optional playback controls, tab switching, automation, notifications, keyboard
+shortcuts, Picture-in-Picture controls, and interface improvements.
 
 #### Permission Justification
 

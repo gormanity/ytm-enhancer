@@ -140,14 +140,29 @@
         background: #0f0f0f;
         border: 1px solid #2a2a2a;
         border-radius: 10px;
-        padding: 16px;
+        padding: 14px 16px;
+      }
+
+      .shortcut-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .shortcut-group-title {
+        color: #aaa;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
       }
 
       .shortcut-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 14px 0;
+        padding: 10px 0;
       }
       .shortcut-row + .shortcut-row {
         border-top: 1px solid #2a2a2a;
@@ -173,13 +188,28 @@
         min-width: 28px;
         text-align: center;
       }
+      .key-muted {
+        color: #aaa;
+        min-width: 52px;
+      }
       .key-sep {
         font-size: 11px;
         color: #666;
       }
 
+      .configure-btn {
+        margin-top: 12px;
+        border-radius: 7px;
+        background: #ff0000;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 10px 14px;
+        text-align: center;
+      }
+
       .shortcuts-hint {
-        margin-top: 20px;
+        margin-top: 16px;
         font-size: 14px;
         color: #aaa;
         line-height: 1.6;
@@ -296,48 +326,63 @@
         </div>
         <h2>Keyboard Shortcuts</h2>
 
-        <div class="settings-card">
-          <div class="shortcut-row">
-            <span class="shortcut-label">Play / Pause</span>
-            <div class="shortcut-keys">
-              <span class="key">Alt</span>
-              <span class="key-sep">+</span>
-              <span class="key">Shift</span>
-              <span class="key-sep">+</span>
-              <span class="key">P</span>
+        <div class="shortcut-groups">
+          <div class="settings-card">
+            <div class="shortcut-group-title">Playback Controls</div>
+            <div class="shortcut-row">
+              <span class="shortcut-label">Play / Pause</span>
+              <div class="shortcut-keys">
+                <span class="key">Alt</span>
+                <span class="key-sep">+</span>
+                <span class="key">Shift</span>
+                <span class="key-sep">+</span>
+                <span class="key">P</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-label">Next Track</span>
+              <div class="shortcut-keys">
+                <span class="key">Alt</span>
+                <span class="key-sep">+</span>
+                <span class="key">Shift</span>
+                <span class="key-sep">+</span>
+                <span class="key">N</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-label">Previous Track</span>
+              <div class="shortcut-keys">
+                <span class="key">Alt</span>
+                <span class="key-sep">+</span>
+                <span class="key">Shift</span>
+                <span class="key-sep">+</span>
+                <span class="key">B</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-label">Focus YTM Tab</span>
+              <div class="shortcut-keys">
+                <span class="key">Alt</span>
+                <span class="key-sep">+</span>
+                <span class="key">Shift</span>
+                <span class="key-sep">+</span>
+                <span class="key">Y</span>
+              </div>
             </div>
           </div>
-          <div class="shortcut-row">
-            <span class="shortcut-label">Next Track</span>
-            <div class="shortcut-keys">
-              <span class="key">Alt</span>
-              <span class="key-sep">+</span>
-              <span class="key">Shift</span>
-              <span class="key-sep">+</span>
-              <span class="key">N</span>
-            </div>
-          </div>
-          <div class="shortcut-row">
-            <span class="shortcut-label">Previous Track</span>
-            <div class="shortcut-keys">
-              <span class="key">Alt</span>
-              <span class="key-sep">+</span>
-              <span class="key">Shift</span>
-              <span class="key-sep">+</span>
-              <span class="key">B</span>
-            </div>
-          </div>
-          <div class="shortcut-row">
-            <span class="shortcut-label">Focus YTM Tab</span>
-            <div class="shortcut-keys">
-              <span class="key">Alt</span>
-              <span class="key-sep">+</span>
-              <span class="key">Shift</span>
-              <span class="key-sep">+</span>
-              <span class="key">Y</span>
+
+          <div class="settings-card">
+            <div class="shortcut-group-title">Notifications</div>
+            <div class="shortcut-row">
+              <span class="shortcut-label">Remind Me</span>
+              <div class="shortcut-keys">
+                <span class="key key-muted">Not set</span>
+              </div>
             </div>
           </div>
         </div>
+
+        <div class="configure-btn">Configure Shortcuts</div>
 
         <div class="shortcuts-hint">
           <strong>Tip:</strong> Shortcuts work globally &mdash; control playback
