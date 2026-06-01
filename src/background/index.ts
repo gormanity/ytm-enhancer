@@ -26,6 +26,7 @@ import {
   isDevBuildConflictActive,
   isActionSuppressedForDevBuildConflict,
   setActionDevBuildConflictIndicator,
+  shouldForwardHotkeyToDevBuild,
   updateDevBuildSuspendedTab,
   type DevBuildConflictState,
 } from "./dev-build-conflict";
@@ -198,7 +199,7 @@ async function ensureYtmContentScripts(): Promise<void> {
 async function handleBrowserCommand(command: string): Promise<void> {
   if (!__DEV__) {
     await devBuildPresenceCoordinator.probeDevPresence();
-    if (isDevBuildConflictActive(devBuildConflictState)) {
+    if (shouldForwardHotkeyToDevBuild(devBuildConflictState, __DEV__)) {
       const forwarded = await forwardHotkeyCommandToDevBuild(
         chrome.runtime,
         command,

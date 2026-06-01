@@ -49,9 +49,11 @@ builds both claim the same shortcut, one build is left unbound.
 
 To avoid Chrome Sync clearing the production shortcuts on other devices, Chrome
 dev builds remove the manifest `suggested_key` values. Keep the standard
-shortcuts assigned to the production extension. When the dev build is present,
-the production background forwards those command events to the dev build, and
-the dev build dispatches them through the same module hotkey registry.
+shortcuts assigned to the production extension. When the production build is in
+its disabled state because the dev build is active, the production background
+forwards those command events to the dev build. The dev build then dispatches
+them through the same module hotkey registry. When production is active, it
+handles its own shortcuts.
 
 ### 2. Register a Handler in the Owning Module
 

@@ -4,6 +4,7 @@ import {
   isActionSuppressedForDevBuildConflict,
   isDevBuildConflictActive,
   setActionDevBuildConflictIndicator,
+  shouldForwardHotkeyToDevBuild,
   updateDevBuildSuspendedTab,
 } from "@/background/dev-build-conflict";
 
@@ -49,6 +50,21 @@ describe("dev build conflict background helpers", () => {
     expect(isDevBuildConflictActive(state)).toBe(true);
     expect(isActionSuppressedForDevBuildConflict(state, undefined)).toBe(true);
     expect(isActionSuppressedForDevBuildConflict(state, 13)).toBe(true);
+  });
+
+  it("forwards hotkeys only when a production build is disabled by dev", () => {
+    const onState = {
+      suspendedTabIds: new Set<number>(),
+      externalDevBuildPresent: false,
+    };
+    const offState = {
+      suspendedTabIds: new Set([12]),
+      externalDevBuildPresent: false,
+    };
+
+    expect(shouldForwardHotkeyToDevBuild(onState, false)).toBe(false);
+    expect(shouldForwardHotkeyToDevBuild(offState, false)).toBe(true);
+    expect(shouldForwardHotkeyToDevBuild(offState, true)).toBe(false);
   });
 
   it("returns normal and disabled action icon paths", () => {

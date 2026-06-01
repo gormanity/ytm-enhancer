@@ -13,6 +13,13 @@ export function isDevBuildConflictActive(
   return state.externalDevBuildPresent || state.suspendedTabIds.size > 0;
 }
 
+export function shouldForwardHotkeyToDevBuild(
+  state: DevBuildConflictState,
+  isDevBuild: boolean,
+): boolean {
+  return !isDevBuild && isDevBuildConflictActive(state);
+}
+
 export function getActionIconPath(disabled: boolean): ActionIconPath {
   return Object.fromEntries(
     ACTION_ICON_SIZES.map((size) => [

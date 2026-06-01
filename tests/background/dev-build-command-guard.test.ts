@@ -53,6 +53,9 @@ describe("dev build conflict command guards", () => {
     expect(backgroundSource).toContain(
       "await devBuildPresenceCoordinator.probeDevPresence()",
     );
+    expect(backgroundSource).toContain(
+      "shouldForwardHotkeyToDevBuild(devBuildConflictState, __DEV__)",
+    );
     expect(backgroundSource).toMatch(
       /await forwardHotkeyCommandToDevBuild\(\s*chrome\.runtime,\s*command,?\s*\)/,
     );
