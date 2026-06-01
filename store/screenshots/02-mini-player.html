@@ -131,70 +131,56 @@
         color: #fab387;
       }
 
-      /* ========================================
-     PiP window — matches actual renderer.ts
-     ======================================== */
+      /* PiP window */
       .pip-window {
         position: absolute;
         bottom: 40px;
         right: 40px;
-        width: 380px;
+        width: 430px;
         height: 170px;
         overflow: hidden;
         border-radius: 8px;
+        background: #000;
         box-shadow:
           0 20px 60px rgba(0, 0, 0, 0.7),
           0 0 0 1px rgba(255, 255, 255, 0.06);
       }
 
-      /* Matches body styling from renderer STYLES */
       .pip-body {
         margin: 0;
-        padding: 10px;
+        padding: 0;
         box-sizing: border-box;
-        background: radial-gradient(circle at 20% -10%, #222 0%, #121212 58%);
+        background: #000;
         color: #fff;
-        font-family: "Roboto", sans-serif;
+        font-family: "Roboto", "YouTube Noto", sans-serif;
         height: 100%;
         overflow: hidden;
         -webkit-font-smoothing: antialiased;
       }
 
-      /* .banner */
-      .pip-banner {
+      .pip {
         display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
+        flex-direction: row;
         height: 100%;
-        border-radius: 11px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.07),
-          rgba(255, 255, 255, 0.03)
-        );
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
-        padding: 8px;
+        padding: 0 10px 0 0;
         box-sizing: border-box;
+        gap: 14px;
+        align-items: stretch;
       }
 
-      /* .artwork-container */
       .pip-artwork-container {
-        width: 72px;
-        height: 72px;
-        flex-shrink: 1;
-        min-width: 0;
-        min-height: 0;
+        height: 100%;
+        aspect-ratio: 1 / 1;
+        max-width: 50%;
+        flex-shrink: 0;
         position: relative;
+        overflow: hidden;
       }
       .pip-artwork {
         width: 100%;
         height: 100%;
-        object-fit: cover;
-        border-radius: 5px;
-        display: block;
-        /* Simulated album art with gradient */
+        display: grid;
+        place-items: center;
         background: linear-gradient(
           135deg,
           #c41010 0%,
@@ -202,123 +188,105 @@
           #ff6060 100%
         );
       }
+      .pip-artwork svg {
+        width: 78px;
+        height: 78px;
+        color: #fff;
+        filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.22));
+      }
 
-      /* .info */
-      .pip-info {
+      .pip-content {
         flex: 1;
         min-width: 0;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        gap: 2px;
+        gap: 10px;
+        padding: 10px 0;
       }
 
-      /* .primary-meta */
-      .pip-primary-meta {
+      .pip-meta {
         display: flex;
         flex-direction: column;
         gap: 2px;
+        margin-right: 20px;
         min-width: 0;
       }
       .pip-title {
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 0.01em;
-        text-align: left;
+        font-size: 20px;
+        font-weight: 700;
+        line-height: 1.2;
         margin: 0;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 100%;
       }
       .pip-artist {
-        font-size: 11px;
-        color: #b7b7b7;
-        text-align: left;
+        font-size: 14px;
+        color: #aaa;
+        line-height: 1.25;
         margin: 0;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 100%;
       }
       .pip-album {
-        font-size: 10px;
-        color: #919191;
-        text-align: left;
+        font-size: 12px;
+        color: #717171;
+        line-height: 1.25;
         margin: 0;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 100%;
       }
 
-      /* .progress-container */
       .pip-progress-container {
         width: 100%;
-        margin: 3px 0 0;
+        margin: 0;
         flex-shrink: 0;
       }
       .pip-progress-bar {
         width: 100%;
-        height: 3px;
-        background: rgba(255, 255, 255, 0.17);
-        border-radius: 999px;
+        height: 5px;
+        background: #333;
+        border-radius: 3px;
         position: relative;
-        padding: 4px 0;
-        background-clip: content-box;
+        overflow: hidden;
       }
       .pip-progress-fill {
-        height: 3px;
-        background: #fff;
-        border-radius: 999px;
+        height: 100%;
+        background: #f00;
+        border-radius: 3px;
         width: 35%;
-        position: absolute;
-        top: 4px;
-        left: 0;
       }
       .pip-progress-thumb {
-        width: 7px;
-        height: 7px;
-        background: #fff;
-        border-radius: 50%;
-        position: absolute;
-        top: 50%;
-        left: 35%;
-        transform: translate(-50%, -50%);
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+        display: none;
       }
 
-      /* .time-display */
       .pip-time {
-        font-size: 10px;
-        color: #adadad;
-        text-align: left;
-        margin: 0;
+        display: none;
       }
 
-      /* .control-row */
       .pip-control-row {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        margin-top: 1px;
-        min-width: 0;
+        gap: 12px;
+        width: 100%;
       }
 
-      /* .controls */
       .pip-controls {
         display: flex;
         align-items: center;
-        gap: 6px;
+        justify-content: center;
+        gap: 11px;
         flex-shrink: 0;
       }
       .pip-ctrl-btn {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: transparent;
+        border: none;
         color: #fff;
-        width: 31px;
-        height: 31px;
+        width: 28px;
+        height: 28px;
         padding: 0;
         border-radius: 50%;
         display: flex;
@@ -327,29 +295,30 @@
       }
       .pip-ctrl-btn svg {
         fill: currentColor;
+        width: 75%;
+        height: 75%;
       }
       .pip-ctrl-primary {
-        width: 36px;
-        height: 36px;
-        background: rgba(255, 255, 255, 0.17);
-        border-color: rgba(255, 255, 255, 0.22);
+        width: 38px;
+        height: 38px;
+      }
+      .pip-ctrl-muted {
+        color: #aaa;
       }
 
-      /* .aux-controls */
       .pip-aux {
         display: flex;
         align-items: center;
         gap: 6px;
-        flex-shrink: 1;
-        min-width: 0;
+        flex-shrink: 0;
       }
       .pip-aux-btn {
         border: none;
         background: transparent;
-        color: #bbb;
-        width: 24px;
-        height: 24px;
-        border-radius: 12px;
+        color: #aaa;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -363,7 +332,7 @@
       .pip-volume-wrap {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
         flex: 1;
         min-width: 56px;
       }
@@ -373,7 +342,7 @@
         fill: currentColor;
       }
       .pip-volume-slider {
-        width: 100%;
+        width: 82px;
         accent-color: #fff;
         margin: 0;
         min-width: 0;
@@ -557,24 +526,28 @@
       </div>
     </div>
 
-    <!-- PiP mini player — matches actual renderer.ts -->
+    <!-- PiP mini player -->
     <div class="pip-window">
       <div class="pip-body">
-        <div class="pip-banner">
-          <!-- Artwork -->
+        <div class="pip">
           <div class="pip-artwork-container">
-            <div class="pip-artwork"></div>
+            <div class="pip-artwork">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M12 3v10.55A4 4 0 1 1 10 9.88V6h10V3h-8z"
+                />
+              </svg>
+            </div>
           </div>
 
-          <!-- Info panel -->
-          <div class="pip-info">
-            <div class="pip-primary-meta">
-              <div class="pip-title">Starlight Echoes</div>
-              <div class="pip-artist">Crystal Waves</div>
-              <div class="pip-album">Cosmic Drift &middot; 2025</div>
+          <div class="pip-content">
+            <div class="pip-meta">
+              <div class="pip-title">Lowdown</div>
+              <div class="pip-artist">Boz Scaggs</div>
+              <div class="pip-album">Silk Degrees &middot; 1976</div>
             </div>
 
-            <!-- Progress -->
             <div class="pip-progress-container">
               <div class="pip-progress-bar">
                 <div class="pip-progress-fill"></div>
@@ -583,48 +556,65 @@
             </div>
             <div class="pip-time">1:23 / 3:47</div>
 
-            <!-- Control row -->
-            <div class="pip-control-row">
-              <!-- Primary controls -->
-              <div class="pip-controls">
-                <!-- Previous -->
-                <div class="pip-ctrl-btn">
-                  <svg
-                    width="19"
-                    height="19"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-                  </svg>
-                </div>
-                <!-- Pause (primary) -->
-                <div class="pip-ctrl-btn pip-ctrl-primary">
-                  <svg
-                    width="26"
-                    height="26"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M6 19h4V5H6zm8-14v14h4V5z" />
-                  </svg>
-                </div>
-                <!-- Next -->
-                <div class="pip-ctrl-btn">
-                  <svg
-                    width="19"
-                    height="19"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z" />
-                  </svg>
-                </div>
+            <div class="pip-controls">
+              <div class="pip-ctrl-btn pip-ctrl-muted">
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.45 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"
+                  />
+                </svg>
               </div>
+              <div class="pip-ctrl-btn">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                </svg>
+              </div>
+              <div class="pip-ctrl-btn pip-ctrl-primary">
+                <svg
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M6 19h4V5H6zm8-14v14h4V5z" />
+                </svg>
+              </div>
+              <div class="pip-ctrl-btn">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z" />
+                </svg>
+              </div>
+              <div class="pip-ctrl-btn pip-ctrl-muted">
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"
+                  />
+                </svg>
+              </div>
+            </div>
 
-              <!-- Aux controls -->
+            <div class="pip-control-row">
               <div class="pip-aux">
-                <!-- Dislike -->
                 <div class="pip-aux-btn">
                   <svg
                     width="15"
@@ -637,7 +627,6 @@
                     />
                   </svg>
                 </div>
-                <!-- Like -->
                 <div class="pip-aux-btn">
                   <svg
                     width="15"
@@ -650,26 +639,25 @@
                     />
                   </svg>
                 </div>
-                <!-- Volume -->
-                <div class="pip-volume-wrap">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"
-                    />
-                  </svg>
-                  <input
-                    class="pip-volume-slider"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value="72"
+              </div>
+              <div class="pip-volume-wrap">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71z"
                   />
-                </div>
+                </svg>
+                <input
+                  class="pip-volume-slider"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value="72"
+                />
               </div>
             </div>
           </div>
@@ -680,7 +668,7 @@
     <!-- Callout -->
     <div
       class="callout"
-      style="bottom: 228px; right: 40px; text-align: center; width: 380px"
+      style="bottom: 228px; right: 40px; text-align: center; width: 430px"
     >
       Picture-in-Picture mini player &mdash; control music while you work
     </div>
