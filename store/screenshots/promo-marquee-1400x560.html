@@ -221,6 +221,12 @@
         letter-spacing: 0.5px;
         margin: 8px 0 6px;
       }
+      .ss-2 .ss-main {
+        padding: 12px 14px;
+      }
+      .ss-2 .ss-main h2 {
+        margin-bottom: 8px;
+      }
 
       .ss-card {
         background: #0f0f0f;
@@ -228,6 +234,28 @@
         border-radius: 6px;
         padding: 6px 8px;
         margin-bottom: 6px;
+      }
+      .ss-source-label {
+        color: #aaa;
+        font-size: 7px;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+      }
+      .ss-source-tabs {
+        display: flex;
+        gap: 5px;
+      }
+      .ss-source-tab {
+        width: 24px;
+        height: 24px;
+        border: 1.5px solid transparent;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #2a1a4a, #4a2a6a);
+      }
+      .ss-source-tab.active {
+        border-color: #ff0000;
+        background: linear-gradient(135deg, #c41010, #ff4040);
       }
       .ss-toggle-row {
         display: flex;
@@ -270,12 +298,12 @@
       /* Now playing mini card */
       .ss-np-row {
         display: flex;
-        gap: 8px;
-        align-items: center;
+        gap: 7px;
+        align-items: flex-start;
       }
       .ss-np-art {
-        width: 36px;
-        height: 36px;
+        width: 34px;
+        height: 34px;
         border-radius: 4px;
         background: linear-gradient(135deg, #c41010, #ff4040);
         flex-shrink: 0;
@@ -287,6 +315,9 @@
       .ss-np-title {
         font-size: 10px;
         font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .ss-np-artist {
         font-size: 8px;
@@ -294,17 +325,19 @@
         margin-top: 1px;
       }
       .ss-np-controls {
-        display: flex;
-        gap: 4px;
-        margin-top: 3px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        margin-top: 4px;
         align-items: center;
+        width: 100%;
       }
       .ss-np-btn {
-        width: 18px;
-        height: 18px;
+        width: 17px;
+        height: 17px;
         display: flex;
         align-items: center;
         justify-content: center;
+        justify-self: center;
       }
       .ss-np-btn svg {
         width: 10px;
@@ -316,8 +349,8 @@
         stroke-linejoin: round;
       }
       .ss-np-btn-play {
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
         background: #fff;
         border-radius: 50%;
         color: #000;
@@ -329,6 +362,27 @@
         stroke: #000;
         width: 10px;
         height: 10px;
+      }
+      .ss-np-progress {
+        margin-top: 4px;
+      }
+      .ss-np-progress-track {
+        height: 3px;
+        border-radius: 2px;
+        background: #3f3f3f;
+        overflow: hidden;
+      }
+      .ss-np-progress-fill {
+        width: 37%;
+        height: 100%;
+        background: #ff0000;
+      }
+      .ss-np-progress-times {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 3px;
+        color: #aaa;
+        font-size: 7px;
       }
 
       /* Volume bar */
@@ -946,6 +1000,14 @@
         <div class="ss-main">
           <h2>Playback Controls</h2>
           <div class="ss-card">
+            <div class="ss-source-label">Music Source</div>
+            <div class="ss-source-tabs">
+              <div class="ss-source-tab active"></div>
+              <div class="ss-source-tab"></div>
+            </div>
+          </div>
+          <h3>Now Playing</h3>
+          <div class="ss-card">
             <div class="ss-np-row">
               <div class="ss-np-art"></div>
               <div class="ss-np-meta">
@@ -954,10 +1016,19 @@
                 <div class="ss-np-controls">
                   <div class="ss-np-btn">
                     <svg viewBox="0 0 24 24">
-                      <path d="m12 5 9 7-9 7V5Z" />
                       <path
-                        d="m3 5 9 7-9 7V5Z"
-                        transform="scale(-1,1) translate(-24,0)"
+                        d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.45 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"
+                        fill="currentColor"
+                        stroke="none"
+                      />
+                    </svg>
+                  </div>
+                  <div class="ss-np-btn">
+                    <svg viewBox="0 0 24 24">
+                      <path
+                        d="M6 6h2v12H6zm3.5 6 8.5 6V6z"
+                        fill="currentColor"
+                        stroke="none"
                       />
                     </svg>
                   </div>
@@ -985,9 +1056,30 @@
                   </div>
                   <div class="ss-np-btn">
                     <svg viewBox="0 0 24 24">
-                      <path d="m3 5 9 7-9 7V5Z" />
-                      <path d="m12 5 9 7-9 7V5Z" />
+                      <path
+                        d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"
+                        fill="currentColor"
+                        stroke="none"
+                      />
                     </svg>
+                  </div>
+                  <div class="ss-np-btn">
+                    <svg viewBox="0 0 24 24">
+                      <path
+                        d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"
+                        fill="currentColor"
+                        stroke="none"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <div class="ss-np-progress">
+                  <div class="ss-np-progress-track">
+                    <div class="ss-np-progress-fill"></div>
+                  </div>
+                  <div class="ss-np-progress-times">
+                    <span>1:34</span>
+                    <span>4:12</span>
                   </div>
                 </div>
               </div>
