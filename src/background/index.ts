@@ -17,7 +17,7 @@ import {
 import { DEV_BUILD_STALE_MS } from "@/runtime-messages";
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
-import { error } from "@/core/logger";
+import { debug, error } from "@/core/logger";
 import { handlePlaybackActionMessage } from "./playback-action";
 
 import { parseSelectedTabId } from "./selected-tab";
@@ -157,6 +157,7 @@ const devBuildPresenceCoordinator = createDevBuildPresenceCoordinator({
     if (!hotkeyRegistry.has(command)) {
       throw new Error(`Unknown forwarded hotkey command: ${command}`);
     }
+    debug("Hotkey: received forwarded command", command);
     await hotkeyRegistry.dispatch(command);
   },
 });

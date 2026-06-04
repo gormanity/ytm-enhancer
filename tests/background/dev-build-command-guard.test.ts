@@ -59,6 +59,9 @@ describe("dev build conflict command guards", () => {
     expect(backgroundSource).toMatch(
       /await forwardHotkeyCommandToDevBuild\(\s*chrome\.runtime,\s*command,?\s*\)/,
     );
+    expect(backgroundSource).toContain(
+      'debug("Hotkey: received forwarded command", command)',
+    );
     expect(backgroundSource).toContain("void handleBrowserCommand(command)");
   });
 
