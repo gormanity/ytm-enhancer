@@ -57,6 +57,7 @@ This file covers **how to work**, not what the project is.
 - Create a semantic version tag: `jj tag set v0.X.Y -r @-` then
   `git push origin v0.X.Y`.
 - Verify the `Release` workflow completes successfully.
+- Return a direct link to the GitHub release in the final release close-out.
 - Review `store/STORE.md` and generated store assets for release accuracy,
   clarity, browser-store fit, and end-user value. Recommend copy changes before
   finalizing store submissions.
