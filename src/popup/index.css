@@ -137,8 +137,12 @@ body {
 #nav-list {
   flex: 1;
   min-height: 0;
-  /* Re-enable scrolling here if the module list grows beyond popup height. */
-  overflow-y: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+#nav-list::-webkit-scrollbar {
+  display: none;
 }
 
 .version-label {
