@@ -16,7 +16,10 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["chrome", "node"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@ytm-enhancer/connector-protocol": [
+        "./packages/connector-protocol/src/index.ts"
+      ]
     },
     "outDir": "./dist"
   },

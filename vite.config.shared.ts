@@ -112,7 +112,13 @@ function entryConfig(
 ): InlineConfig {
   return {
     resolve: {
-      alias: { "@": resolve(__dirname, "src") },
+      alias: {
+        "@": resolve(__dirname, "src"),
+        "@ytm-enhancer/connector-protocol": resolve(
+          __dirname,
+          "packages/connector-protocol/src/index.ts",
+        ),
+      },
     },
     build: {
       lib: {
@@ -163,6 +169,10 @@ export function createConfig(browser: string, mode = "production") {
     resolve: {
       alias: {
         "@": resolve(__dirname, "src"),
+        "@ytm-enhancer/connector-protocol": resolve(
+          __dirname,
+          "packages/connector-protocol/src/index.ts",
+        ),
       },
     },
     plugins: [

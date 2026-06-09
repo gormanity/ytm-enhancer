@@ -5,6 +5,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
+      "@ytm-enhancer/connector-protocol": resolve(
+        __dirname,
+        "packages/connector-protocol/src/index.ts",
+      ),
     },
   },
   define: {

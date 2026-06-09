@@ -7,6 +7,10 @@ export { createShortcutCommandClient } from "./commands";
 export { createMessageSender, createMessageHandler } from "./messaging";
 export { createRuntimeClient } from "./messaging";
 export {
+  CONNECTOR_HOST_ENABLED_DEFAULT,
+  createConnectorHost,
+} from "./connectors";
+export {
   createPlaybackController,
   createYtmPlaybackDriver,
 } from "./playback-controller";
@@ -60,6 +64,16 @@ export type {
   RuntimeClient,
   SendOptions,
 } from "./messaging";
+export type {
+  ConnectorHost,
+  ConnectorHostError,
+  ConnectorHostErrorCode,
+  ConnectorHostOptions,
+  ConnectorHostResult,
+  ConnectorSessionSnapshot,
+  ConnectorTransport,
+  ConnectorTransportMessageHandler,
+} from "./connectors";
 export type {
   PlaybackControlDriver,
   PlaybackController,

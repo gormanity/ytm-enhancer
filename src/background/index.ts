@@ -1,7 +1,9 @@
 import {
   createExtensionContext,
   AlarmRegistry,
+  CONNECTOR_HOST_ENABLED_DEFAULT,
   createMessageHandler,
+  createConnectorHost,
   createYtmRuntimeClient,
   HotkeyRegistry,
   initializeModules,
@@ -111,6 +113,12 @@ const context = createExtensionContext({
   state: { saveValue: saveModuleStateValue },
   popupEvents: { broadcast: broadcastPopupMessage },
 });
+const connectorHost = createConnectorHost({
+  enabled: CONNECTOR_HOST_ENABLED_DEFAULT,
+  ytm,
+});
+// TODO(connectors): Load a user setting and attach a transport when available.
+connectorHost.start();
 
 async function notifyDevBuildConflictStatusChanged(): Promise<void> {
   broadcastPopupMessage({ type: "dev-build-conflict-status-changed" });

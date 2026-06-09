@@ -32,7 +32,7 @@
     "test:e2e:firefox": "pnpm run dev:build:firefox && playwright test tests/e2e --project=firefox",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/ tests/",
+    "lint": "eslint src/ tests/ packages/",
     "css:dead": "node scripts/check-dead-popup-css.mjs",
     "data-role:check": "node scripts/check-data-role-uniqueness.mjs",
     "format": "prettier --write .",
