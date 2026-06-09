@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const renderOne = vi.fn();
 const renderAbout = vi.fn();
+const renderAutomation = vi.fn();
 const cleanupOne = vi.fn();
 const renderTwo = vi.fn();
 const extensionStorage: Record<string, unknown> = {};
@@ -18,6 +19,13 @@ vi.mock("@/modules/popup-views", () => ({
       render: (container: HTMLElement) => {
         renderOne(container);
         return cleanupOne;
+      },
+    },
+    {
+      id: "automation-settings",
+      label: "Automation",
+      render: (container: HTMLElement) => {
+        renderAutomation(container);
       },
     },
     {
@@ -45,6 +53,7 @@ describe("popup index", () => {
     }));
     renderOne.mockReset();
     renderAbout.mockReset();
+    renderAutomation.mockReset();
     cleanupOne.mockReset();
     renderTwo.mockReset();
     for (const key of Object.keys(extensionStorage)) {
@@ -104,8 +113,8 @@ describe("popup index", () => {
     await import("../../src/popup/index");
 
     const navItems = document.querySelectorAll(".nav-item");
-    expect(navItems).toHaveLength(3);
-    (navItems[2] as HTMLElement).click();
+    expect(navItems).toHaveLength(4);
+    (navItems[3] as HTMLElement).click();
 
     expect(cleanupOne).toHaveBeenCalledTimes(1);
   });
@@ -190,4 +199,22 @@ describe("popup index", () => {
     expect(extensionStorage["about.reviewPromptAccessed"]).toBe(true);
     expect(aboutItem?.classList.contains("has-notification")).toBe(false);
   });
+
+  it.each(["auto-play-settings", "auto-skip-disliked-settings"])(
+    "restores legacy %s as the Automation view",
+    async (legacyViewId) => {
+      localStorage.setItem("active-view-id", legacyViewId);
+
+      await import("../../src/popup/index");
+
+      const automationItem = document.querySelector<HTMLElement>(
+        '[data-view-id="automation-settings"]',
+      );
+      expect(renderAutomation).toHaveBeenCalledTimes(1);
+      expect(localStorage.getItem("active-view-id")).toBe(
+        "automation-settings",
+      );
+      expect(automationItem?.classList.contains("active")).toBe(true);
+    },
+  );
 });

@@ -1,8 +1,7 @@
 import type { PopupView } from "@/core/types";
 import { createPopupModuleContext } from "@/core/popup-context";
 import { createPlaybackControlsPopupView } from "./playback-controls/popup";
-import { createAutoPlayPopupView } from "./auto-play/popup";
-import { createAutoSkipDislikedPopupView } from "./auto-skip-disliked/popup";
+import { createAutomationPopupView } from "./automation/popup";
 import { createAudioVisualizerPopupView } from "./audio-visualizer/popup";
 import { createHotkeysPopupView } from "./hotkeys/popup";
 import { createMiniPlayerPopupView } from "./mini-player/popup";
@@ -12,7 +11,6 @@ import { createConnectedAppsPopupView } from "@/core/connectors/popup";
 import { createAboutPopupView } from "./about/popup";
 import playbackControlsIcon from "@/assets/module-icons/playback-controls.svg?raw";
 import autoPlayIcon from "@/assets/module-icons/auto-play.svg?raw";
-import autoSkipIcon from "@/assets/module-icons/auto-skip.svg?raw";
 import visualizerIcon from "@/assets/module-icons/visualizer.svg?raw";
 import hotkeysIcon from "@/assets/module-icons/hotkeys.svg?raw";
 import miniPlayerIcon from "@/assets/module-icons/mini-player.svg?raw";
@@ -23,8 +21,7 @@ import aboutIcon from "@/assets/module-icons/about.svg?raw";
 
 const ICONS = {
   playbackControls: playbackControlsIcon,
-  autoPlay: autoPlayIcon,
-  autoSkip: autoSkipIcon,
+  automation: autoPlayIcon,
   visualizer: visualizerIcon,
   hotkeys: hotkeysIcon,
   miniPlayer: miniPlayerIcon,
@@ -47,8 +44,7 @@ export function getAllPopupViews(): PopupView[] {
       ...createPlaybackControlsPopupView(context),
       icon: ICONS.playbackControls,
     },
-    { ...createAutoPlayPopupView(context), icon: ICONS.autoPlay },
-    { ...createAutoSkipDislikedPopupView(context), icon: ICONS.autoSkip },
+    { ...createAutomationPopupView(context), icon: ICONS.automation },
     { ...createAudioVisualizerPopupView(context), icon: ICONS.visualizer },
     { ...createHotkeysPopupView(context), icon: ICONS.hotkeys },
     { ...createMiniPlayerPopupView(context), icon: ICONS.miniPlayer },

@@ -46,7 +46,10 @@ describe("automation popup view", () => {
   });
 
   it("renders Auto-Play and Auto-Skip Disliked controls together", async () => {
-    const clients = createClients({ autoPlayMode: "on", autoSkipEnabled: true });
+    const clients = createClients({
+      autoPlayMode: "on",
+      autoSkipEnabled: true,
+    });
     const view = createAutomationPopupView(createTestModuleContext(), clients);
     const container = document.createElement("div");
 

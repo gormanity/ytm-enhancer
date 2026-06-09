@@ -19,7 +19,26 @@ const navItemTemplate = document.getElementById(
 ) as HTMLTemplateElement | null;
 
 const views = getAllPopupViews();
-let activeViewId = localStorage.getItem("active-view-id") || views[0]?.id;
+const ACTIVE_VIEW_ID_STORAGE_KEY = "active-view-id";
+const LEGACY_ACTIVE_VIEW_IDS: Record<string, string> = {
+  "auto-play-settings": "automation-settings",
+  "auto-skip-disliked-settings": "automation-settings",
+};
+
+function restoreActiveViewId(): string | undefined {
+  const storedViewId = localStorage.getItem(ACTIVE_VIEW_ID_STORAGE_KEY);
+  const normalizedViewId = storedViewId
+    ? (LEGACY_ACTIVE_VIEW_IDS[storedViewId] ?? storedViewId)
+    : views[0]?.id;
+
+  if (storedViewId && normalizedViewId !== storedViewId) {
+    localStorage.setItem(ACTIVE_VIEW_ID_STORAGE_KEY, normalizedViewId);
+  }
+
+  return normalizedViewId;
+}
+
+let activeViewId = restoreActiveViewId();
 let activeViewCleanup: (() => void) | null = null;
 let showAboutReviewIndicator = false;
 
@@ -161,7 +180,7 @@ function createNavItem(
 
 function switchView(viewId: string) {
   activeViewId = viewId;
-  localStorage.setItem("active-view-id", viewId);
+  localStorage.setItem(ACTIVE_VIEW_ID_STORAGE_KEY, viewId);
   markAboutReviewPromptAccessed();
   renderNav();
   renderActiveView();

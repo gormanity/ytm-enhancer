@@ -1,0 +1,31 @@
+<h2>Automation</h2>
+
+<div class="settings-card">
+  <h3>Auto-Play</h3>
+  <label
+    class="card-row auto-play-mode-row"
+    data-role="automation-auto-play-mode-row"
+  >
+    <span>On page load</span>
+    <select data-role="automation-auto-play-mode">
+      <option value="default">Default</option>
+      <option value="off">Off</option>
+      <option value="on">On</option>
+    </select>
+  </label>
+  <p
+    class="status-hint status-warning is-hidden"
+    data-role="automation-auto-play-browser-blocked"
+  >
+    Firefox is blocking autoplay for YouTube Music. Allow autoplay for
+    music.youtube.com in Firefox site permissions.
+  </p>
+</div>
+
+<div class="settings-card">
+  <h3>Auto-Skip Disliked</h3>
+  <label class="card-row">
+    <span>Automatically skip disliked songs</span>
+    <input type="checkbox" data-role="automation-auto-skip-disliked-toggle" />
+  </label>
+</div>
