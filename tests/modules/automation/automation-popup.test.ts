@@ -45,7 +45,7 @@ describe("automation popup view", () => {
     expect(view.label).toBe("Automation");
   });
 
-  it("renders Auto-Play and Auto-Skip Disliked controls together", async () => {
+  it("renders automation controls in one flat card", async () => {
     const clients = createClients({
       autoPlayMode: "on",
       autoSkipEnabled: true,
@@ -57,8 +57,12 @@ describe("automation popup view", () => {
 
     await vi.waitFor(() => {
       expect(container.querySelector("h2")?.textContent).toBe("Automation");
-      expect(container.textContent).toContain("Auto-Play");
-      expect(container.textContent).toContain("Auto-Skip Disliked");
+      expect(container.querySelectorAll(".settings-card")).toHaveLength(1);
+      expect(container.querySelector("h3")).toBeNull();
+      expect(container.textContent).toContain("On page load");
+      expect(container.textContent).toContain(
+        "Automatically skip disliked songs",
+      );
       expect(
         container.querySelector<HTMLSelectElement>(
           '[data-role="automation-auto-play-mode"]',
