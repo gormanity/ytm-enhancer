@@ -18,6 +18,7 @@ export type ConnectorHostErrorCode =
   | "host_disabled"
   | "invalid_message"
   | "unsupported_protocol"
+  | "connector_blocked"
   | "connector_not_registered"
   | "permission_denied"
   | "route_failed";
@@ -71,6 +72,11 @@ export interface ConnectorHostOptions {
   >;
   supportedProtocolVersions?: readonly string[];
   transports?: readonly ConnectorTransport[];
+  isConnectorAllowed?: (manifest: ConnectorManifest) => boolean;
+  onConnectorSeen?: (
+    manifest: ConnectorManifest,
+    status: "connected" | "blocked" | "incompatible",
+  ) => void;
   onError?: (error: ConnectorHostError) => void;
   now?: () => number;
 }
@@ -175,9 +181,18 @@ export function createConnectorHost(
     message: Extract<ConnectorMessage, { type: "connector.hello" }>,
   ): ConnectorHostResult => {
     if (!supportedProtocolVersions.has(message.manifest.protocolVersion)) {
+      options.onConnectorSeen?.(message.manifest, "incompatible");
       return errorResult(
         "unsupported_protocol",
         `Unsupported connector protocol version: ${message.manifest.protocolVersion}`,
+      );
+    }
+
+    if (options.isConnectorAllowed?.(message.manifest) === false) {
+      options.onConnectorSeen?.(message.manifest, "blocked");
+      return errorResult(
+        "connector_blocked",
+        `Connector ${message.manifest.id} is disabled`,
       );
     }
 
@@ -188,6 +203,7 @@ export function createConnectorHost(
       subscribedEvents: new Set(),
       connectedAt: now(),
     });
+    options.onConnectorSeen?.(message.manifest, "connected");
 
     return {
       ok: true,

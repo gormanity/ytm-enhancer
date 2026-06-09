@@ -12,10 +12,15 @@ function sourceBefore(functionName: string): string {
   return start < 0 ? backgroundSource : backgroundSource.slice(0, start);
 }
 
-function functionBody(functionName: string): string {
-  const start = backgroundSource.indexOf(`async function ${functionName}`);
+function functionBody(functionName: string, async = true): string {
+  const start = backgroundSource.indexOf(
+    `${async ? "async " : ""}function ${functionName}`,
+  );
   if (start < 0) return "";
-  const next = backgroundSource.indexOf("\nasync function ", start + 1);
+  const nextAsync = backgroundSource.indexOf("\nasync function ", start + 1);
+  const nextSync = backgroundSource.indexOf("\nfunction ", start + 1);
+  const nextCandidates = [nextAsync, nextSync].filter((index) => index >= 0);
+  const next = nextCandidates.length > 0 ? Math.min(...nextCandidates) : -1;
   return backgroundSource.slice(start, next < 0 ? undefined : next);
 }
 
@@ -24,18 +29,40 @@ describe("connector host background gating", () => {
     const startupSource = sourceBefore("enableConnectorSupport");
 
     expect(backgroundSource).not.toContain("CONNECTOR_HOST_ENABLED_DEFAULT");
-    expect(startupSource).not.toContain("createConnectorHost");
+    expect(startupSource).not.toContain("connectorHost = createConnectorHost");
     expect(startupSource).not.toContain("connectorHost.start();");
   });
 
+  it("does not use dynamic imports in the extension service worker", () => {
+    expect(backgroundSource).not.toContain("import(");
+  });
+
   it("only enables connector support from persisted module state", () => {
-    expect(backgroundSource).toContain('state["connectors.enabled"] === true');
+    expect(backgroundSource).toContain("CONNECTORS_ENABLED_STATE_KEY");
+    expect(backgroundSource).toContain(
+      "connectorSupportEnabled = bool(CONNECTORS_ENABLED_STATE_KEY, false)",
+    );
     expect(backgroundSource).toContain("enableConnectorSupport()");
     expect(functionBody("enableConnectorSupport")).toContain(
       "createConnectorHost",
     );
     expect(functionBody("enableConnectorSupport")).toContain(
       "connectorHost.start();",
+    );
+  });
+
+  it("can stop and discard the connector host when the popup disables support", () => {
+    expect(backgroundSource).toContain(
+      'handler.on("set-connected-apps-enabled"',
+    );
+    expect(functionBody("setConnectorSupportEnabled")).toContain(
+      "disableConnectorSupport()",
+    );
+    expect(functionBody("disableConnectorSupport", false)).toContain(
+      "connectorHost?.setEnabled(false)",
+    );
+    expect(functionBody("disableConnectorSupport", false)).toContain(
+      "connectorHost = null",
     );
   });
 });

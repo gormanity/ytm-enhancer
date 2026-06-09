@@ -10,3 +10,17 @@ export {
   type ConnectorTransport,
   type ConnectorTransportMessageHandler,
 } from "./host";
+export {
+  CONNECTOR_PERMISSION_LABELS,
+  CONNECTORS_ENABLED_STATE_KEY,
+  CONNECTORS_KNOWN_STATE_KEY,
+  createConnectedAppsSettings,
+  normalizeKnownConnectors,
+  removeKnownConnector,
+  setKnownConnectorEnabled,
+  upsertKnownConnector,
+  type ConnectedApp,
+  type ConnectedAppsSettings,
+  type ConnectorStatus,
+  type KnownConnector,
+} from "./settings";

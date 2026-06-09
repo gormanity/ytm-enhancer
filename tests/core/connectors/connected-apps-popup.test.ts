@@ -99,6 +99,8 @@ describe("Connected Apps popup view", () => {
           permissions: ["playback:read", "playback:control"],
           enabled: true,
           status: "connected",
+          lastSeenAt: null,
+          lastConnectedAt: null,
         },
       ],
     });
@@ -118,7 +120,7 @@ describe("Connected Apps popup view", () => {
     });
 
     const connectorToggle = container.querySelector<HTMLInputElement>(
-      '[data-role="connector-enabled-toggle"][data-connector-id="com.example.menu-bar"]',
+      '[data-role="connected-app-enabled-toggle"][data-connector-id="com.example.menu-bar"]',
     );
     expect(connectorToggle?.checked).toBe(true);
   });
@@ -135,6 +137,8 @@ describe("Connected Apps popup view", () => {
           permissions: ["playback:read"],
           enabled: true,
           status: "disconnected",
+          lastSeenAt: null,
+          lastConnectedAt: null,
         },
       ],
     });
@@ -148,7 +152,7 @@ describe("Connected Apps popup view", () => {
 
     const toggle = await vi.waitFor(() => {
       const input = container.querySelector<HTMLInputElement>(
-        '[data-role="connector-enabled-toggle"]',
+        '[data-role="connected-app-enabled-toggle"]',
       );
       expect(input).not.toBeNull();
       return input!;
@@ -175,6 +179,8 @@ describe("Connected Apps popup view", () => {
           permissions: ["playback:read"],
           enabled: true,
           status: "disconnected",
+          lastSeenAt: null,
+          lastConnectedAt: null,
         },
       ],
     });
@@ -188,7 +194,7 @@ describe("Connected Apps popup view", () => {
 
     const button = await vi.waitFor(() => {
       const element = container.querySelector<HTMLButtonElement>(
-        '[data-role="forget-connector"]',
+        '[data-role="connected-app-forget-button"]',
       );
       expect(element).not.toBeNull();
       return element!;

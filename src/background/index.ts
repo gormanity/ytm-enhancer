@@ -14,7 +14,19 @@ import {
   type FeatureModule,
   type AutoPlayMode,
 } from "@/core";
-import type { ConnectorHost } from "@/core/connectors";
+import { createConnectorHost, type ConnectorHost } from "@/core/connectors";
+import {
+  CONNECTORS_ENABLED_STATE_KEY,
+  CONNECTORS_KNOWN_STATE_KEY,
+  createConnectedAppsSettings,
+  normalizeKnownConnectors,
+  removeKnownConnector,
+  setKnownConnectorEnabled,
+  upsertKnownConnector,
+  type ConnectorStatus,
+  type KnownConnector,
+} from "@/core/connectors/settings";
+import type { ConnectorManifest } from "@ytm-enhancer/connector-protocol";
 import { DEV_BUILD_STALE_MS } from "@/runtime-messages";
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
@@ -74,6 +86,8 @@ const modules: FeatureModule[] = [
 ];
 let selectedTabId: number | null = null;
 let connectorHost: ConnectorHost | null = null;
+let connectorSupportEnabled = false;
+let knownConnectors = new Map<string, KnownConnector>();
 const devBuildSuspendedTabIds = new Set<number>();
 const devBuildConflictState: DevBuildConflictState = {
   suspendedTabIds: devBuildSuspendedTabIds,
@@ -85,7 +99,8 @@ type PopupRuntimeMessage =
   | { type: "ytm-tabs-changed" }
   | { type: "sleep-timer-state-changed" }
   | { type: "auto-play-status-changed" }
-  | { type: "dev-build-conflict-status-changed" };
+  | { type: "dev-build-conflict-status-changed" }
+  | { type: "connected-apps-state-changed" };
 
 function broadcastPopupMessage(message: PopupRuntimeMessage): void {
   void chrome.runtime.sendMessage(message).catch(() => {
@@ -95,6 +110,10 @@ function broadcastPopupMessage(message: PopupRuntimeMessage): void {
 
 function notifyYtmTabsChanged(): void {
   broadcastPopupMessage({ type: "ytm-tabs-changed" });
+}
+
+function notifyConnectedAppsChanged(): void {
+  broadcastPopupMessage({ type: "connected-apps-state-changed" });
 }
 
 const ytm = createYtmRuntimeClient({
@@ -117,13 +136,74 @@ const context = createExtensionContext({
 async function enableConnectorSupport(): Promise<void> {
   if (connectorHost !== null) return;
 
-  const { createConnectorHost } = await import("@/core/connectors");
   connectorHost = createConnectorHost({
     enabled: true,
     ytm,
+    isConnectorAllowed(manifest) {
+      return knownConnectors.get(manifest.id)?.enabled !== false;
+    },
+    onConnectorSeen: rememberConnector,
   });
   // TODO(connectors): Attach a transport when one is available.
   connectorHost.start();
+}
+
+function disableConnectorSupport(): void {
+  connectorHost?.setEnabled(false);
+  connectorHost = null;
+}
+
+function connectedConnectorIds(): Set<string> {
+  return new Set(
+    connectorHost?.listSessions().map((session) => session.manifest.id) ?? [],
+  );
+}
+
+function connectedAppsSettings() {
+  return createConnectedAppsSettings(
+    connectorSupportEnabled,
+    knownConnectors,
+    connectedConnectorIds(),
+  );
+}
+
+async function saveKnownConnectors(): Promise<void> {
+  await saveModuleStateValue(
+    CONNECTORS_KNOWN_STATE_KEY,
+    Array.from(knownConnectors.values()),
+  );
+}
+
+function disconnectConnector(connectorId: string): void {
+  for (const session of connectorHost?.listSessions() ?? []) {
+    if (session.manifest.id === connectorId) {
+      connectorHost?.disconnect(session.connectionId);
+    }
+  }
+}
+
+function rememberConnector(
+  manifest: ConnectorManifest,
+  status: ConnectorStatus,
+): void {
+  knownConnectors = upsertKnownConnector(knownConnectors, manifest, {
+    now: Date.now(),
+    status,
+  });
+  void saveKnownConnectors().finally(notifyConnectedAppsChanged);
+}
+
+async function setConnectorSupportEnabled(enabled: boolean): Promise<void> {
+  connectorSupportEnabled = enabled;
+  await saveModuleStateValue(CONNECTORS_ENABLED_STATE_KEY, enabled);
+
+  if (enabled) {
+    await enableConnectorSupport();
+  } else {
+    disableConnectorSupport();
+  }
+
+  notifyConnectedAppsChanged();
 }
 
 async function notifyDevBuildConflictStatusChanged(): Promise<void> {
@@ -323,6 +403,54 @@ handler.on("get-dev-build-conflict-status", async () => {
   };
 });
 
+handler.on("get-connected-apps-settings", async () => {
+  return { ok: true, data: connectedAppsSettings() };
+});
+
+handler.on("set-connected-apps-enabled", async (message) => {
+  if (typeof message.enabled !== "boolean") {
+    return { ok: false, error: "Invalid connector support enabled value" };
+  }
+  await setConnectorSupportEnabled(message.enabled);
+  return { ok: true };
+});
+
+handler.on("set-connector-enabled", async (message) => {
+  if (typeof message.connectorId !== "string") {
+    return { ok: false, error: "Invalid connector ID" };
+  }
+  if (typeof message.enabled !== "boolean") {
+    return { ok: false, error: "Invalid connector enabled value" };
+  }
+
+  const next = setKnownConnectorEnabled(
+    knownConnectors,
+    message.connectorId,
+    message.enabled,
+  );
+  if (!next) return { ok: false, error: "Unknown connector" };
+
+  knownConnectors = next;
+  if (!message.enabled) {
+    disconnectConnector(message.connectorId);
+  }
+  await saveKnownConnectors();
+  notifyConnectedAppsChanged();
+  return { ok: true };
+});
+
+handler.on("forget-connector", async (message) => {
+  if (typeof message.connectorId !== "string") {
+    return { ok: false, error: "Invalid connector ID" };
+  }
+
+  disconnectConnector(message.connectorId);
+  knownConnectors = removeKnownConnector(knownConnectors, message.connectorId);
+  await saveKnownConnectors();
+  notifyConnectedAppsChanged();
+  return { ok: true };
+});
+
 handler.on("inject-audio-bridge", async (_message, sender) => {
   const tabId = sender?.tab?.id;
   if (tabId === undefined) return { ok: false, error: "No tab ID" };
@@ -487,7 +615,13 @@ async function restoreModuleState(): Promise<void> {
   miniPlayer.setSuppressNotificationsWhilePipOpen(
     bool("mini-player.suppressNotificationsWhilePipOpen", false),
   );
-  if (state["connectors.enabled"] === true) {
+  knownConnectors = new Map(
+    normalizeKnownConnectors(state[CONNECTORS_KNOWN_STATE_KEY]).map(
+      (connector) => [connector.id, connector],
+    ),
+  );
+  connectorSupportEnabled = bool(CONNECTORS_ENABLED_STATE_KEY, false);
+  if (connectorSupportEnabled) {
     await enableConnectorSupport();
   }
   selectedTabId = parseSelectedTabId(state["tabs.selectedTabId"]);

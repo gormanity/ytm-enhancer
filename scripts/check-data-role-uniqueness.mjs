@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const MODULES_DIR = "src/modules";
+const TEMPLATE_DIRS = ["src/modules", "src/core/connectors"];
 const DATA_ROLE_PATTERN = /data-role="([^"]+)"/g;
 
 function collectHtmlFiles(dir) {
@@ -29,7 +29,7 @@ function collectDataRoles(dir) {
       while ((match = DATA_ROLE_PATTERN.exec(lines[i])) !== null) {
         results.push({
           value: match[1],
-          file: relative(dir, filePath),
+          file: relative(process.cwd(), filePath),
           line: i + 1,
         });
       }
@@ -38,7 +38,7 @@ function collectDataRoles(dir) {
   return results;
 }
 
-const roles = collectDataRoles(MODULES_DIR);
+const roles = TEMPLATE_DIRS.flatMap(collectDataRoles);
 let failed = false;
 
 // Check uniqueness
@@ -55,7 +55,7 @@ for (const entry of roles) {
 
 if (duplicates.length > 0) {
   failed = true;
-  console.error("Duplicate data-role values found across module templates:");
+  console.error("Duplicate data-role values found across popup templates:");
   for (const d of duplicates) {
     console.error(`  "${d.value}"`);
     console.error(`    ${d.first.file}:${d.first.line}`);
@@ -83,6 +83,6 @@ if (failed) {
   process.exit(1);
 } else {
   console.log(
-    `Data-role uniqueness check passed (${roles.length} roles across module templates).`,
+    `Data-role uniqueness check passed (${roles.length} roles across popup templates).`,
   );
 }

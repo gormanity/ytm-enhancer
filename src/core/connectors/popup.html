@@ -1,0 +1,69 @@
+<h2>Connected Apps</h2>
+
+<div class="settings-card">
+  <label class="card-row">
+    <span class="card-row-copy">
+      <span>Enable Connected Apps</span>
+      <small class="status-hint">
+        Allow approved external apps to connect to YTM Enhancer.
+      </small>
+    </span>
+    <input type="checkbox" data-role="connected-apps-enabled-toggle" />
+  </label>
+</div>
+
+<div data-role="connected-apps-list"></div>
+
+<div
+  class="settings-card connected-apps-empty"
+  data-role="connected-apps-empty"
+>
+  <p class="status-hint">No connected apps registered yet.</p>
+</div>
+
+<template data-role="connected-app-template">
+  <div class="settings-card connected-app-card">
+    <div class="connected-app-header">
+      <div class="connected-app-title-group">
+        <h3 data-role="connected-app-name"></h3>
+        <p
+          class="status-hint connected-app-version"
+          data-role="connected-app-version"
+        ></p>
+      </div>
+      <span
+        class="connected-app-status"
+        data-role="connected-app-header-status"
+      ></span>
+    </div>
+
+    <div class="card-row">
+      <span>Status</span>
+      <span class="connected-app-status" data-role="connected-app-status">
+      </span>
+    </div>
+
+    <div class="connected-app-section">
+      <h3>Permissions</h3>
+      <ul
+        class="connected-app-permissions"
+        data-role="connected-app-permissions"
+      ></ul>
+    </div>
+
+    <label class="card-row">
+      <span>Enabled</span>
+      <input type="checkbox" data-role="connected-app-enabled-toggle" />
+    </label>
+
+    <div class="connected-app-actions">
+      <button
+        type="button"
+        class="secondary-btn connected-app-forget-button"
+        data-role="connected-app-forget-button"
+      >
+        Forget Connector
+      </button>
+    </div>
+  </div>
+</template>

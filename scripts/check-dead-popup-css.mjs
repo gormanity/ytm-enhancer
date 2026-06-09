@@ -3,7 +3,12 @@ import { join } from "node:path";
 
 const POPUP_HTML_PATH = "src/popup/index.html";
 const POPUP_CSS_PATH = "src/popup/index.css";
-const SEARCH_ROOTS = ["src/popup", "src/modules", "src/ui"];
+const SEARCH_ROOTS = [
+  "src/popup",
+  "src/modules",
+  "src/ui",
+  "src/core/connectors",
+];
 const SOURCE_EXTENSIONS = new Set([".ts", ".html"]);
 
 const SAFELIST = new Set([
