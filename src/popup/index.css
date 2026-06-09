@@ -295,6 +295,7 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 10px 0;
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);
@@ -319,6 +320,10 @@ h3 {
 
 .card-row span {
   font-size: 14px;
+}
+
+.card-row > span {
+  min-width: 0;
 }
 
 .card-row-copy {
