@@ -59,7 +59,7 @@ describe("automation popup view", () => {
       expect(container.querySelector("h2")?.textContent).toBe("Automation");
       expect(container.querySelectorAll(".settings-card")).toHaveLength(1);
       expect(container.querySelector("h3")).toBeNull();
-      expect(container.textContent).toContain("On page load");
+      expect(container.textContent).toContain("Start playback automatically");
       expect(container.textContent).toContain(
         "Automatically skip disliked songs",
       );
