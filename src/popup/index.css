@@ -243,6 +243,11 @@ h3 {
   padding-bottom: 0;
 }
 
+.automation-card > .auto-play-mode-row {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
 .settings-card > .auto-play-mode-row.has-following-message {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;

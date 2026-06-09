@@ -1,8 +1,15 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAutomationPopupView } from "@/modules/automation/popup";
 import type { AutoPlayClient } from "@/modules/auto-play/client";
 import type { AutoSkipDislikedClient } from "@/modules/auto-skip-disliked/client";
 import { createTestModuleContext } from "../../helpers/module-context";
+
+const popupCss = readFileSync(
+  resolve(process.cwd(), "src/popup/index.css"),
+  "utf-8",
+);
 
 function createClients(options?: {
   autoPlayMode?: "default" | "off" | "on";
@@ -59,7 +66,7 @@ describe("automation popup view", () => {
       expect(container.querySelector("h2")?.textContent).toBe("Automation");
       expect(container.querySelectorAll(".settings-card")).toHaveLength(1);
       expect(container.querySelector("h3")).toBeNull();
-      expect(container.textContent).toContain("Start playback automatically");
+      expect(container.textContent).toContain("Auto-play on page load");
       expect(container.textContent).toContain(
         "Automatically skip disliked songs",
       );
@@ -74,6 +81,12 @@ describe("automation popup view", () => {
         )?.checked,
       ).toBe(true);
     });
+  });
+
+  it("keeps a divider below the Auto-Play row", () => {
+    expect(popupCss).toMatch(
+      /\.automation-card\s*>\s*\.auto-play-mode-row\s*\{[^}]*border-bottom:\s*1px solid var\(--border-color\);/s,
+    );
   });
 
   it("persists Auto-Play mode changes through the Auto-Play client", async () => {
