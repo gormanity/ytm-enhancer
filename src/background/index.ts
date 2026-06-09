@@ -1,9 +1,7 @@
 import {
   createExtensionContext,
   AlarmRegistry,
-  CONNECTOR_HOST_ENABLED_DEFAULT,
   createMessageHandler,
-  createConnectorHost,
   createYtmRuntimeClient,
   HotkeyRegistry,
   initializeModules,
@@ -16,6 +14,7 @@ import {
   type FeatureModule,
   type AutoPlayMode,
 } from "@/core";
+import type { ConnectorHost } from "@/core/connectors";
 import { DEV_BUILD_STALE_MS } from "@/runtime-messages";
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
@@ -74,6 +73,7 @@ const modules: FeatureModule[] = [
   sleepTimer,
 ];
 let selectedTabId: number | null = null;
+let connectorHost: ConnectorHost | null = null;
 const devBuildSuspendedTabIds = new Set<number>();
 const devBuildConflictState: DevBuildConflictState = {
   suspendedTabIds: devBuildSuspendedTabIds,
@@ -113,12 +113,18 @@ const context = createExtensionContext({
   state: { saveValue: saveModuleStateValue },
   popupEvents: { broadcast: broadcastPopupMessage },
 });
-const connectorHost = createConnectorHost({
-  enabled: CONNECTOR_HOST_ENABLED_DEFAULT,
-  ytm,
-});
-// TODO(connectors): Load a user setting and attach a transport when available.
-connectorHost.start();
+
+async function enableConnectorSupport(): Promise<void> {
+  if (connectorHost !== null) return;
+
+  const { createConnectorHost } = await import("@/core/connectors");
+  connectorHost = createConnectorHost({
+    enabled: true,
+    ytm,
+  });
+  // TODO(connectors): Attach a transport when one is available.
+  connectorHost.start();
+}
 
 async function notifyDevBuildConflictStatusChanged(): Promise<void> {
   broadcastPopupMessage({ type: "dev-build-conflict-status-changed" });
@@ -481,6 +487,9 @@ async function restoreModuleState(): Promise<void> {
   miniPlayer.setSuppressNotificationsWhilePipOpen(
     bool("mini-player.suppressNotificationsWhilePipOpen", false),
   );
+  if (state["connectors.enabled"] === true) {
+    await enableConnectorSupport();
+  }
   selectedTabId = parseSelectedTabId(state["tabs.selectedTabId"]);
 
   await sleepTimer.restore({

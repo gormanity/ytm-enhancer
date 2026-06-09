@@ -73,8 +73,9 @@ track metadata is redacted.
 - Converts extension playback state into protocol playback state.
 - Catches connector routing failures and returns protocol errors.
 
-The background service worker creates a disabled host with no transport. This
-has no external listener and no connector side effects.
+The background service worker does not create the host unless persisted state
+has `connectors.enabled` set to `true`. Disabled connector support has no host
+object, no transport listener, and no connector sessions.
 
 ## Transport
 
@@ -111,7 +112,8 @@ package would be a larger monorepo refactor and is not part of this slice.
 
 1. Choose the transport for a native menu bar app, likely browser native
    messaging.
-2. Add a user-visible connector support setting that defaults to disabled.
+2. Add a user-visible connector support setting backed by `connectors.enabled`
+   that defaults to disabled.
 3. Implement the transport adapter behind `ConnectorTransport`.
 4. Add a pairing or allow-list model for first-party and third-party clients.
 5. Build the menu bar app in `apps/menu-bar` against
