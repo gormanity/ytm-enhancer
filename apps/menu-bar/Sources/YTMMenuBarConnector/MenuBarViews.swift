@@ -192,26 +192,30 @@ final class MenuBarNowPlayingView: NSView {
 private final class MenuBarScrollingTextView: NSView {
   static let scrollPauseDelay: TimeInterval = 1.25
 
-  private let clipView = NSClipView()
-  private let label = NSTextField(labelWithString: "")
+  private static let frameInterval: TimeInterval = 1.0 / 60.0
+
+  private var text = ""
+  private var font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+  private var textColor = MenuBarStyle.primaryText
   private var scrollGeneration = 0
   private var pendingScroll: DispatchWorkItem?
-  private var currentScrollOffset: CGFloat = 0
-  private var isScrollAnimating = false
+  private var scrollTimer: Timer?
+  private var scrollOffset: CGFloat = 0
   private var lastVisibleWidth: CGFloat = -1
   private var lastTextWidth: CGFloat = -1
 
   override var isFlipped: Bool { true }
 
   var stringValue: String {
-    get { label.stringValue }
+    get { text }
     set {
-      guard label.stringValue != newValue else { return }
-      label.stringValue = newValue
-      label.toolTip = newValue.isEmpty ? nil : newValue
+      guard text != newValue else { return }
+      text = newValue
+      toolTip = newValue.isEmpty ? nil : newValue
       setAccessibilityLabel(newValue)
       lastTextWidth = -1
       needsLayout = true
+      needsDisplay = true
     }
   }
 
@@ -224,17 +228,21 @@ private final class MenuBarScrollingTextView: NSView {
     fatalError("init(coder:) has not been implemented")
   }
 
+  deinit {
+    cancelScrolling()
+  }
+
   func configure(font: NSFont, textColor: NSColor) {
-    label.font = font
-    label.textColor = textColor
+    self.font = font
+    self.textColor = textColor
     lastTextWidth = -1
     needsLayout = true
+    needsDisplay = true
   }
 
   override func layout() {
     super.layout()
 
-    clipView.frame = bounds
     let textWidth = measuredTextWidth()
     let visibleWidth = bounds.width
     let changed =
@@ -249,9 +257,25 @@ private final class MenuBarScrollingTextView: NSView {
       return
     }
 
-    if !isScrollAnimating {
-      applyLabelFrame(offset: currentScrollOffset)
-    }
+    needsDisplay = true
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    super.draw(dirtyRect)
+
+    guard !text.isEmpty else { return }
+
+    let attributes: [NSAttributedString.Key: Any] = [
+      .font: font,
+      .foregroundColor: textColor,
+    ]
+    let lineHeight = ceil(font.ascender - font.descender + font.leading)
+    let y = max(0, (bounds.height - lineHeight) / 2)
+
+    (text as NSString).draw(
+      at: NSPoint(x: -scrollOffset, y: y),
+      withAttributes: attributes
+    )
   }
 
   private var needsScroll: Bool {
@@ -261,31 +285,19 @@ private final class MenuBarScrollingTextView: NSView {
   private func configure() {
     wantsLayer = true
     layer?.masksToBounds = true
-
-    clipView.drawsBackground = false
-    clipView.documentView = label
-    addSubview(clipView)
-
-    label.lineBreakMode = .byClipping
-    label.isSelectable = false
-    label.allowsDefaultTighteningForTruncation = false
-    label.cell?.usesSingleLineMode = true
   }
 
   private func measuredTextWidth() -> CGFloat {
-    guard !label.stringValue.isEmpty else { return 0 }
-    let font = label.font ?? .systemFont(ofSize: NSFont.systemFontSize)
+    guard !text.isEmpty else { return 0 }
     return ceil(
-      (label.stringValue as NSString).size(withAttributes: [.font: font]).width
-    ) + 16
+      (text as NSString).size(withAttributes: [.font: font]).width
+    )
   }
 
   private func restartScrollingIfNeeded() {
     scrollGeneration += 1
-    pendingScroll?.cancel()
-    pendingScroll = nil
-    isScrollAnimating = false
-    applyLabelFrame(offset: 0)
+    cancelScrolling()
+    applyScrollOffset(0)
 
     guard needsScroll else { return }
     scheduleScroll(generation: scrollGeneration)
@@ -309,21 +321,35 @@ private final class MenuBarScrollingTextView: NSView {
     let targetOffset = overflow
     let duration = min(8, max(1.4, TimeInterval(overflow / 32)))
 
-    isScrollAnimating = true
-    currentScrollOffset = targetOffset
+    applyScrollOffset(0)
+    let startDate = Date()
+    let timer = Timer(timeInterval: Self.frameInterval, repeats: true) {
+      [weak self] timer in
+      guard
+        let self,
+        generation == self.scrollGeneration,
+        self.needsScroll
+      else {
+        timer.invalidate()
+        return
+      }
 
-    NSAnimationContext.runAnimationGroup { context in
-      context.duration = duration
-      context.allowsImplicitAnimation = true
-      clipView.animator().setBoundsOrigin(NSPoint(x: targetOffset, y: 0))
-    } completionHandler: { [weak self] in
-      self?.scheduleResetAfterScroll(generation: generation)
+      let elapsed = Date().timeIntervalSince(startDate)
+      let progress = min(1, elapsed / duration)
+      self.applyScrollOffset(targetOffset * CGFloat(progress))
+
+      if progress >= 1 {
+        timer.invalidate()
+        self.scrollTimer = nil
+        self.scheduleResetAfterScroll(generation: generation)
+      }
     }
+    scrollTimer = timer
+    RunLoop.main.add(timer, forMode: .common)
   }
 
   private func scheduleResetAfterScroll(generation: Int) {
     guard generation == scrollGeneration, needsScroll else { return }
-    isScrollAnimating = false
 
     let work = DispatchWorkItem { [weak self] in
       guard
@@ -332,7 +358,7 @@ private final class MenuBarScrollingTextView: NSView {
         self.needsScroll
       else { return }
 
-      self.applyLabelFrame(offset: 0)
+      self.applyScrollOffset(0)
       self.scheduleScroll(generation: generation)
     }
     pendingScroll = work
@@ -342,19 +368,16 @@ private final class MenuBarScrollingTextView: NSView {
     )
   }
 
-  private func applyLabelFrame(offset: CGFloat) {
-    currentScrollOffset = offset
-    label.frame = labelFrame(offset: offset)
-    clipView.scroll(to: NSPoint(x: offset, y: 0))
+  private func applyScrollOffset(_ offset: CGFloat) {
+    scrollOffset = max(0, offset)
+    needsDisplay = true
   }
 
-  private func labelFrame(offset _: CGFloat) -> NSRect {
-    NSRect(
-      x: 0,
-      y: 0,
-      width: max(lastVisibleWidth, lastTextWidth),
-      height: bounds.height
-    )
+  private func cancelScrolling() {
+    pendingScroll?.cancel()
+    pendingScroll = nil
+    scrollTimer?.invalidate()
+    scrollTimer = nil
   }
 }
 

@@ -143,7 +143,8 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("formatAlbumLine");
     expect(sources).toContain("scrollPauseDelay");
     expect(sources).toContain("needsScroll");
-    expect(sources).toContain("NSAnimationContext.runAnimationGroup");
+    expect(sources).toContain("Timer(timeInterval:");
+    expect(sources).toContain("RunLoop.main.add(timer, forMode: .common)");
     expect(sources).toContain("DispatchQueue.main.asyncAfter");
     expect(sources).not.toContain("titleLabel = NSTextField(labelWithString:");
     expect(sources).not.toContain("artistLabel = NSTextField(labelWithString:");
@@ -154,25 +155,35 @@ describe("menu bar connector app scaffold", () => {
       .map(read)
       .join("\n");
 
-    expect(sources).toContain("currentScrollOffset");
-    expect(sources).toContain("labelFrame(offset:");
-    expect(sources).toContain("applyLabelFrame(offset:");
+    expect(sources).toContain("private var scrollOffset: CGFloat = 0");
+    expect(sources).toContain("applyScrollOffset(0)");
+    expect(sources).toContain("NSPoint(x: -scrollOffset");
+    expect(sources).not.toContain("currentScrollOffset");
+    expect(sources).not.toContain("labelFrame(offset:");
+    expect(sources).not.toContain("applyLabelFrame(offset:");
     expect(sources).not.toContain("x: label.frame.minX");
   });
 
-  it("scrolls menu bar text through a fixed clip view", () => {
+  it("draws scrolling menu bar text directly without clip view animation", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
       .join("\n");
+    const scrollingViewSource = sources.match(
+      /private final class MenuBarScrollingTextView:[\s\S]+?final class MenuBarControlsView/,
+    )?.[0];
 
-    expect(sources).toContain("private let clipView = NSClipView()");
-    expect(sources).toContain("clipView.documentView = label");
-    expect(sources).toContain("clipView.frame = bounds");
-    expect(sources).toContain("clipView.scroll(to:");
-    expect(sources).toContain("clipView.animator().setBoundsOrigin");
-    expect(sources).not.toContain("setAffineTransform");
-    expect(sources).not.toContain("translationX:");
-    expect(sources).not.toContain("reflectScrolledClipView");
+    expect(scrollingViewSource).toBeDefined();
+    expect(scrollingViewSource).toContain("override func draw");
+    expect(scrollingViewSource).toContain("(text as NSString).draw");
+    expect(scrollingViewSource).toContain("applyScrollOffset");
+    expect(scrollingViewSource).not.toContain("NSClipView");
+    expect(scrollingViewSource).not.toContain("NSTextField(labelWithString:");
+    expect(scrollingViewSource).not.toContain("clipView.scroll(to:");
+    expect(scrollingViewSource).not.toContain("clipView.animator()");
+    expect(scrollingViewSource).not.toContain("label.animator()");
+    expect(scrollingViewSource).not.toContain("setAffineTransform");
+    expect(scrollingViewSource).not.toContain("translationX:");
+    expect(scrollingViewSource).not.toContain("reflectScrolledClipView");
   });
 
   it("reuses the extension icon for the menu bar status item", () => {
