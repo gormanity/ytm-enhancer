@@ -24,6 +24,13 @@ function functionBody(functionName: string, async = true): string {
   return backgroundSource.slice(start, next < 0 ? undefined : next);
 }
 
+function handlerBody(messageType: string): string {
+  const start = backgroundSource.indexOf(`handler.on("${messageType}"`);
+  if (start < 0) return "";
+  const next = backgroundSource.indexOf("\nhandler.on(", start + 1);
+  return backgroundSource.slice(start, next < 0 ? undefined : next);
+}
+
 describe("connector host background gating", () => {
   it("does not create or start the connector host at background startup", () => {
     const startupSource = sourceBefore("enableConnectorSupport");
@@ -67,6 +74,21 @@ describe("connector host background gating", () => {
     );
     expect(functionBody("disableConnectorSupport", false)).toContain(
       "connectorHost = null",
+    );
+  });
+
+  it("restarts connector support when a known connector is re-enabled", () => {
+    expect(functionBody("restartConnectorSupport")).toContain(
+      "connectorSupportEnabled",
+    );
+    expect(functionBody("restartConnectorSupport")).toContain(
+      "disableConnectorSupport()",
+    );
+    expect(functionBody("restartConnectorSupport")).toContain(
+      "enableConnectorSupport()",
+    );
+    expect(handlerBody("set-connector-enabled")).toContain(
+      "await restartConnectorSupport();",
     );
   });
 });
