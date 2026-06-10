@@ -301,6 +301,39 @@ describe("YTMAdapter", () => {
       const state = adapter.getPlaybackState();
       expect(state.artworkUrl).toBe("https://example.com/art.jpg");
     });
+
+    it("should read repeat mode from the current repeat icon before tooltip text", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="repeat" title="Repeat all">
+          <iron-icon icon="yt-icons:repeat-one"></iron-icon>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("one");
+    });
+
+    it("should read playlist repeat from the current repeat icon before tooltip text", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="repeat" title="Repeat one">
+          <iron-icon icon="yt-icons:repeat"></iron-icon>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("all");
+    });
+
+    it("should read repeat off from pressed state before tooltip text", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="repeat" title="Repeat all" aria-pressed="false">
+          <iron-icon icon="yt-icons:repeat"></iron-icon>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("off");
+    });
   });
 
   describe("executeAction", () => {
@@ -459,6 +492,26 @@ describe("YTMAdapter", () => {
       adapter.executeAction("previous");
 
       expect(click).toHaveBeenCalled();
+    });
+
+    it("should activate nested shuffle button controls", () => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "shuffle";
+      makeVisible(wrapper);
+
+      const button = document.createElement("button");
+      button.setAttribute("aria-label", "Shuffle");
+      const events: string[] = [];
+      for (const type of ["pointerdown", "mousedown", "mouseup", "click"]) {
+        button.addEventListener(type, () => events.push(type));
+      }
+      makeVisible(button);
+      wrapper.appendChild(button);
+      document.body.appendChild(wrapper);
+
+      adapter.executeAction("shuffle");
+
+      expect(events).toEqual(["pointerdown", "mousedown", "mouseup", "click"]);
     });
   });
 
