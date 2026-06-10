@@ -1,4 +1,6 @@
 node_modules/
+.build/
+apps/*/.build/
 dist/
 dist-dev/
 playwright-report/

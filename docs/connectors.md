@@ -83,14 +83,23 @@ subsystem rather than a `FeatureModule`.
 
 ## Transport
 
-No transport is implemented yet. The host exposes a `ConnectorTransport`
-interface with `start`, `stop`, and `send` methods so a future transport can be
-attached without changing the protocol or playback routing.
+The first transport is browser native messaging for the first-party macOS menu
+bar app. The extension-side adapter lives behind the `ConnectorTransport`
+interface, so protocol validation and playback routing still flow through the
+connector host.
 
-Transport design still needs a browser-specific decision. Candidate transports
-include native messaging for a native menu bar application, extension runtime
-messaging for another extension, or a constrained browser-local bridge. Any
-transport must preserve the host validation path.
+The native messaging host name is:
+
+```text
+com.gormanity.ytm_enhancer.menu_bar
+```
+
+The background service worker attaches the transport only when Connected Apps is
+enabled. When connector support is disabled, the host is not created and the
+native messaging connection is not opened.
+
+Future transports, such as extension runtime messaging for another extension or
+a constrained browser-local bridge, must preserve the same host validation path.
 
 ## Repository Layout
 
@@ -114,10 +123,16 @@ package would be a larger monorepo refactor and is not part of this slice.
 
 ## Menu Bar Connector Next Steps
 
-1. Choose the transport for a native menu bar app, likely browser native
-   messaging.
-2. Implement the transport adapter behind `ConnectorTransport`.
-3. Add a pairing or allow-list model for first-party and third-party clients.
-4. Build the menu bar app in `apps/menu-bar` against
-   `@ytm-enhancer/connector-protocol`.
-5. Add integration tests for connection lifecycle and transport failures.
+The first-party macOS menu bar connector lives in `apps/menu-bar`. It is a
+native Swift/AppKit executable that communicates with the extension through
+native messaging. It displays current playback information and exposes basic
+playback controls.
+
+Remaining work:
+
+1. Package the connector as a signed `.app`.
+2. Replace the development native host installer with a signed installer.
+3. Add a clearer approval flow for newly seen connectors.
+4. Add diagnostics for native host launch failures and disconnected hosts.
+5. Add artwork, seek controls, and richer playback state once the first slice is
+   stable.
