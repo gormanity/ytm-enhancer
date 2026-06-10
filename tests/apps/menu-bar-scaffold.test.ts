@@ -77,7 +77,6 @@ describe("menu bar connector app scaffold", () => {
 
     expect(sources).toContain("MenuBarNowPlayingView");
     expect(sources).toContain("MenuBarControlsView");
-    expect(sources).toContain("systemSymbolName");
     expect(sources).toContain("progressFill");
     expect(sources).toContain("artworkView");
     expect(sources).not.toContain('NSMenuItem(title: "Previous"');
@@ -93,9 +92,9 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("playPauseButton");
     expect(sources).toContain("nextButton");
     expect(sources).toContain("repeatButton");
-    expect(sources).toContain('systemSymbolName: "shuffle"');
-    expect(sources).toContain('systemSymbolName: "repeat"');
-    expect(sources).toContain("repeatSystemSymbolName");
+    expect(sources).toContain("MenuBarControlIcon.shuffle");
+    expect(sources).toContain("MenuBarControlIcon.repeat");
+    expect(sources).toContain("repeatIcon");
     expect(sources).toContain("setActive(");
     expect(sources).toContain("MenuBarStyle.controlHoverBackground");
     expect(sources).toContain("background = .clear");
@@ -104,6 +103,59 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain('"Playing"');
     expect(sources).not.toContain('"Paused"');
     expect(sources).not.toContain("MenuBarStyle.accentMuted");
+  });
+
+  it("reuses Mini Player SVG playback control icons in the menu bar view", () => {
+    const manifest = read("Package.swift");
+    const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
+    const sources = sourceFiles.map(read).join("\n");
+    const controlIconResources = [
+      "playback-play.svg",
+      "playback-pause.svg",
+      "playback-previous.svg",
+      "playback-next.svg",
+      "playback-shuffle.svg",
+      "playback-repeat.svg",
+      "playback-repeat-one.svg",
+    ];
+
+    for (const resource of controlIconResources) {
+      expect(manifest).toContain(`.copy("Resources/${resource}")`);
+      expect(sourceFiles).toContain(
+        `Sources/YTMMenuBarConnector/Resources/${resource}`,
+      );
+    }
+
+    expect(sources).toContain("enum MenuBarControlIcon");
+    expect(sources).toContain('resourceName: "playback-play"');
+    expect(sources).toContain('resourceName: "playback-repeat-one"');
+    expect(sources).toContain("Bundle.module.url(forResource: resourceName");
+    expect(sources).toContain("image.isTemplate = true");
+
+    const controlsSource = sources.match(
+      /final class MenuBarControlsView:[\s\S]+?private final class MenuBarArtworkView/,
+    )?.[0];
+    expect(controlsSource).toBeDefined();
+    expect(controlsSource).not.toContain("systemSymbolName:");
+    expect(controlsSource).not.toContain("setSystemSymbolName");
+  });
+
+  it("uses tint instead of persistent hover fill for active shuffle and repeat", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const iconButtonSource = sources.match(
+      /private final class MenuBarIconButton:[\s\S]+$/,
+    )?.[0];
+
+    expect(iconButtonSource).toBeDefined();
+    expect(sources).toContain("MenuBarStyle.controlInactiveTint");
+    expect(iconButtonSource).toContain("let tintColor: NSColor");
+    expect(iconButtonSource).toContain("if prominent || active || hovering");
+    expect(iconButtonSource).toContain("contentTintColor = tintColor");
+    expect(iconButtonSource).not.toContain(
+      "background = MenuBarStyle.controlActiveBackground",
+    );
   });
 
   it("adds a circular Mini Player-style hover shadow to menu bar controls", () => {
