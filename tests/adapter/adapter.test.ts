@@ -315,7 +315,7 @@ describe("YTMAdapter", () => {
 
     it("should read playlist repeat from the current repeat icon before tooltip text", () => {
       document.body.innerHTML = `
-        <tp-yt-paper-icon-button class="repeat" title="Repeat one">
+        <tp-yt-paper-icon-button class="repeat" title="Repeat one" aria-pressed="true">
           <iron-icon icon="yt-icons:repeat"></iron-icon>
         </tp-yt-paper-icon-button>
       `;
@@ -333,6 +333,39 @@ describe("YTMAdapter", () => {
 
       const state = adapter.getPlaybackState();
       expect(state.repeatMode).toBe("off");
+    });
+
+    it("should not treat an inactive generic repeat icon as playlist repeat", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="repeat" title="Repeat all">
+          <iron-icon icon="yt-icons:repeat"></iron-icon>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("off");
+    });
+
+    it("should detect active shuffle from a nested icon color", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="shuffle">
+          <iron-icon style="color: rgb(255, 255, 255)"></iron-icon>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.isShuffling).toBe(true);
+    });
+
+    it("should detect playlist repeat from a nested active icon color", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="repeat" title="Repeat one">
+          <iron-icon icon="yt-icons:repeat" style="color: rgb(255, 255, 255)"></iron-icon>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("all");
     });
   });
 

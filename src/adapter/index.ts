@@ -42,14 +42,11 @@ export class YTMAdapter {
     const shuffleEl = document.querySelector(SELECTORS.shuffleButton);
     const repeatEl = document.querySelector(SELECTORS.repeatButton);
 
-    // Shuffle has no aria-pressed or state attribute; detect via computed color.
-    // Repeat uses title ("Repeat off" / "Repeat all" / "Repeat one").
+    // Shuffle has no reliable aria-pressed state; detect via computed color.
+    // Repeat tooltips can describe the next action, so prefer current-state
+    // attributes and icons before falling back to legacy title text.
     const isShuffling = this.isToggleActiveByColor(shuffleEl);
-    const repeatTitle = repeatEl?.getAttribute("title")?.toLowerCase() ?? "";
-
-    let repeatMode: "off" | "all" | "one" = "off";
-    if (repeatTitle.includes("one")) repeatMode = "one";
-    else if (repeatTitle.includes("all")) repeatMode = "all";
+    const repeatMode = this.readRepeatMode(repeatEl);
 
     return {
       title: titleEl?.textContent?.trim() ?? null,
@@ -381,8 +378,67 @@ export class YTMAdapter {
    */
   private isToggleActiveByColor(el: Element | null): boolean {
     if (!el) return false;
-    const color = window.getComputedStyle(el as HTMLElement).color;
-    return color === "rgb(255, 255, 255)";
+    const candidates = [el, ...Array.from(el.querySelectorAll("*"))];
+    return candidates.some((candidate) => {
+      const color = window.getComputedStyle(candidate as HTMLElement).color;
+      return color === "rgb(255, 255, 255)";
+    });
+  }
+
+  private readRepeatMode(el: Element | null): "off" | "all" | "one" {
+    if (!el) return "off";
+
+    const pressed = this.readPressedState(el);
+    if (pressed === false) return "off";
+
+    const iconMode = this.readRepeatIconMode(el);
+    if (iconMode === "one") return "one";
+    if (iconMode === "all") {
+      return pressed === true || this.isToggleActiveByColor(el) ? "all" : "off";
+    }
+
+    if (pressed === true || this.isToggleActiveByColor(el)) return "all";
+
+    const repeatTitle = el.getAttribute("title")?.toLowerCase() ?? "";
+    if (repeatTitle.includes("one")) return "one";
+    if (repeatTitle.includes("all")) return "all";
+    return "off";
+  }
+
+  private readPressedState(el: Element): boolean | null {
+    for (const attribute of ["aria-pressed", "aria-checked"]) {
+      const value = el.getAttribute(attribute)?.toLowerCase();
+      if (value === "true") return true;
+      if (value === "false") return false;
+    }
+
+    return null;
+  }
+
+  private readRepeatIconMode(el: Element): "all" | "one" | null {
+    const iconText = [
+      el.getAttribute("icon"),
+      el.getAttribute("data-icon"),
+      el.getAttribute("aria-label"),
+      ...Array.from(el.querySelectorAll("[icon], [data-icon], svg, path")).map(
+        (node) =>
+          [
+            node.getAttribute("icon"),
+            node.getAttribute("data-icon"),
+            node.getAttribute("aria-label"),
+            node.getAttribute("class"),
+            node.getAttribute("d"),
+            node.outerHTML,
+          ].join(" "),
+      ),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (/\brepeat[-_. ]?one\b/.test(iconText)) return "one";
+    if (/\brepeat[-_. ]?(?:all|playlist)?\b/.test(iconText)) return "all";
+    return null;
   }
 
   private isElementVisible(el: HTMLElement): boolean {
@@ -452,6 +508,11 @@ export class YTMAdapter {
   private findActivationTarget(el: HTMLElement): HTMLElement {
     const nested = el.querySelector<HTMLElement>(
       [
+        "button",
+        '[role="button"]',
+        "yt-icon-button",
+        "tp-yt-paper-icon-button",
+        "paper-icon-button-light",
         'button[aria-label^="Play" i]',
         'button[title^="Play" i]',
         '[role="button"][aria-label^="Play" i]',
