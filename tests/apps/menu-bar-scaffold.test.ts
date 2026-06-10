@@ -84,13 +84,14 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain('NSMenuItem(title: "Previous"');
   });
 
-  it("scrolls overflowing title and album text in the menu bar view", () => {
+  it("scrolls overflowing title, artist, and album text in the menu bar view", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
       .join("\n");
 
     expect(sources).toContain("MenuBarScrollingTextView");
     expect(sources).toContain("titleTextView");
+    expect(sources).toContain("artistTextView");
     expect(sources).toContain("albumTextView");
     expect(sources).toContain("formatAlbumLine");
     expect(sources).toContain("scrollPauseDelay");
@@ -98,6 +99,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("NSAnimationContext.runAnimationGroup");
     expect(sources).toContain("DispatchQueue.main.asyncAfter");
     expect(sources).not.toContain("titleLabel = NSTextField(labelWithString:");
+    expect(sources).not.toContain("artistLabel = NSTextField(labelWithString:");
   });
 
   it("keeps scrolling menu bar text anchored during layout", () => {
