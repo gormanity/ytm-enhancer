@@ -246,13 +246,6 @@ h3 {
 .automation-card > .auto-play-mode-row {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
-  flex-wrap: wrap;
-  row-gap: 6px;
-}
-
-.automation-auto-play-mode-hint {
-  flex-basis: 100%;
-  margin-top: 0;
 }
 
 .settings-card > .auto-play-mode-row.has-following-message {

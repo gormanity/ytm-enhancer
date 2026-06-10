@@ -5,18 +5,17 @@
     class="card-row auto-play-mode-row"
     data-role="automation-auto-play-mode-row"
   >
-    <span>Auto-play on page load</span>
+    <span class="card-row-copy">
+      <span>Auto-play on page load</span>
+      <small class="status-hint" data-role="automation-auto-play-mode-hint">
+        Use YouTube Music's normal startup playback behavior.
+      </small>
+    </span>
     <select data-role="automation-auto-play-mode">
       <option value="default">Default</option>
       <option value="off">Off</option>
       <option value="on">On</option>
     </select>
-    <span
-      class="status-hint automation-auto-play-mode-hint"
-      data-role="automation-auto-play-mode-hint"
-    >
-      Use YouTube Music's normal startup playback behavior.
-    </span>
   </label>
   <p
     class="status-hint status-warning is-hidden"
