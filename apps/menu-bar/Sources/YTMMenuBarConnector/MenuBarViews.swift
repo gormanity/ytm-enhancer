@@ -30,7 +30,7 @@ final class MenuBarNowPlayingView: NSView {
   override var isFlipped: Bool { true }
   override var allowsVibrancy: Bool { true }
   override var intrinsicContentSize: NSSize {
-    NSSize(width: MenuBarStyle.width, height: 210)
+    NSSize(width: MenuBarStyle.width, height: 190)
   }
 
   override init(frame frameRect: NSRect) {
@@ -106,7 +106,7 @@ final class MenuBarNowPlayingView: NSView {
     )
     elapsedLabel.frame = NSRect(x: 24, y: 112, width: 90, height: 16)
     durationLabel.frame = NSRect(x: 214, y: 112, width: 90, height: 16)
-    controlsView.frame = NSRect(x: 0, y: 138, width: bounds.width, height: 58)
+    controlsView.frame = NSRect(x: 0, y: 130, width: bounds.width, height: 52)
   }
 
   private func configure() {
@@ -432,7 +432,7 @@ final class MenuBarControlsView: NSView {
 
   override var isFlipped: Bool { true }
   override var intrinsicContentSize: NSSize {
-    NSSize(width: MenuBarStyle.width, height: 58)
+    NSSize(width: MenuBarStyle.width, height: 52)
   }
 
   override init(frame frameRect: NSRect) {
@@ -470,11 +470,11 @@ final class MenuBarControlsView: NSView {
     super.layout()
 
     let centerX = bounds.midX
-    playPauseButton.frame = NSRect(x: centerX - 22, y: 7, width: 44, height: 44)
-    previousButton.frame = NSRect(x: centerX - 67, y: 11, width: 36, height: 36)
-    shuffleButton.frame = NSRect(x: centerX - 108, y: 12, width: 34, height: 34)
-    nextButton.frame = NSRect(x: centerX + 31, y: 11, width: 36, height: 36)
-    repeatButton.frame = NSRect(x: centerX + 74, y: 12, width: 34, height: 34)
+    playPauseButton.frame = NSRect(x: centerX - 24, y: 2, width: 48, height: 48)
+    previousButton.frame = NSRect(x: centerX - 76, y: 6, width: 40, height: 40)
+    shuffleButton.frame = NSRect(x: centerX - 124, y: 8, width: 36, height: 36)
+    nextButton.frame = NSRect(x: centerX + 36, y: 6, width: 40, height: 40)
+    repeatButton.frame = NSRect(x: centerX + 88, y: 8, width: 36, height: 36)
   }
 
   private func configure() {
