@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import QuartzCore
 
 private enum MenuBarStyle {
   static let width: CGFloat = 328
@@ -16,8 +17,9 @@ private enum MenuBarStyle {
 final class MenuBarNowPlayingView: NSView {
   private let effectView = NSVisualEffectView()
   private let artworkView = MenuBarArtworkView()
-  private let titleLabel = NSTextField(labelWithString: "YTM Enhancer")
+  private let titleTextView = MenuBarScrollingTextView()
   private let artistLabel = NSTextField(labelWithString: "Connecting")
+  private let albumTextView = MenuBarScrollingTextView()
   private let badgeLabel = NSTextField(labelWithString: "Connector")
   private let progressTrack = NSView()
   private let progressFill = NSView()
@@ -42,8 +44,9 @@ final class MenuBarNowPlayingView: NSView {
   }
 
   func updateConnectionStatus(_ status: String) {
-    titleLabel.stringValue = "YTM Enhancer"
-    artistLabel.stringValue = status
+    titleTextView.stringValue = "YTM Enhancer"
+    artistLabel.stringValue = ""
+    albumTextView.stringValue = status
     badgeLabel.stringValue = "Connector"
     badgeLabel.textColor = MenuBarStyle.secondaryText
     progressFraction = 0
@@ -57,8 +60,9 @@ final class MenuBarNowPlayingView: NSView {
     let title = state.title?.isEmpty == false ? state.title! : "Unknown track"
     let artist = state.artist?.isEmpty == false ? state.artist! : "Unknown artist"
 
-    titleLabel.stringValue = title
+    titleTextView.stringValue = title
     artistLabel.stringValue = artist
+    albumTextView.stringValue = formatAlbumLine(state)
     badgeLabel.stringValue = state.isPlaying ? "Playing" : "Paused"
     badgeLabel.textColor = state.isPlaying
       ? NSColor(calibratedRed: 0.58, green: 0.91, blue: 0.7, alpha: 1)
@@ -75,9 +79,10 @@ final class MenuBarNowPlayingView: NSView {
 
     effectView.frame = bounds.insetBy(dx: 10, dy: 8)
     artworkView.frame = NSRect(x: 24, y: 28, width: 64, height: 64)
-    titleLabel.frame = NSRect(x: 104, y: 28, width: 190, height: 24)
-    artistLabel.frame = NSRect(x: 104, y: 54, width: 190, height: 20)
-    badgeLabel.frame = NSRect(x: 104, y: 79, width: 96, height: 18)
+    titleTextView.frame = NSRect(x: 104, y: 23, width: 190, height: 24)
+    artistLabel.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
+    albumTextView.frame = NSRect(x: 104, y: 68, width: 190, height: 18)
+    badgeLabel.frame = NSRect(x: 104, y: 90, width: 96, height: 18)
     progressTrack.frame = NSRect(x: 24, y: 112, width: 280, height: 5)
     progressFill.frame = NSRect(
       x: 0,
@@ -102,13 +107,19 @@ final class MenuBarNowPlayingView: NSView {
     effectView.layer?.borderColor = MenuBarStyle.cardBorder.cgColor
     addSubview(effectView)
 
-    configureLabel(titleLabel, font: .systemFont(ofSize: 15, weight: .semibold))
+    titleTextView.configure(
+      font: .systemFont(ofSize: 15, weight: .semibold),
+      textColor: MenuBarStyle.primaryText
+    )
     configureLabel(artistLabel, font: .systemFont(ofSize: 13, weight: .regular))
+    albumTextView.configure(
+      font: .systemFont(ofSize: 12, weight: .regular),
+      textColor: MenuBarStyle.tertiaryText
+    )
     configureLabel(badgeLabel, font: .systemFont(ofSize: 11, weight: .medium))
     configureLabel(elapsedLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     configureLabel(durationLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
 
-    titleLabel.textColor = MenuBarStyle.primaryText
     artistLabel.textColor = MenuBarStyle.secondaryText
     elapsedLabel.textColor = MenuBarStyle.tertiaryText
     durationLabel.textColor = MenuBarStyle.tertiaryText
@@ -123,8 +134,9 @@ final class MenuBarNowPlayingView: NSView {
     progressTrack.addSubview(progressFill)
 
     addSubview(artworkView)
-    addSubview(titleLabel)
+    addSubview(titleTextView)
     addSubview(artistLabel)
+    addSubview(albumTextView)
     addSubview(badgeLabel)
     addSubview(progressTrack)
     addSubview(elapsedLabel)
@@ -146,6 +158,158 @@ final class MenuBarNowPlayingView: NSView {
   private func formatTime(_ value: Double) -> String {
     let seconds = max(0, Int(value.rounded()))
     return String(format: "%d:%02d", seconds / 60, seconds % 60)
+  }
+
+  private func formatAlbumLine(_ state: PlaybackState) -> String {
+    var parts: [String] = []
+    if let album = state.album, !album.isEmpty {
+      parts.append(album)
+    }
+    if let year = state.year {
+      parts.append(String(year))
+    }
+    return parts.joined(separator: " \u{00B7} ")
+  }
+}
+
+private final class MenuBarScrollingTextView: NSView {
+  static let scrollPauseDelay: TimeInterval = 1.25
+
+  private let label = NSTextField(labelWithString: "")
+  private var scrollGeneration = 0
+  private var pendingScroll: DispatchWorkItem?
+  private var lastVisibleWidth: CGFloat = -1
+  private var lastTextWidth: CGFloat = -1
+
+  override var isFlipped: Bool { true }
+
+  var stringValue: String {
+    get { label.stringValue }
+    set {
+      guard label.stringValue != newValue else { return }
+      label.stringValue = newValue
+      label.toolTip = newValue.isEmpty ? nil : newValue
+      setAccessibilityLabel(newValue)
+      lastTextWidth = -1
+      needsLayout = true
+    }
+  }
+
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    configure()
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  func configure(font: NSFont, textColor: NSColor) {
+    label.font = font
+    label.textColor = textColor
+    lastTextWidth = -1
+    needsLayout = true
+  }
+
+  override func layout() {
+    super.layout()
+
+    let textWidth = measuredTextWidth()
+    let visibleWidth = bounds.width
+    let changed =
+      abs(visibleWidth - lastVisibleWidth) > 0.5 ||
+      abs(textWidth - lastTextWidth) > 0.5
+
+    lastVisibleWidth = visibleWidth
+    lastTextWidth = textWidth
+    label.frame = NSRect(
+      x: label.frame.minX,
+      y: 0,
+      width: max(visibleWidth, textWidth),
+      height: bounds.height
+    )
+
+    if changed {
+      restartScrollingIfNeeded()
+    }
+  }
+
+  private var needsScroll: Bool {
+    lastVisibleWidth > 0 && lastTextWidth > lastVisibleWidth + 4
+  }
+
+  private func configure() {
+    wantsLayer = true
+    layer?.masksToBounds = true
+
+    label.wantsLayer = true
+    label.lineBreakMode = .byClipping
+    label.isSelectable = false
+    label.allowsDefaultTighteningForTruncation = false
+    label.cell?.usesSingleLineMode = true
+    addSubview(label)
+  }
+
+  private func measuredTextWidth() -> CGFloat {
+    guard !label.stringValue.isEmpty else { return 0 }
+    return ceil(label.attributedStringValue.size().width) + 6
+  }
+
+  private func restartScrollingIfNeeded() {
+    scrollGeneration += 1
+    pendingScroll?.cancel()
+    pendingScroll = nil
+    label.layer?.removeAllAnimations()
+    label.setFrameOrigin(.zero)
+
+    guard needsScroll else { return }
+    scheduleScroll(generation: scrollGeneration)
+  }
+
+  private func scheduleScroll(generation: Int) {
+    let work = DispatchWorkItem { [weak self] in
+      self?.performScroll(generation: generation)
+    }
+    pendingScroll = work
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + Self.scrollPauseDelay,
+      execute: work
+    )
+  }
+
+  private func performScroll(generation: Int) {
+    guard generation == scrollGeneration, needsScroll else { return }
+
+    let overflow = max(0, lastTextWidth - lastVisibleWidth)
+    let duration = min(8, max(1.4, TimeInterval(overflow / 32)))
+
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = duration
+      context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+      label.animator().setFrameOrigin(NSPoint(x: -overflow, y: 0))
+    } completionHandler: { [weak self] in
+      guard
+        let self,
+        generation == self.scrollGeneration,
+        self.needsScroll
+      else { return }
+
+      let work = DispatchWorkItem { [weak self] in
+        guard
+          let self,
+          generation == self.scrollGeneration,
+          self.needsScroll
+        else { return }
+
+        self.label.setFrameOrigin(.zero)
+        self.scheduleScroll(generation: generation)
+      }
+      self.pendingScroll = work
+      DispatchQueue.main.asyncAfter(
+        deadline: .now() + Self.scrollPauseDelay,
+        execute: work
+      )
+    }
   }
 }
 
