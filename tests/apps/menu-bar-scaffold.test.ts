@@ -60,10 +60,21 @@ describe("menu bar connector app scaffold", () => {
     const script = read("scripts/install-native-hosts.sh");
 
     expect(script).toContain(NATIVE_MESSAGING_HOST_NAME);
+    expect(script).toContain("scripts/uninstall-native-hosts.sh");
     expect(script).toContain("Google/Chrome/NativeMessagingHosts");
     expect(script).toContain("Microsoft Edge/NativeMessagingHosts");
     expect(script).toContain("Mozilla/NativeMessagingHosts");
     expect(script).toContain("allowed_origins");
     expect(script).toContain("allowed_extensions");
+  });
+
+  it("includes a macOS native host uninstaller", () => {
+    const script = read("scripts/uninstall-native-hosts.sh");
+
+    expect(script).toContain(NATIVE_MESSAGING_HOST_NAME);
+    expect(script).toContain("Google/Chrome/NativeMessagingHosts");
+    expect(script).toContain("Microsoft Edge/NativeMessagingHosts");
+    expect(script).toContain("Mozilla/NativeMessagingHosts");
+    expect(script).toContain("rm -f");
   });
 });
