@@ -84,6 +84,29 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain('NSMenuItem(title: "Previous"');
   });
 
+  it("matches Mini Player playback controls in the menu bar view", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+
+    expect(sources).toContain("shuffleButton");
+    expect(sources).toContain("previousButton");
+    expect(sources).toContain("playPauseButton");
+    expect(sources).toContain("nextButton");
+    expect(sources).toContain("repeatButton");
+    expect(sources).toContain('systemSymbolName: "shuffle"');
+    expect(sources).toContain('systemSymbolName: "repeat"');
+    expect(sources).toContain("repeatSystemSymbolName");
+    expect(sources).toContain("setActive(");
+    expect(sources).toContain("MenuBarStyle.controlHoverBackground");
+    expect(sources).toContain("background = .clear");
+    expect(sources).toContain("contentTintColor = .white");
+    expect(sources).not.toContain("badgeLabel");
+    expect(sources).not.toContain('"Playing"');
+    expect(sources).not.toContain('"Paused"');
+    expect(sources).not.toContain("MenuBarStyle.accentMuted");
+  });
+
   it("scrolls overflowing title, artist, and album text in the menu bar view", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
