@@ -58,6 +58,18 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("playback state");
   });
 
+  it("retries transient startup playback state errors", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+
+    expect(sources).toContain("Waiting for YouTube Music");
+    expect(sources).toContain("schedulePlaybackStateRetry");
+    expect(sources).toContain("isPlaybackStateRequestError");
+    expect(sources).toContain("Receiving end does not exist");
+    expect(sources).toContain("playback state retry scheduled");
+  });
+
   it("keeps the app isolated from extension internals", () => {
     const sources = listFiles(".")
       .filter((path) => /\.(swift|md|sh)$/.test(path))
