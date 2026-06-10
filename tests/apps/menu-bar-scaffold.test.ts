@@ -399,6 +399,33 @@ describe("menu bar connector app scaffold", () => {
     expect(scrollingViewSource).not.toContain("reflectScrolledClipView");
   });
 
+  it("loops scrolling menu bar text back to the start instead of snapping", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const scrollingViewSource = sources.match(
+      /private final class MenuBarScrollingTextView:[\s\S]+?private final class MenuBarMetadataScroller/,
+    )?.[0];
+    const metadataScrollerSource = sources.match(
+      /private final class MenuBarMetadataScroller[\s\S]+?final class MenuBarControlsView/,
+    )?.[0];
+
+    expect(scrollingViewSource).toBeDefined();
+    expect(scrollingViewSource).toContain(
+      "private static let scrollLoopGap: CGFloat",
+    );
+    expect(scrollingViewSource).toContain("var scrollDistance: CGFloat");
+    expect(scrollingViewSource).toContain("lastTextWidth + Self.scrollLoopGap");
+    expect(scrollingViewSource).toContain("drawLoopingCopy");
+    expect(scrollingViewSource).toContain(
+      "NSPoint(x: -scrollOffset + lastTextWidth + Self.scrollLoopGap",
+    );
+    expect(metadataScrollerSource).toBeDefined();
+    expect(metadataScrollerSource).toContain("maximumScrollDistance");
+    expect(metadataScrollerSource).toContain("scrollDistance");
+    expect(metadataScrollerSource).not.toContain("maximumOverflow");
+  });
+
   it("reuses the extension icon for the menu bar status item", () => {
     const manifest = read("Package.swift");
     const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
