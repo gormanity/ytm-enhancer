@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CONNECTOR_PROTOCOL_VERSION,
   type ConnectorManifest,
@@ -47,6 +47,10 @@ async function connect(host: ReturnType<typeof createConnectorHost>) {
 }
 
 describe("ConnectorHost", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("is disabled by default and does not route connector messages", async () => {
     const ytm = createMockYtmRuntimeClient();
     const host = createConnectorHost({ ytm });
@@ -189,6 +193,129 @@ describe("ConnectorHost", () => {
       message: { type: "connector.ack", requestId: "action-1" },
     });
     expect(ytm.executePlaybackAction).toHaveBeenCalledWith("next");
+  });
+
+  it("publishes immediate and delayed playback updates after connector playback actions", async () => {
+    vi.useFakeTimers();
+    const send = vi.fn().mockResolvedValue(undefined);
+    const nextState = { ...playbackState, title: "Next Song", progress: 0 };
+    const settledState = { ...nextState, progress: 1 };
+    const ytm = createMockYtmRuntimeClient({
+      getPlaybackState: vi
+        .fn()
+        .mockResolvedValueOnce(nextState)
+        .mockResolvedValueOnce(settledState),
+    });
+    const host = createConnectorHost({
+      enabled: true,
+      ytm,
+      transports: [{ start: vi.fn(), stop: vi.fn(), send }],
+    });
+    await connect(host);
+    await host.receive("connection-1", {
+      type: "connector.subscribe",
+      requestId: "subscribe-1",
+      events: ["playback.state"],
+    });
+
+    const result = await host.receive("connection-1", {
+      type: "playback.action",
+      requestId: "action-1",
+      action: "next",
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(result).toEqual({
+      ok: true,
+      message: { type: "connector.ack", requestId: "action-1" },
+    });
+    expect(ytm.executePlaybackAction).toHaveBeenCalledWith("next");
+    expect(ytm.getPlaybackState).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenLastCalledWith("connection-1", {
+      type: "playback.state",
+      state: expect.objectContaining({ title: "Next Song", progress: 0 }),
+    });
+
+    await vi.advanceTimersByTimeAsync(149);
+    expect(ytm.getPlaybackState).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(ytm.getPlaybackState).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenLastCalledWith("connection-1", {
+      type: "playback.state",
+      state: expect.objectContaining({ title: "Next Song", progress: 1 }),
+    });
+  });
+
+  it("publishes playback updates after connector seek commands", async () => {
+    vi.useFakeTimers();
+    const send = vi.fn().mockResolvedValue(undefined);
+    const ytm = createMockYtmRuntimeClient({
+      getPlaybackState: vi
+        .fn()
+        .mockResolvedValue({ ...playbackState, progress: 30 }),
+    });
+    const host = createConnectorHost({
+      enabled: true,
+      ytm,
+      transports: [{ start: vi.fn(), stop: vi.fn(), send }],
+    });
+    await connect(host);
+    await host.receive("connection-1", {
+      type: "connector.subscribe",
+      requestId: "subscribe-1",
+      events: ["playback.state"],
+    });
+
+    const result = await host.receive("connection-1", {
+      type: "playback.seek",
+      requestId: "seek-1",
+      time: 30,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(result).toEqual({
+      ok: true,
+      message: { type: "connector.ack", requestId: "seek-1" },
+    });
+    expect(ytm.seekTo).toHaveBeenCalledWith(30);
+    expect(ytm.getPlaybackState).toHaveBeenCalled();
+    expect(send).toHaveBeenCalledWith("connection-1", {
+      type: "playback.state",
+      state: expect.objectContaining({ progress: 30 }),
+    });
+  });
+
+  it("keeps connector playback actions isolated from post-action refresh failures", async () => {
+    vi.useFakeTimers();
+    const onError = vi.fn();
+    const ytm = createMockYtmRuntimeClient({
+      getPlaybackState: vi.fn().mockRejectedValue(new Error("YTM tab closed")),
+    });
+    const host = createConnectorHost({ enabled: true, ytm, onError });
+    await connect(host);
+    await host.receive("connection-1", {
+      type: "connector.subscribe",
+      requestId: "subscribe-1",
+      events: ["playback.state"],
+    });
+
+    const result = await host.receive("connection-1", {
+      type: "playback.action",
+      requestId: "action-1",
+      action: "togglePlay",
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(result).toEqual({
+      ok: true,
+      message: { type: "connector.ack", requestId: "action-1" },
+    });
+    expect(ytm.executePlaybackAction).toHaveBeenCalledWith("togglePlay");
+    expect(onError).toHaveBeenCalledWith({
+      code: "route_failed",
+      message: "YTM tab closed",
+    });
   });
 
   it("keeps connector failures isolated from core playback APIs", async () => {
