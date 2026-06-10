@@ -98,7 +98,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("setActive(");
     expect(sources).toContain("MenuBarStyle.controlHoverBackground");
     expect(sources).toContain("background = .clear");
-    expect(sources).toContain("contentTintColor = .white");
+    expect(sources).toContain("tintColor = .white");
     expect(sources).not.toContain("badgeLabel");
     expect(sources).not.toContain('"Playing"');
     expect(sources).not.toContain('"Paused"');

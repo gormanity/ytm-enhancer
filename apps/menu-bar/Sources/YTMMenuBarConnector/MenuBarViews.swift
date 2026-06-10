@@ -9,9 +9,9 @@ private enum MenuBarStyle {
   static let secondaryText = NSColor(calibratedWhite: 0.68, alpha: 1)
   static let tertiaryText = NSColor(calibratedWhite: 0.45, alpha: 1)
   static let accent = NSColor(calibratedRed: 1, green: 0, blue: 0, alpha: 1)
+  static let controlInactiveTint = NSColor(calibratedWhite: 0.46, alpha: 1)
   static let controlHoverBackground = NSColor(calibratedWhite: 1, alpha: 0.2)
   static let controlPressedBackground = NSColor(calibratedWhite: 1, alpha: 0.28)
-  static let controlActiveBackground = NSColor(calibratedWhite: 1, alpha: 0.14)
   static let controlHoverShadow = NSColor.black.withAlphaComponent(0.55)
 }
 
@@ -410,24 +410,26 @@ final class MenuBarControlsView: NSView {
   var onRepeat: (() -> Void)?
 
   private let shuffleButton = MenuBarIconButton(
-    systemSymbolName: "shuffle",
+    icon: MenuBarControlIcon.shuffle,
     label: "Shuffle"
   )
   private let previousButton = MenuBarIconButton(
-    systemSymbolName: "backward.fill",
-    label: "Previous"
+    icon: MenuBarControlIcon.previous,
+    label: "Previous",
+    isProminent: true
   )
   private let playPauseButton = MenuBarIconButton(
-    systemSymbolName: "play.fill",
+    icon: MenuBarControlIcon.play,
     label: "Play",
-    isPrimary: true
+    isProminent: true
   )
   private let nextButton = MenuBarIconButton(
-    systemSymbolName: "forward.fill",
-    label: "Next"
+    icon: MenuBarControlIcon.next,
+    label: "Next",
+    isProminent: true
   )
   private let repeatButton = MenuBarIconButton(
-    systemSymbolName: "repeat",
+    icon: MenuBarControlIcon.repeat,
     label: "Repeat"
   )
 
@@ -451,10 +453,10 @@ final class MenuBarControlsView: NSView {
     isShuffling: Bool?,
     repeatMode: String?
   ) {
-    playPauseButton.setSystemSymbolName(isPlaying ? "pause.fill" : "play.fill")
+    playPauseButton.setIcon(isPlaying ? MenuBarControlIcon.pause : MenuBarControlIcon.play)
     playPauseButton.setAccessibilityLabel(isPlaying ? "Pause" : "Play")
     shuffleButton.setActive(isShuffling == true)
-    repeatButton.setSystemSymbolName(repeatSystemSymbolName(repeatMode))
+    repeatButton.setIcon(repeatIcon(repeatMode))
     repeatButton.setAccessibilityLabel(repeatAccessibilityLabel(repeatMode))
     repeatButton.setActive((repeatMode ?? "off") != "off")
   }
@@ -496,8 +498,8 @@ final class MenuBarControlsView: NSView {
     setPlaybackControlsEnabled(false)
   }
 
-  private func repeatSystemSymbolName(_ repeatMode: String?) -> String {
-    repeatMode == "one" ? "repeat.1" : "repeat"
+  private func repeatIcon(_ repeatMode: String?) -> MenuBarControlIcon {
+    repeatMode == "one" ? MenuBarControlIcon.repeatOne : MenuBarControlIcon.repeat
   }
 
   private func repeatAccessibilityLabel(_ repeatMode: String?) -> String {
@@ -600,18 +602,18 @@ private final class MenuBarArtworkView: NSView {
 private final class MenuBarIconButton: NSButton {
   var onPress: (() -> Void)?
 
-  private var systemSymbolName: String
-  private let primary: Bool
+  private var icon: MenuBarControlIcon
+  private let prominent: Bool
   private var active = false
   private var hovering = false
 
-  init(systemSymbolName: String, label: String, isPrimary: Bool = false) {
-    self.systemSymbolName = systemSymbolName
-    self.primary = isPrimary
+  init(icon: MenuBarControlIcon, label: String, isProminent: Bool = false) {
+    self.icon = icon
+    self.prominent = isProminent
     super.init(frame: .zero)
 
     setAccessibilityLabel(label)
-    setSystemSymbolName(systemSymbolName)
+    setIcon(icon)
     target = self
     action = #selector(performPress)
     isBordered = false
@@ -667,12 +669,9 @@ private final class MenuBarIconButton: NSButton {
     super.mouseExited(with: event)
   }
 
-  func setSystemSymbolName(_ systemSymbolName: String) {
-    self.systemSymbolName = systemSymbolName
-    image = NSImage(
-      systemSymbolName: systemSymbolName,
-      accessibilityDescription: accessibilityLabel()
-    )
+  func setIcon(_ icon: MenuBarControlIcon) {
+    self.icon = icon
+    image = icon.image(accessibilityDescription: accessibilityLabel())
   }
 
   func setActive(_ active: Bool) {
@@ -697,19 +696,19 @@ private final class MenuBarIconButton: NSButton {
       background = MenuBarStyle.controlPressedBackground
     } else if hovering {
       background = MenuBarStyle.controlHoverBackground
-    } else if active {
-      background = MenuBarStyle.controlActiveBackground
     } else {
       background = .clear
     }
 
-    if primary || active {
-      contentTintColor = .white
+    let tintColor: NSColor
+    if prominent || active || hovering {
+      tintColor = .white
     } else {
-      contentTintColor = MenuBarStyle.secondaryText
+      tintColor = MenuBarStyle.controlInactiveTint
     }
 
     alphaValue = isEnabled ? 0.9 : 0.35
+    contentTintColor = tintColor
     layer?.backgroundColor = background.cgColor
     layer?.shadowColor = MenuBarStyle.controlHoverShadow.cgColor
     layer?.shadowOpacity = shadowOpacity
