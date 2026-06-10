@@ -2,9 +2,11 @@ import AppKit
 import Foundation
 
 final class MenuBarController: NSObject {
+  var onShuffle: (() -> Void)?
   var onPrevious: (() -> Void)?
   var onTogglePlay: (() -> Void)?
   var onNext: (() -> Void)?
+  var onRepeat: (() -> Void)?
   var onRefresh: (() -> Void)?
 
   private let barItem = NSStatusBar.system.statusItem(
@@ -35,7 +37,11 @@ final class MenuBarController: NSObject {
   func updatePlayback(_ state: PlaybackState) {
     updateStatusBar(isPlaying: state.isPlaying)
     nowPlayingView.updatePlayback(state)
-    controlsView.updatePlayback(isPlaying: state.isPlaying)
+    controlsView.updatePlayback(
+      isPlaying: state.isPlaying,
+      isShuffling: state.isShuffling,
+      repeatMode: state.repeatMode
+    )
     controlsView.setPlaybackControlsEnabled(true)
   }
 
@@ -49,9 +55,11 @@ final class MenuBarController: NSObject {
 
     nowPlayingItem.view = nowPlayingView
     controlsItem.view = controlsView
+    controlsView.onShuffle = { [weak self] in self?.shuffle() }
     controlsView.onPrevious = { [weak self] in self?.previous() }
     controlsView.onTogglePlay = { [weak self] in self?.togglePlay() }
     controlsView.onNext = { [weak self] in self?.next() }
+    controlsView.onRepeat = { [weak self] in self?.repeatMode() }
 
     menu.appearance = NSAppearance(named: .darkAqua)
     menu.addItem(nowPlayingItem)
@@ -71,6 +79,10 @@ final class MenuBarController: NSObject {
     barItem.button?.toolTip = "YTM Enhancer"
   }
 
+  @objc private func shuffle() {
+    onShuffle?()
+  }
+
   @objc private func previous() {
     onPrevious?()
   }
@@ -81,6 +93,10 @@ final class MenuBarController: NSObject {
 
   @objc private func next() {
     onNext?()
+  }
+
+  @objc private func repeatMode() {
+    onRepeat?()
   }
 
   @objc private func refresh() {

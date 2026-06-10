@@ -10,7 +10,9 @@ private enum MenuBarStyle {
   static let secondaryText = NSColor(calibratedWhite: 0.68, alpha: 1)
   static let tertiaryText = NSColor(calibratedWhite: 0.45, alpha: 1)
   static let accent = NSColor(calibratedRed: 1, green: 0, blue: 0, alpha: 1)
-  static let accentMuted = NSColor(calibratedRed: 1, green: 0, blue: 0, alpha: 0.22)
+  static let controlHoverBackground = NSColor(calibratedWhite: 1, alpha: 0.2)
+  static let controlPressedBackground = NSColor(calibratedWhite: 1, alpha: 0.28)
+  static let controlActiveBackground = NSColor(calibratedWhite: 1, alpha: 0.14)
 }
 
 final class MenuBarNowPlayingView: NSView {
@@ -19,7 +21,6 @@ final class MenuBarNowPlayingView: NSView {
   private let titleTextView = MenuBarScrollingTextView()
   private let artistTextView = MenuBarScrollingTextView()
   private let albumTextView = MenuBarScrollingTextView()
-  private let badgeLabel = NSTextField(labelWithString: "Connector")
   private let progressTrack = NSView()
   private let progressFill = NSView()
   private let elapsedLabel = NSTextField(labelWithString: "")
@@ -46,8 +47,6 @@ final class MenuBarNowPlayingView: NSView {
     titleTextView.stringValue = "YTM Enhancer"
     artistTextView.stringValue = ""
     albumTextView.stringValue = status
-    badgeLabel.stringValue = "Connector"
-    badgeLabel.textColor = MenuBarStyle.secondaryText
     progressFraction = 0
     elapsedLabel.stringValue = ""
     durationLabel.stringValue = ""
@@ -62,10 +61,6 @@ final class MenuBarNowPlayingView: NSView {
     titleTextView.stringValue = title
     artistTextView.stringValue = artist
     albumTextView.stringValue = formatAlbumLine(state)
-    badgeLabel.stringValue = state.isPlaying ? "Playing" : "Paused"
-    badgeLabel.textColor = state.isPlaying
-      ? NSColor(calibratedRed: 0.58, green: 0.91, blue: 0.7, alpha: 1)
-      : MenuBarStyle.secondaryText
     progressFraction = progressRatio(state)
     elapsedLabel.stringValue = state.duration > 0 ? formatTime(state.progress) : ""
     durationLabel.stringValue = state.duration > 0 ? formatTime(state.duration) : ""
@@ -81,16 +76,15 @@ final class MenuBarNowPlayingView: NSView {
     titleTextView.frame = NSRect(x: 104, y: 23, width: 190, height: 24)
     artistTextView.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
     albumTextView.frame = NSRect(x: 104, y: 68, width: 190, height: 18)
-    badgeLabel.frame = NSRect(x: 104, y: 90, width: 96, height: 18)
-    progressTrack.frame = NSRect(x: 24, y: 112, width: 280, height: 5)
+    progressTrack.frame = NSRect(x: 24, y: 101, width: 280, height: 5)
     progressFill.frame = NSRect(
       x: 0,
       y: 0,
       width: progressTrack.bounds.width * progressFraction,
       height: progressTrack.bounds.height
     )
-    elapsedLabel.frame = NSRect(x: 24, y: 123, width: 90, height: 16)
-    durationLabel.frame = NSRect(x: 214, y: 123, width: 90, height: 16)
+    elapsedLabel.frame = NSRect(x: 24, y: 112, width: 90, height: 16)
+    durationLabel.frame = NSRect(x: 214, y: 112, width: 90, height: 16)
   }
 
   private func configure() {
@@ -118,7 +112,6 @@ final class MenuBarNowPlayingView: NSView {
       font: .systemFont(ofSize: 12, weight: .regular),
       textColor: MenuBarStyle.tertiaryText
     )
-    configureLabel(badgeLabel, font: .systemFont(ofSize: 11, weight: .medium))
     configureLabel(elapsedLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     configureLabel(durationLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
 
@@ -138,7 +131,6 @@ final class MenuBarNowPlayingView: NSView {
     addSubview(titleTextView)
     addSubview(artistTextView)
     addSubview(albumTextView)
-    addSubview(badgeLabel)
     addSubview(progressTrack)
     addSubview(elapsedLabel)
     addSubview(durationLabel)
@@ -343,10 +335,16 @@ private final class MenuBarScrollingTextView: NSView {
 }
 
 final class MenuBarControlsView: NSView {
+  var onShuffle: (() -> Void)?
   var onPrevious: (() -> Void)?
   var onTogglePlay: (() -> Void)?
   var onNext: (() -> Void)?
+  var onRepeat: (() -> Void)?
 
+  private let shuffleButton = MenuBarIconButton(
+    systemSymbolName: "shuffle",
+    label: "Shuffle"
+  )
   private let previousButton = MenuBarIconButton(
     systemSymbolName: "backward.fill",
     label: "Previous"
@@ -359,6 +357,10 @@ final class MenuBarControlsView: NSView {
   private let nextButton = MenuBarIconButton(
     systemSymbolName: "forward.fill",
     label: "Next"
+  )
+  private let repeatButton = MenuBarIconButton(
+    systemSymbolName: "repeat",
+    label: "Repeat"
   )
   private let effectView = NSVisualEffectView()
 
@@ -377,15 +379,25 @@ final class MenuBarControlsView: NSView {
     fatalError("init(coder:) has not been implemented")
   }
 
-  func updatePlayback(isPlaying: Bool) {
+  func updatePlayback(
+    isPlaying: Bool,
+    isShuffling: Bool?,
+    repeatMode: String?
+  ) {
     playPauseButton.setSystemSymbolName(isPlaying ? "pause.fill" : "play.fill")
     playPauseButton.setAccessibilityLabel(isPlaying ? "Pause" : "Play")
+    shuffleButton.setActive(isShuffling == true)
+    repeatButton.setSystemSymbolName(repeatSystemSymbolName(repeatMode))
+    repeatButton.setAccessibilityLabel(repeatAccessibilityLabel(repeatMode))
+    repeatButton.setActive((repeatMode ?? "off") != "off")
   }
 
   func setPlaybackControlsEnabled(_ enabled: Bool) {
+    shuffleButton.isEnabled = enabled
     previousButton.isEnabled = enabled
     playPauseButton.isEnabled = enabled
     nextButton.isEnabled = enabled
+    repeatButton.isEnabled = enabled
   }
 
   override func layout() {
@@ -394,8 +406,10 @@ final class MenuBarControlsView: NSView {
 
     let centerX = bounds.midX
     playPauseButton.frame = NSRect(x: centerX - 22, y: 11, width: 44, height: 44)
-    previousButton.frame = NSRect(x: centerX - 78, y: 15, width: 36, height: 36)
-    nextButton.frame = NSRect(x: centerX + 42, y: 15, width: 36, height: 36)
+    previousButton.frame = NSRect(x: centerX - 67, y: 15, width: 36, height: 36)
+    shuffleButton.frame = NSRect(x: centerX - 108, y: 16, width: 34, height: 34)
+    nextButton.frame = NSRect(x: centerX + 31, y: 15, width: 36, height: 36)
+    repeatButton.frame = NSRect(x: centerX + 74, y: 16, width: 34, height: 34)
   }
 
   private func configure() {
@@ -411,14 +425,33 @@ final class MenuBarControlsView: NSView {
     effectView.layer?.borderColor = MenuBarStyle.cardBorder.cgColor
     addSubview(effectView)
 
+    shuffleButton.onPress = { [weak self] in self?.onShuffle?() }
     previousButton.onPress = { [weak self] in self?.onPrevious?() }
     playPauseButton.onPress = { [weak self] in self?.onTogglePlay?() }
     nextButton.onPress = { [weak self] in self?.onNext?() }
+    repeatButton.onPress = { [weak self] in self?.onRepeat?() }
 
+    addSubview(shuffleButton)
     addSubview(previousButton)
     addSubview(playPauseButton)
     addSubview(nextButton)
+    addSubview(repeatButton)
     setPlaybackControlsEnabled(false)
+  }
+
+  private func repeatSystemSymbolName(_ repeatMode: String?) -> String {
+    repeatMode == "one" ? "repeat.1" : "repeat"
+  }
+
+  private func repeatAccessibilityLabel(_ repeatMode: String?) -> String {
+    switch repeatMode {
+    case "one":
+      return "Repeat one"
+    case "all":
+      return "Repeat all"
+    default:
+      return "Repeat off"
+    }
   }
 }
 
@@ -512,6 +545,8 @@ private final class MenuBarIconButton: NSButton {
 
   private var systemSymbolName: String
   private let primary: Bool
+  private var active = false
+  private var hovering = false
 
   init(systemSymbolName: String, label: String, isPrimary: Bool = false) {
     self.systemSymbolName = systemSymbolName
@@ -546,12 +581,41 @@ private final class MenuBarIconButton: NSButton {
     }
   }
 
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    trackingAreas.forEach(removeTrackingArea)
+    addTrackingArea(
+      NSTrackingArea(
+        rect: bounds,
+        options: [.activeInActiveApp, .inVisibleRect, .mouseEnteredAndExited],
+        owner: self
+      )
+    )
+  }
+
+  override func mouseEntered(with event: NSEvent) {
+    hovering = true
+    updateAppearance()
+    super.mouseEntered(with: event)
+  }
+
+  override func mouseExited(with event: NSEvent) {
+    hovering = false
+    updateAppearance()
+    super.mouseExited(with: event)
+  }
+
   func setSystemSymbolName(_ systemSymbolName: String) {
     self.systemSymbolName = systemSymbolName
     image = NSImage(
       systemSymbolName: systemSymbolName,
       accessibilityDescription: accessibilityLabel()
     )
+  }
+
+  func setActive(_ active: Bool) {
+    self.active = active
+    updateAppearance()
   }
 
   override func layout() {
@@ -561,17 +625,23 @@ private final class MenuBarIconButton: NSButton {
 
   private func updateAppearance() {
     let background: NSColor
-    if primary {
-      background = isHighlighted ? NSColor(calibratedRed: 0.8, green: 0, blue: 0, alpha: 1) : MenuBarStyle.accent
-      contentTintColor = .white
+    if isHighlighted {
+      background = MenuBarStyle.controlPressedBackground
+    } else if hovering {
+      background = MenuBarStyle.controlHoverBackground
+    } else if active {
+      background = MenuBarStyle.controlActiveBackground
     } else {
-      background = isHighlighted
-        ? NSColor(calibratedWhite: 0.3, alpha: 1)
-        : MenuBarStyle.accentMuted
-      contentTintColor = MenuBarStyle.primaryText
+      background = .clear
     }
 
-    alphaValue = isEnabled ? 1 : 0.35
+    if primary || active {
+      contentTintColor = .white
+    } else {
+      contentTintColor = MenuBarStyle.secondaryText
+    }
+
+    alphaValue = isEnabled ? 0.9 : 0.35
     layer?.backgroundColor = background.cgColor
   }
 
