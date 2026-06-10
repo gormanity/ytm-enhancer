@@ -130,6 +130,45 @@ describe("menu bar connector app scaffold", () => {
     expect(controllerSource).not.toContain("menu.addItem(controlsItem)");
   });
 
+  it("uses a compact but roomier playback control layout", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+    const controlsViewSource = sources.match(
+      /final class MenuBarControlsView:[\s\S]+?private final class MenuBarArtworkView/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain(
+      "NSSize(width: MenuBarStyle.width, height: 190)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "controlsView.frame = NSRect(x: 0, y: 130, width: bounds.width, height: 52)",
+    );
+    expect(controlsViewSource).toBeDefined();
+    expect(controlsViewSource).toContain(
+      "NSSize(width: MenuBarStyle.width, height: 52)",
+    );
+    expect(controlsViewSource).toContain(
+      "playPauseButton.frame = NSRect(x: centerX - 24, y: 2, width: 48, height: 48)",
+    );
+    expect(controlsViewSource).toContain(
+      "previousButton.frame = NSRect(x: centerX - 76, y: 6, width: 40, height: 40)",
+    );
+    expect(controlsViewSource).toContain(
+      "shuffleButton.frame = NSRect(x: centerX - 124, y: 8, width: 36, height: 36)",
+    );
+    expect(controlsViewSource).toContain(
+      "nextButton.frame = NSRect(x: centerX + 36, y: 6, width: 40, height: 40)",
+    );
+    expect(controlsViewSource).toContain(
+      "repeatButton.frame = NSRect(x: centerX + 88, y: 8, width: 36, height: 36)",
+    );
+  });
+
   it("uses live updates instead of a manual refresh menu item", () => {
     const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
     const controllerSource = read(
