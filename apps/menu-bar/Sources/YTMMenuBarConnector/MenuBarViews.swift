@@ -18,8 +18,8 @@ private enum MenuBarStyle {
 final class MenuBarNowPlayingView: NSView {
   private let artworkView = MenuBarArtworkView()
   private let titleTextView = MenuBarScrollingTextView()
-  private let artistTextView = MenuBarScrollingTextView()
   private let albumTextView = MenuBarScrollingTextView()
+  private let artistYearTextView = MenuBarScrollingTextView()
   private let progressTrack = NSView()
   private let progressFill = NSView()
   private let elapsedLabel = NSTextField(labelWithString: "")
@@ -47,8 +47,8 @@ final class MenuBarNowPlayingView: NSView {
 
   func updateConnectionStatus(_ status: String) {
     titleTextView.stringValue = "YTM Enhancer"
-    artistTextView.stringValue = ""
-    albumTextView.stringValue = status
+    albumTextView.stringValue = ""
+    artistYearTextView.stringValue = status
     progressFraction = 0
     elapsedLabel.stringValue = ""
     durationLabel.stringValue = ""
@@ -59,11 +59,10 @@ final class MenuBarNowPlayingView: NSView {
 
   func updatePlayback(_ state: PlaybackState) {
     let title = state.title?.isEmpty == false ? state.title! : "Unknown track"
-    let artist = state.artist?.isEmpty == false ? state.artist! : "Unknown artist"
 
     titleTextView.stringValue = title
-    artistTextView.stringValue = artist
-    albumTextView.stringValue = formatAlbumLine(state)
+    albumTextView.stringValue = state.album ?? ""
+    artistYearTextView.stringValue = formatArtistYearLine(state)
     progressFraction = progressRatio(state)
     elapsedLabel.stringValue = state.duration > 0 ? formatTime(state.progress) : ""
     durationLabel.stringValue = state.duration > 0 ? formatTime(state.duration) : ""
@@ -96,8 +95,8 @@ final class MenuBarNowPlayingView: NSView {
 
     artworkView.frame = NSRect(x: 24, y: 28, width: 64, height: 64)
     titleTextView.frame = NSRect(x: 104, y: 23, width: 190, height: 24)
-    artistTextView.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
-    albumTextView.frame = NSRect(x: 104, y: 68, width: 190, height: 18)
+    albumTextView.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
+    artistYearTextView.frame = NSRect(x: 104, y: 68, width: 190, height: 18)
     progressTrack.frame = NSRect(x: 24, y: 101, width: 280, height: 5)
     progressFill.frame = NSRect(
       x: 0,
@@ -115,17 +114,17 @@ final class MenuBarNowPlayingView: NSView {
       font: .systemFont(ofSize: 15, weight: .semibold),
       textColor: MenuBarStyle.primaryText
     )
-    artistTextView.configure(
+    albumTextView.configure(
       font: .systemFont(ofSize: 13, weight: .regular),
       textColor: MenuBarStyle.secondaryText
     )
-    albumTextView.configure(
+    artistYearTextView.configure(
       font: .systemFont(ofSize: 12, weight: .regular),
       textColor: MenuBarStyle.tertiaryText
     )
     metadataScroller.register(titleTextView)
-    metadataScroller.register(artistTextView)
     metadataScroller.register(albumTextView)
+    metadataScroller.register(artistYearTextView)
 
     configureLabel(elapsedLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     configureLabel(durationLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
@@ -144,8 +143,8 @@ final class MenuBarNowPlayingView: NSView {
 
     addSubview(artworkView)
     addSubview(titleTextView)
-    addSubview(artistTextView)
     addSubview(albumTextView)
+    addSubview(artistYearTextView)
     addSubview(progressTrack)
     addSubview(elapsedLabel)
     addSubview(durationLabel)
@@ -169,10 +168,10 @@ final class MenuBarNowPlayingView: NSView {
     return String(format: "%d:%02d", seconds / 60, seconds % 60)
   }
 
-  private func formatAlbumLine(_ state: PlaybackState) -> String {
+  private func formatArtistYearLine(_ state: PlaybackState) -> String {
     var parts: [String] = []
-    if let album = state.album, !album.isEmpty {
-      parts.append(album)
+    if let artist = state.artist, !artist.isEmpty {
+      parts.append(artist)
     }
     if let year = state.year {
       parts.append(String(year))
