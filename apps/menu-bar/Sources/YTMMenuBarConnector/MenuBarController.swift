@@ -10,6 +10,7 @@ final class MenuBarController: NSObject {
   private let barItem = NSStatusBar.system.statusItem(
     withLength: NSStatusItem.variableLength
   )
+  private let statusIcon = MenuBarStatusIcon.extensionIcon()
   private let menu = NSMenu()
   private let nowPlayingView = MenuBarNowPlayingView()
   private let controlsView = MenuBarControlsView()
@@ -61,12 +62,12 @@ final class MenuBarController: NSObject {
   }
 
   private func updateStatusBar(isPlaying: Bool) {
-    barItem.button?.title = "YTM"
-    barItem.button?.image = NSImage(
-      systemSymbolName: isPlaying ? "music.note" : "music.note.list",
-      accessibilityDescription: "YTM Enhancer"
-    )
-    barItem.button?.imagePosition = .imageLeading
+    barItem.length = NSStatusItem.squareLength
+    barItem.button?.title = ""
+    barItem.button?.image = statusIcon ?? MenuBarStatusIcon.fallbackIcon(isPlaying: isPlaying)
+    barItem.button?.imagePosition = .imageOnly
+    barItem.button?.imageScaling = .scaleProportionallyDown
+    barItem.button?.toolTip = "YTM Enhancer"
   }
 
   @objc private func previous() {
