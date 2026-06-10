@@ -84,6 +84,24 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain('NSMenuItem(title: "Previous"');
   });
 
+  it("reuses the extension icon for the menu bar status item", () => {
+    const manifest = read("Package.swift");
+    const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
+    const sources = sourceFiles.map(read).join("\n");
+
+    expect(manifest).toContain('.copy("Resources/extension-icon.svg")');
+    expect(sourceFiles).toContain(
+      "Sources/YTMMenuBarConnector/Resources/extension-icon.svg",
+    );
+    expect(sources).toContain(
+      'Bundle.module.url(forResource: "extension-icon", withExtension: "svg")',
+    );
+    expect(sources).toContain("MenuBarStatusIcon.extensionIcon()");
+    expect(sources).not.toContain(
+      'systemSymbolName: isPlaying ? "music.note" : "music.note.list"',
+    );
+  });
+
   it("keeps the app isolated from extension internals", () => {
     const sources = listFiles(".")
       .filter((path) => /\.(swift|md|sh)$/.test(path))
