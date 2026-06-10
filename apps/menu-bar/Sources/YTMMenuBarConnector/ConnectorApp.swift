@@ -2,11 +2,14 @@ import AppKit
 import Foundation
 
 final class ConnectorApp {
+  private static let playbackStateRetryDelaySeconds: TimeInterval = 2
+
   private let connection: NativeMessagingConnection
   private let menu: MenuBarController
   private let logger: NativeAppLogger
   private var nextRequestNumber = 0
   private var isReady = false
+  private var playbackStateRetry: DispatchWorkItem?
 
   init(
     connection: NativeMessagingConnection,
@@ -31,6 +34,8 @@ final class ConnectorApp {
       },
       onDisconnect: { [weak self] in
         self?.logger.log("connector disconnected")
+        self?.isReady = false
+        self?.clearPlaybackStateRetry()
         self?.menu.updateConnectionStatus("Disconnected")
       }
     )
@@ -62,6 +67,7 @@ final class ConnectorApp {
       requestPlaybackState()
     case "playback.state":
       if let state = message.state {
+        clearPlaybackStateRetry()
         logger.log(playbackStateSummary(state))
         menu.updatePlayback(state)
       } else {
@@ -70,6 +76,11 @@ final class ConnectorApp {
     case "connector.error":
       let label = message.message ?? message.code ?? "Connector error"
       logger.log("connector error \(label)")
+      if isPlaybackStateRequestError(message) {
+        menu.updateConnectionStatus("Waiting for YouTube Music")
+        schedulePlaybackStateRetry(reason: label)
+        return
+      }
       menu.updateConnectionStatus(label)
     default:
       logger.log("received message ignored type=\(message.type)")
@@ -82,6 +93,7 @@ final class ConnectorApp {
       logger.log("playback state refresh skipped because connector is not ready")
       return
     }
+    clearPlaybackStateRetry()
     logger.log("requesting playback state")
     connection.send(
       ConnectorProtocol.playbackStateRequest(requestId: nextRequestId("state"))
@@ -116,6 +128,36 @@ final class ConnectorApp {
       "progress=\(Int(state.progress.rounded()))",
       "duration=\(Int(state.duration.rounded()))",
     ].joined(separator: " ")
+  }
+
+  private func isPlaybackStateRequestError(_ message: HostMessage) -> Bool {
+    guard message.requestId?.hasPrefix("state-") == true else {
+      return false
+    }
+
+    return message.message?.contains("Receiving end does not exist") == true
+  }
+
+  private func schedulePlaybackStateRetry(reason: String) {
+    clearPlaybackStateRetry()
+    let retry = DispatchWorkItem { [weak self] in
+      self?.playbackStateRetry = nil
+      self?.logger.log("playback state retry starting")
+      self?.requestPlaybackState()
+    }
+    playbackStateRetry = retry
+    logger.log(
+      "playback state retry scheduled reason=\(reason) delay=\(Self.playbackStateRetryDelaySeconds)"
+    )
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + Self.playbackStateRetryDelaySeconds,
+      execute: retry
+    )
+  }
+
+  private func clearPlaybackStateRetry() {
+    playbackStateRetry?.cancel()
+    playbackStateRetry = nil
   }
 
   private func logValue(_ value: String?) -> String {
