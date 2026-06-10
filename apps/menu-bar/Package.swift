@@ -17,7 +17,8 @@ let package = Package(
     .executableTarget(
       name: "YTMMenuBarConnector",
       resources: [
-        .copy("Resources/extension-icon.svg")
+        .copy("Resources/extension-icon.svg"),
+        .copy("Resources/extension-icon-monochrome.svg"),
       ],
       linkerSettings: [
         .linkedFramework("AppKit")

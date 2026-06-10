@@ -10,7 +10,8 @@ final class MenuBarController: NSObject {
   private let barItem = NSStatusBar.system.statusItem(
     withLength: NSStatusItem.variableLength
   )
-  private let statusIcon = MenuBarStatusIcon.extensionIcon()
+  private let statusIcon =
+    MenuBarStatusIcon.monochromeIcon() ?? MenuBarStatusIcon.extensionIcon()
   private let menu = NSMenu()
   private let nowPlayingView = MenuBarNowPlayingView()
   private let controlsView = MenuBarControlsView()
