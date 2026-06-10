@@ -45,6 +45,19 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("FileHandle.standardOutput");
   });
 
+  it("writes local debug logs for connector diagnostics", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+
+    expect(sources).toContain("NativeAppLogger");
+    expect(sources).toContain("YTM_MENU_BAR_LOG_PATH");
+    expect(sources).toContain("/tmp/ytm-menu-bar-connector.log");
+    expect(sources).toContain("received message");
+    expect(sources).toContain("sending message");
+    expect(sources).toContain("playback state");
+  });
+
   it("keeps the app isolated from extension internals", () => {
     const sources = listFiles(".")
       .filter((path) => /\.(swift|md|sh)$/.test(path))
