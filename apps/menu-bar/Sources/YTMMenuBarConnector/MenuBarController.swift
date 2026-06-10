@@ -11,12 +11,10 @@ final class MenuBarController: NSObject {
     withLength: NSStatusItem.variableLength
   )
   private let menu = NSMenu()
-  private let titleItem = NSMenuItem(title: "YTM Enhancer", action: nil, keyEquivalent: "")
-  private let artistItem = NSMenuItem(title: "Waiting for playback", action: nil, keyEquivalent: "")
-  private let progressItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-  private let previousItem = NSMenuItem(title: "Previous", action: #selector(previous), keyEquivalent: "")
-  private let playPauseItem = NSMenuItem(title: "Play/Pause", action: #selector(togglePlay), keyEquivalent: "")
-  private let nextItem = NSMenuItem(title: "Next", action: #selector(next), keyEquivalent: "")
+  private let nowPlayingView = MenuBarNowPlayingView()
+  private let controlsView = MenuBarControlsView()
+  private let nowPlayingItem = NSMenuItem()
+  private let controlsItem = NSMenuItem()
   private let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refresh), keyEquivalent: "")
   private let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
 
@@ -27,55 +25,48 @@ final class MenuBarController: NSObject {
   }
 
   func updateConnectionStatus(_ status: String) {
-    barItem.button?.title = "YTM"
-    titleItem.title = "YTM Enhancer"
-    artistItem.title = status
-    progressItem.title = ""
+    updateStatusBar(isPlaying: false)
+    nowPlayingView.updateConnectionStatus(status)
+    controlsView.setPlaybackControlsEnabled(false)
   }
 
   func updatePlayback(_ state: PlaybackState) {
-    let title = state.title?.isEmpty == false ? state.title! : "Unknown track"
-    let artist = state.artist?.isEmpty == false ? state.artist! : "Unknown artist"
-
-    barItem.button?.title = state.isPlaying ? "YTM >" : "YTM"
-    titleItem.title = title
-    artistItem.title = artist
-    progressItem.title = formatProgress(state)
-    playPauseItem.title = state.isPlaying ? "Pause" : "Play"
+    updateStatusBar(isPlaying: state.isPlaying)
+    nowPlayingView.updatePlayback(state)
+    controlsView.updatePlayback(isPlaying: state.isPlaying)
+    controlsView.setPlaybackControlsEnabled(true)
   }
 
   private func configureMenu() {
-    titleItem.isEnabled = false
-    artistItem.isEnabled = false
-    progressItem.isEnabled = false
-
-    previousItem.target = self
-    playPauseItem.target = self
-    nextItem.target = self
     refreshItem.target = self
     quitItem.target = self
+    refreshItem.image = NSImage(
+      systemSymbolName: "arrow.clockwise",
+      accessibilityDescription: "Refresh"
+    )
 
-    menu.addItem(titleItem)
-    menu.addItem(artistItem)
-    menu.addItem(progressItem)
-    menu.addItem(.separator())
-    menu.addItem(previousItem)
-    menu.addItem(playPauseItem)
-    menu.addItem(nextItem)
+    nowPlayingItem.view = nowPlayingView
+    controlsItem.view = controlsView
+    controlsView.onPrevious = { [weak self] in self?.previous() }
+    controlsView.onTogglePlay = { [weak self] in self?.togglePlay() }
+    controlsView.onNext = { [weak self] in self?.next() }
+
+    menu.appearance = NSAppearance(named: .darkAqua)
+    menu.addItem(nowPlayingItem)
+    menu.addItem(controlsItem)
     menu.addItem(.separator())
     menu.addItem(refreshItem)
     menu.addItem(quitItem)
     barItem.menu = menu
   }
 
-  private func formatProgress(_ state: PlaybackState) -> String {
-    guard state.duration > 0 else { return "" }
-    return "\(formatTime(state.progress)) / \(formatTime(state.duration))"
-  }
-
-  private func formatTime(_ value: Double) -> String {
-    let seconds = max(0, Int(value.rounded()))
-    return String(format: "%d:%02d", seconds / 60, seconds % 60)
+  private func updateStatusBar(isPlaying: Bool) {
+    barItem.button?.title = "YTM"
+    barItem.button?.image = NSImage(
+      systemSymbolName: isPlaying ? "music.note" : "music.note.list",
+      accessibilityDescription: "YTM Enhancer"
+    )
+    barItem.button?.imagePosition = .imageLeading
   }
 
   @objc private func previous() {
