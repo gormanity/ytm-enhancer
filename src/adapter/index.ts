@@ -33,10 +33,7 @@ export class YTMAdapter {
     const artworkEl = document.querySelector(
       SELECTORS.albumArt,
     ) as HTMLImageElement | null;
-    const playPauseEl = document.querySelector(SELECTORS.playPauseButton);
-
-    const isPlaying =
-      playPauseEl?.getAttribute("title")?.toLowerCase() === "pause";
+    const isPlaying = this.isPlaying();
 
     const { progress, duration } = this.readVideoTime();
 
@@ -327,6 +324,11 @@ export class YTMAdapter {
   }
 
   private isPlaying(): boolean {
+    const video = document.querySelector<HTMLVideoElement>(
+      SELECTORS.videoElement,
+    );
+    if (video && !video.paused && !video.ended) return true;
+
     const el = document.querySelector(SELECTORS.playPauseButton);
     return el?.getAttribute("title")?.toLowerCase() === "pause";
   }

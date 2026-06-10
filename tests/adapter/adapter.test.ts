@@ -376,6 +376,23 @@ describe("YTMAdapter", () => {
       expect(button.click).not.toHaveBeenCalled();
     });
 
+    it("should not click play when media is already playing and the button title is stale", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "paused", { value: false });
+      Object.defineProperty(video, "ended", { value: false });
+
+      const button = document.createElement("tp-yt-paper-icon-button");
+      button.id = "play-pause-button";
+      button.setAttribute("title", "Play");
+      button.click = vi.fn();
+      document.body.appendChild(button);
+
+      adapter.executeAction("play");
+
+      expect(button.click).not.toHaveBeenCalled();
+    });
+
     it("should click the next button for next", () => {
       const button = document.createElement("tp-yt-paper-icon-button");
       button.className = "next-button";
