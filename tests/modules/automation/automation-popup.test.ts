@@ -142,6 +142,29 @@ describe("automation popup view", () => {
     );
   });
 
+  it("uses the standard row helper text styling for the Auto-Play hint", async () => {
+    const clients = createClients({ autoPlayMode: "default" });
+    const view = createAutomationPopupView(createTestModuleContext(), clients);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const hint = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLElement>(
+        '[data-role="automation-auto-play-mode-hint"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    const copy = hint.closest(".card-row-copy");
+    const modeRow = container.querySelector<HTMLElement>(
+      '[data-role="automation-auto-play-mode-row"]',
+    );
+
+    expect(modeRow?.contains(copy)).toBe(true);
+    expect(hint.classList.contains("status-hint")).toBe(true);
+  });
+
   it("persists Auto-Play mode changes through the Auto-Play client", async () => {
     const clients = createClients();
     const view = createAutomationPopupView(createTestModuleContext(), clients);
