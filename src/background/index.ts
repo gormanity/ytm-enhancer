@@ -154,6 +154,13 @@ function disableConnectorSupport(): void {
   connectorHost = null;
 }
 
+async function restartConnectorSupport(): Promise<void> {
+  if (!connectorSupportEnabled) return;
+
+  disableConnectorSupport();
+  await enableConnectorSupport();
+}
+
 function connectedConnectorIds(): Set<string> {
   return new Set(
     connectorHost?.listSessions().map((session) => session.manifest.id) ?? [],
@@ -435,7 +442,9 @@ handler.on("set-connector-enabled", async (message) => {
   if (!next) return { ok: false, error: "Unknown connector" };
 
   knownConnectors = next;
-  if (!message.enabled) {
+  if (message.enabled) {
+    await restartConnectorSupport();
+  } else {
     disconnectConnector(message.connectorId);
   }
   await saveKnownConnectors();
