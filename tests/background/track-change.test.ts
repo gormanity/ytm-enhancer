@@ -83,6 +83,7 @@ describe("track-changed background handling", () => {
         isYTMTabSuppressed: () => false,
         miniPlayer,
         notifications,
+        publishPlaybackState: vi.fn(),
       },
     );
 
@@ -107,6 +108,7 @@ describe("track-changed background handling", () => {
         isYTMTabSuppressed: () => false,
         miniPlayer,
         notifications,
+        publishPlaybackState: vi.fn(),
       },
     );
 
@@ -131,6 +133,7 @@ describe("track-changed background handling", () => {
         isYTMTabSuppressed: () => false,
         miniPlayer,
         notifications,
+        publishPlaybackState: vi.fn(),
       },
     );
 

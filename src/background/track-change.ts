@@ -16,6 +16,7 @@ export interface TrackChangeDependencies {
   isYTMTabSuppressed(tabId: number | undefined): boolean;
   miniPlayer: TrackChangeMiniPlayer;
   notifications: TrackChangeNotifications;
+  publishPlaybackState(state: PlaybackState): void;
 }
 
 export function handleTrackChangedMessage(
@@ -28,6 +29,8 @@ export function handleTrackChangedMessage(
     return { ok: true };
   }
 
+  const state = message.state as PlaybackState;
+  dependencies.publishPlaybackState(state);
   dependencies.miniPlayer.syncPipOpenState(tabId, message.pipOpen);
   const messageReportsPipOpen = message.pipOpen === true;
   if (
@@ -38,6 +41,6 @@ export function handleTrackChangedMessage(
     return { ok: true };
   }
 
-  dependencies.notifications.handleTrackChange(message.state as PlaybackState);
+  dependencies.notifications.handleTrackChange(state);
   return { ok: true };
 }

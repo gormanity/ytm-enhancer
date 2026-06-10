@@ -350,6 +350,9 @@ handler.on("track-changed", async (message, sender) => {
     isYTMTabSuppressed,
     miniPlayer,
     notifications,
+    publishPlaybackState(state) {
+      void connectorHost?.publishPlaybackState(state);
+    },
   });
 });
 
