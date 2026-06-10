@@ -106,6 +106,24 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain("MenuBarStyle.accentMuted");
   });
 
+  it("adds a circular Mini Player-style hover shadow to menu bar controls", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const iconButtonSource = sources.match(
+      /private final class MenuBarIconButton:[\s\S]+$/,
+    )?.[0];
+
+    expect(iconButtonSource).toBeDefined();
+    expect(sources).toContain("MenuBarStyle.controlHoverShadow");
+    expect(iconButtonSource).toContain("layer?.masksToBounds = false");
+    expect(iconButtonSource).toContain("layer?.shadowPath = CGPath(");
+    expect(iconButtonSource).toContain("ellipseIn: bounds.insetBy");
+    expect(iconButtonSource).toContain("layer?.shadowOpacity = shadowOpacity");
+    expect(iconButtonSource).toContain("hovering || isHighlighted");
+    expect(iconButtonSource).toContain("MenuBarStyle.controlHoverShadow.cgColor");
+  });
+
   it("keeps menu bar playback controls in the same card as playback state", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
