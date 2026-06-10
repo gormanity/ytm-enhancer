@@ -100,6 +100,17 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain("titleLabel = NSTextField(labelWithString:");
   });
 
+  it("keeps scrolling menu bar text anchored during layout", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+
+    expect(sources).toContain("currentScrollOffset");
+    expect(sources).toContain("labelFrame(offset:");
+    expect(sources).toContain("applyLabelFrame(offset:");
+    expect(sources).not.toContain("x: label.frame.minX");
+  });
+
   it("reuses the extension icon for the menu bar status item", () => {
     const manifest = read("Package.swift");
     const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
