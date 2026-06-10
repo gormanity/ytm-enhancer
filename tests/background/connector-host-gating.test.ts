@@ -98,4 +98,19 @@ describe("connector host background gating", () => {
     );
     expect(backgroundSource).toContain("connectorHost?.publishPlaybackState");
   });
+
+  it("streams content playback state only when connector sessions subscribe", () => {
+    expect(functionBody("enableConnectorSupport")).toContain(
+      "onPlaybackStateSubscriptionChanged",
+    );
+    expect(backgroundSource).toContain(
+      'type: "set-connector-playback-state-streaming"',
+    );
+    expect(backgroundSource).toContain(
+      'handler.on("get-connector-playback-state-streaming"',
+    );
+    expect(handlerBody("connector-playback-state-changed")).toContain(
+      "connectorHost?.publishPlaybackState",
+    );
+  });
 });

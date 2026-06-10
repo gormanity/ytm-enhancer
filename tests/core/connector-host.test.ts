@@ -286,6 +286,36 @@ describe("ConnectorHost", () => {
     });
   });
 
+  it("notifies when playback state subscribers become active and inactive", async () => {
+    const onPlaybackStateSubscriptionChanged = vi.fn();
+    const host = createConnectorHost({
+      enabled: true,
+      ytm: createMockYtmRuntimeClient(),
+      onPlaybackStateSubscriptionChanged,
+    });
+    await connect(host);
+
+    expect(host.hasPlaybackStateSubscribers()).toBe(false);
+    expect(onPlaybackStateSubscriptionChanged).not.toHaveBeenCalled();
+
+    await host.receive("connection-1", {
+      type: "connector.subscribe",
+      requestId: "subscribe-1",
+      events: ["playback.state"],
+    });
+
+    expect(host.hasPlaybackStateSubscribers()).toBe(true);
+    expect(onPlaybackStateSubscriptionChanged).toHaveBeenCalledWith(true);
+
+    await host.receive("connection-1", {
+      type: "connector.disconnect",
+      requestId: "disconnect-1",
+    });
+
+    expect(host.hasPlaybackStateSubscribers()).toBe(false);
+    expect(onPlaybackStateSubscriptionChanged).toHaveBeenLastCalledWith(false);
+  });
+
   it("keeps connector playback actions isolated from post-action refresh failures", async () => {
     vi.useFakeTimers();
     const onError = vi.fn();
