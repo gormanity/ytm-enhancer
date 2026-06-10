@@ -328,7 +328,6 @@ private final class MenuBarScrollingTextView: NSView {
     currentScrollOffset = offset
     label.frame = labelFrame(offset: offset)
     clipView.scroll(to: NSPoint(x: offset, y: 0))
-    clipView.reflectScrolledClipView(clipView)
   }
 
   private func labelFrame(offset _: CGFloat) -> NSRect {
