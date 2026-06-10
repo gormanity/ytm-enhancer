@@ -15,7 +15,6 @@ private enum MenuBarStyle {
 }
 
 final class MenuBarNowPlayingView: NSView {
-  private let effectView = NSVisualEffectView()
   private let artworkView = MenuBarArtworkView()
   private let titleTextView = MenuBarScrollingTextView()
   private let artistTextView = MenuBarScrollingTextView()
@@ -29,6 +28,7 @@ final class MenuBarNowPlayingView: NSView {
   private var progressFraction: CGFloat = 0
 
   override var isFlipped: Bool { true }
+  override var allowsVibrancy: Bool { true }
   override var intrinsicContentSize: NSSize {
     NSSize(width: MenuBarStyle.width, height: 210)
   }
@@ -93,7 +93,6 @@ final class MenuBarNowPlayingView: NSView {
   override func layout() {
     super.layout()
 
-    effectView.frame = bounds
     artworkView.frame = NSRect(x: 24, y: 28, width: 64, height: 64)
     titleTextView.frame = NSRect(x: 104, y: 23, width: 190, height: 24)
     artistTextView.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
@@ -111,15 +110,6 @@ final class MenuBarNowPlayingView: NSView {
   }
 
   private func configure() {
-    wantsLayer = true
-    layer?.backgroundColor = NSColor.clear.cgColor
-
-    effectView.material = .menu
-    effectView.blendingMode = .withinWindow
-    effectView.state = .active
-    effectView.wantsLayer = true
-    addSubview(effectView)
-
     titleTextView.configure(
       font: .systemFont(ofSize: 15, weight: .semibold),
       textColor: MenuBarStyle.primaryText

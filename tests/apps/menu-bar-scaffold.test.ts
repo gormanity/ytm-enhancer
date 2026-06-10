@@ -77,7 +77,6 @@ describe("menu bar connector app scaffold", () => {
 
     expect(sources).toContain("MenuBarNowPlayingView");
     expect(sources).toContain("MenuBarControlsView");
-    expect(sources).toContain("NSVisualEffectView");
     expect(sources).toContain("systemSymbolName");
     expect(sources).toContain("progressFill");
     expect(sources).toContain("artworkView");
@@ -144,7 +143,7 @@ describe("menu bar connector app scaffold", () => {
     expect(appSource).not.toContain("menu.onRefresh");
   });
 
-  it("keeps the default liquid glass menu background for the playback view", () => {
+  it("lets the default menu background show through the playback view", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
       .join("\n");
@@ -153,9 +152,14 @@ describe("menu bar connector app scaffold", () => {
     )?.[0];
 
     expect(nowPlayingViewSource).toBeDefined();
-    expect(nowPlayingViewSource).toContain("effectView.material = .menu");
-    expect(nowPlayingViewSource).toContain("effectView.frame = bounds");
-    expect(nowPlayingViewSource).toContain("NSColor.clear.cgColor");
+    expect(nowPlayingViewSource).toContain(
+      "override var allowsVibrancy: Bool { true }",
+    );
+    expect(nowPlayingViewSource).not.toContain("NSVisualEffectView");
+    expect(nowPlayingViewSource).not.toContain("effectView");
+    expect(nowPlayingViewSource).not.toContain(
+      "layer?.backgroundColor = NSColor.clear.cgColor",
+    );
     expect(nowPlayingViewSource).not.toContain(
       "effectView.frame = bounds.insetBy",
     );
