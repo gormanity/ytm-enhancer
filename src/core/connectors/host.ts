@@ -13,6 +13,7 @@ import type { PlaybackAction, PlaybackState } from "../types";
 import type { YtmRuntimeClient } from "../ytm-client";
 
 export const CONNECTOR_HOST_ENABLED_DEFAULT = false;
+const CONNECTOR_PLAYBACK_MUTATION_REFRESH_DELAY_MS = 150;
 
 export type ConnectorHostErrorCode =
   | "host_disabled"
@@ -79,6 +80,7 @@ export interface ConnectorHostOptions {
   ) => void;
   onError?: (error: ConnectorHostError) => void;
   now?: () => number;
+  playbackMutationRefreshDelayMs?: number;
 }
 
 interface ConnectorSession {
@@ -134,6 +136,10 @@ export function createConnectorHost(
   );
   const transports = options.transports ?? [];
   const now = options.now ?? Date.now;
+  const playbackMutationRefreshDelayMs =
+    options.playbackMutationRefreshDelayMs ??
+    CONNECTOR_PLAYBACK_MUTATION_REFRESH_DELAY_MS;
+  let playbackMutationRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   const reportError = (error: ConnectorHostError): void => {
     try {
@@ -174,6 +180,61 @@ export function createConnectorHost(
         await transport.send(connectionId, message);
       }),
     );
+  };
+
+  const hasPlaybackStateSubscribers = (): boolean => {
+    for (const session of sessions.values()) {
+      if (!session.subscribedEvents.has("playback.state")) continue;
+      if (!session.permissions.has("playback:read")) continue;
+      return true;
+    }
+
+    return false;
+  };
+
+  const publishPlaybackState = async (state: PlaybackState): Promise<void> => {
+    if (!enabled) return;
+    const deliveries: Promise<void>[] = [];
+
+    for (const session of sessions.values()) {
+      if (!session.subscribedEvents.has("playback.state")) continue;
+      if (!session.permissions.has("playback:read")) continue;
+
+      const message: StateUpdateMessage = {
+        type: "playback.state",
+        state: toConnectorPlaybackState(state, session),
+      };
+      deliveries.push(deliver(session.connectionId, message));
+    }
+
+    await Promise.allSettled(deliveries);
+  };
+
+  const publishCurrentPlaybackState = async (): Promise<void> => {
+    if (!enabled || !hasPlaybackStateSubscribers()) return;
+
+    try {
+      const state = await options.ytm.getPlaybackState();
+      await publishPlaybackState(state);
+    } catch (err) {
+      reportError({ code: "route_failed", message: errorMessage(err) });
+    }
+  };
+
+  const clearPlaybackMutationRefresh = (): void => {
+    if (playbackMutationRefreshTimer === null) return;
+    clearTimeout(playbackMutationRefreshTimer);
+    playbackMutationRefreshTimer = null;
+  };
+
+  const refreshPlaybackStateAfterMutation = (): void => {
+    if (!enabled || !hasPlaybackStateSubscribers()) return;
+    void publishCurrentPlaybackState();
+    clearPlaybackMutationRefresh();
+    playbackMutationRefreshTimer = setTimeout(() => {
+      playbackMutationRefreshTimer = null;
+      void publishCurrentPlaybackState();
+    }, playbackMutationRefreshDelayMs);
   };
 
   const handleHello = (
@@ -256,9 +317,13 @@ export function createConnectorHost(
           "playback:control",
         );
         if (missingPermission) return missingPermission;
-        await options.ytm.executePlaybackAction(
-          message.action as PlaybackAction,
-        );
+        try {
+          await options.ytm.executePlaybackAction(
+            message.action as PlaybackAction,
+          );
+        } finally {
+          refreshPlaybackStateAfterMutation();
+        }
         return ack(message.requestId);
       }
       case "playback.seek": {
@@ -267,7 +332,11 @@ export function createConnectorHost(
           "playback:control",
         );
         if (missingPermission) return missingPermission;
-        await options.ytm.seekTo(message.time);
+        try {
+          await options.ytm.seekTo(message.time);
+        } finally {
+          refreshPlaybackStateAfterMutation();
+        }
         return ack(message.requestId);
       }
     }
@@ -281,6 +350,7 @@ export function createConnectorHost(
     setEnabled(nextEnabled: boolean) {
       enabled = nextEnabled;
       if (!enabled) {
+        clearPlaybackMutationRefresh();
         this.stop();
         sessions.clear();
       }
@@ -299,6 +369,7 @@ export function createConnectorHost(
     },
 
     stop() {
+      clearPlaybackMutationRefresh();
       if (!started) return;
       started = false;
       for (const transport of transports) {
@@ -339,21 +410,7 @@ export function createConnectorHost(
     },
 
     async publishPlaybackState(state: PlaybackState): Promise<void> {
-      if (!enabled) return;
-      const deliveries: Promise<void>[] = [];
-
-      for (const session of sessions.values()) {
-        if (!session.subscribedEvents.has("playback.state")) continue;
-        if (!session.permissions.has("playback:read")) continue;
-
-        const message: StateUpdateMessage = {
-          type: "playback.state",
-          state: toConnectorPlaybackState(state, session),
-        };
-        deliveries.push(deliver(session.connectionId, message));
-      }
-
-      await Promise.allSettled(deliveries);
+      await publishPlaybackState(state);
     },
 
     listSessions() {
