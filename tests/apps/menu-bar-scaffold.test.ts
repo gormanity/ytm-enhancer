@@ -70,6 +70,20 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("playback state retry scheduled");
   });
 
+  it("uses custom Mini Player-style menu views for playback status and controls", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+
+    expect(sources).toContain("MenuBarNowPlayingView");
+    expect(sources).toContain("MenuBarControlsView");
+    expect(sources).toContain("NSVisualEffectView");
+    expect(sources).toContain("systemSymbolName");
+    expect(sources).toContain("progressFill");
+    expect(sources).toContain("artworkView");
+    expect(sources).not.toContain('NSMenuItem(title: "Previous"');
+  });
+
   it("keeps the app isolated from extension internals", () => {
     const sources = listFiles(".")
       .filter((path) => /\.(swift|md|sh)$/.test(path))
