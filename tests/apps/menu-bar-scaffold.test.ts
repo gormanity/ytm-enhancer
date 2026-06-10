@@ -102,6 +102,31 @@ describe("menu bar connector app scaffold", () => {
     );
   });
 
+  it("uses a monochrome template icon for the macOS status item", () => {
+    const manifest = read("Package.swift");
+    const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
+    const sources = sourceFiles.map(read).join("\n");
+    const icon = read(
+      "Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome.svg",
+    );
+
+    expect(manifest).toContain(
+      '.copy("Resources/extension-icon-monochrome.svg")',
+    );
+    expect(sourceFiles).toContain(
+      "Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome.svg",
+    );
+    expect(sources).toContain(
+      'Bundle.module.url(forResource: "extension-icon-monochrome", withExtension: "svg")',
+    );
+    expect(sources).toContain("MenuBarStatusIcon.monochromeIcon()");
+    expect(sources).toContain("image.isTemplate = true");
+    expect(icon).toContain('fill="#000000"');
+    expect(icon).toContain('fill-rule="evenodd"');
+    expect(icon).not.toContain("#F03030");
+    expect(icon).not.toContain("#33ffff");
+  });
+
   it("keeps the app isolated from extension internals", () => {
     const sources = listFiles(".")
       .filter((path) => /\.(swift|md|sh)$/.test(path))
