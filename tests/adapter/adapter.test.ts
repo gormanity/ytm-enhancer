@@ -63,6 +63,32 @@ describe("YTMAdapter", () => {
       expect(state.isPlaying).toBe(false);
     });
 
+    it("should detect playing state from the media element when the button title is stale", () => {
+      document.body.innerHTML = `
+        <video class="html5-main-video"></video>
+        <tp-yt-paper-icon-button id="play-pause-button" title="Play"></tp-yt-paper-icon-button>
+      `;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "paused", { value: false });
+      Object.defineProperty(video, "ended", { value: false });
+
+      const state = adapter.getPlaybackState();
+      expect(state.isPlaying).toBe(true);
+    });
+
+    it("should not treat ended media as playing when the button title is paused", () => {
+      document.body.innerHTML = `
+        <video class="html5-main-video"></video>
+        <tp-yt-paper-icon-button id="play-pause-button" title="Play"></tp-yt-paper-icon-button>
+      `;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "paused", { value: false });
+      Object.defineProperty(video, "ended", { value: true });
+
+      const state = adapter.getPlaybackState();
+      expect(state.isPlaying).toBe(false);
+    });
+
     it("should read progress and duration from video element", () => {
       document.body.innerHTML = `<video class="html5-main-video"></video>`;
       const video = document.querySelector("video") as HTMLVideoElement;
