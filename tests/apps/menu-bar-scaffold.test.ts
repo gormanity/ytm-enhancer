@@ -95,7 +95,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("formatAlbumLine");
     expect(sources).toContain("scrollPauseDelay");
     expect(sources).toContain("needsScroll");
-    expect(sources).toContain("CABasicAnimation");
+    expect(sources).toContain("NSAnimationContext.runAnimationGroup");
     expect(sources).toContain("DispatchQueue.main.asyncAfter");
     expect(sources).not.toContain("titleLabel = NSTextField(labelWithString:");
   });
@@ -109,6 +109,20 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("labelFrame(offset:");
     expect(sources).toContain("applyLabelFrame(offset:");
     expect(sources).not.toContain("x: label.frame.minX");
+  });
+
+  it("scrolls menu bar text through a fixed clip view", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+
+    expect(sources).toContain("private let clipView = NSClipView()");
+    expect(sources).toContain("clipView.documentView = label");
+    expect(sources).toContain("clipView.frame = bounds");
+    expect(sources).toContain("clipView.scroll(to:");
+    expect(sources).toContain("clipView.animator().setBoundsOrigin");
+    expect(sources).not.toContain("setAffineTransform");
+    expect(sources).not.toContain("translationX:");
   });
 
   it("reuses the extension icon for the menu bar status item", () => {
