@@ -16,6 +16,55 @@ function makeState(): PlaybackState {
 }
 
 describe("track-changed background handling", () => {
+  it("should publish playback updates to connected apps", () => {
+    const state = makeState();
+    const publishPlaybackState = vi.fn();
+    const notifications = { clearCurrent: vi.fn(), handleTrackChange: vi.fn() };
+    const miniPlayer = {
+      syncPipOpenState: vi.fn(),
+      isSuppressNotificationsWhilePipOpenEnabled: vi.fn(() => false),
+      hasOpenPipWindow: vi.fn(() => false),
+    };
+
+    const response = handleTrackChangedMessage(
+      { type: "track-changed", state, pipOpen: false },
+      { tab: { id: 42 } } as chrome.runtime.MessageSender,
+      {
+        isYTMTabSuppressed: () => false,
+        miniPlayer,
+        notifications,
+        publishPlaybackState,
+      },
+    );
+
+    expect(response).toEqual({ ok: true });
+    expect(publishPlaybackState).toHaveBeenCalledWith(state);
+  });
+
+  it("should not publish playback updates from suppressed tabs", () => {
+    const publishPlaybackState = vi.fn();
+    const notifications = { clearCurrent: vi.fn(), handleTrackChange: vi.fn() };
+    const miniPlayer = {
+      syncPipOpenState: vi.fn(),
+      isSuppressNotificationsWhilePipOpenEnabled: vi.fn(() => false),
+      hasOpenPipWindow: vi.fn(() => false),
+    };
+
+    const response = handleTrackChangedMessage(
+      { type: "track-changed", state: makeState(), pipOpen: false },
+      { tab: { id: 42 } } as chrome.runtime.MessageSender,
+      {
+        isYTMTabSuppressed: () => true,
+        miniPlayer,
+        notifications,
+        publishPlaybackState,
+      },
+    );
+
+    expect(response).toEqual({ ok: true });
+    expect(publishPlaybackState).not.toHaveBeenCalled();
+  });
+
   it("should suppress notifications when the message reports PiP is open", () => {
     let pipOpen = false;
     const notifications = { clearCurrent: vi.fn(), handleTrackChange: vi.fn() };
