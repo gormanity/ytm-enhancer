@@ -84,6 +84,22 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain('NSMenuItem(title: "Previous"');
   });
 
+  it("scrolls overflowing title and album text in the menu bar view", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+
+    expect(sources).toContain("MenuBarScrollingTextView");
+    expect(sources).toContain("titleTextView");
+    expect(sources).toContain("albumTextView");
+    expect(sources).toContain("formatAlbumLine");
+    expect(sources).toContain("scrollPauseDelay");
+    expect(sources).toContain("needsScroll");
+    expect(sources).toContain("NSAnimationContext.runAnimationGroup");
+    expect(sources).toContain("DispatchQueue.main.asyncAfter");
+    expect(sources).not.toContain('titleLabel = NSTextField(labelWithString:');
+  });
+
   it("reuses the extension icon for the menu bar status item", () => {
     const manifest = read("Package.swift");
     const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
