@@ -16,6 +16,12 @@ export interface AutomationPopupClients {
   autoSkipDisliked: AutoSkipDislikedClient;
 }
 
+const AUTO_PLAY_MODE_HINTS: Record<AutoPlayMode, string> = {
+  default: "Use YouTube Music's normal startup playback behavior.",
+  off: "Prevent playback from starting automatically when YouTube Music loads.",
+  on: "Start playback automatically when YouTube Music loads with music ready to play.",
+};
+
 function createAutomationPopupClients(
   context: ModuleContext,
 ): AutomationPopupClients {
@@ -42,9 +48,17 @@ export function createAutomationPopupView(
       const blockedHint = container.querySelector<HTMLElement>(
         '[data-role="automation-auto-play-browser-blocked"]',
       );
+      const modeHint = container.querySelector<HTMLElement>(
+        '[data-role="automation-auto-play-mode-hint"]',
+      );
       const modeRow = container.querySelector<HTMLElement>(
         '[data-role="automation-auto-play-mode-row"]',
       );
+
+      const updateModeHint = (mode: AutoPlayMode) => {
+        if (!modeHint) return;
+        modeHint.textContent = AUTO_PLAY_MODE_HINTS[mode];
+      };
 
       const setBlockedHintVisible = (visible: boolean) => {
         blockedHint?.classList.toggle("is-hidden", !visible);
@@ -61,8 +75,16 @@ export function createAutomationPopupView(
       };
 
       bindModuleSelect(container, "automation-auto-play-mode", {
-        get: () => clients.autoPlay.getMode(),
-        set: (mode) => clients.autoPlay.setMode(mode as AutoPlayMode),
+        get: async () => {
+          const mode = await clients.autoPlay.getMode();
+          updateModeHint(mode);
+          return mode;
+        },
+        set: (mode) => {
+          const autoPlayMode = mode as AutoPlayMode;
+          updateModeHint(autoPlayMode);
+          return clients.autoPlay.setMode(autoPlayMode);
+        },
       });
       bindModuleToggle(container, "automation-auto-skip-disliked-toggle", {
         get: () => clients.autoSkipDisliked.isEnabled(),
