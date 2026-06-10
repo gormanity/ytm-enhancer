@@ -16,6 +16,11 @@ private enum MenuBarStyle {
 }
 
 final class MenuBarNowPlayingView: NSView {
+  private struct MenuBarMetadataLines {
+    let album: String
+    let artistYear: String
+  }
+
   private let artworkView = MenuBarArtworkView()
   private let titleTextView = MenuBarScrollingTextView()
   private let albumTextView = MenuBarScrollingTextView()
@@ -59,10 +64,11 @@ final class MenuBarNowPlayingView: NSView {
 
   func updatePlayback(_ state: PlaybackState) {
     let title = state.title?.isEmpty == false ? state.title! : "Unknown track"
+    let metadata = formatMetadataLines(state)
 
     titleTextView.stringValue = title
-    albumTextView.stringValue = state.album ?? ""
-    artistYearTextView.stringValue = formatArtistYearLine(state)
+    albumTextView.stringValue = metadata.album
+    artistYearTextView.stringValue = metadata.artistYear
     progressFraction = progressRatio(state)
     elapsedLabel.stringValue = state.duration > 0 ? formatTime(state.progress) : ""
     durationLabel.stringValue = state.duration > 0 ? formatTime(state.duration) : ""
@@ -168,19 +174,39 @@ final class MenuBarNowPlayingView: NSView {
     return String(format: "%d:%02d", seconds / 60, seconds % 60)
   }
 
-  private func formatArtistYearLine(_ state: PlaybackState) -> String {
+  private func formatMetadataLines(_ state: PlaybackState) -> MenuBarMetadataLines {
+    let album = trimmed(state.album)
+    let artist = trimmed(state.artist)
+    let displayAlbum = album ?? artist ?? ""
+    let displayArtist = album == nil || artist == album ? nil : artist
+
+    return MenuBarMetadataLines(
+      album: displayAlbum,
+      artistYear: formatArtistYearLine(artist: displayArtist, year: state.year)
+    )
+  }
+
+  private func formatArtistYearLine(artist: String?, year: Int?) -> String {
     var parts: [String] = []
-    if let artist = state.artist, !artist.isEmpty {
+    if let artist {
       parts.append(artist)
     }
-    if let year = state.year {
+    if let year {
       parts.append(String(year))
     }
     return parts.joined(separator: " \u{00B7} ")
   }
+
+  private func trimmed(_ value: String?) -> String? {
+    guard let value else { return nil }
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
+  }
 }
 
 private final class MenuBarScrollingTextView: NSView {
+  private static let scrollLoopGap: CGFloat = 32
+
   private var text = ""
   private var font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
   private var textColor = MenuBarStyle.primaryText
@@ -259,20 +285,34 @@ private final class MenuBarScrollingTextView: NSView {
       at: NSPoint(x: -scrollOffset, y: y),
       withAttributes: attributes
     )
+
+    drawLoopingCopy(attributes: attributes, y: y)
   }
 
   private var needsScroll: Bool {
     lastVisibleWidth > 0 && lastTextWidth > lastVisibleWidth + 4
   }
 
-  var scrollOverflow: CGFloat {
+  var scrollDistance: CGFloat {
     guard needsScroll else { return 0 }
-    return max(0, lastTextWidth - lastVisibleWidth)
+    return lastTextWidth + Self.scrollLoopGap
   }
 
   func setScrollProgress(_ progress: CGFloat) {
-    scrollOffset = scrollOverflow * max(0, min(1, progress))
+    scrollOffset = scrollDistance * max(0, min(1, progress))
     needsDisplay = true
+  }
+
+  private func drawLoopingCopy(
+    attributes: [NSAttributedString.Key: Any],
+    y: CGFloat
+  ) {
+    guard needsScroll else { return }
+
+    (text as NSString).draw(
+      at: NSPoint(x: -scrollOffset + lastTextWidth + Self.scrollLoopGap, y: y),
+      withAttributes: attributes
+    )
   }
 
   private func configure() {
@@ -309,12 +349,12 @@ private final class MenuBarMetadataScroller {
     }
   }
 
-  private var maximumOverflow: CGFloat {
-    scrollingTextViews.map(\.scrollOverflow).max() ?? 0
+  private var maximumScrollDistance: CGFloat {
+    scrollingTextViews.map(\.scrollDistance).max() ?? 0
   }
 
   private var needsScroll: Bool {
-    maximumOverflow > 0
+    maximumScrollDistance > 0
   }
 
   private func restartScrollingIfNeeded() {
@@ -340,7 +380,7 @@ private final class MenuBarMetadataScroller {
   private func performScroll(generation: Int) {
     guard generation == scrollGeneration, needsScroll else { return }
 
-    let duration = min(8, max(1.4, TimeInterval(maximumOverflow / 32)))
+    let duration = min(8, max(1.4, TimeInterval(maximumScrollDistance / 32)))
 
     setScrollProgress(0)
     let startDate = Date()

@@ -168,16 +168,26 @@ describe("menu bar connector app scaffold", () => {
 
     expect(nowPlayingViewSource).toBeDefined();
     expect(nowPlayingViewSource).toContain(
-      'albumTextView.stringValue = state.album ?? ""',
+      "let metadata = formatMetadataLines(state)",
     );
     expect(nowPlayingViewSource).toContain(
-      "artistYearTextView.stringValue = formatArtistYearLine(state)",
+      "albumTextView.stringValue = metadata.album",
     );
     expect(nowPlayingViewSource).toContain(
-      "private func formatArtistYearLine(_ state: PlaybackState) -> String",
+      "artistYearTextView.stringValue = metadata.artistYear",
     );
-    expect(nowPlayingViewSource).toContain("if let artist = state.artist");
-    expect(nowPlayingViewSource).toContain("if let year = state.year");
+    expect(nowPlayingViewSource).toContain(
+      "private func formatMetadataLines(_ state: PlaybackState) -> MenuBarMetadataLines",
+    );
+    expect(nowPlayingViewSource).toContain(
+      'let displayAlbum = album ?? artist ?? ""',
+    );
+    expect(nowPlayingViewSource).toContain(
+      "let displayArtist = album == nil || artist == album ? nil : artist",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "formatArtistYearLine(artist: displayArtist, year: state.year)",
+    );
     expect(nowPlayingViewSource).toContain(
       'parts.joined(separator: " \\u{00B7} ")',
     );
@@ -356,7 +366,7 @@ describe("menu bar connector app scaffold", () => {
     expect(scrollingViewSource).not.toContain("Timer(timeInterval:");
     expect(metadataScrollerSource).toBeDefined();
     expect(metadataScrollerSource).toContain("scrollingTextViews");
-    expect(metadataScrollerSource).toContain("maximumOverflow");
+    expect(metadataScrollerSource).toContain("maximumScrollDistance");
     expect(metadataScrollerSource).toContain("setScrollProgress(progress)");
     expect(metadataScrollerSource).toContain(
       "RunLoop.main.add(timer, forMode: .common)",
