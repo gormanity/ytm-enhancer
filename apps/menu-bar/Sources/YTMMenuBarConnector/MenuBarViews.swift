@@ -3,7 +3,6 @@ import Foundation
 
 private enum MenuBarStyle {
   static let width: CGFloat = 328
-  static let background = NSColor(calibratedWhite: 0.02, alpha: 1)
   static let card = NSColor(calibratedWhite: 0.07, alpha: 1)
   static let cardBorder = NSColor(calibratedWhite: 0.22, alpha: 1)
   static let primaryText = NSColor.white
@@ -26,6 +25,7 @@ final class MenuBarNowPlayingView: NSView {
   private let elapsedLabel = NSTextField(labelWithString: "")
   private let durationLabel = NSTextField(labelWithString: "")
   private let controlsView = MenuBarControlsView()
+  private let metadataScroller = MenuBarMetadataScroller()
   private var progressFraction: CGFloat = 0
 
   override var isFlipped: Bool { true }
@@ -93,7 +93,7 @@ final class MenuBarNowPlayingView: NSView {
   override func layout() {
     super.layout()
 
-    effectView.frame = bounds.insetBy(dx: 10, dy: 8)
+    effectView.frame = bounds
     artworkView.frame = NSRect(x: 24, y: 28, width: 64, height: 64)
     titleTextView.frame = NSRect(x: 104, y: 23, width: 190, height: 24)
     artistTextView.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
@@ -112,15 +112,12 @@ final class MenuBarNowPlayingView: NSView {
 
   private func configure() {
     wantsLayer = true
-    layer?.backgroundColor = MenuBarStyle.background.cgColor
+    layer?.backgroundColor = NSColor.clear.cgColor
 
-    effectView.material = .hudWindow
+    effectView.material = .menu
     effectView.blendingMode = .withinWindow
     effectView.state = .active
     effectView.wantsLayer = true
-    effectView.layer?.cornerRadius = 12
-    effectView.layer?.borderWidth = 1
-    effectView.layer?.borderColor = MenuBarStyle.cardBorder.cgColor
     addSubview(effectView)
 
     titleTextView.configure(
@@ -135,6 +132,10 @@ final class MenuBarNowPlayingView: NSView {
       font: .systemFont(ofSize: 12, weight: .regular),
       textColor: MenuBarStyle.tertiaryText
     )
+    metadataScroller.register(titleTextView)
+    metadataScroller.register(artistTextView)
+    metadataScroller.register(albumTextView)
+
     configureLabel(elapsedLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     configureLabel(durationLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
 
@@ -190,19 +191,13 @@ final class MenuBarNowPlayingView: NSView {
 }
 
 private final class MenuBarScrollingTextView: NSView {
-  static let scrollPauseDelay: TimeInterval = 1.25
-
-  private static let frameInterval: TimeInterval = 1.0 / 60.0
-
   private var text = ""
   private var font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
   private var textColor = MenuBarStyle.primaryText
-  private var scrollGeneration = 0
-  private var pendingScroll: DispatchWorkItem?
-  private var scrollTimer: Timer?
   private var scrollOffset: CGFloat = 0
   private var lastVisibleWidth: CGFloat = -1
   private var lastTextWidth: CGFloat = -1
+  var onScrollMetricsChanged: (() -> Void)?
 
   override var isFlipped: Bool { true }
 
@@ -214,6 +209,7 @@ private final class MenuBarScrollingTextView: NSView {
       toolTip = newValue.isEmpty ? nil : newValue
       setAccessibilityLabel(newValue)
       lastTextWidth = -1
+      setScrollProgress(0)
       needsLayout = true
       needsDisplay = true
     }
@@ -228,14 +224,11 @@ private final class MenuBarScrollingTextView: NSView {
     fatalError("init(coder:) has not been implemented")
   }
 
-  deinit {
-    cancelScrolling()
-  }
-
   func configure(font: NSFont, textColor: NSColor) {
     self.font = font
     self.textColor = textColor
     lastTextWidth = -1
+    setScrollProgress(0)
     needsLayout = true
     needsDisplay = true
   }
@@ -253,8 +246,8 @@ private final class MenuBarScrollingTextView: NSView {
     lastTextWidth = textWidth
 
     if changed {
-      restartScrollingIfNeeded()
-      return
+      setScrollProgress(0)
+      onScrollMetricsChanged?()
     }
 
     needsDisplay = true
@@ -282,6 +275,16 @@ private final class MenuBarScrollingTextView: NSView {
     lastVisibleWidth > 0 && lastTextWidth > lastVisibleWidth + 4
   }
 
+  var scrollOverflow: CGFloat {
+    guard needsScroll else { return 0 }
+    return max(0, lastTextWidth - lastVisibleWidth)
+  }
+
+  func setScrollProgress(_ progress: CGFloat) {
+    scrollOffset = scrollOverflow * max(0, min(1, progress))
+    needsDisplay = true
+  }
+
   private func configure() {
     wantsLayer = true
     layer?.masksToBounds = true
@@ -293,11 +296,41 @@ private final class MenuBarScrollingTextView: NSView {
       (text as NSString).size(withAttributes: [.font: font]).width
     )
   }
+}
+
+private final class MenuBarMetadataScroller {
+  static let scrollPauseDelay: TimeInterval = 1.25
+
+  private static let frameInterval: TimeInterval = 1.0 / 60.0
+
+  private var scrollingTextViews: [MenuBarScrollingTextView] = []
+  private var scrollGeneration = 0
+  private var pendingScroll: DispatchWorkItem?
+  private var scrollTimer: Timer?
+
+  deinit {
+    cancelScrolling()
+  }
+
+  func register(_ scrollingTextView: MenuBarScrollingTextView) {
+    scrollingTextViews.append(scrollingTextView)
+    scrollingTextView.onScrollMetricsChanged = { [weak self] in
+      self?.restartScrollingIfNeeded()
+    }
+  }
+
+  private var maximumOverflow: CGFloat {
+    scrollingTextViews.map(\.scrollOverflow).max() ?? 0
+  }
+
+  private var needsScroll: Bool {
+    maximumOverflow > 0
+  }
 
   private func restartScrollingIfNeeded() {
     scrollGeneration += 1
     cancelScrolling()
-    applyScrollOffset(0)
+    setScrollProgress(0)
 
     guard needsScroll else { return }
     scheduleScroll(generation: scrollGeneration)
@@ -317,11 +350,9 @@ private final class MenuBarScrollingTextView: NSView {
   private func performScroll(generation: Int) {
     guard generation == scrollGeneration, needsScroll else { return }
 
-    let overflow = max(0, lastTextWidth - lastVisibleWidth)
-    let targetOffset = overflow
-    let duration = min(8, max(1.4, TimeInterval(overflow / 32)))
+    let duration = min(8, max(1.4, TimeInterval(maximumOverflow / 32)))
 
-    applyScrollOffset(0)
+    setScrollProgress(0)
     let startDate = Date()
     let timer = Timer(timeInterval: Self.frameInterval, repeats: true) {
       [weak self] timer in
@@ -336,7 +367,7 @@ private final class MenuBarScrollingTextView: NSView {
 
       let elapsed = Date().timeIntervalSince(startDate)
       let progress = min(1, elapsed / duration)
-      self.applyScrollOffset(targetOffset * CGFloat(progress))
+      self.setScrollProgress(progress)
 
       if progress >= 1 {
         timer.invalidate()
@@ -358,7 +389,7 @@ private final class MenuBarScrollingTextView: NSView {
         self.needsScroll
       else { return }
 
-      self.applyScrollOffset(0)
+      self.setScrollProgress(0)
       self.scheduleScroll(generation: generation)
     }
     pendingScroll = work
@@ -368,9 +399,8 @@ private final class MenuBarScrollingTextView: NSView {
     )
   }
 
-  private func applyScrollOffset(_ offset: CGFloat) {
-    scrollOffset = max(0, offset)
-    needsDisplay = true
+  private func setScrollProgress(_ progress: CGFloat) {
+    scrollingTextViews.forEach { $0.setScrollProgress(progress) }
   }
 
   private func cancelScrolling() {

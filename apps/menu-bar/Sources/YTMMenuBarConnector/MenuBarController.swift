@@ -7,7 +7,6 @@ final class MenuBarController: NSObject {
   var onTogglePlay: (() -> Void)?
   var onNext: (() -> Void)?
   var onRepeat: (() -> Void)?
-  var onRefresh: (() -> Void)?
 
   private let barItem = NSStatusBar.system.statusItem(
     withLength: NSStatusItem.variableLength
@@ -17,7 +16,6 @@ final class MenuBarController: NSObject {
   private let menu = NSMenu()
   private let nowPlayingView = MenuBarNowPlayingView()
   private let nowPlayingItem = NSMenuItem()
-  private let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refresh), keyEquivalent: "")
   private let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
 
   override init() {
@@ -37,12 +35,7 @@ final class MenuBarController: NSObject {
   }
 
   private func configureMenu() {
-    refreshItem.target = self
     quitItem.target = self
-    refreshItem.image = NSImage(
-      systemSymbolName: "arrow.clockwise",
-      accessibilityDescription: "Refresh"
-    )
 
     nowPlayingItem.view = nowPlayingView
     nowPlayingView.setControlActions(
@@ -56,7 +49,6 @@ final class MenuBarController: NSObject {
     menu.appearance = NSAppearance(named: .darkAqua)
     menu.addItem(nowPlayingItem)
     menu.addItem(.separator())
-    menu.addItem(refreshItem)
     menu.addItem(quitItem)
     barItem.menu = menu
   }
@@ -88,10 +80,6 @@ final class MenuBarController: NSObject {
 
   @objc private func repeatMode() {
     onRepeat?()
-  }
-
-  @objc private func refresh() {
-    onRefresh?()
   }
 
   @objc private func quit() {

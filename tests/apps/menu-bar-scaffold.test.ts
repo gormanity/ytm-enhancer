@@ -131,6 +131,41 @@ describe("menu bar connector app scaffold", () => {
     expect(controllerSource).not.toContain("menu.addItem(controlsItem)");
   });
 
+  it("uses live updates instead of a manual refresh menu item", () => {
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+
+    expect(controllerSource).not.toContain("refreshItem");
+    expect(controllerSource).not.toContain('title: "Refresh"');
+    expect(controllerSource).not.toContain("onRefresh");
+    expect(controllerSource).not.toContain("@objc private func refresh");
+    expect(appSource).not.toContain("menu.onRefresh");
+  });
+
+  it("keeps the default liquid glass menu background for the playback view", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain("effectView.material = .menu");
+    expect(nowPlayingViewSource).toContain("effectView.frame = bounds");
+    expect(nowPlayingViewSource).toContain("NSColor.clear.cgColor");
+    expect(nowPlayingViewSource).not.toContain(
+      "effectView.frame = bounds.insetBy",
+    );
+    expect(nowPlayingViewSource).not.toContain(
+      "layer?.backgroundColor = MenuBarStyle.background.cgColor",
+    );
+    expect(nowPlayingViewSource).not.toContain("effectView.layer?.borderWidth");
+    expect(nowPlayingViewSource).not.toContain("effectView.layer?.borderColor");
+  });
+
   it("scrolls overflowing title, artist, and album text in the menu bar view", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
@@ -150,13 +185,49 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain("artistLabel = NSTextField(labelWithString:");
   });
 
+  it("scrolls title, artist, and album together from one metadata scroller", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+    const scrollingViewSource = sources.match(
+      /private final class MenuBarScrollingTextView:[\s\S]+?private final class MenuBarMetadataScroller/,
+    )?.[0];
+    const metadataScrollerSource = sources.match(
+      /private final class MenuBarMetadataScroller[\s\S]+?final class MenuBarControlsView/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain(
+      "metadataScroller.register(titleTextView)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "metadataScroller.register(artistTextView)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "metadataScroller.register(albumTextView)",
+    );
+    expect(scrollingViewSource).toBeDefined();
+    expect(scrollingViewSource).toContain("func setScrollProgress");
+    expect(scrollingViewSource).not.toContain("Timer(timeInterval:");
+    expect(metadataScrollerSource).toBeDefined();
+    expect(metadataScrollerSource).toContain("scrollingTextViews");
+    expect(metadataScrollerSource).toContain("maximumOverflow");
+    expect(metadataScrollerSource).toContain("setScrollProgress(progress)");
+    expect(metadataScrollerSource).toContain(
+      "RunLoop.main.add(timer, forMode: .common)",
+    );
+  });
+
   it("keeps scrolling menu bar text anchored during layout", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
       .join("\n");
 
     expect(sources).toContain("private var scrollOffset: CGFloat = 0");
-    expect(sources).toContain("applyScrollOffset(0)");
+    expect(sources).toContain("setScrollProgress(0)");
     expect(sources).toContain("NSPoint(x: -scrollOffset");
     expect(sources).not.toContain("currentScrollOffset");
     expect(sources).not.toContain("labelFrame(offset:");
@@ -175,7 +246,7 @@ describe("menu bar connector app scaffold", () => {
     expect(scrollingViewSource).toBeDefined();
     expect(scrollingViewSource).toContain("override func draw");
     expect(scrollingViewSource).toContain("(text as NSString).draw");
-    expect(scrollingViewSource).toContain("applyScrollOffset");
+    expect(scrollingViewSource).toContain("setScrollProgress");
     expect(scrollingViewSource).not.toContain("NSClipView");
     expect(scrollingViewSource).not.toContain("NSTextField(labelWithString:");
     expect(scrollingViewSource).not.toContain("clipView.scroll(to:");

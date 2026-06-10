@@ -27,7 +27,6 @@ final class ConnectorApp {
     menu.onTogglePlay = { [weak self] in self?.sendAction("togglePlay") }
     menu.onNext = { [weak self] in self?.sendAction("next") }
     menu.onRepeat = { [weak self] in self?.sendAction("repeat") }
-    menu.onRefresh = { [weak self] in self?.requestPlaybackState() }
     logger.log("connector app starting logPath=\(logger.path)")
 
     connection.start(
