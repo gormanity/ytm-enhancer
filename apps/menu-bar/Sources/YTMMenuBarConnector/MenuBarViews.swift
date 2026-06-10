@@ -17,7 +17,7 @@ final class MenuBarNowPlayingView: NSView {
   private let effectView = NSVisualEffectView()
   private let artworkView = MenuBarArtworkView()
   private let titleTextView = MenuBarScrollingTextView()
-  private let artistLabel = NSTextField(labelWithString: "Connecting")
+  private let artistTextView = MenuBarScrollingTextView()
   private let albumTextView = MenuBarScrollingTextView()
   private let badgeLabel = NSTextField(labelWithString: "Connector")
   private let progressTrack = NSView()
@@ -44,7 +44,7 @@ final class MenuBarNowPlayingView: NSView {
 
   func updateConnectionStatus(_ status: String) {
     titleTextView.stringValue = "YTM Enhancer"
-    artistLabel.stringValue = ""
+    artistTextView.stringValue = ""
     albumTextView.stringValue = status
     badgeLabel.stringValue = "Connector"
     badgeLabel.textColor = MenuBarStyle.secondaryText
@@ -60,7 +60,7 @@ final class MenuBarNowPlayingView: NSView {
     let artist = state.artist?.isEmpty == false ? state.artist! : "Unknown artist"
 
     titleTextView.stringValue = title
-    artistLabel.stringValue = artist
+    artistTextView.stringValue = artist
     albumTextView.stringValue = formatAlbumLine(state)
     badgeLabel.stringValue = state.isPlaying ? "Playing" : "Paused"
     badgeLabel.textColor = state.isPlaying
@@ -79,7 +79,7 @@ final class MenuBarNowPlayingView: NSView {
     effectView.frame = bounds.insetBy(dx: 10, dy: 8)
     artworkView.frame = NSRect(x: 24, y: 28, width: 64, height: 64)
     titleTextView.frame = NSRect(x: 104, y: 23, width: 190, height: 24)
-    artistLabel.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
+    artistTextView.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
     albumTextView.frame = NSRect(x: 104, y: 68, width: 190, height: 18)
     badgeLabel.frame = NSRect(x: 104, y: 90, width: 96, height: 18)
     progressTrack.frame = NSRect(x: 24, y: 112, width: 280, height: 5)
@@ -110,7 +110,10 @@ final class MenuBarNowPlayingView: NSView {
       font: .systemFont(ofSize: 15, weight: .semibold),
       textColor: MenuBarStyle.primaryText
     )
-    configureLabel(artistLabel, font: .systemFont(ofSize: 13, weight: .regular))
+    artistTextView.configure(
+      font: .systemFont(ofSize: 13, weight: .regular),
+      textColor: MenuBarStyle.secondaryText
+    )
     albumTextView.configure(
       font: .systemFont(ofSize: 12, weight: .regular),
       textColor: MenuBarStyle.tertiaryText
@@ -119,7 +122,6 @@ final class MenuBarNowPlayingView: NSView {
     configureLabel(elapsedLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     configureLabel(durationLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
 
-    artistLabel.textColor = MenuBarStyle.secondaryText
     elapsedLabel.textColor = MenuBarStyle.tertiaryText
     durationLabel.textColor = MenuBarStyle.tertiaryText
     durationLabel.alignment = .right
@@ -134,7 +136,7 @@ final class MenuBarNowPlayingView: NSView {
 
     addSubview(artworkView)
     addSubview(titleTextView)
-    addSubview(artistLabel)
+    addSubview(artistTextView)
     addSubview(albumTextView)
     addSubview(badgeLabel)
     addSubview(progressTrack)
