@@ -25,11 +25,12 @@ final class MenuBarNowPlayingView: NSView {
   private let progressFill = NSView()
   private let elapsedLabel = NSTextField(labelWithString: "")
   private let durationLabel = NSTextField(labelWithString: "")
+  private let controlsView = MenuBarControlsView()
   private var progressFraction: CGFloat = 0
 
   override var isFlipped: Bool { true }
   override var intrinsicContentSize: NSSize {
-    NSSize(width: MenuBarStyle.width, height: 152)
+    NSSize(width: MenuBarStyle.width, height: 210)
   }
 
   override init(frame frameRect: NSRect) {
@@ -51,6 +52,7 @@ final class MenuBarNowPlayingView: NSView {
     elapsedLabel.stringValue = ""
     durationLabel.stringValue = ""
     artworkView.showPlaceholder()
+    controlsView.setPlaybackControlsEnabled(false)
     needsLayout = true
   }
 
@@ -65,7 +67,27 @@ final class MenuBarNowPlayingView: NSView {
     elapsedLabel.stringValue = state.duration > 0 ? formatTime(state.progress) : ""
     durationLabel.stringValue = state.duration > 0 ? formatTime(state.duration) : ""
     artworkView.update(artworkUrl: state.artworkUrl)
+    controlsView.updatePlayback(
+      isPlaying: state.isPlaying,
+      isShuffling: state.isShuffling,
+      repeatMode: state.repeatMode
+    )
+    controlsView.setPlaybackControlsEnabled(true)
     needsLayout = true
+  }
+
+  func setControlActions(
+    onShuffle: (() -> Void)?,
+    onPrevious: (() -> Void)?,
+    onTogglePlay: (() -> Void)?,
+    onNext: (() -> Void)?,
+    onRepeat: (() -> Void)?
+  ) {
+    controlsView.onShuffle = onShuffle
+    controlsView.onPrevious = onPrevious
+    controlsView.onTogglePlay = onTogglePlay
+    controlsView.onNext = onNext
+    controlsView.onRepeat = onRepeat
   }
 
   override func layout() {
@@ -85,6 +107,7 @@ final class MenuBarNowPlayingView: NSView {
     )
     elapsedLabel.frame = NSRect(x: 24, y: 112, width: 90, height: 16)
     durationLabel.frame = NSRect(x: 214, y: 112, width: 90, height: 16)
+    controlsView.frame = NSRect(x: 0, y: 138, width: bounds.width, height: 58)
   }
 
   private func configure() {
@@ -134,6 +157,7 @@ final class MenuBarNowPlayingView: NSView {
     addSubview(progressTrack)
     addSubview(elapsedLabel)
     addSubview(durationLabel)
+    addSubview(controlsView)
   }
 
   private func configureLabel(_ label: NSTextField, font: NSFont) {
@@ -362,11 +386,10 @@ final class MenuBarControlsView: NSView {
     systemSymbolName: "repeat",
     label: "Repeat"
   )
-  private let effectView = NSVisualEffectView()
 
   override var isFlipped: Bool { true }
   override var intrinsicContentSize: NSSize {
-    NSSize(width: MenuBarStyle.width, height: 66)
+    NSSize(width: MenuBarStyle.width, height: 58)
   }
 
   override init(frame frameRect: NSRect) {
@@ -402,28 +425,18 @@ final class MenuBarControlsView: NSView {
 
   override func layout() {
     super.layout()
-    effectView.frame = bounds.insetBy(dx: 10, dy: 6)
 
     let centerX = bounds.midX
-    playPauseButton.frame = NSRect(x: centerX - 22, y: 11, width: 44, height: 44)
-    previousButton.frame = NSRect(x: centerX - 67, y: 15, width: 36, height: 36)
-    shuffleButton.frame = NSRect(x: centerX - 108, y: 16, width: 34, height: 34)
-    nextButton.frame = NSRect(x: centerX + 31, y: 15, width: 36, height: 36)
-    repeatButton.frame = NSRect(x: centerX + 74, y: 16, width: 34, height: 34)
+    playPauseButton.frame = NSRect(x: centerX - 22, y: 7, width: 44, height: 44)
+    previousButton.frame = NSRect(x: centerX - 67, y: 11, width: 36, height: 36)
+    shuffleButton.frame = NSRect(x: centerX - 108, y: 12, width: 34, height: 34)
+    nextButton.frame = NSRect(x: centerX + 31, y: 11, width: 36, height: 36)
+    repeatButton.frame = NSRect(x: centerX + 74, y: 12, width: 34, height: 34)
   }
 
   private func configure() {
     wantsLayer = true
-    layer?.backgroundColor = MenuBarStyle.background.cgColor
-
-    effectView.material = .hudWindow
-    effectView.blendingMode = .withinWindow
-    effectView.state = .active
-    effectView.wantsLayer = true
-    effectView.layer?.cornerRadius = 12
-    effectView.layer?.borderWidth = 1
-    effectView.layer?.borderColor = MenuBarStyle.cardBorder.cgColor
-    addSubview(effectView)
+    layer?.backgroundColor = NSColor.clear.cgColor
 
     shuffleButton.onPress = { [weak self] in self?.onShuffle?() }
     previousButton.onPress = { [weak self] in self?.onPrevious?() }

@@ -16,9 +16,7 @@ final class MenuBarController: NSObject {
     MenuBarStatusIcon.monochromeIcon() ?? MenuBarStatusIcon.extensionIcon()
   private let menu = NSMenu()
   private let nowPlayingView = MenuBarNowPlayingView()
-  private let controlsView = MenuBarControlsView()
   private let nowPlayingItem = NSMenuItem()
-  private let controlsItem = NSMenuItem()
   private let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refresh), keyEquivalent: "")
   private let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
 
@@ -31,18 +29,11 @@ final class MenuBarController: NSObject {
   func updateConnectionStatus(_ status: String) {
     updateStatusBar(isPlaying: false)
     nowPlayingView.updateConnectionStatus(status)
-    controlsView.setPlaybackControlsEnabled(false)
   }
 
   func updatePlayback(_ state: PlaybackState) {
     updateStatusBar(isPlaying: state.isPlaying)
     nowPlayingView.updatePlayback(state)
-    controlsView.updatePlayback(
-      isPlaying: state.isPlaying,
-      isShuffling: state.isShuffling,
-      repeatMode: state.repeatMode
-    )
-    controlsView.setPlaybackControlsEnabled(true)
   }
 
   private func configureMenu() {
@@ -54,16 +45,16 @@ final class MenuBarController: NSObject {
     )
 
     nowPlayingItem.view = nowPlayingView
-    controlsItem.view = controlsView
-    controlsView.onShuffle = { [weak self] in self?.shuffle() }
-    controlsView.onPrevious = { [weak self] in self?.previous() }
-    controlsView.onTogglePlay = { [weak self] in self?.togglePlay() }
-    controlsView.onNext = { [weak self] in self?.next() }
-    controlsView.onRepeat = { [weak self] in self?.repeatMode() }
+    nowPlayingView.setControlActions(
+      onShuffle: { [weak self] in self?.shuffle() },
+      onPrevious: { [weak self] in self?.previous() },
+      onTogglePlay: { [weak self] in self?.togglePlay() },
+      onNext: { [weak self] in self?.next() },
+      onRepeat: { [weak self] in self?.repeatMode() }
+    )
 
     menu.appearance = NSAppearance(named: .darkAqua)
     menu.addItem(nowPlayingItem)
-    menu.addItem(controlsItem)
     menu.addItem(.separator())
     menu.addItem(refreshItem)
     menu.addItem(quitItem)

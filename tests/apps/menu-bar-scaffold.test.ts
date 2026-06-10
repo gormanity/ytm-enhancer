@@ -107,6 +107,30 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain("MenuBarStyle.accentMuted");
   });
 
+  it("keeps menu bar playback controls in the same card as playback state", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain(
+      "private let controlsView = MenuBarControlsView()",
+    );
+    expect(nowPlayingViewSource).toContain("controlsView.frame =");
+    expect(nowPlayingViewSource).toContain("addSubview(controlsView)");
+    expect(controllerSource).not.toContain(
+      "private let controlsView = MenuBarControlsView()",
+    );
+    expect(controllerSource).not.toContain("controlsItem");
+    expect(controllerSource).not.toContain("menu.addItem(controlsItem)");
+  });
+
   it("scrolls overflowing title, artist, and album text in the menu bar view", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
