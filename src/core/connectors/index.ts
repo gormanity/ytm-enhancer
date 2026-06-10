@@ -24,3 +24,9 @@ export {
   type ConnectorStatus,
   type KnownConnector,
 } from "./settings";
+export {
+  createNativeMessagingTransport,
+  NATIVE_MESSAGING_CONNECTION_ID,
+  NATIVE_MESSAGING_HOST_NAME,
+  type NativeMessagingTransportOptions,
+} from "./native-messaging-transport";

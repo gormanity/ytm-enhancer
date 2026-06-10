@@ -15,6 +15,7 @@ import {
   type AutoPlayMode,
 } from "@/core";
 import { createConnectorHost, type ConnectorHost } from "@/core/connectors";
+import { createNativeMessagingTransport } from "@/core/connectors/native-messaging-transport";
 import {
   CONNECTORS_ENABLED_STATE_KEY,
   CONNECTORS_KNOWN_STATE_KEY,
@@ -143,8 +144,8 @@ async function enableConnectorSupport(): Promise<void> {
       return knownConnectors.get(manifest.id)?.enabled !== false;
     },
     onConnectorSeen: rememberConnector,
+    transports: [createNativeMessagingTransport()],
   });
-  // TODO(connectors): Attach a transport when one is available.
   connectorHost.start();
 }
 
