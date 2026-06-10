@@ -121,7 +121,9 @@ describe("menu bar connector app scaffold", () => {
     expect(iconButtonSource).toContain("ellipseIn: bounds.insetBy");
     expect(iconButtonSource).toContain("layer?.shadowOpacity = shadowOpacity");
     expect(iconButtonSource).toContain("hovering || isHighlighted");
-    expect(iconButtonSource).toContain("MenuBarStyle.controlHoverShadow.cgColor");
+    expect(iconButtonSource).toContain(
+      "MenuBarStyle.controlHoverShadow.cgColor",
+    );
   });
 
   it("keeps menu bar playback controls in the same card as playback state", () => {

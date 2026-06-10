@@ -12,6 +12,7 @@ private enum MenuBarStyle {
   static let controlHoverBackground = NSColor(calibratedWhite: 1, alpha: 0.2)
   static let controlPressedBackground = NSColor(calibratedWhite: 1, alpha: 0.28)
   static let controlActiveBackground = NSColor(calibratedWhite: 1, alpha: 0.14)
+  static let controlHoverShadow = NSColor.black.withAlphaComponent(0.55)
 }
 
 final class MenuBarNowPlayingView: NSView {
@@ -618,6 +619,11 @@ private final class MenuBarIconButton: NSButton {
     imagePosition = .imageOnly
     imageScaling = .scaleProportionallyDown
     wantsLayer = true
+    layer?.masksToBounds = false
+    layer?.shadowColor = MenuBarStyle.controlHoverShadow.cgColor
+    layer?.shadowOffset = CGSize(width: 0, height: 2)
+    layer?.shadowOpacity = 0
+    layer?.shadowRadius = 8
     updateAppearance()
   }
 
@@ -677,10 +683,16 @@ private final class MenuBarIconButton: NSButton {
   override func layout() {
     super.layout()
     layer?.cornerRadius = min(bounds.width, bounds.height) / 2
+    layer?.shadowPath = CGPath(
+      ellipseIn: bounds.insetBy(dx: -2, dy: -2),
+      transform: nil
+    )
   }
 
   private func updateAppearance() {
     let background: NSColor
+    let showsHoverShadow = isEnabled && (hovering || isHighlighted)
+    let shadowOpacity: Float = showsHoverShadow ? (isHighlighted ? 0.32 : 0.24) : 0
     if isHighlighted {
       background = MenuBarStyle.controlPressedBackground
     } else if hovering {
@@ -699,6 +711,9 @@ private final class MenuBarIconButton: NSButton {
 
     alphaValue = isEnabled ? 0.9 : 0.35
     layer?.backgroundColor = background.cgColor
+    layer?.shadowColor = MenuBarStyle.controlHoverShadow.cgColor
+    layer?.shadowOpacity = shadowOpacity
+    layer?.shadowRadius = isHighlighted ? 10 : 8
   }
 
   @objc private func performPress() {
