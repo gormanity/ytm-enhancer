@@ -89,6 +89,59 @@ describe("automation popup view", () => {
     );
   });
 
+  it.each([
+    ["default", "Use YouTube Music's normal startup playback behavior."],
+    [
+      "off",
+      "Prevent playback from starting automatically when YouTube Music loads.",
+    ],
+    [
+      "on",
+      "Start playback automatically when YouTube Music loads with music ready to play.",
+    ],
+  ] as const)("explains the %s Auto-Play mode", async (autoPlayMode, text) => {
+    const clients = createClients({ autoPlayMode });
+    const view = createAutomationPopupView(createTestModuleContext(), clients);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      expect(
+        container.querySelector<HTMLElement>(
+          '[data-role="automation-auto-play-mode-hint"]',
+        )?.textContent,
+      ).toBe(text);
+    });
+  });
+
+  it("updates the Auto-Play mode helper text when the mode changes", async () => {
+    const clients = createClients({ autoPlayMode: "default" });
+    const view = createAutomationPopupView(createTestModuleContext(), clients);
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const select = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLSelectElement>(
+        '[data-role="automation-auto-play-mode"]',
+      );
+      expect(element?.disabled).toBe(false);
+      return element!;
+    });
+
+    select.value = "on";
+    select.dispatchEvent(new Event("change"));
+
+    expect(
+      container.querySelector<HTMLElement>(
+        '[data-role="automation-auto-play-mode-hint"]',
+      )?.textContent,
+    ).toBe(
+      "Start playback automatically when YouTube Music loads with music ready to play.",
+    );
+  });
+
   it("persists Auto-Play mode changes through the Auto-Play client", async () => {
     const clients = createClients();
     const view = createAutomationPopupView(createTestModuleContext(), clients);
