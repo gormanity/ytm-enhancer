@@ -71,6 +71,24 @@ YTM_ENHANCER_EXTENSION_ORIGINS="chrome-extension://<extension-id>/" \
 When connector support starts, the extension launches the native messaging host
 and the menu bar item appears.
 
+## Debug Logs
+
+The app writes local diagnostic logs to:
+
+```text
+/tmp/ytm-menu-bar-connector.log
+```
+
+To follow connector activity while testing:
+
+```sh
+tail -f /tmp/ytm-menu-bar-connector.log
+```
+
+Set `YTM_MENU_BAR_LOG_PATH` before launching the host to write somewhere else.
+Logs include native messaging lifecycle events, message types, request IDs, and
+playback state summaries.
+
 ## Uninstall Native Host Manifests
 
 ```sh
