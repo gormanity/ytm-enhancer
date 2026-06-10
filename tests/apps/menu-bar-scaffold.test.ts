@@ -123,6 +123,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("clipView.animator().setBoundsOrigin");
     expect(sources).not.toContain("setAffineTransform");
     expect(sources).not.toContain("translationX:");
+    expect(sources).not.toContain("reflectScrolledClipView");
   });
 
   it("reuses the extension icon for the menu bar status item", () => {
