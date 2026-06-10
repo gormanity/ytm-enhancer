@@ -172,12 +172,14 @@ final class MenuBarNowPlayingView: NSView {
   }
 }
 
-private final class MenuBarScrollingTextView: NSView {
+private final class MenuBarScrollingTextView: NSView, CAAnimationDelegate {
   static let scrollPauseDelay: TimeInterval = 1.25
 
   private let label = NSTextField(labelWithString: "")
   private var scrollGeneration = 0
   private var pendingScroll: DispatchWorkItem?
+  private var currentScrollOffset: CGFloat = 0
+  private var isScrollAnimating = false
   private var lastVisibleWidth: CGFloat = -1
   private var lastTextWidth: CGFloat = -1
 
@@ -222,15 +224,14 @@ private final class MenuBarScrollingTextView: NSView {
 
     lastVisibleWidth = visibleWidth
     lastTextWidth = textWidth
-    label.frame = NSRect(
-      x: label.frame.minX,
-      y: 0,
-      width: max(visibleWidth, textWidth),
-      height: bounds.height
-    )
 
     if changed {
       restartScrollingIfNeeded()
+      return
+    }
+
+    if !isScrollAnimating {
+      label.frame = labelFrame(offset: currentScrollOffset)
     }
   }
 
@@ -260,7 +261,8 @@ private final class MenuBarScrollingTextView: NSView {
     pendingScroll?.cancel()
     pendingScroll = nil
     label.layer?.removeAllAnimations()
-    label.setFrameOrigin(.zero)
+    isScrollAnimating = false
+    applyLabelFrame(offset: 0)
 
     guard needsScroll else { return }
     scheduleScroll(generation: scrollGeneration)
@@ -281,35 +283,80 @@ private final class MenuBarScrollingTextView: NSView {
     guard generation == scrollGeneration, needsScroll else { return }
 
     let overflow = max(0, lastTextWidth - lastVisibleWidth)
+    let targetOffset = -overflow
     let duration = min(8, max(1.4, TimeInterval(overflow / 32)))
 
-    NSAnimationContext.runAnimationGroup { context in
-      context.duration = duration
-      context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-      label.animator().setFrameOrigin(NSPoint(x: -overflow, y: 0))
-    } completionHandler: { [weak self] in
+    isScrollAnimating = true
+    currentScrollOffset = targetOffset
+
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    label.layer?.setAffineTransform(
+      CGAffineTransform(translationX: targetOffset, y: 0)
+    )
+    CATransaction.commit()
+
+    let animation = CABasicAnimation(keyPath: "transform.translation.x")
+    animation.fromValue = 0
+    animation.toValue = targetOffset
+    animation.duration = duration
+    animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+    animation.delegate = self
+    animation.setValue(generation, forKey: "scrollGeneration")
+    label.layer?.add(animation, forKey: "scroll")
+  }
+
+  func animationDidStop(_ animation: CAAnimation, finished flag: Bool) {
+    guard
+      flag,
+      let generation = animation.value(forKey: "scrollGeneration") as? Int
+    else { return }
+
+    DispatchQueue.main.async { [weak self] in
+      self?.scheduleResetAfterScroll(generation: generation)
+    }
+  }
+
+  private func scheduleResetAfterScroll(generation: Int) {
+    guard generation == scrollGeneration, needsScroll else { return }
+    isScrollAnimating = false
+
+    let work = DispatchWorkItem { [weak self] in
       guard
         let self,
         generation == self.scrollGeneration,
         self.needsScroll
       else { return }
 
-      let work = DispatchWorkItem { [weak self] in
-        guard
-          let self,
-          generation == self.scrollGeneration,
-          self.needsScroll
-        else { return }
-
-        self.label.setFrameOrigin(.zero)
-        self.scheduleScroll(generation: generation)
-      }
-      self.pendingScroll = work
-      DispatchQueue.main.asyncAfter(
-        deadline: .now() + Self.scrollPauseDelay,
-        execute: work
-      )
+      self.applyLabelFrame(offset: 0)
+      self.scheduleScroll(generation: generation)
     }
+    pendingScroll = work
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + Self.scrollPauseDelay,
+      execute: work
+    )
+  }
+
+  private func applyLabelFrame(offset: CGFloat) {
+    currentScrollOffset = offset
+    label.frame = labelFrame(offset: offset)
+
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    label.layer?.setAffineTransform(
+      CGAffineTransform(translationX: offset, y: 0)
+    )
+    CATransaction.commit()
+  }
+
+  private func labelFrame(offset _: CGFloat) -> NSRect {
+    NSRect(
+      x: 0,
+      y: 0,
+      width: max(lastVisibleWidth, lastTextWidth),
+      height: bounds.height
+    )
   }
 }
 

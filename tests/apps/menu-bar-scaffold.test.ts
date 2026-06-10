@@ -95,7 +95,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("formatAlbumLine");
     expect(sources).toContain("scrollPauseDelay");
     expect(sources).toContain("needsScroll");
-    expect(sources).toContain("NSAnimationContext.runAnimationGroup");
+    expect(sources).toContain("CABasicAnimation");
     expect(sources).toContain("DispatchQueue.main.asyncAfter");
     expect(sources).not.toContain("titleLabel = NSTextField(labelWithString:");
   });
