@@ -53,6 +53,11 @@ export class PlaybackControlsModule implements FeatureModule {
     const playbackController = createPlaybackController(
       createYtmPlaybackDriver(context.ytm),
     );
+    playbackController.subscribe((snapshot) => {
+      if (snapshot.ok) {
+        context.events.emit("playback-state-changed", snapshot.data);
+      }
+    });
     this.hotkeyPlaybackController = playbackController;
 
     for (const [command, action] of Object.entries(COMMAND_ACTION_MAP)) {

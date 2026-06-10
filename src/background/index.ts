@@ -13,6 +13,7 @@ import {
   syncModuleContentState,
   type FeatureModule,
   type AutoPlayMode,
+  type PlaybackState,
 } from "@/core";
 import { createConnectorHost, type ConnectorHost } from "@/core/connectors";
 import { createNativeMessagingTransport } from "@/core/connectors/native-messaging-transport";
@@ -132,6 +133,10 @@ const context = createExtensionContext({
   ytm,
   state: { saveValue: saveModuleStateValue },
   popupEvents: { broadcast: broadcastPopupMessage },
+});
+
+context.events.on<PlaybackState>("playback-state-changed", (state) => {
+  void connectorHost?.publishPlaybackState(state);
 });
 
 async function enableConnectorSupport(): Promise<void> {
