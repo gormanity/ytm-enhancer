@@ -6,6 +6,7 @@ DESCRIPTION="YTM Enhancer Menu Bar Connector"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BINARY_PATH="$APP_ROOT/.build/release/YTMMenuBarConnector"
+UNINSTALL_SCRIPT="$APP_ROOT/scripts/uninstall-native-hosts.sh"
 
 CHROMIUM_ORIGINS=(
   "chrome-extension://pggblbpjleekkobiinobaeeefnimgljh/"
@@ -74,6 +75,7 @@ JSON
 }
 
 cd "$APP_ROOT"
+"$UNINSTALL_SCRIPT"
 swift build -c release
 
 write_chromium_manifest \

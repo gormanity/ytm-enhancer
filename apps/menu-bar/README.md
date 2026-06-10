@@ -48,6 +48,10 @@ apps/menu-bar/scripts/install-native-hosts.sh
 The script builds the release executable and writes browser native host
 manifests under the current user's Library folder.
 
+Before writing new manifests, it removes any existing manifests for the same
+native host name. This prevents stale executable paths or extension allow-lists
+from surviving across local installs.
+
 For Chromium builds with a non-standard extension ID, provide a comma-separated
 override:
 
@@ -66,6 +70,19 @@ YTM_ENHANCER_EXTENSION_ORIGINS="chrome-extension://<extension-id>/" \
 
 When connector support starts, the extension launches the native messaging host
 and the menu bar item appears.
+
+## Uninstall Native Host Manifests
+
+```sh
+apps/menu-bar/scripts/uninstall-native-hosts.sh
+```
+
+This removes the browser native host manifests created by the installer. It does
+not remove Swift build output. To remove local build artifacts too:
+
+```sh
+rm -rf apps/menu-bar/.build
+```
 
 ## Architecture Rules
 
