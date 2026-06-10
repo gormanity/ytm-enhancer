@@ -158,6 +158,34 @@ describe("menu bar connector app scaffold", () => {
     );
   });
 
+  it("shows artist beside year on the lower menu bar metadata line", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain(
+      'albumTextView.stringValue = state.album ?? ""',
+    );
+    expect(nowPlayingViewSource).toContain(
+      "artistYearTextView.stringValue = formatArtistYearLine(state)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "private func formatArtistYearLine(_ state: PlaybackState) -> String",
+    );
+    expect(nowPlayingViewSource).toContain("if let artist = state.artist");
+    expect(nowPlayingViewSource).toContain("if let year = state.year");
+    expect(nowPlayingViewSource).toContain(
+      'parts.joined(separator: " \\u{00B7} ")',
+    );
+    expect(nowPlayingViewSource).not.toContain(
+      "albumTextView.stringValue = formatAlbumLine(state)",
+    );
+  });
+
   it("adds a circular Mini Player-style hover shadow to menu bar controls", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
@@ -281,26 +309,25 @@ describe("menu bar connector app scaffold", () => {
     expect(nowPlayingViewSource).not.toContain("effectView.layer?.borderColor");
   });
 
-  it("scrolls overflowing title, artist, and album text in the menu bar view", () => {
+  it("scrolls overflowing title, album, and artist/year text in the menu bar view", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
       .join("\n");
 
     expect(sources).toContain("MenuBarScrollingTextView");
     expect(sources).toContain("titleTextView");
-    expect(sources).toContain("artistTextView");
     expect(sources).toContain("albumTextView");
-    expect(sources).toContain("formatAlbumLine");
+    expect(sources).toContain("artistYearTextView");
+    expect(sources).toContain("formatArtistYearLine");
     expect(sources).toContain("scrollPauseDelay");
     expect(sources).toContain("needsScroll");
     expect(sources).toContain("Timer(timeInterval:");
     expect(sources).toContain("RunLoop.main.add(timer, forMode: .common)");
     expect(sources).toContain("DispatchQueue.main.asyncAfter");
     expect(sources).not.toContain("titleLabel = NSTextField(labelWithString:");
-    expect(sources).not.toContain("artistLabel = NSTextField(labelWithString:");
   });
 
-  it("scrolls title, artist, and album together from one metadata scroller", () => {
+  it("scrolls title, album, and artist/year together from one metadata scroller", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
       .join("\n");
@@ -319,10 +346,10 @@ describe("menu bar connector app scaffold", () => {
       "metadataScroller.register(titleTextView)",
     );
     expect(nowPlayingViewSource).toContain(
-      "metadataScroller.register(artistTextView)",
+      "metadataScroller.register(albumTextView)",
     );
     expect(nowPlayingViewSource).toContain(
-      "metadataScroller.register(albumTextView)",
+      "metadataScroller.register(artistYearTextView)",
     );
     expect(scrollingViewSource).toBeDefined();
     expect(scrollingViewSource).toContain("func setScrollProgress");
