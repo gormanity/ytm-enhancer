@@ -1,6 +1,5 @@
 import AppKit
 import Foundation
-import QuartzCore
 
 private enum MenuBarStyle {
   static let width: CGFloat = 328
@@ -172,9 +171,10 @@ final class MenuBarNowPlayingView: NSView {
   }
 }
 
-private final class MenuBarScrollingTextView: NSView, CAAnimationDelegate {
+private final class MenuBarScrollingTextView: NSView {
   static let scrollPauseDelay: TimeInterval = 1.25
 
+  private let clipView = NSClipView()
   private let label = NSTextField(labelWithString: "")
   private var scrollGeneration = 0
   private var pendingScroll: DispatchWorkItem?
@@ -216,6 +216,7 @@ private final class MenuBarScrollingTextView: NSView, CAAnimationDelegate {
   override func layout() {
     super.layout()
 
+    clipView.frame = bounds
     let textWidth = measuredTextWidth()
     let visibleWidth = bounds.width
     let changed =
@@ -231,7 +232,7 @@ private final class MenuBarScrollingTextView: NSView, CAAnimationDelegate {
     }
 
     if !isScrollAnimating {
-      label.frame = labelFrame(offset: currentScrollOffset)
+      applyLabelFrame(offset: currentScrollOffset)
     }
   }
 
@@ -243,24 +244,28 @@ private final class MenuBarScrollingTextView: NSView, CAAnimationDelegate {
     wantsLayer = true
     layer?.masksToBounds = true
 
-    label.wantsLayer = true
+    clipView.drawsBackground = false
+    clipView.documentView = label
+    addSubview(clipView)
+
     label.lineBreakMode = .byClipping
     label.isSelectable = false
     label.allowsDefaultTighteningForTruncation = false
     label.cell?.usesSingleLineMode = true
-    addSubview(label)
   }
 
   private func measuredTextWidth() -> CGFloat {
     guard !label.stringValue.isEmpty else { return 0 }
-    return ceil(label.attributedStringValue.size().width) + 6
+    let font = label.font ?? .systemFont(ofSize: NSFont.systemFontSize)
+    return ceil(
+      (label.stringValue as NSString).size(withAttributes: [.font: font]).width
+    ) + 16
   }
 
   private func restartScrollingIfNeeded() {
     scrollGeneration += 1
     pendingScroll?.cancel()
     pendingScroll = nil
-    label.layer?.removeAllAnimations()
     isScrollAnimating = false
     applyLabelFrame(offset: 0)
 
@@ -283,36 +288,17 @@ private final class MenuBarScrollingTextView: NSView, CAAnimationDelegate {
     guard generation == scrollGeneration, needsScroll else { return }
 
     let overflow = max(0, lastTextWidth - lastVisibleWidth)
-    let targetOffset = -overflow
+    let targetOffset = overflow
     let duration = min(8, max(1.4, TimeInterval(overflow / 32)))
 
     isScrollAnimating = true
     currentScrollOffset = targetOffset
 
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    label.layer?.setAffineTransform(
-      CGAffineTransform(translationX: targetOffset, y: 0)
-    )
-    CATransaction.commit()
-
-    let animation = CABasicAnimation(keyPath: "transform.translation.x")
-    animation.fromValue = 0
-    animation.toValue = targetOffset
-    animation.duration = duration
-    animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-    animation.delegate = self
-    animation.setValue(generation, forKey: "scrollGeneration")
-    label.layer?.add(animation, forKey: "scroll")
-  }
-
-  func animationDidStop(_ animation: CAAnimation, finished flag: Bool) {
-    guard
-      flag,
-      let generation = animation.value(forKey: "scrollGeneration") as? Int
-    else { return }
-
-    DispatchQueue.main.async { [weak self] in
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = duration
+      context.allowsImplicitAnimation = true
+      clipView.animator().setBoundsOrigin(NSPoint(x: targetOffset, y: 0))
+    } completionHandler: { [weak self] in
       self?.scheduleResetAfterScroll(generation: generation)
     }
   }
@@ -341,13 +327,8 @@ private final class MenuBarScrollingTextView: NSView, CAAnimationDelegate {
   private func applyLabelFrame(offset: CGFloat) {
     currentScrollOffset = offset
     label.frame = labelFrame(offset: offset)
-
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    label.layer?.setAffineTransform(
-      CGAffineTransform(translationX: offset, y: 0)
-    )
-    CATransaction.commit()
+    clipView.scroll(to: NSPoint(x: offset, y: 0))
+    clipView.reflectScrolledClipView(clipView)
   }
 
   private func labelFrame(offset _: CGFloat) -> NSRect {
