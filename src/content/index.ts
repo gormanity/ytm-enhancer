@@ -15,6 +15,7 @@ import { QualityBridgeInjector } from "./quality-bridge-injector";
 import { AutoPlayController } from "./auto-play";
 import { createDevBuildRuntimeCoordinator } from "./dev-build-coordinator";
 import { installYtmTooltipDismissal } from "./ytm-tooltip-dismissal";
+import { ConnectorPlaybackStatePublisher } from "./connector-playback-state-publisher";
 import {
   DislikeObserver,
   shouldAutoSkipDislikedChange,
@@ -76,6 +77,21 @@ function safeSendMessage<TResponse>(
     callback(null);
   }
 }
+
+const connectorPlaybackStatePublisher = new ConnectorPlaybackStatePublisher(
+  () => adapter.getPlaybackState(),
+  (state) => {
+    safeSendMessage(
+      { type: "connector-playback-state-changed", state },
+      () => undefined,
+    );
+  },
+);
+
+handler.on("set-connector-playback-state-streaming", async (message) => {
+  connectorPlaybackStatePublisher.setEnabled(message.enabled === true);
+  return { ok: true };
+});
 
 function shouldRunVisualizer(): boolean {
   if (!visualizerEnabled) return false;
@@ -447,6 +463,14 @@ function queryInitialRuntimeState(): void {
       }
     },
   );
+
+  safeSendMessage<{ ok: boolean; data?: boolean }>(
+    { type: "get-connector-playback-state-streaming" },
+    (response) => {
+      if (!contentRuntimeStarted) return;
+      connectorPlaybackStatePublisher.setEnabled(response?.data === true);
+    },
+  );
 }
 
 function startContentRuntime(): void {
@@ -491,6 +515,7 @@ function stopContentRuntime(): void {
   stopVisualizer();
   audioBridge.destroy();
   qualityBridge.destroy();
+  connectorPlaybackStatePublisher.stop();
 
   dislikeObserver?.stop();
   dislikeObserver = null;

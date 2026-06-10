@@ -61,6 +61,7 @@ export interface ConnectorHost {
   stop(): void;
   receive(connectionId: string, message: unknown): Promise<ConnectorHostResult>;
   publishPlaybackState(state: PlaybackState): Promise<void>;
+  hasPlaybackStateSubscribers(): boolean;
   listSessions(): ConnectorSessionSnapshot[];
   disconnect(connectionId: string): void;
 }
@@ -78,6 +79,7 @@ export interface ConnectorHostOptions {
     manifest: ConnectorManifest,
     status: "connected" | "blocked" | "incompatible",
   ) => void;
+  onPlaybackStateSubscriptionChanged?: (hasSubscribers: boolean) => void;
   onError?: (error: ConnectorHostError) => void;
   now?: () => number;
   playbackMutationRefreshDelayMs?: number;
@@ -140,6 +142,7 @@ export function createConnectorHost(
     options.playbackMutationRefreshDelayMs ??
     CONNECTOR_PLAYBACK_MUTATION_REFRESH_DELAY_MS;
   let playbackMutationRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  let playbackStateSubscribersActive = false;
 
   const reportError = (error: ConnectorHostError): void => {
     try {
@@ -190,6 +193,17 @@ export function createConnectorHost(
     }
 
     return false;
+  };
+
+  const notifyPlaybackStateSubscriptionChanged = (): void => {
+    const hasSubscribers = enabled && hasPlaybackStateSubscribers();
+    if (hasSubscribers === playbackStateSubscribersActive) return;
+    playbackStateSubscribersActive = hasSubscribers;
+    try {
+      options.onPlaybackStateSubscriptionChanged?.(hasSubscribers);
+    } catch {
+      // Connector host diagnostics must not affect extension behavior.
+    }
   };
 
   const publishPlaybackState = async (state: PlaybackState): Promise<void> => {
@@ -265,6 +279,7 @@ export function createConnectorHost(
       connectedAt: now(),
     });
     options.onConnectorSeen?.(message.manifest, "connected");
+    notifyPlaybackStateSubscriptionChanged();
 
     return {
       ok: true,
@@ -293,10 +308,12 @@ export function createConnectorHost(
         const missingPermission = requirePermission(session, "playback:read");
         if (missingPermission) return missingPermission;
         message.events.forEach((event) => session.subscribedEvents.add(event));
+        notifyPlaybackStateSubscriptionChanged();
         return ack(message.requestId);
       }
       case "connector.disconnect":
         sessions.delete(connectionId);
+        notifyPlaybackStateSubscriptionChanged();
         return ack(message.requestId);
       case "playback.getState": {
         const missingPermission = requirePermission(session, "playback:read");
@@ -354,6 +371,7 @@ export function createConnectorHost(
         this.stop();
         sessions.clear();
       }
+      notifyPlaybackStateSubscriptionChanged();
     },
 
     start() {
@@ -413,6 +431,10 @@ export function createConnectorHost(
       await publishPlaybackState(state);
     },
 
+    hasPlaybackStateSubscribers() {
+      return enabled && hasPlaybackStateSubscribers();
+    },
+
     listSessions() {
       return Array.from(sessions.values()).map((session) => ({
         connectionId: session.connectionId,
@@ -424,6 +446,7 @@ export function createConnectorHost(
 
     disconnect(connectionId: string) {
       sessions.delete(connectionId);
+      notifyPlaybackStateSubscriptionChanged();
     },
   };
 }

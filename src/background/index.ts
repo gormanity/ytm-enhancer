@@ -139,6 +139,12 @@ context.events.on<PlaybackState>("playback-state-changed", (state) => {
   void connectorHost?.publishPlaybackState(state);
 });
 
+function setConnectorPlaybackStateStreaming(enabled: boolean): void {
+  void ytm
+    .broadcast({ type: "set-connector-playback-state-streaming", enabled })
+    .catch(() => undefined);
+}
+
 async function enableConnectorSupport(): Promise<void> {
   if (connectorHost !== null) return;
 
@@ -149,6 +155,7 @@ async function enableConnectorSupport(): Promise<void> {
       return knownConnectors.get(manifest.id)?.enabled !== false;
     },
     onConnectorSeen: rememberConnector,
+    onPlaybackStateSubscriptionChanged: setConnectorPlaybackStateStreaming,
     transports: [createNativeMessagingTransport()],
   });
   connectorHost.start();
@@ -157,6 +164,7 @@ async function enableConnectorSupport(): Promise<void> {
 function disableConnectorSupport(): void {
   connectorHost?.setEnabled(false);
   connectorHost = null;
+  setConnectorPlaybackStateStreaming(false);
 }
 
 async function restartConnectorSupport(): Promise<void> {
@@ -366,6 +374,19 @@ handler.on("track-changed", async (message, sender) => {
       void connectorHost?.publishPlaybackState(state);
     },
   });
+});
+
+handler.on("connector-playback-state-changed", async (message, sender) => {
+  if (isYTMTabSuppressed(sender?.tab?.id)) return { ok: true };
+  void connectorHost?.publishPlaybackState(message.state as PlaybackState);
+  return { ok: true };
+});
+
+handler.on("get-connector-playback-state-streaming", async () => {
+  return {
+    ok: true,
+    data: connectorHost?.hasPlaybackStateSubscribers() === true,
+  };
 });
 
 handler.on("get-ytm-tabs", async () => {
