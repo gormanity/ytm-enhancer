@@ -106,4 +106,43 @@ describe("PlaybackControlsModule", () => {
       expect(getPlaybackState).toHaveBeenCalledTimes(3);
     });
   });
+
+  it("should emit refreshed playback state for playback command hotkeys", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const playbackState = {
+        title: "Track A",
+        artist: "Artist A",
+        album: null,
+        year: null,
+        artworkUrl: null,
+        isPlaying: true,
+        progress: 12,
+        duration: 200,
+      };
+      const executePlaybackAction = vi.fn().mockResolvedValue(undefined);
+      const getPlaybackState = vi.fn().mockResolvedValue(playbackState);
+      const context = createTestModuleContext({
+        ytm: { executePlaybackAction, getPlaybackState },
+      });
+      const playbackStateListener = vi.fn();
+      const registry: TestHotkeyRegistry = { register: vi.fn() };
+
+      context.events.on("playback-state-changed", playbackStateListener);
+      (module as TestHotkeyModule).registerHotkeys?.(registry, context);
+
+      const playPauseHandler = registry.register.mock.calls.find(
+        ([command]) => command === "play-pause",
+      )?.[1] as ((command: string) => Promise<void>) | undefined;
+
+      await playPauseHandler?.("play-pause");
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(executePlaybackAction).toHaveBeenCalledWith("togglePlay");
+      expect(playbackStateListener).toHaveBeenCalledWith(playbackState);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

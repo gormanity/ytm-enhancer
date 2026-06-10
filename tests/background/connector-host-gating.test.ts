@@ -91,4 +91,11 @@ describe("connector host background gating", () => {
       "await restartConnectorSupport();",
     );
   });
+
+  it("publishes module playback state events to connector sessions", () => {
+    expect(backgroundSource).toContain(
+      'context.events.on<PlaybackState>("playback-state-changed"',
+    );
+    expect(backgroundSource).toContain("connectorHost?.publishPlaybackState");
+  });
 });
