@@ -1036,6 +1036,33 @@ describe("YTMAdapter", () => {
   });
 
   describe("seekTo", () => {
+    it("should seek through the YouTube Music progress bar when available", () => {
+      document.body.innerHTML = `
+        <input id="progress-bar" type="range" min="0" max="163" value="65" />
+        <span id="time-info">1:23 / 3:31</span>
+        <video class="html5-main-video"></video>
+      `;
+      const progressBar =
+        document.querySelector<HTMLInputElement>("#progress-bar")!;
+      const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "currentTime", {
+        configurable: true,
+        value: 0,
+        writable: true,
+      });
+      const input = vi.fn();
+      const change = vi.fn();
+      progressBar.addEventListener("input", input);
+      progressBar.addEventListener("change", change);
+
+      adapter.seekTo(90);
+
+      expect(progressBar.value).toBe("90");
+      expect(input).toHaveBeenCalledTimes(1);
+      expect(change).toHaveBeenCalledTimes(1);
+      expect(video.currentTime).toBe(0);
+    });
+
     it("should set video currentTime", () => {
       document.body.innerHTML = `<video class="html5-main-video"></video>`;
       const video = document.querySelector("video") as HTMLVideoElement;
