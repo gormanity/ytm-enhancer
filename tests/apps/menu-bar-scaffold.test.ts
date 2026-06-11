@@ -730,6 +730,7 @@ describe("menu bar connector app scaffold", () => {
 
     expect(nowPlayingViewSource).toBeDefined();
     expect(nowPlayingViewSource).toContain("private var mouseEventMonitor");
+    expect(nowPlayingViewSource).toContain("private var hoverPollTimer");
     expect(nowPlayingViewSource).toContain("override func viewDidMoveToWindow");
     expect(nowPlayingViewSource).toContain(
       "window?.acceptsMouseMovedEvents = true",
@@ -737,6 +738,14 @@ describe("menu bar connector app scaffold", () => {
     expect(nowPlayingViewSource).toContain("NSEvent.addLocalMonitorForEvents");
     expect(nowPlayingViewSource).toContain(".mouseMoved");
     expect(nowPlayingViewSource).toContain("updateHoverSurfaces(with: event)");
+    expect(nowPlayingViewSource).toContain("startHoverPolling()");
+    expect(nowPlayingViewSource).toContain("stopHoverPolling()");
+    expect(nowPlayingViewSource).toContain(
+      "window.mouseLocationOutsideOfEventStream",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "updateHoverSurfaces(windowPoint: mousePoint)",
+    );
     expect(nowPlayingViewSource).toContain("clearHoverSurfaces()");
     expect(nowPlayingViewSource).toContain(
       "controlsView.updateHover(from: event)",
@@ -744,14 +753,24 @@ describe("menu bar connector app scaffold", () => {
     expect(nowPlayingViewSource).toContain(
       "seekBarView.updateHover(from: event)",
     );
+    expect(nowPlayingViewSource).toContain(
+      "controlsView.updateHover(windowPoint: windowPoint)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "seekBarView.updateHover(windowPoint: windowPoint)",
+    );
 
     expect(seekBarSource).toBeDefined();
     expect(seekBarSource).toContain("func updateHover(from event: NSEvent)");
+    expect(seekBarSource).toContain("func updateHover(windowPoint: NSPoint)");
     expect(seekBarSource).toContain("func clearHoverState()");
 
     expect(controlsViewSource).toBeDefined();
     expect(controlsViewSource).toContain(
       "func updateHover(from event: NSEvent)",
+    );
+    expect(controlsViewSource).toContain(
+      "func updateHover(windowPoint: NSPoint)",
     );
     expect(controlsViewSource).toContain("func clearHoverState()");
     expect(controlsViewSource).toContain("shuffleButton.setHovering");
