@@ -22,6 +22,7 @@ describe("YTMAdapter", () => {
       expect(state.album).toBeNull();
       expect(state.year).toBeNull();
       expect(state.artworkUrl).toBeNull();
+      expect(state.nextTrack).toBeNull();
       expect(state.isPlaying).toBe(false);
       expect(state.progress).toBe(0);
       expect(state.duration).toBe(0);
@@ -286,6 +287,52 @@ describe("YTMAdapter", () => {
 
       const state = adapter.getPlaybackState();
       expect(state.year).toBe(2024);
+    });
+
+    it("should extract next track metadata from the player queue", () => {
+      document.body.innerHTML = `
+        <ytmusic-player-queue>
+          <ytmusic-player-queue-item selected>
+            <yt-formatted-string class="song-title">Current Song</yt-formatted-string>
+            <yt-formatted-string class="byline">
+              <a href="/channel/current">Current Artist</a>
+            </yt-formatted-string>
+          </ytmusic-player-queue-item>
+          <ytmusic-player-queue-item>
+            <img class="image" src="https://lh3.googleusercontent.com/next=w60-h60-l90-rj">
+            <yt-formatted-string class="song-title">Next Song</yt-formatted-string>
+            <yt-formatted-string class="byline">
+              <a href="/channel/next">Next Artist</a>
+              &nbsp;•&nbsp;
+              <a href="/browse/MPREb_next_album">Next Album</a>
+              &nbsp;•&nbsp;
+              2025
+            </yt-formatted-string>
+          </ytmusic-player-queue-item>
+        </ytmusic-player-queue>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.nextTrack).toEqual({
+        title: "Next Song",
+        artist: "Next Artist",
+        album: "Next Album",
+        year: 2025,
+        artworkUrl: "https://lh3.googleusercontent.com/next=w544-h544-l90-rj",
+      });
+    });
+
+    it("should return null next track when the queue has no following item", () => {
+      document.body.innerHTML = `
+        <ytmusic-player-queue>
+          <ytmusic-player-queue-item selected>
+            <yt-formatted-string class="song-title">Current Song</yt-formatted-string>
+          </ytmusic-player-queue-item>
+        </ytmusic-player-queue>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.nextTrack).toBeNull();
     });
 
     it("should return null album when subtitle has only one link", () => {

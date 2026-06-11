@@ -50,4 +50,11 @@ describe("SELECTORS", () => {
     expect(SELECTORS.likeButtonRenderer).toBeDefined();
     expect(typeof SELECTORS.likeButtonRenderer).toBe("string");
   });
+
+  it("should define selectors for the player queue and next track metadata", () => {
+    expect(SELECTORS.queueItem).toBeDefined();
+    expect(SELECTORS.queueItemTitle).toBeDefined();
+    expect(SELECTORS.queueItemByline).toBeDefined();
+    expect(SELECTORS.queueItemThumbnail).toBeDefined();
+  });
 });

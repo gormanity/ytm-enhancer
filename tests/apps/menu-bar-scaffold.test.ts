@@ -189,6 +189,17 @@ describe("menu bar connector app scaffold", () => {
     );
   });
 
+  it("decodes next track metadata from connector playback state", () => {
+    const protocolSource = read(
+      "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
+    );
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+
+    expect(protocolSource).toContain("struct TrackMetadata: Decodable");
+    expect(protocolSource).toContain("let nextTrack: TrackMetadata?");
+    expect(appSource).toContain('"nextTrack=\\(logValue(state.nextTrack?.title))"');
+  });
+
   it("adds a circular Mini Player-style hover shadow to menu bar controls", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)

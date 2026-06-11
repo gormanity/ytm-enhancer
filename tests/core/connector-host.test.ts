@@ -21,6 +21,13 @@ const playbackState: PlaybackState = {
   album: "Album",
   year: 2026,
   artworkUrl: "https://example.com/art.jpg",
+  nextTrack: {
+    title: "Next Song",
+    artist: "Next Artist",
+    album: "Next Album",
+    year: 2027,
+    artworkUrl: "https://example.com/next.jpg",
+  },
   isPlaying: true,
   progress: 12,
   duration: 60,
@@ -166,6 +173,13 @@ describe("ConnectorHost", () => {
           album: "Album",
           year: 2026,
           artworkUrl: "https://example.com/art.jpg",
+          nextTrack: {
+            title: "Next Song",
+            artist: "Next Artist",
+            album: "Next Album",
+            year: 2027,
+            artworkUrl: "https://example.com/next.jpg",
+          },
           isPlaying: true,
           progress: 12,
           duration: 60,
@@ -175,6 +189,47 @@ describe("ConnectorHost", () => {
       },
     });
     expect(ytm.getPlaybackState).toHaveBeenCalledTimes(1);
+  });
+
+  it("redacts next track metadata when track read permission is missing", async () => {
+    const ytm = createMockYtmRuntimeClient({
+      getPlaybackState: vi.fn().mockResolvedValue(playbackState),
+    });
+    const host = createConnectorHost({ enabled: true, ytm });
+
+    const hello = await host.receive("connection-1", {
+      type: "connector.hello",
+      requestId: "hello-1",
+      manifest: {
+        ...validManifest,
+        permissions: ["playback:read"],
+      },
+    });
+    expect(hello.ok).toBe(true);
+
+    const result = await host.receive("connection-1", {
+      type: "playback.getState",
+      requestId: "state-1",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      message: {
+        type: "playback.state",
+        requestId: "state-1",
+        state: expect.objectContaining({
+          title: null,
+          artist: null,
+          album: null,
+          year: null,
+          artworkUrl: null,
+          nextTrack: null,
+          isPlaying: true,
+          progress: 12,
+          duration: 60,
+        }),
+      },
+    });
   });
 
   it("routes playback controls through the centralized YTM runtime API", async () => {
