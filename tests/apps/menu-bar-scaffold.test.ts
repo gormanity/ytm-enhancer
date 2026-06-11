@@ -202,6 +202,39 @@ describe("menu bar connector app scaffold", () => {
     );
   });
 
+  it("displays the next track below current playback and above Quit", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain("private let nextTrackLabel");
+    expect(nowPlayingViewSource).toContain("private let nextTrackTitleTextView");
+    expect(nowPlayingViewSource).toContain("private let nextTrackDetailTextView");
+    expect(nowPlayingViewSource).toContain('nextTrackLabel.stringValue = "Up Next"');
+    expect(nowPlayingViewSource).toContain("updateNextTrack(state.nextTrack)");
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackTitleTextView.stringValue = title",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackDetailTextView.stringValue = formatTrackDetailLine(track)",
+    );
+    expect(nowPlayingViewSource).toContain("NSSize(width: MenuBarStyle.width, height: 252)");
+    expect(nowPlayingViewSource).toContain("nextTrackDivider.frame =");
+    expect(nowPlayingViewSource).toContain("addSubview(nextTrackLabel)");
+    expect(nowPlayingViewSource).toContain("addSubview(nextTrackTitleTextView)");
+    expect(nowPlayingViewSource).toContain("addSubview(nextTrackDetailTextView)");
+    expect(controllerSource).toContain("menu.addItem(nowPlayingItem)");
+    expect(controllerSource).toContain("menu.addItem(.separator())");
+    expect(controllerSource).toContain("menu.addItem(quitItem)");
+  });
+
   it("adds a circular Mini Player-style hover shadow to menu bar controls", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
