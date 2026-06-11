@@ -480,8 +480,8 @@ describe("menu bar connector app scaffold", () => {
       "Sources/YTMMenuBarConnector/MenuBarController.swift",
     );
 
-    expect(controllerSource).toContain("focusItem.indentationLevel = 1");
-    expect(controllerSource).toContain("quitItem.indentationLevel = 1");
+    expect(controllerSource).toContain("focusItem.indentationLevel = 0");
+    expect(controllerSource).toContain("quitItem.indentationLevel = 0");
     expect(controllerSource).toContain("menu.addItem(focusItem)");
     expect(controllerSource).toContain("menu.addItem(quitItem)");
   });
@@ -642,13 +642,54 @@ describe("menu bar connector app scaffold", () => {
     expect(scrollingViewSource).toContain("var scrollDistance: CGFloat");
     expect(scrollingViewSource).toContain("lastTextWidth + Self.scrollLoopGap");
     expect(scrollingViewSource).toContain("drawLoopingCopy");
+    expect(scrollingViewSource).toContain("func completeScrollLoop");
+    expect(scrollingViewSource).toContain("scrollOffset = scrollDistance");
     expect(scrollingViewSource).toContain(
       "NSPoint(x: -scrollOffset + lastTextWidth + Self.scrollLoopGap",
     );
     expect(metadataScrollerSource).toBeDefined();
     expect(metadataScrollerSource).toContain("maximumScrollDistance");
     expect(metadataScrollerSource).toContain("scrollDistance");
+    expect(metadataScrollerSource).toContain("completeScrollLoop()");
     expect(metadataScrollerSource).not.toContain("maximumOverflow");
+  });
+
+  it("keeps the menu bar seek bar optimistic until seek state catches up", () => {
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+    const nowPlayingViewSource = viewSource.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarSeekBarView/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain("pendingSeekTime");
+    expect(nowPlayingViewSource).toContain("pendingSeekExpirationDate");
+    expect(nowPlayingViewSource).toContain("applyOptimisticSeek");
+    expect(nowPlayingViewSource).toContain("displayProgress(for: state)");
+    expect(nowPlayingViewSource).toContain(
+      "abs(state.progress - pendingSeekTime)",
+    );
+    expect(nowPlayingViewSource).toContain("pendingSeekToleranceSeconds");
+    expect(nowPlayingViewSource).toContain(
+      "updateProgressDisplay(progress: displayProgress, duration: state.duration)",
+    );
+  });
+
+  it("shows a hover tooltip with the target seek timestamp", () => {
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+    const seekBarSource = viewSource.match(
+      /private final class MenuBarSeekBarView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+
+    expect(seekBarSource).toBeDefined();
+    expect(seekBarSource).toContain("private let seekTooltipLabel");
+    expect(seekBarSource).toContain("func setDuration");
+    expect(seekBarSource).toContain("override func mouseMoved");
+    expect(seekBarSource).toContain("override func mouseExited");
+    expect(seekBarSource).toContain("updateSeekTooltip(with: event)");
+    expect(seekBarSource).toContain("hideSeekTooltip()");
+    expect(seekBarSource).toContain("formatTime(Double(fraction) * duration)");
+    expect(seekBarSource).toContain(".mouseMoved");
+    expect(seekBarSource).toContain("seekTooltipLabel.isHidden = false");
   });
 
   it("reuses the extension icon for the menu bar status item", () => {
