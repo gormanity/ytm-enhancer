@@ -111,11 +111,20 @@ export class YTMAdapter {
   }
 
   seekTo(time: number): void {
-    const video = document.querySelector(
+    const seekTime = Number.isFinite(time) ? Math.max(0, time) : 0;
+    const progressBar = document.querySelector<HTMLElement>(
+      SELECTORS.progressBar,
+    );
+    if (progressBar) {
+      this.updateSeekProgressControl(progressBar, seekTime);
+      return;
+    }
+
+    const video = document.querySelector<HTMLVideoElement>(
       SELECTORS.videoElement,
-    ) as HTMLVideoElement | null;
+    );
     if (video) {
-      video.currentTime = time;
+      video.currentTime = seekTime;
     }
   }
 
@@ -415,6 +424,67 @@ export class YTMAdapter {
     const progress = video.currentTime || 0;
     const duration = Number.isFinite(video.duration) ? video.duration : 0;
     return { progress, duration };
+  }
+
+  private updateSeekProgressControl(
+    progressBar: HTMLElement,
+    time: number,
+  ): void {
+    const min = this.readElementNumber(progressBar, ["min", "aria-valuemin"]);
+    const max = this.readElementNumber(progressBar, ["max", "aria-valuemax"]);
+    const clampedTime = Math.min(
+      max ?? Number.POSITIVE_INFINITY,
+      Math.max(min ?? 0, time),
+    );
+    const value = String(clampedTime);
+
+    if ("value" in progressBar) {
+      (progressBar as HTMLInputElement).value = value;
+    }
+    progressBar.setAttribute("value", value);
+    progressBar.setAttribute("aria-valuenow", value);
+
+    const view = progressBar.ownerDocument.defaultView ?? window;
+    for (const type of ["input", "change"]) {
+      progressBar.dispatchEvent(
+        new view.Event(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+        }),
+      );
+    }
+  }
+
+  private readElementNumber(
+    el: HTMLElement | null,
+    attributes: string[],
+  ): number | null {
+    if (!el) return null;
+
+    if (attributes.includes("value") && "value" in el) {
+      const value = this.parseFiniteElementNumber(
+        (el as HTMLInputElement).value,
+      );
+      if (value !== null) return value;
+    }
+
+    for (const attribute of attributes) {
+      const value = this.parseFiniteElementNumber(el.getAttribute(attribute));
+      if (value !== null) return value;
+    }
+
+    return null;
+  }
+
+  private parseFiniteElementNumber(
+    value: string | number | null | undefined,
+  ): number | null {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "string" && value.trim() === "") return null;
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private parseTimeInfo(): { progress: number; duration: number } {
