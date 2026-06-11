@@ -439,6 +439,17 @@ describe("menu bar connector app scaffold", () => {
     expect(appSource).not.toContain("menu.onRefresh");
   });
 
+  it("aligns footer menu actions with the playback content inset", () => {
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+
+    expect(controllerSource).toContain("focusItem.indentationLevel = 1");
+    expect(controllerSource).toContain("quitItem.indentationLevel = 1");
+    expect(controllerSource).toContain("menu.addItem(focusItem)");
+    expect(controllerSource).toContain("menu.addItem(quitItem)");
+  });
+
   it("lets the default menu background show through the playback view", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
