@@ -96,7 +96,7 @@ describe("Connected Apps popup view", () => {
           name: "YTM Menu Bar",
           version: "0.1.0",
           protocolVersion: "1.0.0",
-          permissions: ["playback:read", "playback:control"],
+          permissions: ["playback:read", "playback:control", "ytm:focus"],
           enabled: true,
           status: "connected",
           lastSeenAt: null,
@@ -117,6 +117,7 @@ describe("Connected Apps popup view", () => {
       expect(container.textContent).toContain("Connected");
       expect(container.textContent).toContain("Playback Info");
       expect(container.textContent).toContain("Playback Controls");
+      expect(container.textContent).toContain("Focus YouTube Music");
     });
 
     const connectorToggle = container.querySelector<HTMLInputElement>(

@@ -40,6 +40,8 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("connector.subscribe");
     expect(sources).toContain("playback.getState");
     expect(sources).toContain("playback.action");
+    expect(sources).toContain("playback.seek");
+    expect(sources).toContain("ytm.focus");
     expect(sources).toContain("playback.state");
     expect(sources).toContain("FileHandle.standardInput");
     expect(sources).toContain("FileHandle.standardOutput");
@@ -70,6 +72,19 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("playback state retry scheduled");
   });
 
+  it("marks playback state stale when live updates stop arriving", () => {
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+
+    expect(appSource).toContain("playbackStateStaleTimeoutSeconds");
+    expect(appSource).toContain("schedulePlaybackStateStaleTimeout");
+    expect(appSource).toContain("markPlaybackStateStale");
+    expect(appSource).toContain("clearPlaybackStateStaleTimeout");
+    expect(viewSource).toContain("setStalePlaybackState");
+    expect(viewSource).toContain('"Reconnecting..."');
+    expect(viewSource).toContain("controlsView.setPlaybackControlsDimmed");
+  });
+
   it("uses custom Mini Player-style menu views for playback status and controls", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
@@ -80,6 +95,57 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("progressFill");
     expect(sources).toContain("artworkView");
     expect(sources).not.toContain('NSMenuItem(title: "Previous"');
+  });
+
+  it("makes the menu bar progress bar seekable", () => {
+    const protocolSource = read(
+      "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
+    );
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+
+    expect(protocolSource).toContain("static func playbackSeek");
+    expect(protocolSource).toContain('"type": "playback.seek"');
+    expect(appSource).toContain("menu.onSeek");
+    expect(appSource).toContain("sendSeek");
+    expect(viewSource).toContain("MenuBarSeekBarView");
+    expect(viewSource).toContain("onSeek");
+    expect(viewSource).toContain("mouseDown");
+    expect(viewSource).toContain("mouseDragged");
+    expect(viewSource).toContain("setSeekEnabled");
+  });
+
+  it("adds a menu action for focusing YouTube Music", () => {
+    const protocolSource = read(
+      "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
+    );
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+
+    expect(protocolSource).toContain("ytm:focus");
+    expect(protocolSource).toContain("static func focusYouTubeMusic");
+    expect(protocolSource).toContain('"type": "ytm.focus"');
+    expect(appSource).toContain("menu.onFocusYouTubeMusic");
+    expect(appSource).toContain("sendFocusYouTubeMusic");
+    expect(controllerSource).toContain("onFocusYouTubeMusic");
+    expect(controllerSource).toContain('title: "Focus YouTube Music"');
+    expect(controllerSource).toContain("menu.addItem(focusItem)");
+  });
+
+  it("shows clearer unavailable states in the menu bar app", () => {
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+
+    expect(appSource).toContain("userFacingStatus");
+    expect(appSource).toContain('"Connected Apps disabled"');
+    expect(appSource).toContain('"Connector disabled"');
+    expect(appSource).toContain('"Update required"');
+    expect(appSource).toContain('"No YouTube Music tab"');
+    expect(viewSource).toContain("isUnavailablePlaybackState");
+    expect(viewSource).toContain('"No track loaded"');
+    expect(viewSource).toContain("controlsView.setPlaybackControlsDimmed");
   });
 
   it("matches Mini Player playback controls in the menu bar view", () => {

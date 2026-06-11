@@ -12,7 +12,7 @@ const validManifest: ConnectorManifest = {
   name: "Menu Bar",
   version: "0.1.0",
   protocolVersion: CONNECTOR_PROTOCOL_VERSION,
-  permissions: ["playback:read", "playback:control", "track:read"],
+  permissions: ["playback:read", "playback:control", "track:read", "ytm:focus"],
 };
 
 const playbackState: PlaybackState = {
@@ -339,6 +339,51 @@ describe("ConnectorHost", () => {
       type: "playback.state",
       state: expect.objectContaining({ progress: 30 }),
     });
+  });
+
+  it("routes focus requests through the centralized YTM runtime API", async () => {
+    const ytm = createMockYtmRuntimeClient();
+    const host = createConnectorHost({ enabled: true, ytm });
+    await connect(host);
+
+    const result = await host.receive("connection-1", {
+      type: "ytm.focus",
+      requestId: "focus-1",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      message: { type: "connector.ack", requestId: "focus-1" },
+    });
+    expect(ytm.focusTab).toHaveBeenCalledWith();
+  });
+
+  it("requires explicit permission before focusing YouTube Music", async () => {
+    const ytm = createMockYtmRuntimeClient();
+    const host = createConnectorHost({ enabled: true, ytm });
+    const hello = await host.receive("connection-1", {
+      type: "connector.hello",
+      requestId: "hello-1",
+      manifest: {
+        ...validManifest,
+        permissions: ["playback:read", "playback:control", "track:read"],
+      },
+    });
+    expect(hello.ok).toBe(true);
+
+    const result = await host.receive("connection-1", {
+      type: "ytm.focus",
+      requestId: "focus-1",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "permission_denied",
+        message: `Connector ${validManifest.id} is missing ytm:focus`,
+      },
+    });
+    expect(ytm.focusTab).not.toHaveBeenCalled();
   });
 
   it("notifies when playback state subscribers become active and inactive", async () => {
