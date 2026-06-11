@@ -560,6 +560,50 @@ describe("menu bar connector app scaffold", () => {
     expect(icon).not.toContain("#33ffff");
   });
 
+  it("uses an outer ring while playback is active in the menu bar status item", () => {
+    const manifest = read("Package.swift");
+    const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const statusIconSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarStatusIcon.swift",
+    );
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+    const idleIcon = read(
+      "Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome.svg",
+    );
+    const playingIcon = read(
+      "Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome-ring.svg",
+    );
+
+    expect(manifest).toContain(
+      '.copy("Resources/extension-icon-monochrome-ring.svg")',
+    );
+    expect(sourceFiles).toContain(
+      "Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome-ring.svg",
+    );
+    expect(sourceFiles).not.toContain(
+      "Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome-spokeless.svg",
+    );
+    expect(statusIconSource).toContain("static func playingIcon");
+    expect(statusIconSource).toContain("image.isTemplate = true");
+    expect(statusIconSource).toContain(
+      'forResource: "extension-icon-monochrome-ring"',
+    );
+    expect(controllerSource).toContain("private let playingStatusIcon");
+    expect(controllerSource).toContain(
+      "isPlaying ? playingStatusIcon : statusIcon",
+    );
+    expect(idleIcon).toContain("<line");
+    expect(playingIcon).toContain("<line");
+    expect(playingIcon).toContain("<circle");
+    expect(statusIconSource).not.toContain("drawPlayingDot");
+    expect(sources).not.toContain('"YTM>"');
+  });
+
   it("keeps the app isolated from extension internals", () => {
     const sources = listFiles(".")
       .filter((path) => /\.(swift|md|sh)$/.test(path))

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { getActionIconPath } from "@/background/action-icon";
 import {
-  getActionIconPath,
   isActionSuppressedForDevBuildConflict,
   isDevBuildConflictActive,
   setActionDevBuildConflictIndicator,
@@ -68,12 +68,12 @@ describe("dev build conflict background helpers", () => {
   });
 
   it("returns normal and disabled action icon paths", () => {
-    expect(getActionIconPath(false)).toEqual({
+    expect(getActionIconPath("idle")).toEqual({
       16: "icon16.png",
       48: "icon48.png",
       128: "icon128.png",
     });
-    expect(getActionIconPath(true)).toEqual({
+    expect(getActionIconPath("disabled")).toEqual({
       16: "icon16-disabled.png",
       48: "icon48-disabled.png",
       128: "icon128-disabled.png",

@@ -97,6 +97,7 @@ describe("connector host background gating", () => {
       'context.events.on<PlaybackState>("playback-state-changed"',
     );
     expect(backgroundSource).toContain("connectorHost?.publishPlaybackState");
+    expect(backgroundSource).toContain("updatePlaybackStateIndicators(state)");
   });
 
   it("streams content playback state only when connector sessions subscribe", () => {
@@ -110,7 +111,15 @@ describe("connector host background gating", () => {
       'handler.on("get-connector-playback-state-streaming"',
     );
     expect(handlerBody("connector-playback-state-changed")).toContain(
-      "connectorHost?.publishPlaybackState",
+      "updatePlaybackStateIndicators(message.state as PlaybackState)",
+    );
+  });
+
+  it("restores the playing action icon after a dev-build conflict clears", () => {
+    expect(backgroundSource).toContain("lastPlaybackStateIsPlaying");
+    expect(backgroundSource).toContain("setActionPlaybackIndicator");
+    expect(functionBody("notifyDevBuildConflictStatusChanged")).toContain(
+      "setActionPlaybackIndicator(lastPlaybackStateIsPlaying, duplicateDetected)",
     );
   });
 });
