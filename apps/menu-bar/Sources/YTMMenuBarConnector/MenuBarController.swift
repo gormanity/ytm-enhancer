@@ -21,7 +21,7 @@ final class MenuBarController: NSObject {
   private let focusItem = NSMenuItem(
     title: "Focus YouTube Music",
     action: #selector(focusYouTubeMusic),
-    keyEquivalent: ""
+    keyEquivalent: "f"
   )
   private let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
 
@@ -54,8 +54,11 @@ final class MenuBarController: NSObject {
   private func configureMenu() {
     focusItem.target = self
     focusItem.indentationLevel = 1
+    focusItem.keyEquivalentModifierMask = [.command]
+    focusItem.image = Self.menuItemIcon("arrow.up.forward.app", accessibilityDescription: "Focus YouTube Music")
     quitItem.target = self
     quitItem.indentationLevel = 1
+    quitItem.image = Self.menuItemIcon("xmark.circle", accessibilityDescription: "Quit")
 
     nowPlayingItem.view = nowPlayingView
     nowPlayingView.setControlActions(
@@ -84,6 +87,18 @@ final class MenuBarController: NSObject {
     barItem.button?.imagePosition = .imageOnly
     barItem.button?.imageScaling = .scaleProportionallyDown
     barItem.button?.toolTip = "YTM Enhancer"
+  }
+
+  private static func menuItemIcon(
+    _ symbolName: String,
+    accessibilityDescription: String
+  ) -> NSImage? {
+    let image = NSImage(
+      systemSymbolName: symbolName,
+      accessibilityDescription: accessibilityDescription
+    )
+    image?.isTemplate = true
+    return image
   }
 
   @objc private func shuffle() {
