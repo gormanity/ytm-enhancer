@@ -1,6 +1,4 @@
-const ACTION_ICON_SIZES = [16, 48, 128] as const;
-
-type ActionIconPath = Record<(typeof ACTION_ICON_SIZES)[number], string>;
+import { getActionIconPath } from "./action-icon";
 
 export interface DevBuildConflictState {
   suspendedTabIds: Set<number>;
@@ -18,15 +16,6 @@ export function shouldForwardHotkeyToDevBuild(
   isDevBuild: boolean,
 ): boolean {
   return !isDevBuild && isDevBuildConflictActive(state);
-}
-
-export function getActionIconPath(disabled: boolean): ActionIconPath {
-  return Object.fromEntries(
-    ACTION_ICON_SIZES.map((size) => [
-      size,
-      disabled ? `icon${size}-disabled.png` : `icon${size}.png`,
-    ]),
-  ) as ActionIconPath;
 }
 
 export function updateDevBuildSuspendedTab(
@@ -62,7 +51,9 @@ export async function setActionDevBuildConflictIndicator(
   if (isDevBuild || typeof chrome.action !== "object") return;
 
   await Promise.allSettled([
-    chrome.action.setIcon({ path: getActionIconPath(disabled) }),
+    chrome.action.setIcon({
+      path: getActionIconPath(disabled ? "disabled" : "idle"),
+    }),
     chrome.action.setTitle({
       title: disabled
         ? "YTM Enhancer disabled while the dev build is active"

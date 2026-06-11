@@ -19,6 +19,7 @@ let package = Package(
       resources: [
         .copy("Resources/extension-icon.svg"),
         .copy("Resources/extension-icon-monochrome.svg"),
+        .copy("Resources/extension-icon-monochrome-ring.svg"),
         .copy("Resources/playback-next.svg"),
         .copy("Resources/playback-pause.svg"),
         .copy("Resources/playback-play.svg"),

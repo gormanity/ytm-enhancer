@@ -11,14 +11,20 @@ final class MenuBarController: NSObject {
   private let barItem = NSStatusBar.system.statusItem(
     withLength: NSStatusItem.variableLength
   )
-  private let statusIcon =
-    MenuBarStatusIcon.monochromeIcon() ?? MenuBarStatusIcon.extensionIcon()
+  private let statusIcon: NSImage?
+  private let playingStatusIcon: NSImage?
   private let menu = NSMenu()
   private let nowPlayingView = MenuBarNowPlayingView()
   private let nowPlayingItem = NSMenuItem()
   private let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
 
   override init() {
+    statusIcon = MenuBarStatusIcon.monochromeIcon() ?? MenuBarStatusIcon.extensionIcon()
+    playingStatusIcon =
+      MenuBarStatusIcon.playingIcon()
+        ?? MenuBarStatusIcon.monochromeIcon()
+        ?? statusIcon
+
     super.init()
     configureMenu()
     updateConnectionStatus("Connecting")
@@ -56,7 +62,9 @@ final class MenuBarController: NSObject {
   private func updateStatusBar(isPlaying: Bool) {
     barItem.length = NSStatusItem.squareLength
     barItem.button?.title = ""
-    barItem.button?.image = statusIcon ?? MenuBarStatusIcon.fallbackIcon(isPlaying: isPlaying)
+    barItem.button?.image =
+      (isPlaying ? playingStatusIcon : statusIcon)
+        ?? MenuBarStatusIcon.fallbackIcon(isPlaying: isPlaying)
     barItem.button?.imagePosition = .imageOnly
     barItem.button?.imageScaling = .scaleProportionallyDown
     barItem.button?.toolTip = "YTM Enhancer"

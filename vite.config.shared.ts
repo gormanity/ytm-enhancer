@@ -12,6 +12,43 @@ const DEFAULT_ICON_SIZES = [16, 48, 128];
 const STORE_ICON_SIZES: Partial<Record<string, number[]>> = {
   edge: [300],
 };
+const PLAYING_RING_COLOR = "#F03030";
+
+function playingRingSvg(size: number): Buffer {
+  const strokeWidth = Math.max(1.5, size * 0.07);
+  const radius = size / 2 - strokeWidth / 2 - Math.max(0.5, size * 0.015);
+
+  return Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" fill="none" stroke="${PLAYING_RING_COLOR}" stroke-width="${strokeWidth}"/>
+    </svg>
+  `);
+}
+
+async function createPlayingIcon(
+  svgBuffer: Buffer,
+  size: number,
+): Promise<Buffer> {
+  const resizedIcon = await sharp(svgBuffer)
+    .resize(size, size)
+    .png()
+    .toBuffer();
+
+  return sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([
+      { input: resizedIcon, left: 0, top: 0 },
+      { input: playingRingSvg(size), left: 0, top: 0 },
+    ])
+    .png()
+    .toBuffer();
+}
 
 async function generateIcons(browser: string, outDir: string): Promise<void> {
   const svgBuffer = readFileSync(resolve(__dirname, "src/assets/icon.svg"));
@@ -31,6 +68,11 @@ async function generateIcons(browser: string, outDir: string): Promise<void> {
         .modulate({ brightness: 0.72 })
         .png()
         .toFile(resolve(outDir, `icon${size}-disabled.png`)),
+      createPlayingIcon(svgBuffer, size).then((buffer) =>
+        sharp(buffer)
+          .png()
+          .toFile(resolve(outDir, `icon${size}-playing.png`)),
+      ),
     ]),
   );
 }

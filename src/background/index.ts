@@ -34,6 +34,7 @@ import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
 import { debug, error } from "@/core/logger";
 import { handlePlaybackActionMessage } from "./playback-action";
+import { setActionPlaybackIndicator } from "./action-icon";
 
 import { parseSelectedTabId } from "./selected-tab";
 import { handleTrackChangedMessage } from "./track-change";
@@ -97,6 +98,7 @@ const devBuildConflictState: DevBuildConflictState = {
 };
 const TAB_ARTWORK_QUERY_TIMEOUT_MS = 150;
 let externalDevBuildStaleTimer: ReturnType<typeof setTimeout> | null = null;
+let lastPlaybackStateIsPlaying = false;
 type PopupRuntimeMessage =
   | { type: "ytm-tabs-changed" }
   | { type: "sleep-timer-state-changed" }
@@ -136,8 +138,17 @@ const context = createExtensionContext({
 });
 
 context.events.on<PlaybackState>("playback-state-changed", (state) => {
-  void connectorHost?.publishPlaybackState(state);
+  updatePlaybackStateIndicators(state);
 });
+
+function updatePlaybackStateIndicators(state: PlaybackState): void {
+  lastPlaybackStateIsPlaying = state.isPlaying;
+  void connectorHost?.publishPlaybackState(state);
+  void setActionPlaybackIndicator(
+    state.isPlaying,
+    isDevBuildConflictActive(devBuildConflictState),
+  );
+}
 
 function setConnectorPlaybackStateStreaming(enabled: boolean): void {
   void ytm
@@ -228,11 +239,11 @@ async function setConnectorSupportEnabled(enabled: boolean): Promise<void> {
 }
 
 async function notifyDevBuildConflictStatusChanged(): Promise<void> {
+  const duplicateDetected = isDevBuildConflictActive(devBuildConflictState);
+
   broadcastPopupMessage({ type: "dev-build-conflict-status-changed" });
-  await setActionDevBuildConflictIndicator(
-    isDevBuildConflictActive(devBuildConflictState),
-    __DEV__,
-  );
+  await setActionDevBuildConflictIndicator(duplicateDetected, __DEV__);
+  setActionPlaybackIndicator(lastPlaybackStateIsPlaying, duplicateDetected);
 }
 
 async function updateDevBuildConflictState(
@@ -371,14 +382,14 @@ handler.on("track-changed", async (message, sender) => {
     miniPlayer,
     notifications,
     publishPlaybackState(state) {
-      void connectorHost?.publishPlaybackState(state);
+      updatePlaybackStateIndicators(state);
     },
   });
 });
 
 handler.on("connector-playback-state-changed", async (message, sender) => {
   if (isYTMTabSuppressed(sender?.tab?.id)) return { ok: true };
-  void connectorHost?.publishPlaybackState(message.state as PlaybackState);
+  updatePlaybackStateIndicators(message.state as PlaybackState);
   return { ok: true };
 });
 
