@@ -36,6 +36,9 @@ private enum MenuBarStyle {
 }
 
 final class MenuBarNowPlayingView: NSView {
+  private static let pendingSeekHoldSeconds: TimeInterval = 1.5
+  private static let pendingSeekToleranceSeconds: Double = 1.25
+
   private let artworkView = MenuBarArtworkView()
   private let titleTextView = MenuBarScrollingTextView()
   private let albumTextView = MenuBarScrollingTextView()
@@ -51,6 +54,8 @@ final class MenuBarNowPlayingView: NSView {
   private let nextTrackDetailTextView = MenuBarScrollingTextView()
   private let metadataScroller = MenuBarMetadataScroller()
   private var currentDuration: Double = 0
+  private var pendingSeekTime: Double?
+  private var pendingSeekExpirationDate: Date?
   private var onSeek: ((Double) -> Void)?
 
   override var isFlipped: Bool { true }
@@ -75,7 +80,9 @@ final class MenuBarNowPlayingView: NSView {
     albumTextView.stringValue = ""
     artistYearTextView.stringValue = status
     currentDuration = 0
+    clearPendingSeek()
     seekBarView.setProgress(0)
+    seekBarView.setDuration(0)
     seekBarView.setSeekEnabled(false)
     seekBarView.setDimmed(true)
     elapsedLabel.stringValue = ""
@@ -99,7 +106,9 @@ final class MenuBarNowPlayingView: NSView {
       albumTextView.stringValue = ""
       artistYearTextView.stringValue = ""
       currentDuration = 0
+      clearPendingSeek()
       seekBarView.setProgress(0)
+      seekBarView.setDuration(0)
       seekBarView.setSeekEnabled(false)
       seekBarView.setDimmed(true)
       elapsedLabel.stringValue = ""
@@ -123,11 +132,10 @@ final class MenuBarNowPlayingView: NSView {
     albumTextView.stringValue = state.album ?? ""
     artistYearTextView.stringValue = formatArtistYearLine(state)
     currentDuration = state.duration
-    seekBarView.setProgress(progressRatio(state))
     seekBarView.setSeekEnabled(state.duration > 0)
     seekBarView.setDimmed(false)
-    elapsedLabel.stringValue = state.duration > 0 ? formatTime(state.progress) : ""
-    durationLabel.stringValue = state.duration > 0 ? formatTime(state.duration) : ""
+    let displayProgress = displayProgress(for: state)
+    updateProgressDisplay(progress: displayProgress, duration: state.duration)
     artworkView.update(artworkUrl: state.artworkUrl)
     controlsView.updatePlayback(
       isPlaying: state.isPlaying,
@@ -213,7 +221,9 @@ final class MenuBarNowPlayingView: NSView {
 
     seekBarView.onSeek = { [weak self] fraction in
       guard let self, self.currentDuration > 0 else { return }
-      self.onSeek?(Double(fraction) * self.currentDuration)
+      let time = Double(fraction) * self.currentDuration
+      self.applyOptimisticSeek(time)
+      self.onSeek?(time)
     }
     nextTrackDivider.wantsLayer = true
     nextTrackDivider.layer?.backgroundColor =
@@ -241,9 +251,50 @@ final class MenuBarNowPlayingView: NSView {
     label.allowsDefaultTighteningForTruncation = true
   }
 
-  private func progressRatio(_ state: PlaybackState) -> CGFloat {
-    guard state.duration > 0 else { return 0 }
-    return CGFloat(max(0, min(1, state.progress / state.duration)))
+  private func updateProgressDisplay(progress: Double, duration: Double) {
+    seekBarView.setDuration(duration)
+    seekBarView.setProgress(progressRatio(progress: progress, duration: duration))
+    elapsedLabel.stringValue = duration > 0 ? formatTime(progress) : ""
+    durationLabel.stringValue = duration > 0 ? formatTime(duration) : ""
+  }
+
+  private func progressRatio(progress: Double, duration: Double) -> CGFloat {
+    guard duration > 0 else { return 0 }
+    return CGFloat(max(0, min(1, progress / duration)))
+  }
+
+  private func applyOptimisticSeek(_ time: Double) {
+    guard currentDuration > 0 else { return }
+    let clampedTime = max(0, min(time, currentDuration))
+    pendingSeekTime = clampedTime
+    pendingSeekExpirationDate = Date().addingTimeInterval(Self.pendingSeekHoldSeconds)
+    updateProgressDisplay(progress: clampedTime, duration: currentDuration)
+  }
+
+  private func displayProgress(for state: PlaybackState) -> Double {
+    guard
+      let pendingSeekTime,
+      let pendingSeekExpirationDate
+    else {
+      return state.progress
+    }
+
+    if state.duration <= 0 || Date() > pendingSeekExpirationDate {
+      clearPendingSeek()
+      return state.progress
+    }
+
+    if abs(state.progress - pendingSeekTime) <= Self.pendingSeekToleranceSeconds {
+      clearPendingSeek()
+      return state.progress
+    }
+
+    return pendingSeekTime
+  }
+
+  private func clearPendingSeek() {
+    pendingSeekTime = nil
+    pendingSeekExpirationDate = nil
   }
 
   private func isUnavailablePlaybackState(_ state: PlaybackState) -> Bool {
@@ -292,8 +343,11 @@ private final class MenuBarSeekBarView: NSView {
 
   private let progressTrack = NSView()
   private let progressFill = NSView()
+  private let seekTooltipLabel = NSTextField(labelWithString: "")
   private var progressFraction: CGFloat = 0
+  private var duration: Double = 0
   private var seekEnabled = false
+  private var trackingArea: NSTrackingArea?
 
   override var isFlipped: Bool { true }
 
@@ -311,9 +365,19 @@ private final class MenuBarSeekBarView: NSView {
     needsLayout = true
   }
 
+  func setDuration(_ duration: Double) {
+    self.duration = max(0, duration)
+    if duration <= 0 {
+      hideSeekTooltip()
+    }
+  }
+
   func setSeekEnabled(_ enabled: Bool) {
     seekEnabled = enabled
     alphaValue = enabled ? 1 : 0.45
+    if !enabled {
+      hideSeekTooltip()
+    }
   }
 
   func setDimmed(_ dimmed: Bool) {
@@ -338,12 +402,40 @@ private final class MenuBarSeekBarView: NSView {
     )
   }
 
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    if let trackingArea {
+      removeTrackingArea(trackingArea)
+    }
+    let nextTrackingArea = NSTrackingArea(
+      rect: bounds,
+      options: [.activeInActiveApp, .inVisibleRect, .mouseEnteredAndExited, .mouseMoved],
+      owner: self
+    )
+    addTrackingArea(nextTrackingArea)
+    trackingArea = nextTrackingArea
+  }
+
   override func mouseDown(with event: NSEvent) {
+    updateSeekTooltip(with: event)
     seek(with: event)
   }
 
   override func mouseDragged(with event: NSEvent) {
+    updateSeekTooltip(with: event)
     seek(with: event)
+  }
+
+  override func mouseEntered(with event: NSEvent) {
+    updateSeekTooltip(with: event)
+  }
+
+  override func mouseMoved(with event: NSEvent) {
+    updateSeekTooltip(with: event)
+  }
+
+  override func mouseExited(with event: NSEvent) {
+    hideSeekTooltip()
   }
 
   override func resetCursorRects() {
@@ -366,15 +458,60 @@ private final class MenuBarSeekBarView: NSView {
 
     progressTrack.addSubview(progressFill)
     addSubview(progressTrack)
+    configureSeekTooltip()
+    addSubview(seekTooltipLabel)
   }
 
   private func seek(with event: NSEvent) {
     guard seekEnabled, bounds.width > 0 else { return }
 
-    let localPoint = convert(event.locationInWindow, from: nil)
-    let fraction = max(0, min(1, localPoint.x / bounds.width))
+    let fraction = seekFraction(for: event)
     setProgress(fraction)
     onSeek?(fraction)
+  }
+
+  private func updateSeekTooltip(with event: NSEvent) {
+    guard seekEnabled, duration > 0, bounds.width > 0 else {
+      hideSeekTooltip()
+      return
+    }
+
+    let fraction = seekFraction(for: event)
+    let time = formatTime(Double(fraction) * duration)
+    let localPoint = convert(event.locationInWindow, from: nil)
+    let width = max(42, seekTooltipLabel.intrinsicContentSize.width + 12)
+    let x = max(0, min(bounds.width - width, localPoint.x - width / 2))
+    seekTooltipLabel.stringValue = time
+    seekTooltipLabel.frame = NSRect(x: x, y: -22, width: width, height: 18)
+    seekTooltipLabel.isHidden = false
+    toolTip = time
+  }
+
+  private func hideSeekTooltip() {
+    seekTooltipLabel.isHidden = true
+    toolTip = nil
+  }
+
+  private func seekFraction(for event: NSEvent) -> CGFloat {
+    let localPoint = convert(event.locationInWindow, from: nil)
+    return max(0, min(1, localPoint.x / bounds.width))
+  }
+
+  private func configureSeekTooltip() {
+    seekTooltipLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .semibold)
+    seekTooltipLabel.textColor = MenuBarStyle.primaryText
+    seekTooltipLabel.alignment = .center
+    seekTooltipLabel.isSelectable = false
+    seekTooltipLabel.isHidden = true
+    seekTooltipLabel.wantsLayer = true
+    seekTooltipLabel.layer?.backgroundColor =
+      NSColor.black.withAlphaComponent(0.72).cgColor
+    seekTooltipLabel.layer?.cornerRadius = 5
+  }
+
+  private func formatTime(_ value: Double) -> String {
+    let seconds = max(0, Int(value.rounded()))
+    return String(format: "%d:%02d", seconds / 60, seconds % 60)
   }
 }
 
@@ -477,6 +614,12 @@ private final class MenuBarScrollingTextView: NSView {
     needsDisplay = true
   }
 
+  func completeScrollLoop() {
+    guard needsScroll else { return }
+    scrollOffset = scrollDistance
+    needsDisplay = true
+  }
+
   private func drawLoopingCopy(
     attributes: [NSAttributedString.Key: Any],
     y: CGFloat
@@ -574,6 +717,7 @@ private final class MenuBarMetadataScroller {
       self.setScrollProgress(progress)
 
       if progress >= 1 {
+        self.completeScrollLoop()
         timer.invalidate()
         self.scrollTimer = nil
         self.scheduleResetAfterScroll(generation: generation)
@@ -605,6 +749,10 @@ private final class MenuBarMetadataScroller {
 
   private func setScrollProgress(_ progress: CGFloat) {
     scrollingTextViews.forEach { $0.setScrollProgress(progress) }
+  }
+
+  private func completeScrollLoop() {
+    scrollingTextViews.forEach { $0.completeScrollLoop() }
   }
 
   private func cancelScrolling() {

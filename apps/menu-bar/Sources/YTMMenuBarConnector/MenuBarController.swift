@@ -53,11 +53,11 @@ final class MenuBarController: NSObject {
 
   private func configureMenu() {
     focusItem.target = self
-    focusItem.indentationLevel = 1
+    focusItem.indentationLevel = 0
     focusItem.keyEquivalentModifierMask = [.command]
     focusItem.image = Self.menuItemIcon("arrow.up.forward.app", accessibilityDescription: "Focus YouTube Music")
     quitItem.target = self
-    quitItem.indentationLevel = 1
+    quitItem.indentationLevel = 0
     quitItem.image = Self.menuItemIcon("xmark.circle", accessibilityDescription: "Quit")
 
     nowPlayingItem.view = nowPlayingView
