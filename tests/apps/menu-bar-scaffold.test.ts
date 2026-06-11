@@ -703,6 +703,10 @@ describe("menu bar connector app scaffold", () => {
     expect(seekBarSource).toContain(".mouseMoved");
     expect(seekBarSource).toContain("seekTooltipLabel.isHidden = false");
     expect(seekBarSource).toContain(".enabledDuringMouseDrag");
+    expect(seekBarSource).toContain(
+      "override var wantsDefaultClipping: Bool { false }",
+    );
+    expect(seekBarSource).toContain("layer?.masksToBounds = false");
     expect(seekBarSource).toContain("isMouseInsideBounds(event)");
     expect(seekBarSource).toContain("hideSeekTooltip()");
     expect(seekBarSource).not.toContain("toolTip = time");
@@ -727,24 +731,28 @@ describe("menu bar connector app scaffold", () => {
     expect(nowPlayingViewSource).toBeDefined();
     expect(nowPlayingViewSource).toContain("private var mouseEventMonitor");
     expect(nowPlayingViewSource).toContain("override func viewDidMoveToWindow");
-    expect(nowPlayingViewSource).toContain("window?.acceptsMouseMovedEvents = true");
     expect(nowPlayingViewSource).toContain(
-      "NSEvent.addLocalMonitorForEvents",
+      "window?.acceptsMouseMovedEvents = true",
     );
+    expect(nowPlayingViewSource).toContain("NSEvent.addLocalMonitorForEvents");
     expect(nowPlayingViewSource).toContain(".mouseMoved");
     expect(nowPlayingViewSource).toContain("updateHoverSurfaces(with: event)");
     expect(nowPlayingViewSource).toContain("clearHoverSurfaces()");
     expect(nowPlayingViewSource).toContain(
       "controlsView.updateHover(from: event)",
     );
-    expect(nowPlayingViewSource).toContain("seekBarView.updateHover(from: event)");
+    expect(nowPlayingViewSource).toContain(
+      "seekBarView.updateHover(from: event)",
+    );
 
     expect(seekBarSource).toBeDefined();
     expect(seekBarSource).toContain("func updateHover(from event: NSEvent)");
     expect(seekBarSource).toContain("func clearHoverState()");
 
     expect(controlsViewSource).toBeDefined();
-    expect(controlsViewSource).toContain("func updateHover(from event: NSEvent)");
+    expect(controlsViewSource).toContain(
+      "func updateHover(from event: NSEvent)",
+    );
     expect(controlsViewSource).toContain("func clearHoverState()");
     expect(controlsViewSource).toContain("shuffleButton.setHovering");
     expect(controlsViewSource).toContain("repeatButton.setHovering");

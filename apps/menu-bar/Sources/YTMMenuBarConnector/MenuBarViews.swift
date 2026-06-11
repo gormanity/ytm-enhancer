@@ -58,6 +58,7 @@ final class MenuBarNowPlayingView: NSView {
   private var pendingSeekTime: Double?
   private var pendingSeekExpirationDate: Date?
   private var onSeek: ((Double) -> Void)?
+  private var mouseEventMonitor: Any?
 
   override var isFlipped: Bool { true }
   override var allowsVibrancy: Bool { true }
@@ -76,6 +77,23 @@ final class MenuBarNowPlayingView: NSView {
     fatalError("init(coder:) has not been implemented")
   }
 
+  deinit {
+    uninstallMouseEventMonitor()
+  }
+
+  override func viewDidMoveToWindow() {
+    super.viewDidMoveToWindow()
+
+    guard window != nil else {
+      uninstallMouseEventMonitor()
+      clearHoverSurfaces()
+      return
+    }
+
+    window?.acceptsMouseMovedEvents = true
+    installMouseEventMonitor()
+  }
+
   func updateConnectionStatus(_ status: String) {
     titleTextView.stringValue = "YTM Enhancer"
     albumTextView.stringValue = ""
@@ -86,6 +104,7 @@ final class MenuBarNowPlayingView: NSView {
     seekBarView.setDuration(0)
     seekBarView.setSeekEnabled(false)
     seekBarView.setDimmed(true)
+    clearHoverSurfaces()
     elapsedLabel.stringValue = ""
     durationLabel.stringValue = ""
     artworkView.showPlaceholder()
@@ -99,6 +118,7 @@ final class MenuBarNowPlayingView: NSView {
     artistYearTextView.stringValue = "Reconnecting..."
     seekBarView.setDimmed(true)
     controlsView.setPlaybackControlsDimmed(true)
+    clearHoverSurfaces()
   }
 
   func updatePlayback(_ state: PlaybackState) {
@@ -112,6 +132,7 @@ final class MenuBarNowPlayingView: NSView {
       seekBarView.setDuration(0)
       seekBarView.setSeekEnabled(false)
       seekBarView.setDimmed(true)
+      clearHoverSurfaces()
       elapsedLabel.stringValue = ""
       durationLabel.stringValue = ""
       artworkView.showPlaceholder()
@@ -337,6 +358,42 @@ final class MenuBarNowPlayingView: NSView {
     nextTrackDetailTextView.stringValue = track.artist ?? ""
     nextTrackArtworkView.update(artworkUrl: track.artworkUrl)
   }
+
+  private func installMouseEventMonitor() {
+    uninstallMouseEventMonitor()
+    mouseEventMonitor = NSEvent.addLocalMonitorForEvents(
+      matching: [.mouseMoved, .leftMouseDown, .leftMouseDragged]
+    ) { [weak self] event in
+      self?.updateHoverSurfaces(with: event)
+      return event
+    }
+  }
+
+  private func uninstallMouseEventMonitor() {
+    guard let mouseEventMonitor else { return }
+    NSEvent.removeMonitor(mouseEventMonitor)
+    self.mouseEventMonitor = nil
+  }
+
+  private func updateHoverSurfaces(with event: NSEvent) {
+    guard let window, event.window === window else {
+      clearHoverSurfaces()
+      return
+    }
+
+    guard bounds.contains(convert(event.locationInWindow, from: nil)) else {
+      clearHoverSurfaces()
+      return
+    }
+
+    controlsView.updateHover(from: event)
+    seekBarView.updateHover(from: event)
+  }
+
+  private func clearHoverSurfaces() {
+    controlsView.clearHoverState()
+    seekBarView.clearHoverState()
+  }
 }
 
 private final class MenuBarSeekBarView: NSView {
@@ -351,6 +408,7 @@ private final class MenuBarSeekBarView: NSView {
   private var trackingArea: NSTrackingArea?
 
   override var isFlipped: Bool { true }
+  override var wantsDefaultClipping: Bool { false }
 
   override init(frame frameRect: NSRect) {
     super.init(frame: frameRect)
@@ -453,6 +511,7 @@ private final class MenuBarSeekBarView: NSView {
 
   private func configure() {
     wantsLayer = true
+    layer?.masksToBounds = false
 
     progressTrack.wantsLayer = true
     progressTrack.layer?.backgroundColor =
@@ -467,6 +526,14 @@ private final class MenuBarSeekBarView: NSView {
     addSubview(progressTrack)
     configureSeekTooltip()
     addSubview(seekTooltipLabel)
+  }
+
+  func updateHover(from event: NSEvent) {
+    updateSeekTooltip(with: event)
+  }
+
+  func clearHoverState() {
+    hideSeekTooltip()
   }
 
   private func seek(with event: NSEvent) {
@@ -847,6 +914,23 @@ final class MenuBarControlsView: NSView {
     alphaValue = dimmed ? 0.55 : 1
   }
 
+  func updateHover(from event: NSEvent) {
+    let localPoint = convert(event.locationInWindow, from: nil)
+    shuffleButton.setHovering(shuffleButton.frame.contains(localPoint))
+    previousButton.setHovering(previousButton.frame.contains(localPoint))
+    playPauseButton.setHovering(playPauseButton.frame.contains(localPoint))
+    nextButton.setHovering(nextButton.frame.contains(localPoint))
+    repeatButton.setHovering(repeatButton.frame.contains(localPoint))
+  }
+
+  func clearHoverState() {
+    shuffleButton.setHovering(false)
+    previousButton.setHovering(false)
+    playPauseButton.setHovering(false)
+    nextButton.setHovering(false)
+    repeatButton.setHovering(false)
+  }
+
   override func layout() {
     super.layout()
 
@@ -1172,6 +1256,10 @@ private final class MenuBarIconButton: NSButton {
   func setActive(_ active: Bool) {
     self.active = active
     updateAppearance()
+  }
+
+  func setHovering(_ hovering: Bool) {
+    updateHoverState(hovering)
   }
 
   override func layout() {
