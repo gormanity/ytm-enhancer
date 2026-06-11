@@ -34,6 +34,7 @@ function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
     album: "Album",
     year: 2024,
     artworkUrl: "https://example.com/art.jpg",
+    nextTrack: null,
     isPlaying: true,
     progress: 0,
     duration: 200,

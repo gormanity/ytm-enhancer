@@ -119,6 +119,7 @@ function toConnectorPlaybackState(
     album: canReadTrack ? state.album : null,
     year: canReadTrack ? state.year : null,
     artworkUrl: canReadTrack ? state.artworkUrl : null,
+    nextTrack: canReadTrack ? state.nextTrack : null,
     isPlaying: state.isPlaying,
     progress: state.progress,
     duration: state.duration,

@@ -9,6 +9,7 @@ function makeState(overrides: Partial<PlaybackState> = {}): PlaybackState {
     album: null,
     year: null,
     artworkUrl: null,
+    nextTrack: null,
     isPlaying: true,
     progress: 12,
     duration: 180,

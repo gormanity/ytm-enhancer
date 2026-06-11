@@ -189,6 +189,7 @@ export class NotificationsModule implements FeatureModule {
       album: "Demo Album",
       year: 2026,
       artworkUrl: this.getExtensionUrl(PREVIEW_ARTWORK),
+      nextTrack: null,
       isPlaying: true,
       progress: 0.5,
       duration: 180,

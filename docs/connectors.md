@@ -54,8 +54,8 @@ The first permission set is intentionally small:
 
 - `playback:read` allows reading playback progress and player state.
 - `playback:control` allows playback commands and seeking.
-- `track:read` allows track metadata such as title, artist, album, year, and
-  artwork.
+- `track:read` allows track metadata such as title, artist, album, year,
+  artwork, and upcoming next-track metadata.
 
 The host rejects unknown permissions during `connector.hello`. If a connector
 has `playback:read` but not `track:read`, playback state is still available, but
@@ -134,5 +134,5 @@ Remaining work:
 2. Replace the development native host installer with a signed installer.
 3. Add a clearer approval flow for newly seen connectors.
 4. Add diagnostics for native host launch failures and disconnected hosts.
-5. Add artwork, seek controls, and richer playback state once the first slice is
-   stable.
+5. Add connector-facing diagnostics for protocol mismatches and permission
+   denials.

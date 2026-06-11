@@ -33,12 +33,16 @@ export interface ConnectorManifest {
   permissions: ConnectorPermission[];
 }
 
-export interface ConnectorPlaybackState {
+export interface ConnectorTrackMetadata {
   title: string | null;
   artist: string | null;
   album: string | null;
   year: number | null;
   artworkUrl: string | null;
+}
+
+export interface ConnectorPlaybackState extends ConnectorTrackMetadata {
+  nextTrack: ConnectorTrackMetadata | null;
   isPlaying: boolean;
   progress: number;
   duration: number;

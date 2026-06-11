@@ -14,13 +14,18 @@ import type {
 import type { PopupRegistry } from "./popup-registry";
 import type { YtmRuntimeClient } from "./ytm-client";
 
-/** Playback state snapshot produced by the adapter layer. */
-export interface PlaybackState {
+/** Track metadata snapshot produced by the adapter layer. */
+export interface TrackMetadata {
   title: string | null;
   artist: string | null;
   album: string | null;
   year: number | null;
   artworkUrl: string | null;
+}
+
+/** Playback state snapshot produced by the adapter layer. */
+export interface PlaybackState extends TrackMetadata {
+  nextTrack: TrackMetadata | null;
   isPlaying: boolean;
   progress: number;
   duration: number;

@@ -15,6 +15,7 @@ function createPlaybackState(
     album: null,
     year: null,
     artworkUrl: null,
+    nextTrack: null,
     isPlaying: false,
     progress: 10,
     duration: 200,

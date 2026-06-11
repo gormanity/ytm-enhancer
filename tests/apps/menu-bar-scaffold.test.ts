@@ -197,7 +197,9 @@ describe("menu bar connector app scaffold", () => {
 
     expect(protocolSource).toContain("struct TrackMetadata: Decodable");
     expect(protocolSource).toContain("let nextTrack: TrackMetadata?");
-    expect(appSource).toContain('"nextTrack=\\(logValue(state.nextTrack?.title))"');
+    expect(appSource).toContain(
+      '"nextTrack=\\(logValue(state.nextTrack?.title))"',
+    );
   });
 
   it("adds a circular Mini Player-style hover shadow to menu bar controls", () => {

@@ -58,6 +58,7 @@ export function createMockYtmRuntimeClient(
       album: null,
       year: null,
       artworkUrl: null,
+      nextTrack: null,
       isPlaying: false,
       progress: 0,
       duration: 0,

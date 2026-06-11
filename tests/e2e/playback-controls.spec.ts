@@ -21,6 +21,7 @@ test("reads playback state from a loaded player bar", async ({ page }) => {
       album: "Fixture Album",
       year: 2026,
       artworkUrl: "https://lh3.googleusercontent.com/fixture=w544-h544-l90-rj",
+      nextTrack: null,
       isPlaying: true,
       progress: 83,
       duration: 296,

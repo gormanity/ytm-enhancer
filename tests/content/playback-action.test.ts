@@ -21,6 +21,7 @@ vi.mock("@/adapter", () => ({
         album: null,
         year: null,
         artworkUrl: null,
+        nextTrack: null,
         isPlaying: true,
         progress: 0,
         duration: 180,

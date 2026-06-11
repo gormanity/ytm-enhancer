@@ -50,12 +50,21 @@ enum ConnectorProtocol {
   }
 }
 
+struct TrackMetadata: Decodable {
+  let title: String?
+  let artist: String?
+  let album: String?
+  let year: Int?
+  let artworkUrl: String?
+}
+
 struct PlaybackState: Decodable {
   let title: String?
   let artist: String?
   let album: String?
   let year: Int?
   let artworkUrl: String?
+  let nextTrack: TrackMetadata?
   let isPlaying: Bool
   let progress: Double
   let duration: Double

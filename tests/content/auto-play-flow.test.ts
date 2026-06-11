@@ -9,7 +9,13 @@ vi.mock("@/adapter", () => {
   MockYTMAdapter.prototype.getPlaybackState = vi.fn().mockReturnValue({
     title: "Song",
     artist: "Artist",
+    album: null,
+    year: null,
+    artworkUrl: null,
+    nextTrack: null,
     isPlaying: false,
+    progress: 0,
+    duration: 0,
   });
   MockYTMAdapter.prototype.executeAction = vi.fn();
   MockYTMAdapter.prototype.clickQuickPicksPlayAll = vi
@@ -211,6 +217,7 @@ describe("auto-play integration flows", () => {
       album: null,
       year: null,
       artworkUrl: null,
+      nextTrack: null,
       isPlaying: false,
       progress: 0,
       duration: 180,

@@ -29,4 +29,10 @@ export const SELECTORS = {
   repeatButton: ".repeat",
   shelfRenderer: "ytmusic-shelf-renderer",
   volumeSlider: "#volume-slider",
+  queueItem: "ytmusic-player-queue-item",
+  queueItemTitle:
+    "#song-title, .song-title, yt-formatted-string.song-title, yt-formatted-string.title",
+  queueItemByline:
+    ".byline, yt-formatted-string.byline, .subtitle, yt-formatted-string.subtitle",
+  queueItemThumbnail: "img.image, img",
 } as const;

@@ -1,6 +1,10 @@
 import { SELECTORS } from "./selectors";
 import { debug } from "@/core/logger";
-import type { PlaybackAction, PlaybackState } from "@/core/types";
+import type {
+  PlaybackAction,
+  PlaybackState,
+  TrackMetadata,
+} from "@/core/types";
 
 export { SELECTORS } from "./selectors";
 
@@ -57,6 +61,7 @@ export class YTMAdapter {
       artworkUrl: this.upscaleArtworkUrl(
         artworkEl?.src ?? mediaSessionMetadata.artworkUrl,
       ),
+      nextTrack: this.readNextTrack(),
       isPlaying,
       progress,
       duration,
@@ -246,9 +251,17 @@ export class YTMAdapter {
     year: number | null;
   } {
     const subtitleEl = document.querySelector(SELECTORS.subtitle);
-    if (!subtitleEl) return { artist: null, album: null, year: null };
+    return this.parseLinkedMetadata(subtitleEl);
+  }
 
-    const links = Array.from(subtitleEl.querySelectorAll("a"));
+  private parseLinkedMetadata(container: Element | null): {
+    artist: string | null;
+    album: string | null;
+    year: number | null;
+  } {
+    if (!container) return { artist: null, album: null, year: null };
+
+    const links = Array.from(container.querySelectorAll("a"));
     const albumLink = links.find((link) => this.isAlbumLink(link));
     const artistLink = links.find((link) => this.isArtistLink(link));
     const artist =
@@ -260,11 +273,69 @@ export class YTMAdapter {
       this.trimmedText(albumLink?.textContent) ??
       (links.length >= 2 ? this.trimmedText(links[1]?.textContent) : null);
 
-    const text = subtitleEl.textContent ?? "";
+    const text = container.textContent ?? "";
     const yearMatch = text.match(/\b((?:19|20)\d{2})\b/);
     const year = yearMatch ? Number(yearMatch[1]) : null;
 
     return { artist, album, year };
+  }
+
+  private readNextTrack(): TrackMetadata | null {
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>(SELECTORS.queueItem),
+    );
+    const currentIndex = items.findIndex((item) =>
+      this.isCurrentQueueItem(item),
+    );
+    if (currentIndex < 0) return null;
+
+    const nextItem = items[currentIndex + 1];
+    if (!nextItem) return null;
+
+    return this.readQueueItemMetadata(nextItem);
+  }
+
+  private isCurrentQueueItem(item: HTMLElement): boolean {
+    if (
+      item.matches(
+        [
+          "[selected]",
+          ".selected",
+          '[aria-current="true"]',
+          '[aria-selected="true"]',
+        ].join(","),
+      )
+    ) {
+      return true;
+    }
+
+    return (
+      item.querySelector(
+        [
+          '[aria-label^="Pause" i]',
+          '[title^="Pause" i]',
+          '[aria-label*="Currently playing" i]',
+          '[title*="Currently playing" i]',
+        ].join(","),
+      ) !== null
+    );
+  }
+
+  private readQueueItemMetadata(item: HTMLElement): TrackMetadata | null {
+    const title = this.trimmedText(
+      item.querySelector<HTMLElement>(SELECTORS.queueItemTitle)?.textContent,
+    );
+    if (!title) return null;
+
+    const byline = item.querySelector<HTMLElement>(SELECTORS.queueItemByline);
+    const { artist, album, year } = this.parseLinkedMetadata(byline);
+    const artworkUrl = this.upscaleArtworkUrl(
+      this.trimmedText(
+        item.querySelector<HTMLImageElement>(SELECTORS.queueItemThumbnail)?.src,
+      ),
+    );
+
+    return { title, artist, album, year, artworkUrl };
   }
 
   private readMediaSessionMetadata(): {
