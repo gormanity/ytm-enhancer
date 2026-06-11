@@ -322,6 +322,30 @@ describe("YTMAdapter", () => {
       });
     });
 
+    it("should extract next track artist from plain queue byline text", () => {
+      document.body.innerHTML = `
+        <ytmusic-player-queue>
+          <ytmusic-player-queue-item selected>
+            <yt-formatted-string class="song-title">Current Song</yt-formatted-string>
+          </ytmusic-player-queue-item>
+          <ytmusic-player-queue-item>
+            <yt-formatted-string class="song-title">Next Song</yt-formatted-string>
+            <yt-formatted-string class="byline">
+              Next Artist • Next Album • 2025
+            </yt-formatted-string>
+          </ytmusic-player-queue-item>
+        </ytmusic-player-queue>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.nextTrack).toMatchObject({
+        title: "Next Song",
+        artist: "Next Artist",
+        album: "Next Album",
+        year: 2025,
+      });
+    });
+
     it("should return null next track when the queue has no following item", () => {
       document.body.innerHTML = `
         <ytmusic-player-queue>
