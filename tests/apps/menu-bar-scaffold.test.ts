@@ -450,6 +450,27 @@ describe("menu bar connector app scaffold", () => {
     expect(controllerSource).toContain("menu.addItem(quitItem)");
   });
 
+  it("adds shortcuts and icons to footer menu actions", () => {
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+
+    expect(controllerSource).toContain('keyEquivalent: "f"');
+    expect(controllerSource).toContain(
+      "focusItem.keyEquivalentModifierMask = [.command]",
+    );
+    expect(controllerSource).toContain(
+      'menuItemIcon("arrow.up.forward.app", accessibilityDescription: "Focus YouTube Music")',
+    );
+    expect(controllerSource).toContain(
+      'menuItemIcon("xmark.circle", accessibilityDescription: "Quit")',
+    );
+    expect(controllerSource).toContain("focusItem.image =");
+    expect(controllerSource).toContain("quitItem.image =");
+    expect(controllerSource).toContain("private static func menuItemIcon");
+    expect(controllerSource).toContain("image?.isTemplate = true");
+  });
+
   it("lets the default menu background show through the playback view", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
