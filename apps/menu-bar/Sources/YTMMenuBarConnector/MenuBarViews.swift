@@ -25,13 +25,17 @@ final class MenuBarNowPlayingView: NSView {
   private let elapsedLabel = NSTextField(labelWithString: "")
   private let durationLabel = NSTextField(labelWithString: "")
   private let controlsView = MenuBarControlsView()
+  private let nextTrackDivider = NSView()
+  private let nextTrackLabel = NSTextField(labelWithString: "")
+  private let nextTrackTitleTextView = MenuBarScrollingTextView()
+  private let nextTrackDetailTextView = MenuBarScrollingTextView()
   private let metadataScroller = MenuBarMetadataScroller()
   private var progressFraction: CGFloat = 0
 
   override var isFlipped: Bool { true }
   override var allowsVibrancy: Bool { true }
   override var intrinsicContentSize: NSSize {
-    NSSize(width: MenuBarStyle.width, height: 190)
+    NSSize(width: MenuBarStyle.width, height: 252)
   }
 
   override init(frame frameRect: NSRect) {
@@ -54,6 +58,7 @@ final class MenuBarNowPlayingView: NSView {
     durationLabel.stringValue = ""
     artworkView.showPlaceholder()
     controlsView.setPlaybackControlsEnabled(false)
+    updateNextTrack(nil)
     needsLayout = true
   }
 
@@ -72,6 +77,7 @@ final class MenuBarNowPlayingView: NSView {
       isShuffling: state.isShuffling,
       repeatMode: state.repeatMode
     )
+    updateNextTrack(state.nextTrack)
     controlsView.setPlaybackControlsEnabled(true)
     needsLayout = true
   }
@@ -107,6 +113,10 @@ final class MenuBarNowPlayingView: NSView {
     elapsedLabel.frame = NSRect(x: 24, y: 112, width: 90, height: 16)
     durationLabel.frame = NSRect(x: 214, y: 112, width: 90, height: 16)
     controlsView.frame = NSRect(x: 0, y: 130, width: bounds.width, height: 52)
+    nextTrackDivider.frame = NSRect(x: 24, y: 188, width: 280, height: 1)
+    nextTrackLabel.frame = NSRect(x: 24, y: 198, width: 280, height: 14)
+    nextTrackTitleTextView.frame = NSRect(x: 24, y: 216, width: 280, height: 18)
+    nextTrackDetailTextView.frame = NSRect(x: 24, y: 235, width: 280, height: 16)
   }
 
   private func configure() {
@@ -122,16 +132,29 @@ final class MenuBarNowPlayingView: NSView {
       font: .systemFont(ofSize: 12, weight: .regular),
       textColor: MenuBarStyle.tertiaryText
     )
+    nextTrackTitleTextView.configure(
+      font: .systemFont(ofSize: 12, weight: .semibold),
+      textColor: MenuBarStyle.secondaryText
+    )
+    nextTrackDetailTextView.configure(
+      font: .systemFont(ofSize: 11, weight: .regular),
+      textColor: MenuBarStyle.tertiaryText
+    )
     metadataScroller.register(titleTextView)
     metadataScroller.register(albumTextView)
     metadataScroller.register(artistYearTextView)
+    metadataScroller.register(nextTrackTitleTextView)
+    metadataScroller.register(nextTrackDetailTextView)
 
     configureLabel(elapsedLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     configureLabel(durationLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
+    configureLabel(nextTrackLabel, font: .systemFont(ofSize: 10, weight: .semibold))
 
     elapsedLabel.textColor = MenuBarStyle.tertiaryText
     durationLabel.textColor = MenuBarStyle.tertiaryText
     durationLabel.alignment = .right
+    nextTrackLabel.textColor = MenuBarStyle.tertiaryText
+    nextTrackLabel.stringValue = "Up Next"
 
     progressTrack.wantsLayer = true
     progressTrack.layer?.backgroundColor = NSColor(calibratedWhite: 0.23, alpha: 1).cgColor
@@ -140,6 +163,9 @@ final class MenuBarNowPlayingView: NSView {
     progressFill.layer?.backgroundColor = MenuBarStyle.accent.cgColor
     progressFill.layer?.cornerRadius = 2.5
     progressTrack.addSubview(progressFill)
+    nextTrackDivider.wantsLayer = true
+    nextTrackDivider.layer?.backgroundColor =
+      MenuBarStyle.cardBorder.withAlphaComponent(0.8).cgColor
 
     addSubview(artworkView)
     addSubview(titleTextView)
@@ -149,6 +175,10 @@ final class MenuBarNowPlayingView: NSView {
     addSubview(elapsedLabel)
     addSubview(durationLabel)
     addSubview(controlsView)
+    addSubview(nextTrackDivider)
+    addSubview(nextTrackLabel)
+    addSubview(nextTrackTitleTextView)
+    addSubview(nextTrackDetailTextView)
   }
 
   private func configureLabel(_ label: NSTextField, font: NSFont) {
@@ -174,6 +204,32 @@ final class MenuBarNowPlayingView: NSView {
       parts.append(artist)
     }
     if let year = state.year {
+      parts.append(String(year))
+    }
+    return parts.joined(separator: " \u{00B7} ")
+  }
+
+  private func updateNextTrack(_ track: TrackMetadata?) {
+    guard let track else {
+      nextTrackTitleTextView.stringValue = "No upcoming track"
+      nextTrackDetailTextView.stringValue = ""
+      return
+    }
+
+    let title = track.title?.isEmpty == false ? track.title! : "Unknown track"
+    nextTrackTitleTextView.stringValue = title
+    nextTrackDetailTextView.stringValue = formatTrackDetailLine(track)
+  }
+
+  private func formatTrackDetailLine(_ track: TrackMetadata) -> String {
+    var parts: [String] = []
+    if let artist = track.artist, !artist.isEmpty {
+      parts.append(artist)
+    }
+    if let album = track.album, !album.isEmpty {
+      parts.append(album)
+    }
+    if let year = track.year {
       parts.append(String(year))
     }
     return parts.joined(separator: " \u{00B7} ")

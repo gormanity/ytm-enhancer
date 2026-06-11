@@ -215,9 +215,15 @@ describe("menu bar connector app scaffold", () => {
 
     expect(nowPlayingViewSource).toBeDefined();
     expect(nowPlayingViewSource).toContain("private let nextTrackLabel");
-    expect(nowPlayingViewSource).toContain("private let nextTrackTitleTextView");
-    expect(nowPlayingViewSource).toContain("private let nextTrackDetailTextView");
-    expect(nowPlayingViewSource).toContain('nextTrackLabel.stringValue = "Up Next"');
+    expect(nowPlayingViewSource).toContain(
+      "private let nextTrackTitleTextView",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "private let nextTrackDetailTextView",
+    );
+    expect(nowPlayingViewSource).toContain(
+      'nextTrackLabel.stringValue = "Up Next"',
+    );
     expect(nowPlayingViewSource).toContain("updateNextTrack(state.nextTrack)");
     expect(nowPlayingViewSource).toContain(
       "nextTrackTitleTextView.stringValue = title",
@@ -225,11 +231,17 @@ describe("menu bar connector app scaffold", () => {
     expect(nowPlayingViewSource).toContain(
       "nextTrackDetailTextView.stringValue = formatTrackDetailLine(track)",
     );
-    expect(nowPlayingViewSource).toContain("NSSize(width: MenuBarStyle.width, height: 252)");
+    expect(nowPlayingViewSource).toContain(
+      "NSSize(width: MenuBarStyle.width, height: 252)",
+    );
     expect(nowPlayingViewSource).toContain("nextTrackDivider.frame =");
     expect(nowPlayingViewSource).toContain("addSubview(nextTrackLabel)");
-    expect(nowPlayingViewSource).toContain("addSubview(nextTrackTitleTextView)");
-    expect(nowPlayingViewSource).toContain("addSubview(nextTrackDetailTextView)");
+    expect(nowPlayingViewSource).toContain(
+      "addSubview(nextTrackTitleTextView)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "addSubview(nextTrackDetailTextView)",
+    );
     expect(controllerSource).toContain("menu.addItem(nowPlayingItem)");
     expect(controllerSource).toContain("menu.addItem(.separator())");
     expect(controllerSource).toContain("menu.addItem(quitItem)");
@@ -292,7 +304,7 @@ describe("menu bar connector app scaffold", () => {
 
     expect(nowPlayingViewSource).toBeDefined();
     expect(nowPlayingViewSource).toContain(
-      "NSSize(width: MenuBarStyle.width, height: 190)",
+      "NSSize(width: MenuBarStyle.width, height: 252)",
     );
     expect(nowPlayingViewSource).toContain(
       "controlsView.frame = NSRect(x: 0, y: 130, width: bounds.width, height: 52)",
