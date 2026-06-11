@@ -15,8 +15,9 @@ private enum MenuBarStyle {
   static let tertiaryText = NSColor(calibratedWhite: 0.45, alpha: 1)
   static let accent = NSColor(calibratedRed: 1, green: 0, blue: 0, alpha: 1)
   static let controlInactiveTint = NSColor(calibratedWhite: 0.46, alpha: 1)
-  static let controlHoverBackground = NSColor(calibratedWhite: 1, alpha: 0.2)
-  static let controlPressedBackground = NSColor(calibratedWhite: 1, alpha: 0.28)
+  static let controlHoverBackground = NSColor(calibratedWhite: 1, alpha: 0.28)
+  static let controlPressedBackground = NSColor(calibratedWhite: 1, alpha: 0.36)
+  static let controlHoverBorder = NSColor(calibratedWhite: 1, alpha: 0.16)
   static let controlHoverShadow = NSColor.black.withAlphaComponent(0.55)
   static var fullWidthContentWidth: CGFloat {
     width - contentInset * 2
@@ -1099,6 +1100,8 @@ private final class MenuBarIconButton: NSButton {
     imageScaling = .scaleProportionallyDown
     wantsLayer = true
     layer?.masksToBounds = false
+    layer?.borderWidth = 0
+    layer?.borderColor = MenuBarStyle.controlHoverBorder.cgColor
     layer?.shadowColor = MenuBarStyle.controlHoverShadow.cgColor
     layer?.shadowOffset = CGSize(width: 0, height: 2)
     layer?.shadowOpacity = 0
@@ -1128,21 +1131,24 @@ private final class MenuBarIconButton: NSButton {
     addTrackingArea(
       NSTrackingArea(
         rect: bounds,
-        options: [.activeInActiveApp, .inVisibleRect, .mouseEnteredAndExited],
+        options: [.activeInActiveApp, .inVisibleRect, .mouseEnteredAndExited, .mouseMoved],
         owner: self
       )
     )
   }
 
   override func mouseEntered(with event: NSEvent) {
-    hovering = true
-    updateAppearance()
+    updateHoverState(true)
     super.mouseEntered(with: event)
   }
 
+  override func mouseMoved(with event: NSEvent) {
+    updateHoverState(isMouseInsideBounds(event))
+    super.mouseMoved(with: event)
+  }
+
   override func mouseExited(with event: NSEvent) {
-    hovering = false
-    updateAppearance()
+    updateHoverState(false)
     super.mouseExited(with: event)
   }
 
@@ -1167,11 +1173,11 @@ private final class MenuBarIconButton: NSButton {
 
   private func updateAppearance() {
     let background: NSColor
-    let showsHoverShadow = isEnabled && (hovering || isHighlighted)
-    let shadowOpacity: Float = showsHoverShadow ? (isHighlighted ? 0.32 : 0.24) : 0
-    if isHighlighted {
+    let showsHoverChrome = isEnabled && (hovering || isHighlighted)
+    let shadowOpacity: Float = showsHoverChrome ? (isHighlighted ? 0.42 : 0.34) : 0
+    if isHighlighted && isEnabled {
       background = MenuBarStyle.controlPressedBackground
-    } else if hovering {
+    } else if hovering && isEnabled {
       background = MenuBarStyle.controlHoverBackground
     } else {
       background = .clear
@@ -1179,17 +1185,33 @@ private final class MenuBarIconButton: NSButton {
 
     let tintColor: NSColor
     if prominent || active || hovering {
-      tintColor = .white
+      if isEnabled {
+        tintColor = .white
+      } else {
+        tintColor = MenuBarStyle.controlInactiveTint
+      }
     } else {
       tintColor = MenuBarStyle.controlInactiveTint
     }
 
-    alphaValue = isEnabled ? 0.9 : 0.35
+    alphaValue = isEnabled ? 1 : 0.35
     contentTintColor = tintColor
     layer?.backgroundColor = background.cgColor
+    layer?.borderWidth = showsHoverChrome ? 1 : 0
+    layer?.borderColor = MenuBarStyle.controlHoverBorder.cgColor
     layer?.shadowColor = MenuBarStyle.controlHoverShadow.cgColor
     layer?.shadowOpacity = shadowOpacity
-    layer?.shadowRadius = isHighlighted ? 10 : 8
+    layer?.shadowRadius = isHighlighted ? 12 : 10
+  }
+
+  private func updateHoverState(_ isHovering: Bool) {
+    guard hovering != isHovering else { return }
+    hovering = isHovering
+    updateAppearance()
+  }
+
+  private func isMouseInsideBounds(_ event: NSEvent) -> Bool {
+    bounds.contains(convert(event.locationInWindow, from: nil))
   }
 
   @objc private func performPress() {
