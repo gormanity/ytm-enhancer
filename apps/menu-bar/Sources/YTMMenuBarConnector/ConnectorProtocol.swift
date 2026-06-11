@@ -10,6 +10,7 @@ enum ConnectorProtocol {
     "playback:read",
     "playback:control",
     "track:read",
+    "ytm:focus",
   ]
 
   static func hello(requestId: String) -> [String: Any] {
@@ -46,6 +47,21 @@ enum ConnectorProtocol {
       "type": "playback.action",
       "requestId": requestId,
       "action": action,
+    ]
+  }
+
+  static func playbackSeek(time: Double, requestId: String) -> [String: Any] {
+    [
+      "type": "playback.seek",
+      "requestId": requestId,
+      "time": time,
+    ]
+  }
+
+  static func focusYouTubeMusic(requestId: String) -> [String: Any] {
+    [
+      "type": "ytm.focus",
+      "requestId": requestId,
     ]
   }
 }

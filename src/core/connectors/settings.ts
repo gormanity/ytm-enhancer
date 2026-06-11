@@ -48,6 +48,7 @@ export const CONNECTOR_PERMISSION_LABELS: Record<ConnectorPermission, string> =
     "playback:read": "Playback Info",
     "playback:control": "Playback Controls",
     "track:read": "Track Info",
+    "ytm:focus": "Focus YouTube Music",
   };
 
 const CONNECTOR_PERMISSION_SET = new Set<string>(CONNECTOR_PERMISSIONS);

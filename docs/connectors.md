@@ -27,6 +27,7 @@ The first implementation exposes playback through `YtmRuntimeClient`:
 - `executePlaybackAction()` for play, pause, next, previous, shuffle, repeat,
   and toggle play.
 - `seekTo()` for timeline control.
+- `focusTab()` for bringing the active YouTube Music tab/window forward.
 
 Future connector API slices should follow the same rule: expose a narrow public
 surface through the host only after a centralized extension API exists.
@@ -56,6 +57,7 @@ The first permission set is intentionally small:
 - `playback:control` allows playback commands and seeking.
 - `track:read` allows track metadata such as title, artist, album, year,
   artwork, and upcoming next-track metadata.
+- `ytm:focus` allows a connector to focus the active YouTube Music tab/window.
 
 The host rejects unknown permissions during `connector.hello`. If a connector
 has `playback:read` but not `track:read`, playback state is still available, but

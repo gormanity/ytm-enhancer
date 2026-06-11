@@ -4,6 +4,7 @@ export const CONNECTOR_PERMISSIONS = [
   "playback:read",
   "playback:control",
   "track:read",
+  "ytm:focus",
 ] as const;
 
 export type ConnectorPermission = (typeof CONNECTOR_PERMISSIONS)[number];
@@ -84,13 +85,19 @@ export interface PlaybackSeekMessage {
   time: number;
 }
 
+export interface YtmFocusMessage {
+  type: "ytm.focus";
+  requestId: string;
+}
+
 export type ConnectorMessage =
   | ConnectorHelloMessage
   | ConnectorSubscribeMessage
   | ConnectorDisconnectMessage
   | PlaybackGetStateMessage
   | PlaybackActionMessage
-  | PlaybackSeekMessage;
+  | PlaybackSeekMessage
+  | YtmFocusMessage;
 
 export interface ConnectorReadyMessage {
   type: "connector.ready";
@@ -265,6 +272,7 @@ export function validateConnectorMessage(
     }
     case "connector.disconnect":
     case "playback.getState":
+    case "ytm.focus":
       return {
         ok: true,
         value: { type: value.type, requestId: requestId.value },

@@ -7,6 +7,8 @@ final class MenuBarController: NSObject {
   var onTogglePlay: (() -> Void)?
   var onNext: (() -> Void)?
   var onRepeat: (() -> Void)?
+  var onSeek: ((Double) -> Void)?
+  var onFocusYouTubeMusic: (() -> Void)?
 
   private let barItem = NSStatusBar.system.statusItem(
     withLength: NSStatusItem.variableLength
@@ -16,6 +18,11 @@ final class MenuBarController: NSObject {
   private let menu = NSMenu()
   private let nowPlayingView = MenuBarNowPlayingView()
   private let nowPlayingItem = NSMenuItem()
+  private let focusItem = NSMenuItem(
+    title: "Focus YouTube Music",
+    action: #selector(focusYouTubeMusic),
+    keyEquivalent: ""
+  )
   private let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
 
   override init() {
@@ -35,12 +42,17 @@ final class MenuBarController: NSObject {
     nowPlayingView.updateConnectionStatus(status)
   }
 
+  func setStalePlaybackState() {
+    nowPlayingView.setStalePlaybackState()
+  }
+
   func updatePlayback(_ state: PlaybackState) {
     updateStatusBar(isPlaying: state.isPlaying)
     nowPlayingView.updatePlayback(state)
   }
 
   private func configureMenu() {
+    focusItem.target = self
     quitItem.target = self
 
     nowPlayingItem.view = nowPlayingView
@@ -49,12 +61,14 @@ final class MenuBarController: NSObject {
       onPrevious: { [weak self] in self?.previous() },
       onTogglePlay: { [weak self] in self?.togglePlay() },
       onNext: { [weak self] in self?.next() },
-      onRepeat: { [weak self] in self?.repeatMode() }
+      onRepeat: { [weak self] in self?.repeatMode() },
+      onSeek: { [weak self] time in self?.seek(time) }
     )
 
     menu.appearance = NSAppearance(named: .darkAqua)
     menu.addItem(nowPlayingItem)
     menu.addItem(.separator())
+    menu.addItem(focusItem)
     menu.addItem(quitItem)
     barItem.menu = menu
   }
@@ -88,6 +102,14 @@ final class MenuBarController: NSObject {
 
   @objc private func repeatMode() {
     onRepeat?()
+  }
+
+  private func seek(_ time: Double) {
+    onSeek?(time)
+  }
+
+  @objc private func focusYouTubeMusic() {
+    onFocusYouTubeMusic?()
   }
 
   @objc private func quit() {

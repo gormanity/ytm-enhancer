@@ -20,8 +20,7 @@ final class MenuBarNowPlayingView: NSView {
   private let titleTextView = MenuBarScrollingTextView()
   private let albumTextView = MenuBarScrollingTextView()
   private let artistYearTextView = MenuBarScrollingTextView()
-  private let progressTrack = NSView()
-  private let progressFill = NSView()
+  private let seekBarView = MenuBarSeekBarView()
   private let elapsedLabel = NSTextField(labelWithString: "")
   private let durationLabel = NSTextField(labelWithString: "")
   private let controlsView = MenuBarControlsView()
@@ -31,7 +30,8 @@ final class MenuBarNowPlayingView: NSView {
   private let nextTrackTitleTextView = MenuBarScrollingTextView()
   private let nextTrackDetailTextView = MenuBarScrollingTextView()
   private let metadataScroller = MenuBarMetadataScroller()
-  private var progressFraction: CGFloat = 0
+  private var currentDuration: Double = 0
+  private var onSeek: ((Double) -> Void)?
 
   override var isFlipped: Bool { true }
   override var allowsVibrancy: Bool { true }
@@ -54,22 +54,58 @@ final class MenuBarNowPlayingView: NSView {
     titleTextView.stringValue = "YTM Enhancer"
     albumTextView.stringValue = ""
     artistYearTextView.stringValue = status
-    progressFraction = 0
+    currentDuration = 0
+    seekBarView.setProgress(0)
+    seekBarView.setSeekEnabled(false)
+    seekBarView.setDimmed(true)
     elapsedLabel.stringValue = ""
     durationLabel.stringValue = ""
     artworkView.showPlaceholder()
     controlsView.setPlaybackControlsEnabled(false)
+    controlsView.setPlaybackControlsDimmed(true)
     updateNextTrack(nil)
     needsLayout = true
   }
 
+  func setStalePlaybackState() {
+    artistYearTextView.stringValue = "Reconnecting..."
+    seekBarView.setDimmed(true)
+    controlsView.setPlaybackControlsDimmed(true)
+  }
+
   func updatePlayback(_ state: PlaybackState) {
+    if isUnavailablePlaybackState(state) {
+      titleTextView.stringValue = "No track loaded"
+      albumTextView.stringValue = ""
+      artistYearTextView.stringValue = ""
+      currentDuration = 0
+      seekBarView.setProgress(0)
+      seekBarView.setSeekEnabled(false)
+      seekBarView.setDimmed(true)
+      elapsedLabel.stringValue = ""
+      durationLabel.stringValue = ""
+      artworkView.showPlaceholder()
+      controlsView.updatePlayback(
+        isPlaying: false,
+        isShuffling: state.isShuffling,
+        repeatMode: state.repeatMode
+      )
+      controlsView.setPlaybackControlsEnabled(false)
+      controlsView.setPlaybackControlsDimmed(true)
+      updateNextTrack(state.nextTrack)
+      needsLayout = true
+      return
+    }
+
     let title = state.title?.isEmpty == false ? state.title! : "Unknown track"
 
     titleTextView.stringValue = title
     albumTextView.stringValue = state.album ?? ""
     artistYearTextView.stringValue = formatArtistYearLine(state)
-    progressFraction = progressRatio(state)
+    currentDuration = state.duration
+    seekBarView.setProgress(progressRatio(state))
+    seekBarView.setSeekEnabled(state.duration > 0)
+    seekBarView.setDimmed(false)
     elapsedLabel.stringValue = state.duration > 0 ? formatTime(state.progress) : ""
     durationLabel.stringValue = state.duration > 0 ? formatTime(state.duration) : ""
     artworkView.update(artworkUrl: state.artworkUrl)
@@ -80,6 +116,7 @@ final class MenuBarNowPlayingView: NSView {
     )
     updateNextTrack(state.nextTrack)
     controlsView.setPlaybackControlsEnabled(true)
+    controlsView.setPlaybackControlsDimmed(false)
     needsLayout = true
   }
 
@@ -88,13 +125,15 @@ final class MenuBarNowPlayingView: NSView {
     onPrevious: (() -> Void)?,
     onTogglePlay: (() -> Void)?,
     onNext: (() -> Void)?,
-    onRepeat: (() -> Void)?
+    onRepeat: (() -> Void)?,
+    onSeek: ((Double) -> Void)?
   ) {
     controlsView.onShuffle = onShuffle
     controlsView.onPrevious = onPrevious
     controlsView.onTogglePlay = onTogglePlay
     controlsView.onNext = onNext
     controlsView.onRepeat = onRepeat
+    self.onSeek = onSeek
   }
 
   override func layout() {
@@ -104,13 +143,7 @@ final class MenuBarNowPlayingView: NSView {
     titleTextView.frame = NSRect(x: 104, y: 23, width: 190, height: 24)
     albumTextView.frame = NSRect(x: 104, y: 49, width: 190, height: 18)
     artistYearTextView.frame = NSRect(x: 104, y: 68, width: 190, height: 18)
-    progressTrack.frame = NSRect(x: 24, y: 101, width: 280, height: 5)
-    progressFill.frame = NSRect(
-      x: 0,
-      y: 0,
-      width: progressTrack.bounds.width * progressFraction,
-      height: progressTrack.bounds.height
-    )
+    seekBarView.frame = NSRect(x: 24, y: 99, width: 280, height: 9)
     elapsedLabel.frame = NSRect(x: 24, y: 112, width: 90, height: 16)
     durationLabel.frame = NSRect(x: 214, y: 112, width: 90, height: 16)
     controlsView.frame = NSRect(x: 0, y: 130, width: bounds.width, height: 52)
@@ -158,13 +191,10 @@ final class MenuBarNowPlayingView: NSView {
     nextTrackLabel.textColor = MenuBarStyle.tertiaryText
     nextTrackLabel.stringValue = "Up Next"
 
-    progressTrack.wantsLayer = true
-    progressTrack.layer?.backgroundColor = NSColor(calibratedWhite: 0.23, alpha: 1).cgColor
-    progressTrack.layer?.cornerRadius = 2.5
-    progressFill.wantsLayer = true
-    progressFill.layer?.backgroundColor = MenuBarStyle.accent.cgColor
-    progressFill.layer?.cornerRadius = 2.5
-    progressTrack.addSubview(progressFill)
+    seekBarView.onSeek = { [weak self] fraction in
+      guard let self, self.currentDuration > 0 else { return }
+      self.onSeek?(Double(fraction) * self.currentDuration)
+    }
     nextTrackDivider.wantsLayer = true
     nextTrackDivider.layer?.backgroundColor =
       MenuBarStyle.cardBorder.withAlphaComponent(0.8).cgColor
@@ -173,7 +203,7 @@ final class MenuBarNowPlayingView: NSView {
     addSubview(titleTextView)
     addSubview(albumTextView)
     addSubview(artistYearTextView)
-    addSubview(progressTrack)
+    addSubview(seekBarView)
     addSubview(elapsedLabel)
     addSubview(durationLabel)
     addSubview(controlsView)
@@ -194,6 +224,16 @@ final class MenuBarNowPlayingView: NSView {
   private func progressRatio(_ state: PlaybackState) -> CGFloat {
     guard state.duration > 0 else { return 0 }
     return CGFloat(max(0, min(1, state.progress / state.duration)))
+  }
+
+  private func isUnavailablePlaybackState(_ state: PlaybackState) -> Bool {
+    let hasMetadata =
+      state.title?.isEmpty == false ||
+      state.artist?.isEmpty == false ||
+      state.album?.isEmpty == false ||
+      state.artworkUrl?.isEmpty == false
+
+    return !hasMetadata && state.duration <= 0
   }
 
   private func formatTime(_ value: Double) -> String {
@@ -224,6 +264,97 @@ final class MenuBarNowPlayingView: NSView {
     nextTrackTitleTextView.stringValue = title
     nextTrackDetailTextView.stringValue = track.artist ?? ""
     nextTrackArtworkView.update(artworkUrl: track.artworkUrl)
+  }
+}
+
+private final class MenuBarSeekBarView: NSView {
+  var onSeek: ((CGFloat) -> Void)?
+
+  private let progressTrack = NSView()
+  private let progressFill = NSView()
+  private var progressFraction: CGFloat = 0
+  private var seekEnabled = false
+
+  override var isFlipped: Bool { true }
+
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    configure()
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  func setProgress(_ fraction: CGFloat) {
+    progressFraction = max(0, min(1, fraction))
+    needsLayout = true
+  }
+
+  func setSeekEnabled(_ enabled: Bool) {
+    seekEnabled = enabled
+    alphaValue = enabled ? 1 : 0.45
+  }
+
+  func setDimmed(_ dimmed: Bool) {
+    alphaValue = dimmed ? 0.45 : 1
+  }
+
+  override func layout() {
+    super.layout()
+
+    let trackHeight: CGFloat = 5
+    progressTrack.frame = NSRect(
+      x: 0,
+      y: (bounds.height - trackHeight) / 2,
+      width: bounds.width,
+      height: trackHeight
+    )
+    progressFill.frame = NSRect(
+      x: 0,
+      y: 0,
+      width: progressTrack.bounds.width * progressFraction,
+      height: progressTrack.bounds.height
+    )
+  }
+
+  override func mouseDown(with event: NSEvent) {
+    seek(with: event)
+  }
+
+  override func mouseDragged(with event: NSEvent) {
+    seek(with: event)
+  }
+
+  override func resetCursorRects() {
+    if seekEnabled {
+      addCursorRect(bounds, cursor: .pointingHand)
+    }
+  }
+
+  private func configure() {
+    wantsLayer = true
+
+    progressTrack.wantsLayer = true
+    progressTrack.layer?.backgroundColor =
+      NSColor(calibratedWhite: 0.23, alpha: 1).cgColor
+    progressTrack.layer?.cornerRadius = 2.5
+
+    progressFill.wantsLayer = true
+    progressFill.layer?.backgroundColor = MenuBarStyle.accent.cgColor
+    progressFill.layer?.cornerRadius = 2.5
+
+    progressTrack.addSubview(progressFill)
+    addSubview(progressTrack)
+  }
+
+  private func seek(with event: NSEvent) {
+    guard seekEnabled, bounds.width > 0 else { return }
+
+    let localPoint = convert(event.locationInWindow, from: nil)
+    let fraction = max(0, min(1, localPoint.x / bounds.width))
+    setProgress(fraction)
+    onSeek?(fraction)
   }
 }
 
@@ -529,6 +660,10 @@ final class MenuBarControlsView: NSView {
     playPauseButton.isEnabled = enabled
     nextButton.isEnabled = enabled
     repeatButton.isEnabled = enabled
+  }
+
+  func setPlaybackControlsDimmed(_ dimmed: Bool) {
+    alphaValue = dimmed ? 0.55 : 1
   }
 
   override func layout() {

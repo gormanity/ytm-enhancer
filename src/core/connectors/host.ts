@@ -70,7 +70,7 @@ export interface ConnectorHostOptions {
   enabled?: boolean;
   ytm: Pick<
     YtmRuntimeClient,
-    "executePlaybackAction" | "getPlaybackState" | "seekTo"
+    "executePlaybackAction" | "focusTab" | "getPlaybackState" | "seekTo"
   >;
   supportedProtocolVersions?: readonly string[];
   transports?: readonly ConnectorTransport[];
@@ -355,6 +355,12 @@ export function createConnectorHost(
         } finally {
           refreshPlaybackStateAfterMutation();
         }
+        return ack(message.requestId);
+      }
+      case "ytm.focus": {
+        const missingPermission = requirePermission(session, "ytm:focus");
+        if (missingPermission) return missingPermission;
+        await options.ytm.focusTab();
         return ack(message.requestId);
       }
     }

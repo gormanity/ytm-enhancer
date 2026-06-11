@@ -3,6 +3,7 @@ import Foundation
 
 final class ConnectorApp {
   private static let playbackStateRetryDelaySeconds: TimeInterval = 2
+  private static let playbackStateStaleTimeoutSeconds: TimeInterval = 8
 
   private let connection: NativeMessagingConnection
   private let menu: MenuBarController
@@ -10,6 +11,7 @@ final class ConnectorApp {
   private var nextRequestNumber = 0
   private var isReady = false
   private var playbackStateRetry: DispatchWorkItem?
+  private var playbackStateStaleTimeout: DispatchWorkItem?
 
   init(
     connection: NativeMessagingConnection,
@@ -27,6 +29,8 @@ final class ConnectorApp {
     menu.onTogglePlay = { [weak self] in self?.sendAction("togglePlay") }
     menu.onNext = { [weak self] in self?.sendAction("next") }
     menu.onRepeat = { [weak self] in self?.sendAction("repeat") }
+    menu.onSeek = { [weak self] time in self?.sendSeek(time) }
+    menu.onFocusYouTubeMusic = { [weak self] in self?.sendFocusYouTubeMusic() }
     logger.log("connector app starting logPath=\(logger.path)")
 
     connection.start(
@@ -37,6 +41,7 @@ final class ConnectorApp {
         self?.logger.log("connector disconnected")
         self?.isReady = false
         self?.clearPlaybackStateRetry()
+        self?.clearPlaybackStateStaleTimeout()
         self?.menu.updateConnectionStatus("Disconnected")
       }
     )
@@ -58,6 +63,7 @@ final class ConnectorApp {
     switch message.type {
     case "connector.ready":
       isReady = true
+      clearPlaybackStateStaleTimeout()
       menu.updateConnectionStatus("Connected")
       logger.log("connector ready; subscribing to playback state")
       connection.send(
@@ -69,16 +75,19 @@ final class ConnectorApp {
     case "playback.state":
       if let state = message.state {
         clearPlaybackStateRetry()
+        clearPlaybackStateStaleTimeout()
         logger.log(playbackStateSummary(state))
         menu.updatePlayback(state)
+        schedulePlaybackStateStaleTimeout()
       } else {
         logger.log("playback state message missing state payload")
       }
     case "connector.error":
-      let label = message.message ?? message.code ?? "Connector error"
+      let label = userFacingStatus(code: message.code, message: message.message)
       logger.log("connector error \(label)")
       if isPlaybackStateRequestError(message) {
-        menu.updateConnectionStatus("Waiting for YouTube Music")
+        logger.log("Waiting for YouTube Music")
+        menu.updateConnectionStatus(label)
         schedulePlaybackStateRetry(reason: label)
         return
       }
@@ -115,6 +124,33 @@ final class ConnectorApp {
     )
   }
 
+  private func sendSeek(_ time: Double) {
+    guard isReady else {
+      logger.log("playback seek skipped because connector is not ready")
+      return
+    }
+    logger.log("sending playback seek time=\(time)")
+    connection.send(
+      ConnectorProtocol.playbackSeek(
+        time: time,
+        requestId: nextRequestId("seek")
+      )
+    )
+  }
+
+  private func sendFocusYouTubeMusic() {
+    guard isReady else {
+      logger.log("focus YouTube Music skipped because connector is not ready")
+      return
+    }
+    logger.log("sending focus YouTube Music")
+    connection.send(
+      ConnectorProtocol.focusYouTubeMusic(
+        requestId: nextRequestId("focus")
+      )
+    )
+  }
+
   private func nextRequestId(_ prefix: String) -> String {
     nextRequestNumber += 1
     return "\(prefix)-\(nextRequestNumber)"
@@ -140,6 +176,8 @@ final class ConnectorApp {
     }
 
     return message.message?.contains("Receiving end does not exist") == true
+      || message.message?.contains("No active YouTube Music tab") == true
+      || message.message?.contains("No YouTube Music tab") == true
   }
 
   private func schedulePlaybackStateRetry(reason: String) {
@@ -159,9 +197,58 @@ final class ConnectorApp {
     )
   }
 
+  private func schedulePlaybackStateStaleTimeout() {
+    clearPlaybackStateStaleTimeout()
+    let timeout = DispatchWorkItem { [weak self] in
+      self?.playbackStateStaleTimeout = nil
+      self?.markPlaybackStateStale()
+    }
+    playbackStateStaleTimeout = timeout
+    logger.log(
+      "playback state stale timeout scheduled delay=\(Self.playbackStateStaleTimeoutSeconds)"
+    )
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + Self.playbackStateStaleTimeoutSeconds,
+      execute: timeout
+    )
+  }
+
+  private func markPlaybackStateStale() {
+    logger.log("playback state stale; marking controls as reconnecting")
+    menu.setStalePlaybackState()
+    requestPlaybackState()
+  }
+
   private func clearPlaybackStateRetry() {
     playbackStateRetry?.cancel()
     playbackStateRetry = nil
+  }
+
+  private func clearPlaybackStateStaleTimeout() {
+    playbackStateStaleTimeout?.cancel()
+    playbackStateStaleTimeout = nil
+  }
+
+  private func userFacingStatus(code: String?, message: String?) -> String {
+    switch code {
+    case "host_disabled":
+      return "Connected Apps disabled"
+    case "connector_blocked":
+      return "Connector disabled"
+    case "unsupported_protocol":
+      return "Update required"
+    default:
+      break
+    }
+
+    if message?.contains("Receiving end does not exist") == true
+      || message?.contains("No active YouTube Music tab") == true
+      || message?.contains("No YouTube Music tab") == true
+    {
+      return "No YouTube Music tab"
+    }
+
+    return message ?? code ?? "Connector error"
   }
 
   private func logValue(_ value: String?) -> String {
