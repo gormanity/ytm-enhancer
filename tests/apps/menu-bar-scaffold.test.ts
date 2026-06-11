@@ -744,6 +744,9 @@ describe("menu bar connector app scaffold", () => {
       "window.mouseLocationOutsideOfEventStream",
     );
     expect(nowPlayingViewSource).toContain(
+      "RunLoop.main.add(timer, forMode: .eventTracking)",
+    );
+    expect(nowPlayingViewSource).toContain(
       "updateHoverSurfaces(windowPoint: mousePoint)",
     );
     expect(nowPlayingViewSource).toContain("clearHoverSurfaces()");

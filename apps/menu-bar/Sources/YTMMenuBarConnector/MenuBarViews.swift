@@ -59,6 +59,7 @@ final class MenuBarNowPlayingView: NSView {
   private var pendingSeekExpirationDate: Date?
   private var onSeek: ((Double) -> Void)?
   private var mouseEventMonitor: Any?
+  private var hoverPollTimer: Timer?
 
   override var isFlipped: Bool { true }
   override var allowsVibrancy: Bool { true }
@@ -79,6 +80,7 @@ final class MenuBarNowPlayingView: NSView {
 
   deinit {
     uninstallMouseEventMonitor()
+    stopHoverPolling()
   }
 
   override func viewDidMoveToWindow() {
@@ -86,12 +88,14 @@ final class MenuBarNowPlayingView: NSView {
 
     guard window != nil else {
       uninstallMouseEventMonitor()
+      stopHoverPolling()
       clearHoverSurfaces()
       return
     }
 
     window?.acceptsMouseMovedEvents = true
     installMouseEventMonitor()
+    startHoverPolling()
   }
 
   func updateConnectionStatus(_ status: String) {
@@ -375,6 +379,26 @@ final class MenuBarNowPlayingView: NSView {
     self.mouseEventMonitor = nil
   }
 
+  private func startHoverPolling() {
+    stopHoverPolling()
+    let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+      guard let self, let window = self.window else {
+        return
+      }
+
+      let mousePoint = window.mouseLocationOutsideOfEventStream
+      self.updateHoverSurfaces(windowPoint: mousePoint)
+    }
+    hoverPollTimer = timer
+    RunLoop.main.add(timer, forMode: .common)
+    RunLoop.main.add(timer, forMode: .eventTracking)
+  }
+
+  private func stopHoverPolling() {
+    hoverPollTimer?.invalidate()
+    hoverPollTimer = nil
+  }
+
   private func updateHoverSurfaces(with event: NSEvent) {
     guard let window, event.window === window else {
       clearHoverSurfaces()
@@ -388,6 +412,16 @@ final class MenuBarNowPlayingView: NSView {
 
     controlsView.updateHover(from: event)
     seekBarView.updateHover(from: event)
+  }
+
+  private func updateHoverSurfaces(windowPoint: NSPoint) {
+    guard bounds.contains(convert(windowPoint, from: nil)) else {
+      clearHoverSurfaces()
+      return
+    }
+
+    controlsView.updateHover(windowPoint: windowPoint)
+    seekBarView.updateHover(windowPoint: windowPoint)
   }
 
   private func clearHoverSurfaces() {
@@ -532,6 +566,10 @@ private final class MenuBarSeekBarView: NSView {
     updateSeekTooltip(with: event)
   }
 
+  func updateHover(windowPoint: NSPoint) {
+    updateSeekTooltip(windowPoint: windowPoint)
+  }
+
   func clearHoverState() {
     hideSeekTooltip()
   }
@@ -557,6 +595,27 @@ private final class MenuBarSeekBarView: NSView {
     let fraction = seekFraction(for: event)
     let time = formatTime(Double(fraction) * duration)
     let localPoint = convert(event.locationInWindow, from: nil)
+    let width = max(42, seekTooltipLabel.intrinsicContentSize.width + 12)
+    let x = max(0, min(bounds.width - width, localPoint.x - width / 2))
+    seekTooltipLabel.stringValue = time
+    seekTooltipLabel.frame = NSRect(x: x, y: -22, width: width, height: 18)
+    seekTooltipLabel.isHidden = false
+  }
+
+  private func updateSeekTooltip(windowPoint: NSPoint) {
+    guard seekEnabled, duration > 0, bounds.width > 0 else {
+      hideSeekTooltip()
+      return
+    }
+
+    let localPoint = convert(windowPoint, from: nil)
+    guard bounds.contains(localPoint) else {
+      hideSeekTooltip()
+      return
+    }
+
+    let fraction = max(0, min(1, localPoint.x / bounds.width))
+    let time = formatTime(Double(fraction) * duration)
     let width = max(42, seekTooltipLabel.intrinsicContentSize.width + 12)
     let x = max(0, min(bounds.width - width, localPoint.x - width / 2))
     seekTooltipLabel.stringValue = time
@@ -916,6 +975,15 @@ final class MenuBarControlsView: NSView {
 
   func updateHover(from event: NSEvent) {
     let localPoint = convert(event.locationInWindow, from: nil)
+    updateHover(localPoint: localPoint)
+  }
+
+  func updateHover(windowPoint: NSPoint) {
+    let localPoint = convert(windowPoint, from: nil)
+    updateHover(localPoint: localPoint)
+  }
+
+  private func updateHover(localPoint: NSPoint) {
     shuffleButton.setHovering(shuffleButton.frame.contains(localPoint))
     previousButton.setHovering(previousButton.frame.contains(localPoint))
     playPauseButton.setHovering(playPauseButton.frame.contains(localPoint))
