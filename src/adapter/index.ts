@@ -29,7 +29,6 @@ export class YTMAdapter {
 
   getPlaybackState(): PlaybackState {
     const titleEl = document.querySelector(SELECTORS.trackTitle);
-    const artistEl = document.querySelector(SELECTORS.artistName);
     const artworkEl = document.querySelector(
       SELECTORS.albumArt,
     ) as HTMLImageElement | null;
@@ -37,7 +36,8 @@ export class YTMAdapter {
 
     const { progress, duration } = this.readVideoTime();
 
-    const { album, year } = this.parseSubtitle();
+    const mediaSessionMetadata = this.readMediaSessionMetadata();
+    const subtitleMetadata = this.parseSubtitle();
 
     const shuffleEl = document.querySelector(SELECTORS.shuffleButton);
     const repeatEl = document.querySelector(SELECTORS.repeatButton);
@@ -49,11 +49,14 @@ export class YTMAdapter {
     const repeatMode = this.readRepeatMode(repeatEl);
 
     return {
-      title: titleEl?.textContent?.trim() ?? null,
-      artist: artistEl?.textContent?.trim() ?? null,
-      album,
-      year,
-      artworkUrl: this.upscaleArtworkUrl(artworkEl?.src ?? null),
+      title:
+        this.trimmedText(titleEl?.textContent) ?? mediaSessionMetadata.title,
+      artist: mediaSessionMetadata.artist ?? subtitleMetadata.artist,
+      album: mediaSessionMetadata.album ?? subtitleMetadata.album,
+      year: subtitleMetadata.year,
+      artworkUrl: this.upscaleArtworkUrl(
+        artworkEl?.src ?? mediaSessionMetadata.artworkUrl,
+      ),
       isPlaying,
       progress,
       duration,
@@ -237,19 +240,62 @@ export class YTMAdapter {
     return false;
   }
 
-  private parseSubtitle(): { album: string | null; year: number | null } {
+  private parseSubtitle(): {
+    artist: string | null;
+    album: string | null;
+    year: number | null;
+  } {
     const subtitleEl = document.querySelector(SELECTORS.subtitle);
-    if (!subtitleEl) return { album: null, year: null };
+    if (!subtitleEl) return { artist: null, album: null, year: null };
 
-    const links = subtitleEl.querySelectorAll("a");
+    const links = Array.from(subtitleEl.querySelectorAll("a"));
+    const albumLink = links.find((link) => this.isAlbumLink(link));
+    const artistLink = links.find((link) => this.isArtistLink(link));
+    const artist =
+      this.trimmedText(artistLink?.textContent) ??
+      (links.length >= 2 || !albumLink
+        ? this.trimmedText(links[0]?.textContent)
+        : null);
     const album =
-      links.length >= 2 ? (links[1].textContent?.trim() ?? null) : null;
+      this.trimmedText(albumLink?.textContent) ??
+      (links.length >= 2 ? this.trimmedText(links[1]?.textContent) : null);
 
     const text = subtitleEl.textContent ?? "";
     const yearMatch = text.match(/\b((?:19|20)\d{2})\b/);
     const year = yearMatch ? Number(yearMatch[1]) : null;
 
-    return { album, year };
+    return { artist, album, year };
+  }
+
+  private readMediaSessionMetadata(): {
+    title: string | null;
+    artist: string | null;
+    album: string | null;
+    artworkUrl: string | null;
+  } {
+    const metadata = navigator.mediaSession?.metadata;
+
+    return {
+      title: this.trimmedText(metadata?.title),
+      artist: this.trimmedText(metadata?.artist),
+      album: this.trimmedText(metadata?.album),
+      artworkUrl: this.trimmedText(metadata?.artwork?.at(-1)?.src),
+    };
+  }
+
+  private isArtistLink(link: HTMLAnchorElement): boolean {
+    const href = link.getAttribute("href") ?? "";
+    return href.includes("/channel/") || href.includes("/browse/UC");
+  }
+
+  private isAlbumLink(link: HTMLAnchorElement): boolean {
+    const href = link.getAttribute("href") ?? "";
+    return href.includes("/browse/MPRE") || href.includes("list=OLAK5uy_");
+  }
+
+  private trimmedText(value: string | null | undefined): string | null {
+    const trimmed = value?.trim() ?? "";
+    return trimmed ? trimmed : null;
   }
 
   private upscaleArtworkUrl(url: string | null): string | null {

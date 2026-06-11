@@ -16,11 +16,6 @@ private enum MenuBarStyle {
 }
 
 final class MenuBarNowPlayingView: NSView {
-  private struct MenuBarMetadataLines {
-    let album: String
-    let artistYear: String
-  }
-
   private let artworkView = MenuBarArtworkView()
   private let titleTextView = MenuBarScrollingTextView()
   private let albumTextView = MenuBarScrollingTextView()
@@ -64,11 +59,10 @@ final class MenuBarNowPlayingView: NSView {
 
   func updatePlayback(_ state: PlaybackState) {
     let title = state.title?.isEmpty == false ? state.title! : "Unknown track"
-    let metadata = formatMetadataLines(state)
 
     titleTextView.stringValue = title
-    albumTextView.stringValue = metadata.album
-    artistYearTextView.stringValue = metadata.artistYear
+    albumTextView.stringValue = state.album ?? ""
+    artistYearTextView.stringValue = formatArtistYearLine(state)
     progressFraction = progressRatio(state)
     elapsedLabel.stringValue = state.duration > 0 ? formatTime(state.progress) : ""
     durationLabel.stringValue = state.duration > 0 ? formatTime(state.duration) : ""
@@ -174,33 +168,15 @@ final class MenuBarNowPlayingView: NSView {
     return String(format: "%d:%02d", seconds / 60, seconds % 60)
   }
 
-  private func formatMetadataLines(_ state: PlaybackState) -> MenuBarMetadataLines {
-    let album = trimmed(state.album)
-    let artist = trimmed(state.artist)
-    let displayAlbum = album ?? artist ?? ""
-    let displayArtist = album == nil || artist == album ? nil : artist
-
-    return MenuBarMetadataLines(
-      album: displayAlbum,
-      artistYear: formatArtistYearLine(artist: displayArtist, year: state.year)
-    )
-  }
-
-  private func formatArtistYearLine(artist: String?, year: Int?) -> String {
+  private func formatArtistYearLine(_ state: PlaybackState) -> String {
     var parts: [String] = []
-    if let artist {
+    if let artist = state.artist, !artist.isEmpty {
       parts.append(artist)
     }
-    if let year {
+    if let year = state.year {
       parts.append(String(year))
     }
     return parts.joined(separator: " \u{00B7} ")
-  }
-
-  private func trimmed(_ value: String?) -> String? {
-    guard let value else { return nil }
-    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    return trimmed.isEmpty ? nil : trimmed
   }
 }
 

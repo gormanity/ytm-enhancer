@@ -125,6 +125,8 @@ final class ConnectorApp {
       "playback state",
       "title=\(logValue(state.title))",
       "artist=\(logValue(state.artist))",
+      "album=\(logValue(state.album))",
+      "year=\(state.year.map(String.init) ?? "nil")",
       "playing=\(state.isPlaying)",
       "progress=\(Int(state.progress.rounded()))",
       "duration=\(Int(state.duration.rounded()))",
