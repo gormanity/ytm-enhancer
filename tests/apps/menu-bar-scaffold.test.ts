@@ -709,6 +709,50 @@ describe("menu bar connector app scaffold", () => {
     expect(seekBarSource).not.toContain("toolTip = nil");
   });
 
+  it("routes menu mouse movement to playback control and seek hover surfaces", () => {
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+    const nowPlayingViewSource = viewSource.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarSeekBarView/,
+    )?.[0];
+    const seekBarSource = viewSource.match(
+      /private final class MenuBarSeekBarView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+    const controlsViewSource = viewSource.match(
+      /final class MenuBarControlsView:[\s\S]+?private final class MenuBarArtworkView/,
+    )?.[0];
+    const iconButtonSource = viewSource.match(
+      /private final class MenuBarIconButton:[\s\S]+$/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain("private var mouseEventMonitor");
+    expect(nowPlayingViewSource).toContain("override func viewDidMoveToWindow");
+    expect(nowPlayingViewSource).toContain("window?.acceptsMouseMovedEvents = true");
+    expect(nowPlayingViewSource).toContain(
+      "NSEvent.addLocalMonitorForEvents",
+    );
+    expect(nowPlayingViewSource).toContain(".mouseMoved");
+    expect(nowPlayingViewSource).toContain("updateHoverSurfaces(with: event)");
+    expect(nowPlayingViewSource).toContain("clearHoverSurfaces()");
+    expect(nowPlayingViewSource).toContain(
+      "controlsView.updateHover(from: event)",
+    );
+    expect(nowPlayingViewSource).toContain("seekBarView.updateHover(from: event)");
+
+    expect(seekBarSource).toBeDefined();
+    expect(seekBarSource).toContain("func updateHover(from event: NSEvent)");
+    expect(seekBarSource).toContain("func clearHoverState()");
+
+    expect(controlsViewSource).toBeDefined();
+    expect(controlsViewSource).toContain("func updateHover(from event: NSEvent)");
+    expect(controlsViewSource).toContain("func clearHoverState()");
+    expect(controlsViewSource).toContain("shuffleButton.setHovering");
+    expect(controlsViewSource).toContain("repeatButton.setHovering");
+
+    expect(iconButtonSource).toBeDefined();
+    expect(iconButtonSource).toContain("func setHovering");
+  });
+
   it("reuses the extension icon for the menu bar status item", () => {
     const manifest = read("Package.swift");
     const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
