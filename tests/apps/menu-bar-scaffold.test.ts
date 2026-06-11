@@ -702,6 +702,11 @@ describe("menu bar connector app scaffold", () => {
     expect(seekBarSource).toContain("formatTime(Double(fraction) * duration)");
     expect(seekBarSource).toContain(".mouseMoved");
     expect(seekBarSource).toContain("seekTooltipLabel.isHidden = false");
+    expect(seekBarSource).toContain(".enabledDuringMouseDrag");
+    expect(seekBarSource).toContain("isMouseInsideBounds(event)");
+    expect(seekBarSource).toContain("hideSeekTooltip()");
+    expect(seekBarSource).not.toContain("toolTip = time");
+    expect(seekBarSource).not.toContain("toolTip = nil");
   });
 
   it("reuses the extension icon for the menu bar status item", () => {
