@@ -446,6 +446,17 @@ describe("YTMAdapter", () => {
       expect(state.repeatMode).toBe("one");
     });
 
+    it("should read repeat one from the icon even when pressed state is false", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="repeat" title="Repeat all" aria-pressed="false">
+          <iron-icon icon="yt-icons:repeat-one"></iron-icon>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("one");
+    });
+
     it("should read playlist repeat from the current repeat icon before tooltip text", () => {
       document.body.innerHTML = `
         <tp-yt-paper-icon-button class="repeat" title="Repeat one" aria-pressed="true">
@@ -455,6 +466,81 @@ describe("YTMAdapter", () => {
 
       const state = adapter.getPlaybackState();
       expect(state.repeatMode).toBe("all");
+    });
+
+    it("should read repeat off from the current YouTube Music repeat label", () => {
+      document.body.innerHTML = `
+        <yt-icon-button class="repeat" title="Repeat off" label="Repeat off">
+          <button aria-label="Repeat off">
+            <yt-icon>
+              <svg>
+                <path d="repeat-path"></path>
+              </svg>
+            </yt-icon>
+          </button>
+        </yt-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("off");
+    });
+
+    it("should read playlist repeat from the current YouTube Music repeat label", () => {
+      document.body.innerHTML = `
+        <yt-icon-button class="repeat" title="Repeat all" label="Repeat all">
+          <button aria-label="Repeat all">
+            <yt-icon style="color: rgb(255, 255, 255)">
+              <svg>
+                <path d="repeat-all-path-with-dot"></path>
+              </svg>
+            </yt-icon>
+          </button>
+        </yt-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("all");
+    });
+
+    it("should read repeat one from the current YouTube Music repeat label", () => {
+      document.body.innerHTML = `
+        <yt-icon-button class="repeat" title="Repeat one" label="Repeat one">
+          <button aria-label="Repeat one">
+            <yt-icon style="color: rgb(255, 255, 255)">
+              <svg>
+                <path d="repeat-one-path-with-number"></path>
+              </svg>
+            </yt-icon>
+          </button>
+        </yt-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("one");
+    });
+
+    it("should read repeat one from an active repeat off next-action label", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="repeat" title="Repeat off">
+          <iron-icon icon="yt-icons:repeat" style="color: rgb(255, 255, 255)"></iron-icon>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("one");
+    });
+
+    it("should read repeat one from an active descendant off next-action label", () => {
+      document.body.innerHTML = `
+        <tp-yt-paper-icon-button class="repeat" aria-pressed="false">
+          <yt-icon-button data-tooltip-text="Turn off">
+            <iron-icon icon="yt-icons:repeat" style="color: rgb(255, 255, 255)"></iron-icon>
+          </yt-icon-button>
+        </tp-yt-paper-icon-button>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.repeatMode).toBe("one");
     });
 
     it("should read repeat off from pressed state before tooltip text", () => {

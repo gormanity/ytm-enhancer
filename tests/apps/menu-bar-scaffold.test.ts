@@ -58,6 +58,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("received message");
     expect(sources).toContain("sending message");
     expect(sources).toContain("playback state");
+    expect(sources).toContain('"repeat=\\(state.repeatMode ?? "nil")"');
   });
 
   it("retries transient startup playback state errors", () => {
@@ -204,6 +205,49 @@ describe("menu bar connector app scaffold", () => {
     expect(controlsSource).toBeDefined();
     expect(controlsSource).not.toContain("systemSymbolName:");
     expect(controlsSource).not.toContain("setSystemSymbolName");
+  });
+
+  it("uses distinct repeat-one iconography for the menu bar repeat control", () => {
+    const repeatIcon = read(
+      "Sources/YTMMenuBarConnector/Resources/playback-repeat.svg",
+    );
+    const repeatOneIcon = read(
+      "Sources/YTMMenuBarConnector/Resources/playback-repeat-one.svg",
+    );
+    const viewsSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+    const controlsSource = viewsSource.match(
+      /final class MenuBarControlsView:[\s\S]+?private final class MenuBarArtworkView/,
+    )?.[0];
+    const iconButtonSource = viewsSource.match(
+      /private final class MenuBarIconButton:[\s\S]+$/,
+    )?.[0];
+
+    expect(repeatOneIcon).not.toBe(repeatIcon);
+    expect(repeatOneIcon).toContain('data-icon-part="repeat-one-marker"');
+    expect(repeatOneIcon).toContain('d="M12.8 15.6V8.4');
+    expect(repeatOneIcon).toContain('stroke-width="1.6"');
+    expect(repeatOneIcon).toContain("Repeat one");
+    expect(controlsSource).toContain(
+      "repeatButton.setRepeatMarker(repeatMarker(repeatMode))",
+    );
+    expect(controlsSource).toContain(
+      'repeatMode == "one" ? MenuBarControlIcon.repeatOne : MenuBarControlIcon.repeat',
+    );
+    expect(controlsSource).toContain('case "all":');
+    expect(controlsSource).toContain("return .dot");
+    expect(iconButtonSource).toContain("enum Marker");
+    expect(iconButtonSource).toContain("func setRepeatMarker");
+    expect(iconButtonSource).toContain("private func drawRepeatMarker");
+    expect(iconButtonSource).toContain("ovalIn: markerRect.insetBy");
+    expect(controlsSource).not.toContain("return .numberOne");
+    expect(iconButtonSource).not.toContain("case numberOne");
+    expect(iconButtonSource).not.toContain("drawRepeatOneMarker");
+    expect(iconButtonSource).not.toContain(
+      "NSColor.black.withAlphaComponent(isEnabled",
+    );
+    expect(iconButtonSource).not.toContain(
+      "NSBezierPath(ovalIn: markerRect).fill()",
+    );
   });
 
   it("uses tint instead of persistent hover fill for active shuffle and repeat", () => {

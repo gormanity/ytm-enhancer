@@ -22,7 +22,7 @@ const SHUFFLE_SVG =
 const REPEAT_SVG =
   '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>';
 const REPEAT_ONE_SVG =
-  '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>';
+  '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><title>Repeat one</title><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/><path data-icon-part="repeat-one-marker" d="M12.8 15.6V8.4l-1.9 1.2M11.2 15.6h3.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"/></svg>';
 const PLAYBACK_STATE_POLL_INTERVAL_MS = 1000;
 
 let playIconTemplate: SVGElement | null | undefined;

@@ -589,20 +589,68 @@ export class YTMAdapter {
     if (!el) return "off";
 
     const pressed = this.readPressedState(el);
-    if (pressed === false) return "off";
-
     const iconMode = this.readRepeatIconMode(el);
     if (iconMode === "one") return "one";
-    if (iconMode === "all") {
-      return pressed === true || this.isToggleActiveByColor(el) ? "all" : "off";
+
+    const isActive = pressed === true || this.isToggleActiveByColor(el);
+    const labelEntries = this.readRepeatLabelEntries(el);
+    const stateLabelMode = this.readRepeatStateLabelMode(labelEntries);
+    if (stateLabelMode !== null) return stateLabelMode;
+
+    const labelText = labelEntries.map((entry) => entry.value).join(" ");
+    if (isActive && labelText.includes("off")) {
+      return "one";
     }
 
-    if (pressed === true || this.isToggleActiveByColor(el)) return "all";
+    if (pressed === false) return "off";
 
-    const repeatTitle = el.getAttribute("title")?.toLowerCase() ?? "";
-    if (repeatTitle.includes("one")) return "one";
-    if (repeatTitle.includes("all")) return "all";
+    if (iconMode === "all") {
+      return isActive ? "all" : "off";
+    }
+
+    if (isActive) return "all";
+
+    if (labelText.includes("one")) return "one";
+    if (labelText.includes("all")) return "all";
     return "off";
+  }
+
+  private readRepeatLabelEntries(
+    el: Element,
+  ): Array<{ attribute: string; value: string }> {
+    const attributes = [
+      "aria-label",
+      "aria-description",
+      "label",
+      "data-tooltip",
+      "data-tooltip-text",
+      "data-title",
+      "title",
+    ];
+    return [el, ...Array.from(el.querySelectorAll("*"))]
+      .flatMap((node) =>
+        attributes.map((attribute) => ({
+          attribute,
+          value: node.getAttribute(attribute)?.trim().toLowerCase() ?? "",
+        })),
+      )
+      .filter((entry) => entry.value.length > 0);
+  }
+
+  private readRepeatStateLabelMode(
+    entries: Array<{ attribute: string; value: string }>,
+  ): "off" | "all" | "one" | null {
+    for (const entry of entries) {
+      if (entry.attribute !== "aria-label" && entry.attribute !== "label") {
+        continue;
+      }
+
+      if (entry.value === "repeat one") return "one";
+      if (entry.value === "repeat all") return "all";
+      if (entry.value === "repeat off") return "off";
+    }
+
+    return null;
   }
 
   private readPressedState(el: Element): boolean | null {

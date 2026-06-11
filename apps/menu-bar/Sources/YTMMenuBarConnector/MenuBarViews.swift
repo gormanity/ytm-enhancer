@@ -959,6 +959,7 @@ final class MenuBarControlsView: NSView {
     repeatButton.setIcon(repeatIcon(repeatMode))
     repeatButton.setAccessibilityLabel(repeatAccessibilityLabel(repeatMode))
     repeatButton.setActive((repeatMode ?? "off") != "off")
+    repeatButton.setRepeatMarker(repeatMarker(repeatMode))
   }
 
   func setPlaybackControlsEnabled(_ enabled: Bool) {
@@ -1030,6 +1031,15 @@ final class MenuBarControlsView: NSView {
 
   private func repeatIcon(_ repeatMode: String?) -> MenuBarControlIcon {
     repeatMode == "one" ? MenuBarControlIcon.repeatOne : MenuBarControlIcon.repeat
+  }
+
+  private func repeatMarker(_ repeatMode: String?) -> MenuBarIconButton.Marker {
+    switch repeatMode {
+    case "all":
+      return .dot
+    default:
+      return .none
+    }
   }
 
   private func repeatAccessibilityLabel(_ repeatMode: String?) -> String {
@@ -1242,12 +1252,18 @@ private final class MenuBarNextTrackArtworkView: NSView {
 }
 
 private final class MenuBarIconButton: NSButton {
+  enum Marker {
+    case none
+    case dot
+  }
+
   var onPress: (() -> Void)?
 
   private var icon: MenuBarControlIcon
   private let prominent: Bool
   private var active = false
   private var hovering = false
+  private var repeatMarker = Marker.none
 
   init(icon: MenuBarControlIcon, label: String, isProminent: Bool = false) {
     self.icon = icon
@@ -1330,6 +1346,11 @@ private final class MenuBarIconButton: NSButton {
     updateHoverState(hovering)
   }
 
+  func setRepeatMarker(_ repeatMarker: Marker) {
+    self.repeatMarker = repeatMarker
+    needsDisplay = true
+  }
+
   override func layout() {
     super.layout()
     layer?.cornerRadius = min(bounds.width, bounds.height) / 2
@@ -1337,6 +1358,32 @@ private final class MenuBarIconButton: NSButton {
       ellipseIn: bounds.insetBy(dx: -2, dy: -2),
       transform: nil
     )
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    super.draw(dirtyRect)
+    drawRepeatMarker()
+  }
+
+  private func drawRepeatMarker() {
+    guard repeatMarker != .none else { return }
+
+    let markerRect = NSRect(
+      x: bounds.midX - 5,
+      y: bounds.midY - 5,
+      width: 10,
+      height: 10
+    )
+
+    switch repeatMarker {
+    case .dot:
+      NSColor.white.withAlphaComponent(isEnabled ? 0.92 : 0.48).setFill()
+      NSBezierPath(
+        ovalIn: markerRect.insetBy(dx: 3.35, dy: 3.35)
+      ).fill()
+    case .none:
+      break
+    }
   }
 
   private func updateAppearance() {

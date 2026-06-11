@@ -167,6 +167,8 @@ final class ConnectorApp {
       "playing=\(state.isPlaying)",
       "progress=\(Int(state.progress.rounded()))",
       "duration=\(Int(state.duration.rounded()))",
+      "shuffle=\(state.isShuffling.map(String.init) ?? "nil")",
+      "repeat=\(state.repeatMode ?? "nil")",
     ].joined(separator: " ")
   }
 
