@@ -262,22 +262,35 @@ export class YTMAdapter {
     if (!container) return { artist: null, album: null, year: null };
 
     const links = Array.from(container.querySelectorAll("a"));
+    const text = container.textContent ?? "";
+    const textSegments = this.parseMetadataTextSegments(text);
     const albumLink = links.find((link) => this.isAlbumLink(link));
     const artistLink = links.find((link) => this.isArtistLink(link));
     const artist =
       this.trimmedText(artistLink?.textContent) ??
       (links.length >= 2 || !albumLink
         ? this.trimmedText(links[0]?.textContent)
-        : null);
+        : null) ??
+      (links.length === 0 ? (textSegments[0] ?? null) : null);
     const album =
       this.trimmedText(albumLink?.textContent) ??
-      (links.length >= 2 ? this.trimmedText(links[1]?.textContent) : null);
+      (links.length >= 2 ? this.trimmedText(links[1]?.textContent) : null) ??
+      (links.length === 0 ? (textSegments[1] ?? null) : null);
 
-    const text = container.textContent ?? "";
     const yearMatch = text.match(/\b((?:19|20)\d{2})\b/);
     const year = yearMatch ? Number(yearMatch[1]) : null;
 
     return { artist, album, year };
+  }
+
+  private parseMetadataTextSegments(text: string): string[] {
+    return text
+      .split(/[•·]/)
+      .map((segment) => this.trimmedText(segment.replace(/\s+/g, " ")))
+      .filter(
+        (segment): segment is string =>
+          segment !== null && !/^(?:19|20)\d{2}$/.test(segment),
+      );
   }
 
   private readNextTrack(): TrackMetadata | null {
