@@ -27,6 +27,7 @@ final class MenuBarNowPlayingView: NSView {
   private let controlsView = MenuBarControlsView()
   private let nextTrackDivider = NSView()
   private let nextTrackLabel = NSTextField(labelWithString: "")
+  private let nextTrackArtworkView = MenuBarNextTrackArtworkView()
   private let nextTrackTitleTextView = MenuBarScrollingTextView()
   private let nextTrackDetailTextView = MenuBarScrollingTextView()
   private let metadataScroller = MenuBarMetadataScroller()
@@ -115,8 +116,9 @@ final class MenuBarNowPlayingView: NSView {
     controlsView.frame = NSRect(x: 0, y: 130, width: bounds.width, height: 52)
     nextTrackDivider.frame = NSRect(x: 24, y: 188, width: 280, height: 1)
     nextTrackLabel.frame = NSRect(x: 24, y: 198, width: 280, height: 14)
-    nextTrackTitleTextView.frame = NSRect(x: 24, y: 216, width: 280, height: 18)
-    nextTrackDetailTextView.frame = NSRect(x: 24, y: 235, width: 280, height: 16)
+    nextTrackArtworkView.frame = NSRect(x: 24, y: 214, width: 34, height: 34)
+    nextTrackTitleTextView.frame = NSRect(x: 68, y: 215, width: 236, height: 18)
+    nextTrackDetailTextView.frame = NSRect(x: 68, y: 234, width: 236, height: 16)
   }
 
   private func configure() {
@@ -177,6 +179,7 @@ final class MenuBarNowPlayingView: NSView {
     addSubview(controlsView)
     addSubview(nextTrackDivider)
     addSubview(nextTrackLabel)
+    addSubview(nextTrackArtworkView)
     addSubview(nextTrackTitleTextView)
     addSubview(nextTrackDetailTextView)
   }
@@ -213,26 +216,14 @@ final class MenuBarNowPlayingView: NSView {
     guard let track else {
       nextTrackTitleTextView.stringValue = "No upcoming track"
       nextTrackDetailTextView.stringValue = ""
+      nextTrackArtworkView.showPlaceholder()
       return
     }
 
     let title = track.title?.isEmpty == false ? track.title! : "Unknown track"
     nextTrackTitleTextView.stringValue = title
-    nextTrackDetailTextView.stringValue = formatTrackDetailLine(track)
-  }
-
-  private func formatTrackDetailLine(_ track: TrackMetadata) -> String {
-    var parts: [String] = []
-    if let artist = track.artist, !artist.isEmpty {
-      parts.append(artist)
-    }
-    if let album = track.album, !album.isEmpty {
-      parts.append(album)
-    }
-    if let year = track.year {
-      parts.append(String(year))
-    }
-    return parts.joined(separator: " \u{00B7} ")
+    nextTrackDetailTextView.stringValue = track.artist ?? ""
+    nextTrackArtworkView.update(artworkUrl: track.artworkUrl)
   }
 }
 
@@ -667,6 +658,118 @@ private final class MenuBarArtworkView: NSView {
     imageView.layer?.cornerRadius = 8
     imageView.layer?.masksToBounds = true
     addSubview(imageView)
+  }
+}
+
+private final class MenuBarNextTrackArtworkView: NSView {
+  private let imageView = NSImageView()
+  private let monochromeContext = CIContext()
+  private var currentArtworkUrl: String?
+
+  override var isFlipped: Bool { true }
+
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    configure()
+    showPlaceholder()
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  func update(artworkUrl: String?) {
+    guard
+      let artworkUrl,
+      let url = URL(string: artworkUrl),
+      let scheme = url.scheme?.lowercased(),
+      scheme == "https" || scheme == "http"
+    else {
+      currentArtworkUrl = nil
+      showPlaceholder()
+      return
+    }
+
+    if artworkUrl == currentArtworkUrl { return }
+    currentArtworkUrl = artworkUrl
+
+    URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+      guard
+        let self,
+        self.currentArtworkUrl == artworkUrl,
+        let data,
+        let image = NSImage(data: data)
+      else {
+        DispatchQueue.main.async {
+          if self?.currentArtworkUrl == artworkUrl {
+            self?.showPlaceholder()
+          }
+        }
+        return
+      }
+
+      let mutedImage = self.monochromeImage(from: image) ?? image
+
+      DispatchQueue.main.async {
+        guard self.currentArtworkUrl == artworkUrl else { return }
+        self.imageView.image = mutedImage
+        self.imageView.contentTintColor = nil
+      }
+    }.resume()
+  }
+
+  func showPlaceholder() {
+    let image = NSImage(
+      systemSymbolName: "music.note",
+      accessibilityDescription: "No next track artwork"
+    )
+    image?.isTemplate = true
+    imageView.image = image
+    imageView.contentTintColor = MenuBarStyle.tertiaryText
+  }
+
+  override func layout() {
+    super.layout()
+    imageView.frame = bounds.insetBy(dx: 3, dy: 3)
+  }
+
+  private func configure() {
+    wantsLayer = true
+    layer?.backgroundColor = NSColor.white.withAlphaComponent(0.04).cgColor
+    layer?.cornerRadius = 7
+    layer?.borderWidth = 1
+    layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
+    layer?.masksToBounds = true
+
+    imageView.alphaValue = 0.34
+    imageView.imageScaling = .scaleProportionallyUpOrDown
+    imageView.wantsLayer = true
+    imageView.layer?.cornerRadius = 5
+    imageView.layer?.masksToBounds = true
+    imageView.layer?.compositingFilter = "plusLighter"
+    addSubview(imageView)
+  }
+
+  private func monochromeImage(from image: NSImage) -> NSImage? {
+    var proposedRect = NSRect(origin: .zero, size: image.size)
+    guard
+      let cgImage = image.cgImage(forProposedRect: &proposedRect, context: nil, hints: nil),
+      let filter = CIFilter(name: "CIPhotoEffectMono")
+    else {
+      return nil
+    }
+
+    let input = CIImage(cgImage: cgImage)
+    filter.setValue(input, forKey: kCIInputImageKey)
+
+    guard
+      let output = filter.outputImage,
+      let mutedCgImage = monochromeContext.createCGImage(output, from: input.extent)
+    else {
+      return nil
+    }
+
+    return NSImage(cgImage: mutedCgImage, size: image.size)
   }
 }
 

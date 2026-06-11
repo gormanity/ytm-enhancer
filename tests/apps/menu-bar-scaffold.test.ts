@@ -271,7 +271,7 @@ describe("menu bar connector app scaffold", () => {
     expect(nextTrackArtworkSource).toContain("CIPhotoEffectMono");
     expect(nextTrackArtworkSource).toContain("alphaValue = 0.34");
     expect(nextTrackArtworkSource).toContain(
-      "imageView.layer?.compositingFilter = \"plusLighter\"",
+      'imageView.layer?.compositingFilter = "plusLighter"',
     );
     expect(nextTrackArtworkSource).toContain("layer?.borderColor");
     expect(nextTrackArtworkSource).toContain("showPlaceholder()");
