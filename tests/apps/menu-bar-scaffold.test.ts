@@ -168,28 +168,21 @@ describe("menu bar connector app scaffold", () => {
 
     expect(nowPlayingViewSource).toBeDefined();
     expect(nowPlayingViewSource).toContain(
-      "let metadata = formatMetadataLines(state)",
+      'albumTextView.stringValue = state.album ?? ""',
     );
     expect(nowPlayingViewSource).toContain(
-      "albumTextView.stringValue = metadata.album",
+      "artistYearTextView.stringValue = formatArtistYearLine(state)",
     );
     expect(nowPlayingViewSource).toContain(
-      "artistYearTextView.stringValue = metadata.artistYear",
+      "private func formatArtistYearLine(_ state: PlaybackState) -> String",
     );
-    expect(nowPlayingViewSource).toContain(
-      "private func formatMetadataLines(_ state: PlaybackState) -> MenuBarMetadataLines",
-    );
-    expect(nowPlayingViewSource).toContain(
-      'let displayAlbum = album ?? artist ?? ""',
-    );
-    expect(nowPlayingViewSource).toContain(
-      "let displayArtist = album == nil || artist == album ? nil : artist",
-    );
-    expect(nowPlayingViewSource).toContain(
-      "formatArtistYearLine(artist: displayArtist, year: state.year)",
-    );
+    expect(nowPlayingViewSource).toContain("if let artist = state.artist");
+    expect(nowPlayingViewSource).toContain("if let year = state.year");
     expect(nowPlayingViewSource).toContain(
       'parts.joined(separator: " \\u{00B7} ")',
+    );
+    expect(nowPlayingViewSource).not.toContain(
+      "private func formatMetadataLines",
     );
     expect(nowPlayingViewSource).not.toContain(
       "albumTextView.stringValue = formatAlbumLine(state)",

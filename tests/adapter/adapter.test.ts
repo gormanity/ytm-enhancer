@@ -6,6 +6,10 @@ describe("YTMAdapter", () => {
 
   beforeEach(() => {
     document.body.innerHTML = "";
+    Object.defineProperty(navigator, "mediaSession", {
+      configurable: true,
+      value: undefined,
+    });
     adapter = new YTMAdapter();
   });
 
@@ -43,6 +47,45 @@ describe("YTMAdapter", () => {
 
       const state = adapter.getPlaybackState();
       expect(state.artist).toBe("Test Artist");
+    });
+
+    it("should prefer Media Session metadata for normalized track metadata", () => {
+      Object.defineProperty(navigator, "mediaSession", {
+        configurable: true,
+        value: {
+          metadata: {
+            title: "Labour of Love",
+            artist: "Ben McCullough",
+            album: "Hardspace: Shipbreaker (Original Soundtrack)",
+            artwork: [
+              { src: "https://lh3.googleusercontent.com/session=w60-h60" },
+            ],
+          },
+        },
+      });
+      document.body.innerHTML = `
+        <yt-formatted-string class="title style-scope ytmusic-player-bar">
+          Labour of Love (feat. Ben McCullough)
+        </yt-formatted-string>
+        <span class="subtitle style-scope ytmusic-player-bar">
+          <yt-formatted-string>
+            <a class="yt-simple-endpoint" href="/browse/MPREb_album">
+              Hardspace: Shipbreaker (Original Soundtrack)
+            </a>
+            &nbsp;•&nbsp;
+            2022
+          </yt-formatted-string>
+        </span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.title).toBe("Labour of Love (feat. Ben McCullough)");
+      expect(state.artist).toBe("Ben McCullough");
+      expect(state.album).toBe("Hardspace: Shipbreaker (Original Soundtrack)");
+      expect(state.year).toBe(2022);
+      expect(state.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/session=w544-h544-l90-rj",
+      );
     });
 
     it("should detect playing state from play/pause button", () => {
@@ -207,6 +250,25 @@ describe("YTMAdapter", () => {
 
       const state = adapter.getPlaybackState();
       expect(state.album).toBe("My Album");
+    });
+
+    it("should identify a single album link in the subtitle without treating it as the artist", () => {
+      document.body.innerHTML = `
+        <span class="subtitle style-scope ytmusic-player-bar">
+          <yt-formatted-string>
+            <a class="yt-simple-endpoint" href="/browse/MPREb_album">
+              My Album
+            </a>
+            &nbsp;•&nbsp;
+            2024
+          </yt-formatted-string>
+        </span>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artist).toBeNull();
+      expect(state.album).toBe("My Album");
+      expect(state.year).toBe(2024);
     });
 
     it("should extract year from subtitle text", () => {
