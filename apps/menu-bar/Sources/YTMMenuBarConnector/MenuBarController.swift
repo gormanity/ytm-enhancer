@@ -53,7 +53,9 @@ final class MenuBarController: NSObject {
 
   private func configureMenu() {
     focusItem.target = self
+    focusItem.indentationLevel = 1
     quitItem.target = self
+    quitItem.indentationLevel = 1
 
     nowPlayingItem.view = nowPlayingView
     nowPlayingView.setControlActions(
