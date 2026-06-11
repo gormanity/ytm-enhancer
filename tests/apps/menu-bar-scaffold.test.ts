@@ -426,6 +426,42 @@ describe("menu bar connector app scaffold", () => {
     );
   });
 
+  it("uses more available menu width for playback metadata", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(sources).toContain("static let contentInset: CGFloat = 18");
+    expect(sources).toContain("static var currentTextX: CGFloat");
+    expect(sources).toContain("static var currentTextWidth: CGFloat");
+    expect(sources).toContain("static var fullWidthContentWidth: CGFloat");
+    expect(sources).toContain("static var nextTrackTextX: CGFloat");
+    expect(sources).toContain("static var nextTrackTextWidth: CGFloat");
+    expect(nowPlayingViewSource).toContain(
+      "titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 23, width: MenuBarStyle.currentTextWidth, height: 24)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "albumTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 49, width: MenuBarStyle.currentTextWidth, height: 18)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "seekBarView.frame = NSRect(x: MenuBarStyle.contentInset, y: 99, width: MenuBarStyle.fullWidthContentWidth, height: 9)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 215, width: MenuBarStyle.nextTrackTextWidth, height: 18)",
+    );
+    expect(nowPlayingViewSource).not.toContain(
+      "titleTextView.frame = NSRect(x: 104",
+    );
+    expect(nowPlayingViewSource).not.toContain(
+      "seekBarView.frame = NSRect(x: 24",
+    );
+    expect(nowPlayingViewSource).not.toContain("width: 190");
+  });
+
   it("uses live updates instead of a manual refresh menu item", () => {
     const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
     const controllerSource = read(
