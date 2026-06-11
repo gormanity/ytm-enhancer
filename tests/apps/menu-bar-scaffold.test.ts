@@ -353,11 +353,23 @@ describe("menu bar connector app scaffold", () => {
 
     expect(iconButtonSource).toBeDefined();
     expect(sources).toContain("MenuBarStyle.controlHoverShadow");
+    expect(sources).toContain("MenuBarStyle.controlHoverBorder");
     expect(iconButtonSource).toContain("layer?.masksToBounds = false");
     expect(iconButtonSource).toContain("layer?.shadowPath = CGPath(");
     expect(iconButtonSource).toContain("ellipseIn: bounds.insetBy");
     expect(iconButtonSource).toContain("layer?.shadowOpacity = shadowOpacity");
-    expect(iconButtonSource).toContain("hovering || isHighlighted");
+    expect(iconButtonSource).toContain(".mouseMoved");
+    expect(iconButtonSource).toContain("override func mouseMoved");
+    expect(iconButtonSource).toContain("updateHoverState(");
+    expect(iconButtonSource).toContain("isMouseInsideBounds");
+    expect(iconButtonSource).toContain(
+      "let showsHoverChrome = isEnabled && (hovering || isHighlighted)",
+    );
+    expect(iconButtonSource).toContain("isHighlighted ? 0.42 : 0.34");
+    expect(iconButtonSource).toContain("layer?.borderWidth =");
+    expect(iconButtonSource).toContain(
+      "layer?.borderColor = MenuBarStyle.controlHoverBorder.cgColor",
+    );
     expect(iconButtonSource).toContain(
       "MenuBarStyle.controlHoverShadow.cgColor",
     );
