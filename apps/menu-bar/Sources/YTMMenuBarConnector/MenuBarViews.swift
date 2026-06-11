@@ -410,7 +410,13 @@ private final class MenuBarSeekBarView: NSView {
     }
     let nextTrackingArea = NSTrackingArea(
       rect: bounds,
-      options: [.activeInActiveApp, .inVisibleRect, .mouseEnteredAndExited, .mouseMoved],
+      options: [
+        .activeInActiveApp,
+        .inVisibleRect,
+        .mouseEnteredAndExited,
+        .mouseMoved,
+        .enabledDuringMouseDrag,
+      ],
       owner: self
     )
     addTrackingArea(nextTrackingArea)
@@ -476,6 +482,10 @@ private final class MenuBarSeekBarView: NSView {
       hideSeekTooltip()
       return
     }
+    guard isMouseInsideBounds(event) else {
+      hideSeekTooltip()
+      return
+    }
 
     let fraction = seekFraction(for: event)
     let time = formatTime(Double(fraction) * duration)
@@ -485,17 +495,19 @@ private final class MenuBarSeekBarView: NSView {
     seekTooltipLabel.stringValue = time
     seekTooltipLabel.frame = NSRect(x: x, y: -22, width: width, height: 18)
     seekTooltipLabel.isHidden = false
-    toolTip = time
   }
 
   private func hideSeekTooltip() {
     seekTooltipLabel.isHidden = true
-    toolTip = nil
   }
 
   private func seekFraction(for event: NSEvent) -> CGFloat {
     let localPoint = convert(event.locationInWindow, from: nil)
     return max(0, min(1, localPoint.x / bounds.width))
+  }
+
+  private func isMouseInsideBounds(_ event: NSEvent) -> Bool {
+    bounds.contains(convert(event.locationInWindow, from: nil))
   }
 
   private func configureSeekTooltip() {
