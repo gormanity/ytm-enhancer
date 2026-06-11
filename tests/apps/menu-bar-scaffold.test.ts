@@ -216,6 +216,9 @@ describe("menu bar connector app scaffold", () => {
     expect(nowPlayingViewSource).toBeDefined();
     expect(nowPlayingViewSource).toContain("private let nextTrackLabel");
     expect(nowPlayingViewSource).toContain(
+      "private let nextTrackArtworkView = MenuBarNextTrackArtworkView()",
+    );
+    expect(nowPlayingViewSource).toContain(
       "private let nextTrackTitleTextView",
     );
     expect(nowPlayingViewSource).toContain(
@@ -229,12 +232,20 @@ describe("menu bar connector app scaffold", () => {
       "nextTrackTitleTextView.stringValue = title",
     );
     expect(nowPlayingViewSource).toContain(
-      "nextTrackDetailTextView.stringValue = formatTrackDetailLine(track)",
+      'nextTrackDetailTextView.stringValue = track.artist ?? ""',
+    );
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackArtworkView.update(artworkUrl: track.artworkUrl)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackArtworkView.showPlaceholder()",
     );
     expect(nowPlayingViewSource).toContain(
       "NSSize(width: MenuBarStyle.width, height: 252)",
     );
+    expect(nowPlayingViewSource).toContain("nextTrackArtworkView.frame =");
     expect(nowPlayingViewSource).toContain("nextTrackDivider.frame =");
+    expect(nowPlayingViewSource).toContain("addSubview(nextTrackArtworkView)");
     expect(nowPlayingViewSource).toContain("addSubview(nextTrackLabel)");
     expect(nowPlayingViewSource).toContain(
       "addSubview(nextTrackTitleTextView)",
@@ -245,6 +256,25 @@ describe("menu bar connector app scaffold", () => {
     expect(controllerSource).toContain("menu.addItem(nowPlayingItem)");
     expect(controllerSource).toContain("menu.addItem(.separator())");
     expect(controllerSource).toContain("menu.addItem(quitItem)");
+  });
+
+  it("renders next track artwork as a muted monochrome thumbnail", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nextTrackArtworkSource = sources.match(
+      /private final class MenuBarNextTrackArtworkView:[\s\S]+?private final class MenuBarIconButton/,
+    )?.[0];
+
+    expect(nextTrackArtworkSource).toBeDefined();
+    expect(nextTrackArtworkSource).toContain("NSImageView");
+    expect(nextTrackArtworkSource).toContain("CIPhotoEffectMono");
+    expect(nextTrackArtworkSource).toContain("alphaValue = 0.34");
+    expect(nextTrackArtworkSource).toContain(
+      "imageView.layer?.compositingFilter = \"plusLighter\"",
+    );
+    expect(nextTrackArtworkSource).toContain("layer?.borderColor");
+    expect(nextTrackArtworkSource).toContain("showPlaceholder()");
   });
 
   it("adds a circular Mini Player-style hover shadow to menu bar controls", () => {
