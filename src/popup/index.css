@@ -605,6 +605,51 @@ h3 {
   display: flex;
 }
 
+.connected-app-install-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.connected-app-install-actions {
+  display: flex;
+}
+
+.connected-app-install-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: #272727;
+  color: var(--text-color);
+  font-weight: 600;
+  padding: 9px 10px;
+  text-decoration: none;
+}
+
+.connected-app-homebrew {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.connected-app-homebrew code {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: var(--text-color);
+  font-size: 11px;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.connected-app-install-note,
+.connected-app-update-guidance {
+  margin: 0;
+}
+
 .connected-app-forget-button {
   width: 100%;
   border: 1px solid var(--border-color);

@@ -79,6 +79,8 @@ This file covers **how to work**, not what the project is.
   - Draft the notes for manual approval before publishing or updating the GitHub
     release.
   - After approval, add the approved notes to the GitHub release.
+- Menu bar connector releases are separate from extension releases. Use
+  `menu-bar-vX.Y.Z` tags and follow `docs/menu-bar-release.md`.
 
 ---
 

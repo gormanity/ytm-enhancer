@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleExecutable</key>
+  <string>YTMMenuBarConnector</string>
+  <key>CFBundleIdentifier</key>
+  <string>{{BUNDLE_IDENTIFIER}}</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>{{APP_NAME}}</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>{{VERSION}}</string>
+  <key>CFBundleVersion</key>
+  <string>{{BUILD_NUMBER}}</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>{{MINIMUM_MACOS_VERSION}}</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>SUEnableAutomaticChecks</key>
+  <{{SPARKLE_AUTOMATIC_CHECKS}}/>
+  <key>SUAllowsAutomaticUpdates</key>
+  <{{SPARKLE_ALLOWS_AUTOMATIC_UPDATES}}/>
+  <key>SUFeedURL</key>
+  <string>{{APPCAST_URL}}</string>
+  <key>SUPublicEDKey</key>
+  <string>{{SPARKLE_PUBLIC_ED_KEY}}</string>
+</dict>
+</plist>

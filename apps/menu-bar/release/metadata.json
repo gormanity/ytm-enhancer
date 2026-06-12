@@ -1,0 +1,20 @@
+{
+  "appName": "YTM Menu Bar",
+  "bundleIdentifier": "com.gormanity.ytm-enhancer.menu-bar",
+  "version": "0.1.0",
+  "buildNumber": "1",
+  "minimumMacOSVersion": "13.0",
+  "appcastUrl": "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
+  "nativeHostExecutablePath": "/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector",
+  "githubReleaseTagPrefix": "menu-bar-v",
+  "channels": {
+    "direct": {
+      "sparkleEnabled": true,
+      "assetPrefix": "YTM-Menu-Bar"
+    },
+    "homebrew": {
+      "sparkleEnabled": false,
+      "assetPrefix": "YTM-Menu-Bar-Homebrew"
+    }
+  }
+}

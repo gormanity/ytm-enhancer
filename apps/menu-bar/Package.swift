@@ -13,9 +13,15 @@ let package = Package(
       targets: ["YTMMenuBarConnector"]
     )
   ],
+  dependencies: [
+    .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.7.3")
+  ],
   targets: [
     .executableTarget(
       name: "YTMMenuBarConnector",
+      dependencies: [
+        .product(name: "Sparkle", package: "Sparkle")
+      ],
       resources: [
         .copy("Resources/extension-icon.svg"),
         .copy("Resources/extension-icon-monochrome.svg"),

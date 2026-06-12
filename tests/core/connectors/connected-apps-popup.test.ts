@@ -205,7 +205,9 @@ describe("Connected Apps popup view", () => {
 
     expect(client.forgetConnector).toHaveBeenCalledWith("com.example.menu-bar");
     await vi.waitFor(() => {
-      expect(container.textContent).not.toContain("YTM Menu Bar");
+      expect(
+        container.querySelector('[data-connector-id="com.example.menu-bar"]'),
+      ).toBeNull();
       expect(container.textContent).toContain("No connected apps registered");
     });
   });

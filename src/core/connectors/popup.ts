@@ -23,6 +23,14 @@ const STATUS_LABELS: Record<ConnectorStatus, string> = {
   incompatible: "Incompatible",
 };
 
+const FIRST_PARTY_MENU_BAR_CONNECTOR_ID = "com.gormanity.ytm-enhancer.menu-bar";
+const MENU_BAR_RELEASES_URL =
+  "https://github.com/gormanity/ytm-enhancer/releases";
+const MENU_BAR_HOMEBREW_COMMAND =
+  "brew install --cask gormanity/tap/ytm-menu-bar";
+const MENU_BAR_UPDATE_GUIDANCE =
+  "Update required. Use Check for Updates in YTM Menu Bar, or run brew upgrade --cask ytm-menu-bar.";
+
 function permissionLabel(permission: ConnectorPermission): string {
   return CONNECTOR_PERMISSION_LABELS[permission] ?? permission;
 }
@@ -93,6 +101,16 @@ function createConnectorCard(
   const status = queryRole(card, "connected-app-status");
   if (status) setStatus(status, connector.status);
 
+  const updateGuidance = queryRole(card, "connected-app-update-guidance");
+  if (
+    updateGuidance &&
+    connector.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID &&
+    connector.status === "incompatible"
+  ) {
+    updateGuidance.textContent = MENU_BAR_UPDATE_GUIDANCE;
+    updateGuidance.classList.remove("is-hidden");
+  }
+
   const permissions = queryRole(card, "connected-app-permissions");
   if (permissions) renderPermissionList(permissions, connector);
 
@@ -130,6 +148,33 @@ function createConnectorCard(
   return card;
 }
 
+function renderMenuBarInstallCard(
+  container: HTMLElement,
+  settings: ConnectedAppsSettings,
+): void {
+  const installCard = container.querySelector<HTMLElement>(
+    '[data-role="connected-app-menu-bar-install"]',
+  );
+  if (!installCard) return;
+
+  const menuBarConnector = settings.connectors.find(
+    (connector) => connector.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+  );
+  installCard.classList.toggle("is-hidden", menuBarConnector !== undefined);
+
+  const directLink = queryRole<HTMLAnchorElement>(
+    installCard,
+    "connected-app-menu-bar-direct-link",
+  );
+  if (directLink) directLink.href = MENU_BAR_RELEASES_URL;
+
+  const homebrewCommand = queryRole<HTMLElement>(
+    installCard,
+    "connected-app-menu-bar-homebrew-command",
+  );
+  if (homebrewCommand) homebrewCommand.textContent = MENU_BAR_HOMEBREW_COMMAND;
+}
+
 function renderConnectorList(
   container: HTMLElement,
   settings: ConnectedAppsSettings,
@@ -146,6 +191,8 @@ function renderConnectorList(
     '[data-role="connected-app-template"]',
   );
   if (!list || !empty || !template) return;
+
+  renderMenuBarInstallCard(container, settings);
 
   list.replaceChildren(
     ...settings.connectors.flatMap((connector) => {

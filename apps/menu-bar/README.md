@@ -2,7 +2,7 @@
 
 This is the first-party macOS menu bar connector for YTM Enhancer.
 
-The app is a native Swift/AppKit executable that communicates with the browser
+The app is a native Swift/AppKit menu bar app that communicates with the browser
 extension through native messaging. It speaks the public connector protocol and
 does not depend on extension internals.
 
@@ -10,43 +10,43 @@ does not depend on extension internals.
 
 Implemented:
 
-- Native macOS menu bar item.
-- Current track title, artist, and progress display.
-- Previous, play/pause, next, refresh, and quit menu actions.
+- Native macOS menu bar playback surface.
+- Current track title, artist, album, year, artwork, progress, and next track.
+- Previous, play/pause, next, shuffle, repeat, seek, and focus actions.
 - Native messaging stdio framing.
 - Connector protocol handshake, playback subscription, state refresh, and
   playback actions.
-- Local native host installer for Chrome, Chromium, Edge, and Firefox.
+- Local development native host installer for Chrome, Chromium, Edge, and
+  Firefox.
+- Release scaffolding for signed app bundles, signed packages, Sparkle appcasts,
+  and Homebrew cask generation.
 
-Not implemented yet:
+Not implemented in this repository alone:
 
-- Packaged `.app` distribution.
-- Signed installer.
-- Automatic launch outside the browser native messaging host lifecycle.
-- Artwork display.
-- Seek controls.
-- Diagnostics UI.
+- Apple Developer certificate and notarization secrets.
+- Publishing `menu-bar-v*` releases.
+- Publishing the external `gormanity/homebrew-tap` repository.
 
-## Build
+## Development Build
 
 ```sh
 swift build --package-path apps/menu-bar -c release
 ```
 
-The executable is written to:
+The development executable is written to:
 
 ```text
 apps/menu-bar/.build/release/YTMMenuBarConnector
 ```
 
-## Install Native Host Manifests
+## Development Native Host Manifests
 
 ```sh
 apps/menu-bar/scripts/install-native-hosts.sh
 ```
 
-The script builds the release executable and writes browser native host
-manifests under the current user's Library folder.
+The development installer builds the release executable and writes user-local
+browser native host manifests under the current user's Library folder.
 
 Before writing new manifests, it removes any existing manifests for the same
 native host name. This prevents stale executable paths or extension allow-lists
@@ -60,10 +60,72 @@ YTM_ENHANCER_EXTENSION_ORIGINS="chrome-extension://<extension-id>/" \
   apps/menu-bar/scripts/install-native-hosts.sh
 ```
 
+## Release Channels
+
+The public macOS connector has two supported install channels.
+
+Direct install:
+
+- Users install `YTM-Menu-Bar-<version>.pkg` from GitHub Releases.
+- The package installs `/Applications/YTM Menu Bar.app`.
+- The package installs production native host manifests under `/Library`.
+- The app uses Sparkle for `Check for Updates...`.
+- The Sparkle appcast lives at:
+
+```text
+https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml
+```
+
+Homebrew install:
+
+```sh
+brew install --cask gormanity/tap/ytm-menu-bar
+```
+
+- Users install `YTM-Menu-Bar-Homebrew-<version>.pkg`.
+- The app is built with the Homebrew distribution channel.
+- Sparkle is disabled for Homebrew builds.
+- Updates are owned by Homebrew:
+
+```sh
+brew update && brew upgrade --cask ytm-menu-bar
+```
+
+## Release Build Scripts
+
+Build a channel-specific `.app` bundle:
+
+```sh
+node apps/menu-bar/scripts/build-release-app.mjs --channel=direct
+node apps/menu-bar/scripts/build-release-app.mjs --channel=homebrew
+```
+
+Build channel-specific `.pkg` installers:
+
+```sh
+node apps/menu-bar/scripts/package-release.mjs --channel=direct
+node apps/menu-bar/scripts/package-release.mjs --channel=homebrew
+```
+
+Generate a Sparkle appcast after signing the direct update archive:
+
+```sh
+node apps/menu-bar/scripts/generate-appcast.mjs \
+  --archive=apps/menu-bar/.build/sparkle/YTM-Menu-Bar-0.1.0.zip \
+  --ed-signature=<sparkle-ed-signature>
+```
+
+Generate the Homebrew cask:
+
+```sh
+node apps/menu-bar/scripts/generate-homebrew-cask.mjs \
+  --package=apps/menu-bar/.build/packages/YTM-Menu-Bar-Homebrew-0.1.0.pkg
+```
+
 ## Run
 
 1. Build the extension.
-2. Install the native host manifests.
+2. Install native host manifests.
 3. Load the extension in the browser.
 4. Open the popup.
 5. Enable `Connected Apps`.
@@ -89,14 +151,15 @@ Set `YTM_MENU_BAR_LOG_PATH` before launching the host to write somewhere else.
 Logs include native messaging lifecycle events, message types, request IDs, and
 playback state summaries.
 
-## Uninstall Native Host Manifests
+## Uninstall Development Manifests
 
 ```sh
 apps/menu-bar/scripts/uninstall-native-hosts.sh
 ```
 
-This removes the browser native host manifests created by the installer. It does
-not remove Swift build output. To remove local build artifacts too:
+This removes the browser native host manifests created by the development
+installer. It does not remove Swift build output. To remove local build
+artifacts too:
 
 ```sh
 rm -rf apps/menu-bar/.build

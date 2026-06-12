@@ -16,6 +16,7 @@ function readJson<T>(relativePath: string): T {
 function listFiles(dir: string): string[] {
   const absolute = resolve(appRoot, dir);
   return readdirSync(absolute).flatMap((entry) => {
+    if (entry === ".build") return [];
     const path = join(absolute, entry);
     const relativePath = path.slice(appRoot.length + 1);
     return statSync(path).isDirectory()
@@ -1044,7 +1045,9 @@ describe("menu bar connector app scaffold", () => {
 
   it("scaffolds Sparkle app updates for direct installs", () => {
     const packageManifest = read("Package.swift");
-    const updaterSource = read("Sources/YTMMenuBarConnector/SparkleUpdater.swift");
+    const updaterSource = read(
+      "Sources/YTMMenuBarConnector/SparkleUpdater.swift",
+    );
     const mainSource = read("Sources/YTMMenuBarConnector/main.swift");
     const controllerSource = read(
       "Sources/YTMMenuBarConnector/MenuBarController.swift",
@@ -1052,7 +1055,7 @@ describe("menu bar connector app scaffold", () => {
     const plistTemplate = read("release/Info.plist.template");
 
     expect(packageManifest).toContain("sparkle-project/Sparkle");
-    expect(packageManifest).toContain(".product(name: \"Sparkle\"");
+    expect(packageManifest).toContain('.product(name: "Sparkle"');
     expect(updaterSource).toContain("SPUStandardUpdaterController");
     expect(updaterSource).toContain("DistributionChannel.current");
     expect(mainSource).toContain("SparkleUpdater");
@@ -1092,6 +1095,7 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain("direct");
     expect(appScript).toContain("homebrew");
     expect(appScript).toContain("Info.plist.template");
+    expect(appScript).toContain("Sparkle.framework");
     expect(packageScript).toContain("pkgbuild");
     expect(packageScript).toContain("productbuild");
     expect(appcastScript).toContain("sparkle:edSignature");
@@ -1116,7 +1120,7 @@ describe("menu bar connector app scaffold", () => {
     expect(template).toContain('cask "ytm-menu-bar" do');
     expect(template).toContain("menu-bar-v#{version}");
     expect(template).toContain("YTM-Menu-Bar-Homebrew-#{version}.pkg");
-    expect(template).toContain("sha256 \"{{SHA256}}\"");
+    expect(template).toContain('sha256 "{{SHA256}}"');
     expect(template).toContain('depends_on macos: ">= :ventura"');
     expect(template).toContain('pkg "YTM-Menu-Bar-Homebrew-#{version}.pkg"');
     expect(template).toContain("pkgutil:");

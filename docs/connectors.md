@@ -130,11 +130,37 @@ native Swift/AppKit executable that communicates with the extension through
 native messaging. It displays current playback information and exposes basic
 playback controls.
 
-Remaining work:
+The public release model has two install channels:
 
-1. Package the connector as a signed `.app`.
-2. Replace the development native host installer with a signed installer.
-3. Add a clearer approval flow for newly seen connectors.
-4. Add diagnostics for native host launch failures and disconnected hosts.
-5. Add connector-facing diagnostics for protocol mismatches and permission
+- Direct install from GitHub Releases with a signed and notarized `.pkg`.
+- Homebrew install from `gormanity/homebrew-tap` with a cask named
+  `ytm-menu-bar`.
+
+Direct installs are updated by the app through Sparkle. The stable appcast URL
+is:
+
+```text
+https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml
+```
+
+Homebrew installs are updated by Homebrew. Homebrew builds keep Sparkle disabled
+and direct users to:
+
+```sh
+brew update && brew upgrade --cask ytm-menu-bar
+```
+
+The extension does not download or install native binaries. The Connected Apps
+page may link to install and update instructions, but native app distribution,
+native host manifest installation, signing, notarization, and updates are owned
+by the menu bar app release channel.
+
+Remaining work before a public connector release:
+
+1. Configure Apple Developer signing and notarization secrets.
+2. Publish the `menu-bar-v*` GitHub Release workflow.
+3. Publish the `gormanity/homebrew-tap` cask repository.
+4. Add a clearer approval flow for newly seen connectors.
+5. Add diagnostics for native host launch failures and disconnected hosts.
+6. Add connector-facing diagnostics for protocol mismatches and permission
    denials.

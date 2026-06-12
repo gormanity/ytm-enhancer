@@ -4,7 +4,7 @@ enum ConnectorProtocol {
   static let hostName = "com.gormanity.ytm_enhancer.menu_bar"
   static let connectorId = "com.gormanity.ytm-enhancer.menu-bar"
   static let connectorName = "YTM Menu Bar"
-  static let connectorVersion = "0.1.0"
+  static let connectorVersion = AppMetadata.version
   static let protocolVersion = "1.0.0"
   static let permissions = [
     "playback:read",
