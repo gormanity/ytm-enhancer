@@ -518,6 +518,26 @@ describe("menu bar connector app scaffold", () => {
     expect(nowPlayingViewSource).not.toContain("width: 190");
   });
 
+  it("balances top and bottom padding in the menu bar playback view", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain(
+      "NSSize(width: MenuBarStyle.width, height: 252)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 12, width: MenuBarStyle.currentTextWidth, height: 24)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 223, width: MenuBarStyle.nextTrackTextWidth, height: 16)",
+    );
+  });
+
   it("uses live updates instead of a manual refresh menu item", () => {
     const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
     const controllerSource = read(
