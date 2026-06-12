@@ -859,14 +859,14 @@ private final class MenuBarMetadataScroller {
         self.completeScrollLoop()
         timer.invalidate()
         self.scrollTimer = nil
-        self.scheduleResetAfterScroll(generation: generation)
+        self.scheduleNextScrollAfterLoop(generation: generation)
       }
     }
     scrollTimer = timer
     RunLoop.main.add(timer, forMode: .common)
   }
 
-  private func scheduleResetAfterScroll(generation: Int) {
+  private func scheduleNextScrollAfterLoop(generation: Int) {
     guard generation == scrollGeneration, needsScroll else { return }
 
     let work = DispatchWorkItem { [weak self] in
@@ -876,8 +876,7 @@ private final class MenuBarMetadataScroller {
         self.needsScroll
       else { return }
 
-      self.setScrollProgress(0)
-      self.scheduleScroll(generation: generation)
+      self.performScroll(generation: generation)
     }
     pendingScroll = work
     DispatchQueue.main.asyncAfter(
