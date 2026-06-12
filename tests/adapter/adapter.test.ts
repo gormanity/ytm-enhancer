@@ -765,6 +765,47 @@ describe("YTMAdapter", () => {
 
       expect(events).toEqual(["pointerdown", "mousedown", "mouseup", "click"]);
     });
+
+    it("should advance repeat in native YTM order", () => {
+      const states = ["off", "one", "all"] as const;
+      let stateIndex = 0;
+
+      const wrapper = document.createElement("yt-icon-button");
+      wrapper.className = "repeat";
+      makeVisible(wrapper);
+
+      const button = document.createElement("button");
+      makeVisible(button);
+      wrapper.appendChild(button);
+
+      const setRepeatState = (state: (typeof states)[number]): void => {
+        const label =
+          state === "all"
+            ? "Repeat all"
+            : state === "one"
+              ? "Repeat one"
+              : "Repeat off";
+        wrapper.setAttribute("label", label);
+        wrapper.setAttribute("title", label);
+        button.setAttribute("aria-label", label);
+      };
+
+      setRepeatState(states[stateIndex]);
+      button.addEventListener("click", () => {
+        stateIndex = (stateIndex + 1) % states.length;
+        setRepeatState(states[stateIndex]);
+      });
+      document.body.appendChild(wrapper);
+
+      adapter.executeAction("repeat");
+      expect(adapter.getPlaybackState().repeatMode).toBe("all");
+
+      adapter.executeAction("repeat");
+      expect(adapter.getPlaybackState().repeatMode).toBe("one");
+
+      adapter.executeAction("repeat");
+      expect(adapter.getPlaybackState().repeatMode).toBe("off");
+    });
   });
 
   describe("getPlaybackSpeed", () => {
