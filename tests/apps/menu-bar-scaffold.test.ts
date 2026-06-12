@@ -753,6 +753,22 @@ describe("menu bar connector app scaffold", () => {
     expect(metadataScrollerSource).not.toContain("maximumOverflow");
   });
 
+  it("does not visibly reset scrolling text while paused between loops", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const metadataScrollerSource = sources.match(
+      /private final class MenuBarMetadataScroller[\s\S]+?final class MenuBarControlsView/,
+    )?.[0];
+
+    expect(metadataScrollerSource).toBeDefined();
+    expect(metadataScrollerSource).toContain("scheduleNextScrollAfterLoop");
+    expect(metadataScrollerSource).not.toContain("scheduleResetAfterScroll");
+    expect(metadataScrollerSource).not.toContain(
+      "self.setScrollProgress(0)\n      self.scheduleScroll",
+    );
+  });
+
   it("keeps the menu bar seek bar optimistic until seek state catches up", () => {
     const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
     const nowPlayingViewSource = viewSource.match(
