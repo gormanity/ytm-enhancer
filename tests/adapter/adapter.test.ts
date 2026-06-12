@@ -746,24 +746,21 @@ describe("YTMAdapter", () => {
       expect(click).toHaveBeenCalled();
     });
 
-    it("should activate nested shuffle button controls", () => {
+    it("should activate nested shuffle controls through the native click method", () => {
       const wrapper = document.createElement("div");
       wrapper.className = "shuffle";
       makeVisible(wrapper);
 
       const button = document.createElement("button");
       button.setAttribute("aria-label", "Shuffle");
-      const events: string[] = [];
-      for (const type of ["pointerdown", "mousedown", "mouseup", "click"]) {
-        button.addEventListener(type, () => events.push(type));
-      }
+      button.click = vi.fn();
       makeVisible(button);
       wrapper.appendChild(button);
       document.body.appendChild(wrapper);
 
       adapter.executeAction("shuffle");
 
-      expect(events).toEqual(["pointerdown", "mousedown", "mouseup", "click"]);
+      expect(button.click).toHaveBeenCalled();
     });
 
     it("should advance repeat in native YTM order", () => {
