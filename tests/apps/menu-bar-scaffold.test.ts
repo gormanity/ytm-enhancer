@@ -9,6 +9,10 @@ function read(relativePath: string): string {
   return readFileSync(resolve(appRoot, relativePath), "utf-8");
 }
 
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(read(relativePath)) as T;
+}
+
 function listFiles(dir: string): string[] {
   const absolute = resolve(appRoot, dir);
   return readdirSync(absolute).flatMap((entry) => {
@@ -1004,5 +1008,120 @@ describe("menu bar connector app scaffold", () => {
     expect(script).toContain("Microsoft Edge/NativeMessagingHosts");
     expect(script).toContain("Mozilla/NativeMessagingHosts");
     expect(script).toContain("rm -f");
+  });
+
+  it("defines release metadata for direct and Homebrew channels", () => {
+    const metadata = readJson<{
+      appName: string;
+      bundleIdentifier: string;
+      version: string;
+      buildNumber: string;
+      minimumMacOSVersion: string;
+      appcastUrl: string;
+      nativeHostExecutablePath: string;
+      channels: {
+        direct: { sparkleEnabled: boolean };
+        homebrew: { sparkleEnabled: boolean };
+      };
+    }>("release/metadata.json");
+
+    expect(metadata.appName).toBe("YTM Menu Bar");
+    expect(metadata.bundleIdentifier).toBe(
+      "com.gormanity.ytm-enhancer.menu-bar",
+    );
+    expect(metadata.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(metadata.buildNumber).toMatch(/^\d+$/);
+    expect(metadata.minimumMacOSVersion).toBe("13.0");
+    expect(metadata.appcastUrl).toBe(
+      "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
+    );
+    expect(metadata.nativeHostExecutablePath).toBe(
+      "/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector",
+    );
+    expect(metadata.channels.direct.sparkleEnabled).toBe(true);
+    expect(metadata.channels.homebrew.sparkleEnabled).toBe(false);
+  });
+
+  it("scaffolds Sparkle app updates for direct installs", () => {
+    const packageManifest = read("Package.swift");
+    const updaterSource = read("Sources/YTMMenuBarConnector/SparkleUpdater.swift");
+    const mainSource = read("Sources/YTMMenuBarConnector/main.swift");
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+    const plistTemplate = read("release/Info.plist.template");
+
+    expect(packageManifest).toContain("sparkle-project/Sparkle");
+    expect(packageManifest).toContain(".product(name: \"Sparkle\"");
+    expect(updaterSource).toContain("SPUStandardUpdaterController");
+    expect(updaterSource).toContain("DistributionChannel.current");
+    expect(mainSource).toContain("SparkleUpdater");
+    expect(controllerSource).toContain("Check for Updates");
+    expect(controllerSource).toContain("Update with Homebrew");
+    expect(plistTemplate).toContain("SUFeedURL");
+    expect(plistTemplate).toContain("SUPublicEDKey");
+    expect(plistTemplate).toContain("LSUIElement");
+  });
+
+  it("generates production native host manifests for app bundle installs", () => {
+    const generator = read("scripts/generate-native-host-manifests.mjs");
+
+    expect(generator).toContain(NATIVE_MESSAGING_HOST_NAME);
+    expect(generator).toContain(
+      "/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector",
+    );
+    expect(generator).toContain("bilcedjabgiedoamakekncokccabdccp");
+    expect(generator).toContain("ytm-enhancer@gormanity");
+    expect(generator).not.toContain("pggblbpjleekkobiinobaeeefnimgljh");
+    expect(generator).not.toContain("akkbieodbakphpfdibailajdknnmmoca");
+    expect(generator).not.toContain("Microsoft Edge");
+  });
+
+  it("defines release scripts for app, package, appcast, and Homebrew cask", () => {
+    const sourceFiles = listFiles(".");
+
+    expect(sourceFiles).toContain("scripts/build-release-app.mjs");
+    expect(sourceFiles).toContain("scripts/package-release.mjs");
+    expect(sourceFiles).toContain("scripts/generate-appcast.mjs");
+    expect(sourceFiles).toContain("scripts/generate-homebrew-cask.mjs");
+
+    const appScript = read("scripts/build-release-app.mjs");
+    const packageScript = read("scripts/package-release.mjs");
+    const appcastScript = read("scripts/generate-appcast.mjs");
+
+    expect(appScript).toContain("direct");
+    expect(appScript).toContain("homebrew");
+    expect(appScript).toContain("Info.plist.template");
+    expect(packageScript).toContain("pkgbuild");
+    expect(packageScript).toContain("productbuild");
+    expect(appcastScript).toContain("sparkle:edSignature");
+    expect(appcastScript).toContain("menu-bar/appcast.xml");
+  });
+
+  it("signs Sparkle appcasts from the decoded CI key file", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
+      "utf-8",
+    );
+
+    expect(workflow).toContain("SPARKLE_PRIVATE_ED_KEY_BASE64");
+    expect(workflow).toContain("--ed-key-file sparkle_ed_private_key");
+    expect(workflow).toContain("sparkle:edSignature");
+    expect(workflow).not.toContain("generate_keys");
+  });
+
+  it("defines a Homebrew cask template where Brew owns updates", () => {
+    const template = read("release/homebrew/ytm-menu-bar.rb.template");
+
+    expect(template).toContain('cask "ytm-menu-bar" do');
+    expect(template).toContain("menu-bar-v#{version}");
+    expect(template).toContain("YTM-Menu-Bar-Homebrew-#{version}.pkg");
+    expect(template).toContain("sha256 \"{{SHA256}}\"");
+    expect(template).toContain('depends_on macos: ">= :ventura"');
+    expect(template).toContain('pkg "YTM-Menu-Bar-Homebrew-#{version}.pkg"');
+    expect(template).toContain("pkgutil:");
+    expect(template).toContain("brew upgrade --cask ytm-menu-bar");
+    expect(template).not.toContain("auto_updates true");
+    expect(template).not.toContain("sha256 :no_check");
   });
 });

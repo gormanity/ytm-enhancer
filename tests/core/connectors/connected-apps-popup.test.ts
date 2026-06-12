@@ -209,4 +209,71 @@ describe("Connected Apps popup view", () => {
       expect(container.textContent).toContain("No connected apps registered");
     });
   });
+
+  it("shows first-party menu bar install options before it is registered", async () => {
+    const client = createClient({ enabled: true, connectors: [] });
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("YTM Menu Bar");
+      expect(container.textContent).toContain("Download for macOS");
+      expect(container.textContent).toContain(
+        "brew install --cask gormanity/tap/ytm-menu-bar",
+      );
+      expect(container.textContent).toContain(
+        "Updates are handled by the menu bar app or Homebrew.",
+      );
+    });
+
+    const directLink = container.querySelector<HTMLAnchorElement>(
+      '[data-role="connected-app-menu-bar-direct-link"]',
+    );
+    const homebrewCode = container.querySelector<HTMLElement>(
+      '[data-role="connected-app-menu-bar-homebrew-command"]',
+    );
+
+    expect(directLink?.href).toContain("/releases");
+    expect(homebrewCode?.textContent).toBe(
+      "brew install --cask gormanity/tap/ytm-menu-bar",
+    );
+  });
+
+  it("shows update guidance for incompatible first-party menu bar connectors", async () => {
+    const client = createClient({
+      enabled: true,
+      connectors: [
+        {
+          id: "com.gormanity.ytm-enhancer.menu-bar",
+          name: "YTM Menu Bar",
+          version: "0.0.1",
+          protocolVersion: "0.1.0",
+          permissions: ["playback:read"],
+          enabled: true,
+          status: "incompatible",
+          lastSeenAt: null,
+          lastConnectedAt: null,
+        },
+      ],
+    });
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Update required");
+      expect(container.textContent).toContain(
+        "Use Check for Updates in YTM Menu Bar, or run brew upgrade --cask ytm-menu-bar.",
+      );
+    });
+  });
 });
