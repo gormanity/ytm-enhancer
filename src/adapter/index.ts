@@ -159,7 +159,7 @@ export class YTMAdapter {
         break;
 
       case "shuffle":
-        this.clickNativeButton(SELECTORS.shuffleButton);
+        this.toggleShuffleMode();
         break;
 
       case "repeat":
@@ -554,6 +554,25 @@ export class YTMAdapter {
     }
     this.findActivationTarget(el).click();
     return true;
+  }
+
+  private toggleShuffleMode(): void {
+    const el = this.findClickableElement(SELECTORS.shuffleButton);
+    if (!el) {
+      debug("PlaybackAction: no clickable element found", {
+        selector: SELECTORS.shuffleButton,
+        matches: document.querySelectorAll(SELECTORS.shuffleButton).length,
+      });
+      return;
+    }
+
+    const target = this.findActivationTarget(el);
+    if (this.isToggleActiveByColor(el)) {
+      this.activateClick(target);
+      return;
+    }
+
+    target.click();
   }
 
   private advanceRepeatMode(): void {
