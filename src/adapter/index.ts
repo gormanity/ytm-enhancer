@@ -163,7 +163,7 @@ export class YTMAdapter {
         break;
 
       case "repeat":
-        this.clickButton(SELECTORS.repeatButton);
+        this.advanceRepeatMode();
         break;
     }
   }
@@ -541,6 +541,37 @@ export class YTMAdapter {
     }
     this.activateClick(el);
     return true;
+  }
+
+  private advanceRepeatMode(): void {
+    const initialMode = this.readCurrentRepeatMode();
+    const targetMode = this.nextRepeatMode(initialMode);
+
+    if (!this.clickButton(SELECTORS.repeatButton)) return;
+
+    let currentMode = this.readCurrentRepeatMode();
+    if (currentMode === targetMode || currentMode === initialMode) return;
+
+    for (let attempts = 1; attempts < 3; attempts += 1) {
+      if (!this.clickButton(SELECTORS.repeatButton)) return;
+      currentMode = this.readCurrentRepeatMode();
+      if (currentMode === targetMode) return;
+    }
+  }
+
+  private readCurrentRepeatMode(): "off" | "all" | "one" {
+    return this.readRepeatMode(document.querySelector(SELECTORS.repeatButton));
+  }
+
+  private nextRepeatMode(mode: "off" | "all" | "one"): "off" | "all" | "one" {
+    switch (mode) {
+      case "off":
+        return "all";
+      case "all":
+        return "one";
+      case "one":
+        return "off";
+    }
   }
 
   private clickLoadedPlayerBarPlayPause(): boolean {
