@@ -459,7 +459,7 @@ describe("menu bar connector app scaffold", () => {
       "NSSize(width: MenuBarStyle.width, height: 252)",
     );
     expect(nowPlayingViewSource).toContain(
-      "controlsView.frame = NSRect(x: 0, y: 130, width: bounds.width, height: 52)",
+      "controlsView.frame = NSRect(x: 0, y: 111, width: bounds.width, height: 52)",
     );
     expect(controlsViewSource).toBeDefined();
     expect(controlsViewSource).toContain(
@@ -498,16 +498,16 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("static var nextTrackTextX: CGFloat");
     expect(sources).toContain("static var nextTrackTextWidth: CGFloat");
     expect(nowPlayingViewSource).toContain(
-      "titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 23, width: MenuBarStyle.currentTextWidth, height: 24)",
+      "titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 4, width: MenuBarStyle.currentTextWidth, height: 24)",
     );
     expect(nowPlayingViewSource).toContain(
-      "albumTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 49, width: MenuBarStyle.currentTextWidth, height: 18)",
+      "albumTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 30, width: MenuBarStyle.currentTextWidth, height: 18)",
     );
     expect(nowPlayingViewSource).toContain(
-      "seekBarView.frame = NSRect(x: MenuBarStyle.contentInset, y: 99, width: MenuBarStyle.fullWidthContentWidth, height: 9)",
+      "seekBarView.frame = NSRect(x: MenuBarStyle.contentInset, y: 80, width: MenuBarStyle.fullWidthContentWidth, height: 9)",
     );
     expect(nowPlayingViewSource).toContain(
-      "nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 215, width: MenuBarStyle.nextTrackTextWidth, height: 18)",
+      "nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 196, width: MenuBarStyle.nextTrackTextWidth, height: 18)",
     );
     expect(nowPlayingViewSource).not.toContain(
       "titleTextView.frame = NSRect(x: 104",
@@ -531,10 +531,10 @@ describe("menu bar connector app scaffold", () => {
       "NSSize(width: MenuBarStyle.width, height: 252)",
     );
     expect(nowPlayingViewSource).toContain(
-      "titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 12, width: MenuBarStyle.currentTextWidth, height: 24)",
+      "titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 4, width: MenuBarStyle.currentTextWidth, height: 24)",
     );
     expect(nowPlayingViewSource).toContain(
-      "nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 223, width: MenuBarStyle.nextTrackTextWidth, height: 16)",
+      "nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 215, width: MenuBarStyle.nextTrackTextWidth, height: 16)",
     );
   });
 

@@ -193,19 +193,19 @@ final class MenuBarNowPlayingView: NSView {
   override func layout() {
     super.layout()
 
-    artworkView.frame = NSRect(x: MenuBarStyle.contentInset, y: 28, width: MenuBarStyle.artworkSize, height: MenuBarStyle.artworkSize)
-    titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 23, width: MenuBarStyle.currentTextWidth, height: 24)
-    albumTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 49, width: MenuBarStyle.currentTextWidth, height: 18)
-    artistYearTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 68, width: MenuBarStyle.currentTextWidth, height: 18)
-    seekBarView.frame = NSRect(x: MenuBarStyle.contentInset, y: 99, width: MenuBarStyle.fullWidthContentWidth, height: 9)
-    elapsedLabel.frame = NSRect(x: MenuBarStyle.contentInset, y: 112, width: 90, height: 16)
-    durationLabel.frame = NSRect(x: MenuBarStyle.width - MenuBarStyle.contentInset - 90, y: 112, width: 90, height: 16)
-    controlsView.frame = NSRect(x: 0, y: 130, width: bounds.width, height: 52)
-    nextTrackDivider.frame = NSRect(x: MenuBarStyle.contentInset, y: 188, width: MenuBarStyle.fullWidthContentWidth, height: 1)
-    nextTrackLabel.frame = NSRect(x: MenuBarStyle.contentInset, y: 198, width: MenuBarStyle.fullWidthContentWidth, height: 14)
-    nextTrackArtworkView.frame = NSRect(x: MenuBarStyle.contentInset, y: 214, width: MenuBarStyle.nextTrackArtworkSize, height: MenuBarStyle.nextTrackArtworkSize)
-    nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 215, width: MenuBarStyle.nextTrackTextWidth, height: 18)
-    nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 234, width: MenuBarStyle.nextTrackTextWidth, height: 16)
+    artworkView.frame = NSRect(x: MenuBarStyle.contentInset, y: 9, width: MenuBarStyle.artworkSize, height: MenuBarStyle.artworkSize)
+    titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 4, width: MenuBarStyle.currentTextWidth, height: 24)
+    albumTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 30, width: MenuBarStyle.currentTextWidth, height: 18)
+    artistYearTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 49, width: MenuBarStyle.currentTextWidth, height: 18)
+    seekBarView.frame = NSRect(x: MenuBarStyle.contentInset, y: 80, width: MenuBarStyle.fullWidthContentWidth, height: 9)
+    elapsedLabel.frame = NSRect(x: MenuBarStyle.contentInset, y: 93, width: 90, height: 16)
+    durationLabel.frame = NSRect(x: MenuBarStyle.width - MenuBarStyle.contentInset - 90, y: 93, width: 90, height: 16)
+    controlsView.frame = NSRect(x: 0, y: 111, width: bounds.width, height: 52)
+    nextTrackDivider.frame = NSRect(x: MenuBarStyle.contentInset, y: 169, width: MenuBarStyle.fullWidthContentWidth, height: 1)
+    nextTrackLabel.frame = NSRect(x: MenuBarStyle.contentInset, y: 179, width: MenuBarStyle.fullWidthContentWidth, height: 14)
+    nextTrackArtworkView.frame = NSRect(x: MenuBarStyle.contentInset, y: 195, width: MenuBarStyle.nextTrackArtworkSize, height: MenuBarStyle.nextTrackArtworkSize)
+    nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 196, width: MenuBarStyle.nextTrackTextWidth, height: 18)
+    nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 215, width: MenuBarStyle.nextTrackTextWidth, height: 16)
   }
 
   private func configure() {
