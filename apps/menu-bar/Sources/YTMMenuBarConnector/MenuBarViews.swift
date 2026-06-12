@@ -203,9 +203,9 @@ final class MenuBarNowPlayingView: NSView {
     controlsView.frame = NSRect(x: 0, y: 111, width: bounds.width, height: 52)
     nextTrackDivider.frame = NSRect(x: MenuBarStyle.contentInset, y: 169, width: MenuBarStyle.fullWidthContentWidth, height: 1)
     nextTrackLabel.frame = NSRect(x: MenuBarStyle.contentInset, y: 179, width: MenuBarStyle.fullWidthContentWidth, height: 14)
-    nextTrackArtworkView.frame = NSRect(x: MenuBarStyle.contentInset, y: 195, width: MenuBarStyle.nextTrackArtworkSize, height: MenuBarStyle.nextTrackArtworkSize)
-    nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 196, width: MenuBarStyle.nextTrackTextWidth, height: 18)
-    nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 215, width: MenuBarStyle.nextTrackTextWidth, height: 16)
+    nextTrackArtworkView.frame = NSRect(x: MenuBarStyle.contentInset, y: 205, width: MenuBarStyle.nextTrackArtworkSize, height: MenuBarStyle.nextTrackArtworkSize)
+    nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 206, width: MenuBarStyle.nextTrackTextWidth, height: 18)
+    nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 225, width: MenuBarStyle.nextTrackTextWidth, height: 16)
   }
 
   private func configure() {

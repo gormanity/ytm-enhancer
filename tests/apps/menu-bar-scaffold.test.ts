@@ -507,7 +507,7 @@ describe("menu bar connector app scaffold", () => {
       "seekBarView.frame = NSRect(x: MenuBarStyle.contentInset, y: 80, width: MenuBarStyle.fullWidthContentWidth, height: 9)",
     );
     expect(nowPlayingViewSource).toContain(
-      "nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 196, width: MenuBarStyle.nextTrackTextWidth, height: 18)",
+      "nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 206, width: MenuBarStyle.nextTrackTextWidth, height: 18)",
     );
     expect(nowPlayingViewSource).not.toContain(
       "titleTextView.frame = NSRect(x: 104",
@@ -534,7 +534,7 @@ describe("menu bar connector app scaffold", () => {
       "titleTextView.frame = NSRect(x: MenuBarStyle.currentTextX, y: 4, width: MenuBarStyle.currentTextWidth, height: 24)",
     );
     expect(nowPlayingViewSource).toContain(
-      "nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 215, width: MenuBarStyle.nextTrackTextWidth, height: 16)",
+      "nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 225, width: MenuBarStyle.nextTrackTextWidth, height: 16)",
     );
   });
 
