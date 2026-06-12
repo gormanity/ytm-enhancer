@@ -538,6 +538,29 @@ describe("menu bar connector app scaffold", () => {
     );
   });
 
+  it("balances top and bottom padding within the Up Next section", () => {
+    const sources = listFiles("Sources/YTMMenuBarConnector")
+      .map(read)
+      .join("\n");
+    const nowPlayingViewSource = sources.match(
+      /final class MenuBarNowPlayingView:[\s\S]+?private final class MenuBarScrollingTextView/,
+    )?.[0];
+
+    expect(nowPlayingViewSource).toBeDefined();
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackLabel.frame = NSRect(x: MenuBarStyle.contentInset, y: 179, width: MenuBarStyle.fullWidthContentWidth, height: 14)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackArtworkView.frame = NSRect(x: MenuBarStyle.contentInset, y: 205, width: MenuBarStyle.nextTrackArtworkSize, height: MenuBarStyle.nextTrackArtworkSize)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 206, width: MenuBarStyle.nextTrackTextWidth, height: 18)",
+    );
+    expect(nowPlayingViewSource).toContain(
+      "nextTrackDetailTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 225, width: MenuBarStyle.nextTrackTextWidth, height: 16)",
+    );
+  });
+
   it("uses live updates instead of a manual refresh menu item", () => {
     const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
     const controllerSource = read(
