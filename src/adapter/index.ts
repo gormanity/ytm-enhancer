@@ -159,7 +159,7 @@ export class YTMAdapter {
         break;
 
       case "shuffle":
-        this.clickButton(SELECTORS.shuffleButton);
+        this.clickNativeButton(SELECTORS.shuffleButton);
         break;
 
       case "repeat":
@@ -540,6 +540,19 @@ export class YTMAdapter {
       return false;
     }
     this.activateClick(el);
+    return true;
+  }
+
+  private clickNativeButton(selector: string): boolean {
+    const el = this.findClickableElement(selector);
+    if (!el) {
+      debug("PlaybackAction: no clickable element found", {
+        selector,
+        matches: document.querySelectorAll(selector).length,
+      });
+      return false;
+    }
+    this.findActivationTarget(el).click();
     return true;
   }
 
