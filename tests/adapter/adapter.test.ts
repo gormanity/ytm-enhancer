@@ -763,6 +763,34 @@ describe("YTMAdapter", () => {
       expect(button.click).toHaveBeenCalled();
     });
 
+    it("should activate active nested shuffle controls through pointer events", () => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "shuffle";
+      makeVisible(wrapper);
+
+      const icon = document.createElement("span");
+      icon.style.color = "rgb(255, 255, 255)";
+
+      const button = document.createElement("button");
+      button.setAttribute("aria-label", "Shuffle");
+      button.click = vi.fn();
+      makeVisible(button);
+
+      const events: string[] = [];
+      for (const type of ["pointerdown", "mousedown", "mouseup", "click"]) {
+        button.addEventListener(type, () => events.push(type));
+      }
+
+      button.appendChild(icon);
+      wrapper.appendChild(button);
+      document.body.appendChild(wrapper);
+
+      adapter.executeAction("shuffle");
+
+      expect(button.click).not.toHaveBeenCalled();
+      expect(events).toEqual(["pointerdown", "mousedown", "mouseup", "click"]);
+    });
+
     it("should advance repeat in native YTM order", () => {
       const states = ["off", "one", "all"] as const;
       let stateIndex = 0;
