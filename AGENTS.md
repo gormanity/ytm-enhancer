@@ -19,6 +19,13 @@ This file covers **how to work**, not what the project is.
   tags, since `jj git push` does not support tags.
 - Make changes atomic and tightly scoped.
 - Write descriptive change descriptions.
+- Start change descriptions with a Conventional Commits-style prefix:
+  `<type>(<scope>): <short summary>`. Use the scope for the module, subsystem,
+  or docs area, e.g. `fix(menu-bar): align footer actions`,
+  `test(connectors): cover native host gating`, or
+  `docs(agents): document commit message style`.
+- Prefer `feat`, `fix`, `test`, `docs`, `refactor`, `chore`, `build`, `ci`, and
+  `style` as the type. Use another type only when it is clearer.
 - Use `jj split` to break apart changes that touch unrelated concerns (e.g., a
   selector fix vs. a new module).
 - `jj split` accepts filesets as positional arguments for non-interactive
