@@ -18,12 +18,12 @@ Implemented:
   playback actions.
 - Local development native host installer for Chrome, Chromium, Edge, and
   Firefox.
-- Release scaffolding for signed app bundles, signed packages, Sparkle appcasts,
-  and Homebrew cask generation.
+- Release scaffolding for ad-hoc signed app bundles, unsigned packages, Sparkle
+  appcasts, and Homebrew cask generation.
 
-Not implemented in this repository alone:
+Deferred:
 
-- Apple Developer certificate and notarization secrets.
+- Apple Developer certificate and notarized package distribution.
 - Publishing `menu-bar-v*` releases.
 - Publishing the external `gormanity/homebrew-tap` repository.
 
@@ -70,6 +70,8 @@ Direct install:
 - The package installs `/Applications/YTM Menu Bar.app`.
 - The package installs production native host manifests under `/Library`.
 - The app uses Sparkle for `Check for Updates...`.
+- Initial releases are ad-hoc signed and not notarized, so macOS will ask users
+  to approve the package as coming from an unidentified developer.
 - The Sparkle appcast lives at:
 
 ```text

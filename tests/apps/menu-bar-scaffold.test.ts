@@ -1096,10 +1096,33 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain("homebrew");
     expect(appScript).toContain("Info.plist.template");
     expect(appScript).toContain("Sparkle.framework");
+    expect(appScript).toContain("verbatimSymlinks: true");
+    expect(appScript).toContain('process.env.DEVELOPER_ID_APPLICATION ?? "-"');
+    expect(appScript).toContain('identity === "-"');
     expect(packageScript).toContain("pkgbuild");
     expect(packageScript).toContain("productbuild");
     expect(appcastScript).toContain("sparkle:edSignature");
     expect(appcastScript).toContain("menu-bar/appcast.xml");
+  });
+
+  it("ships initial menu bar releases without Apple notarization", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
+      "utf-8",
+    );
+    const releaseDocs = readFileSync(
+      resolve(process.cwd(), "docs/menu-bar-release.md"),
+      "utf-8",
+    );
+
+    expect(workflow).not.toContain("notarytool");
+    expect(workflow).not.toContain("stapler staple");
+    expect(workflow).not.toContain("CERTIFICATE_PASSWORD");
+    expect(workflow).not.toContain("DEVELOPER_ID_APPLICATION_P12_BASE64");
+    expect(workflow).not.toContain("DEVELOPER_ID_INSTALLER_P12_BASE64");
+    expect(workflow).not.toContain("APP_STORE_CONNECT_PRIVATE_KEY_BASE64");
+    expect(releaseDocs).toContain("not notarized");
+    expect(releaseDocs).toContain("ad-hoc signed");
   });
 
   it("signs Sparkle appcasts from the decoded CI key file", () => {
@@ -1112,6 +1135,25 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain("--ed-key-file sparkle_ed_private_key");
     expect(workflow).toContain("sparkle:edSignature");
     expect(workflow).not.toContain("generate_keys");
+  });
+
+  it("updates the Homebrew tap through a repository deploy key", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
+      "utf-8",
+    );
+    const releaseDocs = readFileSync(
+      resolve(process.cwd(), "docs/menu-bar-release.md"),
+      "utf-8",
+    );
+
+    expect(workflow).toContain("repository: gormanity/homebrew-tap");
+    expect(workflow).toContain(
+      "ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}",
+    );
+    expect(workflow).not.toContain("HOMEBREW_TAP_TOKEN");
+    expect(releaseDocs).toContain("HOMEBREW_TAP_DEPLOY_KEY");
+    expect(releaseDocs).not.toContain("HOMEBREW_TAP_TOKEN");
   });
 
   it("defines a Homebrew cask template where Brew owns updates", () => {

@@ -68,12 +68,14 @@ function copySparkleFramework(releaseDirectory, contentsDirectory) {
   mkdirSync(frameworksDirectory, { recursive: true });
   cpSync(source, join(frameworksDirectory, "Sparkle.framework"), {
     recursive: true,
+    verbatimSymlinks: true,
   });
 }
 
 function signAppBundle(appDirectory) {
-  const identity = process.env.DEVELOPER_ID_APPLICATION;
-  if (!identity) return;
+  const identity = process.env.DEVELOPER_ID_APPLICATION ?? "-";
+  const developerIdArgs =
+    identity === "-" ? [] : ["--options", "runtime", "--timestamp"];
 
   const sparkleFramework = join(
     appDirectory,
@@ -81,18 +83,14 @@ function signAppBundle(appDirectory) {
   );
   run("codesign", [
     "--force",
-    "--options",
-    "runtime",
-    "--timestamp",
+    ...developerIdArgs,
     "--sign",
     identity,
     sparkleFramework,
   ]);
   run("codesign", [
     "--force",
-    "--options",
-    "runtime",
-    "--timestamp",
+    ...developerIdArgs,
     "--sign",
     identity,
     appDirectory,

@@ -12,6 +12,9 @@ Direct install:
 - Update archive: `YTM-Menu-Bar-<version>.zip`.
 - Update feed: `https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml`.
 - Updates are handled by Sparkle inside the app.
+- Initial packages are unsigned and not notarized. They contain an ad-hoc signed
+  app bundle, and users may need to approve the package through macOS Gatekeeper
+  prompts.
 
 Homebrew install:
 
@@ -36,20 +39,20 @@ updates.
 
 The `Menu Bar Release` workflow requires:
 
-- `APP_STORE_CONNECT_ISSUER_ID`
-- `APP_STORE_CONNECT_KEY_ID`
-- `APP_STORE_CONNECT_PRIVATE_KEY_BASE64`
-- `CERTIFICATE_PASSWORD`
-- `DEVELOPER_ID_APPLICATION`
-- `DEVELOPER_ID_APPLICATION_P12_BASE64`
-- `DEVELOPER_ID_INSTALLER`
-- `DEVELOPER_ID_INSTALLER_P12_BASE64`
 - `SPARKLE_PUBLIC_ED_KEY`
 - `SPARKLE_PRIVATE_ED_KEY_BASE64`
-- `HOMEBREW_TAP_TOKEN`
+- `HOMEBREW_TAP_DEPLOY_KEY`
 
-The Developer ID values without `_P12_BASE64` are the certificate identity names
-passed to `codesign` and `productbuild`.
+Sparkle keys sign app updates and do not require Apple Developer Program
+membership. The Homebrew tap deploy key updates the external tap repository
+without requiring a broad personal access token.
+
+The Sparkle keys were generated with the keychain account
+`gormanity.ytm-enhancer.menu-bar`.
+
+Developer ID certificates, Apple notarization credentials, and App Store Connect
+API keys are intentionally not required for the initial release. Add them only
+after the project is ready to ship notarized macOS packages.
 
 ## Release Steps
 
@@ -78,6 +81,8 @@ swift build --package-path apps/menu-bar -c release
 Direct install:
 
 - Install the `.pkg` on a clean macOS account.
+- Confirm the expected macOS unidentified developer warning appears.
+- Approve the package through the macOS Gatekeeper prompt.
 - Confirm `/Applications/YTM Menu Bar.app` exists.
 - Confirm native host manifests exist under `/Library`.
 - Enable Connected Apps in the extension.

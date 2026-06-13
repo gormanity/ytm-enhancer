@@ -132,7 +132,8 @@ playback controls.
 
 The public release model has two install channels:
 
-- Direct install from GitHub Releases with a signed and notarized `.pkg`.
+- Direct install from GitHub Releases with an unsigned, unnotarized `.pkg`
+  containing an ad-hoc signed app bundle for the initial release phase.
 - Homebrew install from `gormanity/homebrew-tap` with a cask named
   `ytm-menu-bar`.
 
@@ -157,10 +158,11 @@ by the menu bar app release channel.
 
 Remaining work before a public connector release:
 
-1. Configure Apple Developer signing and notarization secrets.
-2. Publish the `menu-bar-v*` GitHub Release workflow.
-3. Publish the `gormanity/homebrew-tap` cask repository.
-4. Add a clearer approval flow for newly seen connectors.
-5. Add diagnostics for native host launch failures and disconnected hosts.
-6. Add connector-facing diagnostics for protocol mismatches and permission
+1. Publish the `menu-bar-v*` GitHub Release workflow.
+2. Publish the `gormanity/homebrew-tap` cask repository.
+3. Add a clearer approval flow for newly seen connectors.
+4. Add diagnostics for native host launch failures and disconnected hosts.
+5. Add connector-facing diagnostics for protocol mismatches and permission
    denials.
+6. Add Developer ID signing and notarization after the connector has enough user
+   adoption to justify Apple Developer Program membership.
