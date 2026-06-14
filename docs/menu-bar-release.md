@@ -255,6 +255,31 @@ The release workflow derives package, appcast, and cask versions from the
 throwaway release dry run rather than a suffix tag such as
 `menu-bar-v0.1.0-test`.
 
+## Manual Validation Policy
+
+CI update-path tests are the routine regression gate for menu bar packaging,
+appcast generation, and Homebrew cask updates. Manual validation is reserved for
+cases where the user-session behavior matters.
+
+Manual validation is required:
+
+- Before the first public menu bar release.
+- When release plumbing changes, including package generation, appcast
+  generation, Sparkle signing, GitHub Pages deployment, Homebrew cask
+  generation, native host manifest paths, signing, or notarization.
+- When connector or native messaging behavior changes, including host names,
+  connector handshake, permissions, lifecycle, command routing, or installed app
+  connection behavior.
+
+Manual validation is optional:
+
+- For ordinary app-only releases when CI update-path tests pass and the release
+  does not change packaging, updater, native host, or connector behavior.
+
+When manual validation is required, the release cutter must tell the user why it
+is required, provide the relevant checklist below, and wait for the user to
+confirm completion before creating or pushing the public release tag.
+
 ## Manual Acceptance
 
 Direct install:

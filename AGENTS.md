@@ -81,6 +81,14 @@ This file covers **how to work**, not what the project is.
   - After approval, add the approved notes to the GitHub release.
 - Menu bar connector releases are separate from extension releases. Use
   `menu-bar-vX.Y.Z` tags and follow `docs/menu-bar-release.md`.
+- Before cutting a menu bar connector release, decide whether manual validation
+  is required or optional using `docs/menu-bar-release.md`.
+  - Required before the first public menu bar release, when release plumbing
+    changes, or when connector/native messaging behavior changes.
+  - Optional for ordinary app-only releases when CI update-path tests pass.
+  - Tell the user which case applies. If validation is required, provide the
+    documented procedure and wait for the user to confirm completion before
+    tagging or publishing the release.
 
 ---
 
