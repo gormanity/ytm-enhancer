@@ -1083,6 +1083,7 @@ describe("menu bar connector app scaffold", () => {
   it("defines release scripts for app, package, appcast, and Homebrew cask", () => {
     const sourceFiles = listFiles(".");
 
+    expect(sourceFiles).toContain("scripts/release-metadata.mjs");
     expect(sourceFiles).toContain("scripts/build-release-app.mjs");
     expect(sourceFiles).toContain("scripts/package-release.mjs");
     expect(sourceFiles).toContain("scripts/generate-appcast.mjs");
@@ -1103,6 +1104,34 @@ describe("menu bar connector app scaffold", () => {
     expect(packageScript).toContain("productbuild");
     expect(appcastScript).toContain("sparkle:edSignature");
     expect(appcastScript).toContain("menu-bar/appcast.xml");
+  });
+
+  it("supports local update testing with release metadata overrides", () => {
+    const metadataScript = read("scripts/release-metadata.mjs");
+    const appScript = read("scripts/build-release-app.mjs");
+    const packageScript = read("scripts/package-release.mjs");
+    const caskScript = read("scripts/generate-homebrew-cask.mjs");
+    const appcastScript = read("scripts/generate-appcast.mjs");
+    const releaseDocs = readFileSync(
+      resolve(process.cwd(), "docs/menu-bar-release.md"),
+      "utf-8",
+    );
+
+    expect(metadataScript).toContain("YTM_MENU_BAR_VERSION");
+    expect(metadataScript).toContain("YTM_MENU_BAR_BUILD_NUMBER");
+    expect(metadataScript).toContain("YTM_MENU_BAR_APPCAST_URL");
+    expect(appScript).toContain("readReleaseMetadata");
+    expect(packageScript).toContain("readReleaseMetadata");
+    expect(caskScript).toContain("readReleaseMetadata");
+    expect(appcastScript).toContain("readReleaseMetadata");
+    expect(appcastScript).toContain('argValue("archive-url"');
+    expect(appcastScript).toContain('"release-base-url"');
+    expect(appcastScript).toContain('argValue("release-notes-url"');
+    expect(appcastScript).toContain("archiveUrl || undefined");
+    expect(releaseDocs).toContain("Keep production and test feeds separate");
+    expect(releaseDocs).toContain("YTM_MENU_BAR_APPCAST_URL");
+    expect(releaseDocs).toContain("Local Sparkle Update Test");
+    expect(releaseDocs).toContain("Local Homebrew Update Test");
   });
 
   it("ships initial menu bar releases without Apple notarization", () => {

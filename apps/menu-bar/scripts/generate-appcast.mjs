@@ -2,13 +2,9 @@
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const appRoot = resolve(scriptDir, "..");
-const metadata = JSON.parse(
-  readFileSync(resolve(appRoot, "release/metadata.json"), "utf-8"),
-);
+const metadata = readReleaseMetadata();
 
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
@@ -32,9 +28,11 @@ function sha256(path) {
 
 export function generateAppcast({
   archivePath,
+  archiveUrl,
   edSignature,
   outputPath = resolve(appRoot, ".build/appcast/menu-bar/appcast.xml"),
   releaseBaseUrl = "https://github.com/gormanity/ytm-enhancer/releases/download",
+  releaseNotesUrl,
 } = {}) {
   if (!archivePath) {
     throw new Error("archivePath is required");
@@ -45,7 +43,10 @@ export function generateAppcast({
 
   const tag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
   const archiveName = archivePath.split("/").at(-1);
-  const url = `${releaseBaseUrl}/${tag}/${archiveName}`;
+  const url = archiveUrl ?? `${releaseBaseUrl}/${tag}/${archiveName}`;
+  const notesUrl =
+    releaseNotesUrl ??
+    `https://github.com/gormanity/ytm-enhancer/releases/tag/${tag}`;
   const length = statSync(archivePath).size;
   const checksum = sha256(archivePath);
   const appcast = `<?xml version="1.0" encoding="utf-8"?>
@@ -60,7 +61,7 @@ export function generateAppcast({
       <sparkle:version>${escapeXml(metadata.buildNumber)}</sparkle:version>
       <sparkle:shortVersionString>${escapeXml(metadata.version)}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>${escapeXml(metadata.minimumMacOSVersion)}</sparkle:minimumSystemVersion>
-      <sparkle:releaseNotesLink>https://github.com/gormanity/ytm-enhancer/releases/tag/${escapeXml(tag)}</sparkle:releaseNotesLink>
+      <sparkle:releaseNotesLink>${escapeXml(notesUrl)}</sparkle:releaseNotesLink>
       <enclosure
         url="${escapeXml(url)}"
         sparkle:edSignature="${escapeXml(edSignature)}"
@@ -79,8 +80,11 @@ export function generateAppcast({
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const archive = argValue("archive", "");
+  const archiveUrl = argValue("archive-url", "");
+  const releaseNotesUrl = argValue("release-notes-url", "");
   const outputPath = generateAppcast({
     archivePath: archive ? resolve(archive) : "",
+    archiveUrl: archiveUrl || undefined,
     edSignature: argValue(
       "ed-signature",
       process.env.SPARKLE_ED_SIGNATURE ?? "",
@@ -91,6 +95,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         resolve(appRoot, ".build/appcast/menu-bar/appcast.xml"),
       ),
     ),
+    releaseBaseUrl: argValue(
+      "release-base-url",
+      "https://github.com/gormanity/ytm-enhancer/releases/download",
+    ),
+    releaseNotesUrl: releaseNotesUrl || undefined,
   });
   console.log(`Wrote appcast to ${outputPath}`);
 }

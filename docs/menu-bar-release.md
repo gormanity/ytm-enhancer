@@ -54,6 +54,120 @@ Developer ID certificates, Apple notarization credentials, and App Store Connect
 API keys are intentionally not required for the initial release. Add them only
 after the project is ready to ship notarized macOS packages.
 
+## Feed Strategy
+
+Keep production and test feeds separate.
+
+- Production direct builds use:
+
+```text
+https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml
+```
+
+- Local or beta update tests must use a separate appcast URL, such as a local
+  HTTP server.
+- Homebrew builds keep Sparkle disabled and must never consume an appcast.
+
+Sparkle compares bundle versions. For every update test, increase
+`CFBundleVersion` even when `CFBundleShortVersionString` stays the same.
+
+The release scripts support local metadata overrides for update validation:
+
+```sh
+YTM_MENU_BAR_VERSION=0.1.1
+YTM_MENU_BAR_BUILD_NUMBER=2
+YTM_MENU_BAR_APPCAST_URL=http://127.0.0.1:8787/menu-bar/appcast.xml
+```
+
+These overrides affect generated app bundles, packages, casks, and appcasts.
+They do not edit `apps/menu-bar/release/metadata.json` or
+`apps/menu-bar/Sources/YTMMenuBarConnector/AppMetadata.swift`.
+
+## Local Sparkle Update Test
+
+Use this path to validate Sparkle updates without publishing fake GitHub
+releases.
+
+1. Build the newer direct app with a local feed URL and higher build number.
+2. Create the Sparkle `.zip` from the newer `.app`.
+3. Sign the `.zip` with the local Sparkle private key.
+4. Generate a local appcast with `--archive-url` pointing at the local `.zip`.
+5. Build and install an older direct `.pkg` with the same local feed URL and a
+   lower build number.
+6. Serve the local appcast and `.zip` over HTTP.
+7. Open `Check for Updates...` in the older installed app.
+8. Confirm Sparkle downloads, verifies, installs, and relaunches the newer app.
+
+Example local feed values:
+
+```sh
+export YTM_MENU_BAR_APPCAST_URL="http://127.0.0.1:8787/menu-bar/appcast.xml"
+export SPARKLE_PUBLIC_ED_KEY="<public-ed-key>"
+```
+
+Build the newer update archive:
+
+```sh
+YTM_MENU_BAR_VERSION=0.1.1 YTM_MENU_BAR_BUILD_NUMBER=2 \
+  pnpm run menu-bar:build:app -- \
+  --channel=direct \
+  --output=apps/menu-bar/.build/update-test/new
+
+ditto -c -k --sequesterRsrc --keepParent \
+  "apps/menu-bar/.build/update-test/new/direct/YTM Menu Bar.app" \
+  apps/menu-bar/.build/update-test/feed/YTM-Menu-Bar-0.1.1.zip
+```
+
+Sign the archive with Sparkle:
+
+```sh
+apps/menu-bar/.build/artifacts/sparkle/Sparkle/bin/sign_update \
+  --ed-key-file sparkle_ed_private_key \
+  apps/menu-bar/.build/update-test/feed/YTM-Menu-Bar-0.1.1.zip
+```
+
+Generate the local appcast using the printed `sparkle:edSignature`:
+
+```sh
+YTM_MENU_BAR_VERSION=0.1.1 YTM_MENU_BAR_BUILD_NUMBER=2 \
+  pnpm run menu-bar:appcast -- \
+  --archive=apps/menu-bar/.build/update-test/feed/YTM-Menu-Bar-0.1.1.zip \
+  --archive-url=http://127.0.0.1:8787/YTM-Menu-Bar-0.1.1.zip \
+  --ed-signature=<sparkle-ed-signature> \
+  --release-notes-url=http://127.0.0.1:8787/release-notes.html \
+  --output=apps/menu-bar/.build/update-test/feed/menu-bar/appcast.xml
+```
+
+Build and install the older package:
+
+```sh
+YTM_MENU_BAR_VERSION=0.1.0 YTM_MENU_BAR_BUILD_NUMBER=1 \
+  pnpm run menu-bar:package:direct
+```
+
+Serve the local feed:
+
+```sh
+python3 -m http.server 8787 \
+  --directory apps/menu-bar/.build/update-test/feed
+```
+
+Then install the older `.pkg`, launch the app from `/Applications`, and run
+`Check for Updates...`.
+
+## Local Homebrew Update Test
+
+Use a temporary local tap with `file://` package URLs to validate the Homebrew
+path without publishing fake releases.
+
+1. Build a Homebrew package with a lower build number.
+2. Generate a cask pointing at that package.
+3. Install from the temporary tap.
+4. Build a Homebrew package with a higher build number.
+5. Regenerate the cask for the newer package.
+6. Run `brew update` and `brew upgrade --cask ytm-menu-bar`.
+7. Confirm the app updates and Sparkle remains disabled.
+
 ## Release Steps
 
 1. Update `apps/menu-bar/release/metadata.json`.
@@ -100,3 +214,15 @@ brew install --cask gormanity/tap/ytm-menu-bar
 - Confirm the app connects to the extension.
 - Confirm the app shows Homebrew update guidance instead of Sparkle updates.
 - Confirm `brew upgrade --cask ytm-menu-bar` updates a test release.
+
+Update path matrix:
+
+- Fresh direct install to newer direct update.
+- Older direct install to newer direct update.
+- Direct beta or local feed build to newer beta or local feed build.
+- Direct beta or local feed build to production feed build before release.
+- Manual `Check for Updates...`.
+- Automatic Sparkle background check.
+- App installed in `/Applications`.
+- App installed in `~/Applications`.
+- Homebrew package upgrade through `brew upgrade --cask ytm-menu-bar`.

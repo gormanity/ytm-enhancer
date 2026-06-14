@@ -1,16 +1,12 @@
 #!/usr/bin/env node
-import { cpSync, mkdirSync, readFileSync, rmSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { buildReleaseApp } from "./build-release-app.mjs";
 import { writeNativeHostManifests } from "./generate-native-host-manifests.mjs";
+import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const appRoot = resolve(scriptDir, "..");
-const metadata = JSON.parse(
-  readFileSync(resolve(appRoot, "release/metadata.json"), "utf-8"),
-);
+const metadata = readReleaseMetadata();
 
 function argValue(name, fallback) {
   const prefix = `--${name}=`;

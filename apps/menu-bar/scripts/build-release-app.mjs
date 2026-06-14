@@ -8,15 +8,11 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
+import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const appRoot = resolve(scriptDir, "..");
-const metadata = JSON.parse(
-  readFileSync(resolve(appRoot, "release/metadata.json"), "utf-8"),
-);
+const metadata = readReleaseMetadata();
 
 function argValue(name, fallback) {
   const prefix = `--${name}=`;

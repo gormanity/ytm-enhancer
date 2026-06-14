@@ -2,13 +2,9 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const appRoot = resolve(scriptDir, "..");
-const metadata = JSON.parse(
-  readFileSync(resolve(appRoot, "release/metadata.json"), "utf-8"),
-);
+const metadata = readReleaseMetadata();
 
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
