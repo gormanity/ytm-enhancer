@@ -250,6 +250,11 @@ swift build --package-path apps/menu-bar -c release
 7. Confirm GitHub Pages serves the updated appcast.
 8. Confirm the Homebrew tap cask was updated.
 
+The release workflow derives package, appcast, and cask versions from the
+`menu-bar-vX.Y.Z` tag. Use a lower numeric tag, such as `menu-bar-v0.0.1`, for a
+throwaway release dry run rather than a suffix tag such as
+`menu-bar-v0.1.0-test`.
+
 ## Manual Acceptance
 
 Direct install:

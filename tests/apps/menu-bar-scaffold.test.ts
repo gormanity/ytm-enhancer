@@ -1201,6 +1201,18 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseDocs).toContain("ad-hoc signed");
   });
 
+  it("builds menu bar release artifacts from the pushed tag version", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
+      "utf-8",
+    );
+
+    expect(workflow).toContain('version="${GITHUB_REF_NAME#menu-bar-v}"');
+    expect(workflow).toContain("menu-bar-vX.Y.Z");
+    expect(workflow).toContain("YTM_MENU_BAR_VERSION=$version");
+    expect(workflow).toContain('echo "YTM_MENU_BAR_VERSION=$version"');
+  });
+
   it("signs Sparkle appcasts from the decoded CI key file", () => {
     const workflow = readFileSync(
       resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
