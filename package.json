@@ -40,6 +40,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ tests/ packages/",
+    "workflow:check": "actionlint",
     "css:dead": "node scripts/check-dead-popup-css.mjs",
     "data-role:check": "node scripts/check-data-role-uniqueness.mjs",
     "format": "prettier --write .",

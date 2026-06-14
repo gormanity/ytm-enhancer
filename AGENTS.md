@@ -86,20 +86,24 @@ This file covers **how to work**, not what the project is.
 
 ## Commands
 
-| Task                     | Command                  |
-| ------------------------ | ------------------------ |
-| Install deps             | `pnpm install`           |
-| Format check             | `pnpm run format:check`  |
-| Format fix               | `pnpm run format`        |
-| Lint                     | `pnpm run lint`          |
-| Type check               | `pnpm run typecheck`     |
-| Test                     | `pnpm run test`          |
-| Build (Chrome)           | `pnpm run build:chrome`  |
-| Build (Firefox)          | `pnpm run build:firefox` |
-| Dev build (stack tip)    | `pnpm run dev:build`     |
-| Dev build (working copy) | `pnpm run dev:build:wc`  |
+| Task                     | Command                   |
+| ------------------------ | ------------------------- |
+| Install deps             | `pnpm install`            |
+| Format check             | `pnpm run format:check`   |
+| Workflow lint            | `pnpm run workflow:check` |
+| Format fix               | `pnpm run format`         |
+| Lint                     | `pnpm run lint`           |
+| Type check               | `pnpm run typecheck`      |
+| Test                     | `pnpm run test`           |
+| Build (Chrome)           | `pnpm run build:chrome`   |
+| Build (Firefox)          | `pnpm run build:firefox`  |
+| Dev build (stack tip)    | `pnpm run dev:build`      |
+| Dev build (working copy) | `pnpm run dev:build:wc`   |
 
 All checks must pass before pushing.
+
+Install `actionlint` locally with `brew install actionlint` before running
+`pnpm run workflow:check`. CI enforces workflow linting with `rhysd/actionlint`.
 
 After each feature change cycle, run `pnpm run dev:build` so the extension can
 be optested with debug logging enabled. Dev builds output to `dist-dev/` and
