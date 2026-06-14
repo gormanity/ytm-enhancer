@@ -1272,7 +1272,8 @@ describe("menu bar connector app scaffold", () => {
     expect(template).toContain("YTM-Menu-Bar-Homebrew-#{version}.pkg");
     expect(template).toContain('url "{{URL}}"');
     expect(template).toContain('sha256 "{{SHA256}}"');
-    expect(template).toContain('depends_on macos: ">= :ventura"');
+    expect(template).toContain("depends_on macos: :ventura");
+    expect(template).not.toContain('depends_on macos: ">= :ventura"');
     expect(template).toContain('pkg "YTM-Menu-Bar-Homebrew-#{version}.pkg"');
     expect(template).toContain("pkgutil:");
     expect(template).toContain("brew upgrade --cask ytm-menu-bar");

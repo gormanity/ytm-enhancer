@@ -12,7 +12,7 @@ cask "ytm-menu-bar" do
     regex(/^menu-bar-v(\d+(?:\.\d+)+)$/i)
   end
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   pkg "YTM-Menu-Bar-Homebrew-#{version}.pkg"
 
