@@ -4,8 +4,6 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
-const metadata = readReleaseMetadata();
-
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
   return (
@@ -18,10 +16,19 @@ function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function defaultPackageUrl(metadata) {
+  const tag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
+  const packageName = `${metadata.channels.homebrew.assetPrefix}-${metadata.version}.pkg`;
+  return `https://github.com/gormanity/ytm-enhancer/releases/download/${tag}/${packageName}`;
+}
+
 export function generateHomebrewCask({
   packagePath,
+  packageUrl,
   outputPath = resolve(appRoot, ".build/homebrew/Casks/ytm-menu-bar.rb"),
 } = {}) {
+  const metadata = readReleaseMetadata();
+
   if (!packagePath) {
     throw new Error("packagePath is required");
   }
@@ -32,6 +39,7 @@ export function generateHomebrewCask({
   );
   const cask = template
     .replaceAll("{{VERSION}}", metadata.version)
+    .replaceAll("{{URL}}", packageUrl ?? defaultPackageUrl(metadata))
     .replaceAll("{{SHA256}}", sha256(packagePath));
 
   mkdirSync(dirname(outputPath), { recursive: true });
@@ -41,8 +49,13 @@ export function generateHomebrewCask({
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const packagePath = argValue("package", "");
+  const packageUrl = argValue(
+    "url",
+    process.env.YTM_MENU_BAR_HOMEBREW_URL ?? "",
+  );
   const outputPath = generateHomebrewCask({
     packagePath: packagePath ? resolve(packagePath) : "",
+    packageUrl: packageUrl || undefined,
     outputPath: resolve(
       argValue(
         "output",

@@ -4,8 +4,6 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
-const metadata = readReleaseMetadata();
-
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
   return (
@@ -34,6 +32,8 @@ export function generateAppcast({
   releaseBaseUrl = "https://github.com/gormanity/ytm-enhancer/releases/download",
   releaseNotesUrl,
 } = {}) {
+  const metadata = readReleaseMetadata();
+
   if (!archivePath) {
     throw new Error("archivePath is required");
   }

@@ -124,6 +124,23 @@ node apps/menu-bar/scripts/generate-homebrew-cask.mjs \
   --package=apps/menu-bar/.build/packages/YTM-Menu-Bar-Homebrew-0.1.0.pkg
 ```
 
+Prepare local update path harnesses:
+
+```sh
+pnpm run menu-bar:update-test:sparkle -- \
+  --old-version=0.1.0 \
+  --old-build=1 \
+  --new-version=0.1.1 \
+  --new-build=2 \
+  --ed-key-file=sparkle_ed_private_key
+
+pnpm run menu-bar:update-test:homebrew -- \
+  --old-version=0.1.0 \
+  --old-build=1 \
+  --new-version=0.1.1 \
+  --new-build=2
+```
+
 ## Run
 
 1. Build the extension.

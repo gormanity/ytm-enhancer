@@ -12,8 +12,6 @@ import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
-const metadata = readReleaseMetadata();
-
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
   return (
@@ -97,6 +95,8 @@ export function buildReleaseApp({
   channel = "direct",
   outputRoot = resolve(appRoot, ".build/release-apps"),
 } = {}) {
+  const metadata = readReleaseMetadata();
+
   if (!["direct", "homebrew"].includes(channel)) {
     throw new Error(`Unsupported release channel: ${channel}`);
   }

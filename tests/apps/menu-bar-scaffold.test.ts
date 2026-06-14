@@ -1088,10 +1088,15 @@ describe("menu bar connector app scaffold", () => {
     expect(sourceFiles).toContain("scripts/package-release.mjs");
     expect(sourceFiles).toContain("scripts/generate-appcast.mjs");
     expect(sourceFiles).toContain("scripts/generate-homebrew-cask.mjs");
+    expect(sourceFiles).toContain("scripts/prepare-sparkle-update-test.mjs");
+    expect(sourceFiles).toContain("scripts/prepare-homebrew-update-test.mjs");
 
     const appScript = read("scripts/build-release-app.mjs");
     const packageScript = read("scripts/package-release.mjs");
     const appcastScript = read("scripts/generate-appcast.mjs");
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
+    ) as { scripts: Record<string, string> };
 
     expect(appScript).toContain("direct");
     expect(appScript).toContain("homebrew");
@@ -1104,6 +1109,12 @@ describe("menu bar connector app scaffold", () => {
     expect(packageScript).toContain("productbuild");
     expect(appcastScript).toContain("sparkle:edSignature");
     expect(appcastScript).toContain("menu-bar/appcast.xml");
+    expect(packageJson.scripts["menu-bar:update-test:sparkle"]).toBe(
+      "node apps/menu-bar/scripts/prepare-sparkle-update-test.mjs",
+    );
+    expect(packageJson.scripts["menu-bar:update-test:homebrew"]).toBe(
+      "node apps/menu-bar/scripts/prepare-homebrew-update-test.mjs",
+    );
   });
 
   it("supports local update testing with release metadata overrides", () => {
@@ -1132,6 +1143,41 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseDocs).toContain("YTM_MENU_BAR_APPCAST_URL");
     expect(releaseDocs).toContain("Local Sparkle Update Test");
     expect(releaseDocs).toContain("Local Homebrew Update Test");
+  });
+
+  it("provides callable update path harnesses for Sparkle and Homebrew", () => {
+    const sparkleHarness = read("scripts/prepare-sparkle-update-test.mjs");
+    const homebrewHarness = read("scripts/prepare-homebrew-update-test.mjs");
+    const caskScript = read("scripts/generate-homebrew-cask.mjs");
+    const template = read("release/homebrew/ytm-menu-bar.rb.template");
+
+    expect(sparkleHarness).toContain("buildReleaseApp");
+    expect(sparkleHarness).toContain("packageRelease");
+    expect(sparkleHarness).toContain("generateAppcast");
+    expect(sparkleHarness).toContain("SPARKLE_PUBLIC_ED_KEY");
+    expect(sparkleHarness).toContain("generate_keys");
+    expect(sparkleHarness).toContain('argValue("key-account"');
+    expect(sparkleHarness).toContain('argValue("public-ed-key"');
+    expect(sparkleHarness).toContain("sign_update");
+    expect(sparkleHarness).toContain("ditto");
+    expect(sparkleHarness).toContain("serveCommand");
+    expect(sparkleHarness).toContain("installOldCommand");
+    expect(sparkleHarness).toContain("verifyUpdatedVersionCommand");
+    expect(sparkleHarness).toContain("assertSafeOutputRoot");
+    expect(sparkleHarness).not.toContain('run("sudo"');
+    expect(sparkleHarness).not.toContain('execFileSync("sudo"');
+
+    expect(homebrewHarness).toContain("packageRelease");
+    expect(homebrewHarness).toContain("generateHomebrewCask");
+    expect(homebrewHarness).toContain("pathToFileURL");
+    expect(homebrewHarness).toContain("brew tap");
+    expect(homebrewHarness).toContain("brew upgrade --cask ytm-menu-bar");
+    expect(homebrewHarness).toContain("brew uninstall --cask ytm-menu-bar");
+    expect(homebrewHarness).toContain("promote-new-cask.sh");
+    expect(homebrewHarness).toContain("assertSafeOutputRoot");
+    expect(caskScript).toContain("YTM_MENU_BAR_HOMEBREW_URL");
+    expect(caskScript).toContain("defaultPackageUrl");
+    expect(template).toContain('url "{{URL}}"');
   });
 
   it("ships initial menu bar releases without Apple notarization", () => {
@@ -1187,10 +1233,12 @@ describe("menu bar connector app scaffold", () => {
 
   it("defines a Homebrew cask template where Brew owns updates", () => {
     const template = read("release/homebrew/ytm-menu-bar.rb.template");
+    const caskScript = read("scripts/generate-homebrew-cask.mjs");
 
     expect(template).toContain('cask "ytm-menu-bar" do');
-    expect(template).toContain("menu-bar-v#{version}");
+    expect(template).toContain("regex(/^menu-bar-v");
     expect(template).toContain("YTM-Menu-Bar-Homebrew-#{version}.pkg");
+    expect(template).toContain('url "{{URL}}"');
     expect(template).toContain('sha256 "{{SHA256}}"');
     expect(template).toContain('depends_on macos: ">= :ventura"');
     expect(template).toContain('pkg "YTM-Menu-Bar-Homebrew-#{version}.pkg"');
@@ -1198,5 +1246,6 @@ describe("menu bar connector app scaffold", () => {
     expect(template).toContain("brew upgrade --cask ytm-menu-bar");
     expect(template).not.toContain("auto_updates true");
     expect(template).not.toContain("sha256 :no_check");
+    expect(caskScript).toContain("${metadata.githubReleaseTagPrefix}");
   });
 });

@@ -2,7 +2,7 @@ cask "ytm-menu-bar" do
   version "{{VERSION}}"
   sha256 "{{SHA256}}"
 
-  url "https://github.com/gormanity/ytm-enhancer/releases/download/menu-bar-v#{version}/YTM-Menu-Bar-Homebrew-#{version}.pkg"
+  url "{{URL}}"
   name "YTM Menu Bar"
   desc "Menu bar playback controls for YouTube Music through YTM Enhancer"
   homepage "https://github.com/gormanity/ytm-enhancer"

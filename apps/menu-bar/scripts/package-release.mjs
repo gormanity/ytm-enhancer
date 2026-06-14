@@ -6,8 +6,6 @@ import { buildReleaseApp } from "./build-release-app.mjs";
 import { writeNativeHostManifests } from "./generate-native-host-manifests.mjs";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
-const metadata = readReleaseMetadata();
-
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
   return (
@@ -24,6 +22,8 @@ export function packageRelease({
   channel = "direct",
   outputRoot = resolve(appRoot, ".build/packages"),
 } = {}) {
+  const metadata = readReleaseMetadata();
+
   if (!["direct", "homebrew"].includes(channel)) {
     throw new Error(`Unsupported release channel: ${channel}`);
   }

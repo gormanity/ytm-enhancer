@@ -88,6 +88,26 @@ They do not edit `apps/menu-bar/release/metadata.json` or
 Use this path to validate Sparkle updates without publishing fake GitHub
 releases.
 
+The reusable harness prepares the old package, newer update archive, local
+appcast, release notes, and a `summary.json` with the exact commands to run:
+
+```sh
+pnpm run menu-bar:update-test:sparkle -- \
+  --old-version=0.1.0 \
+  --old-build=1 \
+  --new-version=0.1.1 \
+  --new-build=2 \
+  --ed-key-file=sparkle_ed_private_key
+```
+
+It does not install or launch anything automatically. Run the printed commands
+to serve the local feed, install the old package, trigger
+`Check for Updates...`, and verify the installed version after relaunch.
+
+The app bundle must embed the public key that matches the private signing key.
+The harness reads `--public-ed-key`, `SPARKLE_PUBLIC_ED_KEY`, or the Sparkle
+keychain account from `--key-account`.
+
 1. Build the newer direct app with a local feed URL and higher build number.
 2. Create the Sparkle `.zip` from the newer `.app`.
 3. Sign the `.zip` with the local Sparkle private key.
@@ -159,6 +179,21 @@ Then install the older `.pkg`, launch the app from `/Applications`, and run
 
 Use a temporary local tap with `file://` package URLs to validate the Homebrew
 path without publishing fake releases.
+
+The reusable harness prepares old and new packages, creates a git-backed local
+tap, and writes a `summary.json` with the install, promote, upgrade, verify, and
+uninstall commands:
+
+```sh
+pnpm run menu-bar:update-test:homebrew -- \
+  --old-version=0.1.0 \
+  --old-build=1 \
+  --new-version=0.1.1 \
+  --new-build=2
+```
+
+It does not run `brew install`, `brew upgrade`, or `brew uninstall`
+automatically. Run the printed commands on a test machine or macOS runner.
 
 1. Build a Homebrew package with a lower build number.
 2. Generate a cask pointing at that package.
