@@ -155,6 +155,7 @@ jobs:
       - name: Install and upgrade through Homebrew
         run: |
           brew tap ytm-enhancer/local-update-test "$HOMEBREW_TEST_ROOT/tap"
+          brew trust --tap ytm-enhancer/local-update-test
           brew install --cask ytm-enhancer/local-update-test/ytm-menu-bar
 
           installed_version="$(plutil -extract CFBundleShortVersionString raw \
@@ -173,4 +174,5 @@ jobs:
         if: always()
         run: |
           brew uninstall --cask ytm-menu-bar || true
+          brew untrust --tap ytm-enhancer/local-update-test || true
           brew untap ytm-enhancer/local-update-test || true
