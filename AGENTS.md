@@ -103,7 +103,8 @@ This file covers **how to work**, not what the project is.
 All checks must pass before pushing.
 
 Install `actionlint` locally with `brew install actionlint` before running
-`pnpm run workflow:check`. CI enforces workflow linting with `rhysd/actionlint`.
+`pnpm run workflow:check`. CI installs the official actionlint binary with the
+upstream download script before running the same command.
 
 After each feature change cycle, run `pnpm run dev:build` so the extension can
 be optested with debug logging enabled. Dev builds output to `dist-dev/` and

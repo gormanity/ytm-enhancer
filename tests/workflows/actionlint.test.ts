@@ -13,8 +13,9 @@ describe("GitHub Actions workflow linting", () => {
     ) as { scripts: Record<string, string> };
 
     expect(ciWorkflow).toContain("workflow-lint:");
-    expect(ciWorkflow).toContain("rhysd/actionlint@v1");
+    expect(ciWorkflow).toContain("scripts/download-actionlint.bash");
     expect(ciWorkflow).toContain("Lint GitHub Actions workflows");
+    expect(ciWorkflow).toContain("pnpm run workflow:check");
     expect(packageJson.scripts["workflow:check"]).toBe("actionlint");
   });
 });
