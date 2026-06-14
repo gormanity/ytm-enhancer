@@ -151,14 +151,14 @@ git -C "${tapRoot}" commit -m "Update ytm-menu-bar to ${newVersion}"
 );
 
 const summary = {
-  installOldCommand: `brew tap ${tapName} ${tapRoot} && brew trust ${tapName} && brew install --cask ${tapName}/ytm-menu-bar`,
+  installOldCommand: `HOMEBREW_NO_REQUIRE_TAP_TRUST=1 brew tap ${tapName} ${tapRoot} && HOMEBREW_NO_REQUIRE_TAP_TRUST=1 brew install --cask ${tapName}/ytm-menu-bar`,
   newPackage,
   oldPackage,
   promoteNewCaskCommand: promoteScriptPath,
   tapName,
   tapRoot,
-  uninstallCommand: `brew trust ${tapName} && brew uninstall --cask ytm-menu-bar && brew untrust ${tapName} && brew untap ${tapName}`,
-  upgradeCommand: `sh ${promoteScriptPath} && brew update && brew upgrade --cask ytm-menu-bar`,
+  uninstallCommand: `HOMEBREW_NO_REQUIRE_TAP_TRUST=1 brew uninstall --cask ytm-menu-bar && brew untap ${tapName}`,
+  upgradeCommand: `sh ${promoteScriptPath} && HOMEBREW_NO_REQUIRE_TAP_TRUST=1 brew update && HOMEBREW_NO_REQUIRE_TAP_TRUST=1 brew upgrade --cask ytm-menu-bar`,
   verifyVersionCommand:
     "plutil -extract CFBundleShortVersionString raw '/Applications/YTM Menu Bar.app/Contents/Info.plist'",
 };

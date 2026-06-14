@@ -1170,11 +1170,10 @@ describe("menu bar connector app scaffold", () => {
     expect(homebrewHarness).toContain("packageRelease");
     expect(homebrewHarness).toContain("generateHomebrewCask");
     expect(homebrewHarness).toContain("pathToFileURL");
+    expect(homebrewHarness).toContain("HOMEBREW_NO_REQUIRE_TAP_TRUST=1");
     expect(homebrewHarness).toContain("brew tap");
-    expect(homebrewHarness).toContain("brew trust");
     expect(homebrewHarness).toContain("brew upgrade --cask ytm-menu-bar");
     expect(homebrewHarness).toContain("brew uninstall --cask ytm-menu-bar");
-    expect(homebrewHarness).toContain("brew untrust");
     expect(homebrewHarness).toContain("promote-new-cask.sh");
     expect(homebrewHarness).toContain("assertSafeOutputRoot");
     expect(caskScript).toContain("YTM_MENU_BAR_HOMEBREW_URL");
@@ -1234,12 +1233,11 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain("generate_keys");
     expect(workflow).toContain("curl -fsS");
     expect(workflow).toContain("sudo installer");
+    expect(workflow).toContain("HOMEBREW_NO_REQUIRE_TAP_TRUST");
     expect(workflow).toContain("brew install --cask");
-    expect(workflow).toContain("brew trust");
     expect(workflow).toContain("brew update");
     expect(workflow).toContain("brew upgrade --cask ytm-menu-bar");
     expect(workflow).toContain("brew uninstall --cask ytm-menu-bar");
-    expect(workflow).toContain("brew untrust");
     expect(workflow).not.toContain("SPARKLE_PRIVATE_ED_KEY_BASE64");
     expect(releaseDocs).toContain("CI Update Path Tests");
     expect(releaseDocs).toContain("throwaway Sparkle EdDSA key");
