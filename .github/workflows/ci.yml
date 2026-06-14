@@ -27,6 +27,7 @@ jobs:
 
       - name: Install actionlint
         run: |
+          mkdir -p "$HOME/.local/bin"
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 

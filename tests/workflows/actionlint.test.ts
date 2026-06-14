@@ -13,6 +13,7 @@ describe("GitHub Actions workflow linting", () => {
     ) as { scripts: Record<string, string> };
 
     expect(ciWorkflow).toContain("workflow-lint:");
+    expect(ciWorkflow).toContain('mkdir -p "$HOME/.local/bin"');
     expect(ciWorkflow).toContain("scripts/download-actionlint.bash");
     expect(ciWorkflow).toContain("Lint GitHub Actions workflows");
     expect(ciWorkflow).toContain("pnpm run workflow:check");
