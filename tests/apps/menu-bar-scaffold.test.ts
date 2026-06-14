@@ -1103,6 +1103,12 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain("Info.plist.template");
     expect(appScript).toContain("Sparkle.framework");
     expect(appScript).toContain("verbatimSymlinks: true");
+    expect(appScript).toContain("install_name_tool");
+    expect(appScript).toContain("@executable_path/../Frameworks");
+    expect(appScript).toContain("otool");
+    expect(appScript).toContain(
+      "Release executable is missing framework rpath",
+    );
     expect(appScript).toContain('process.env.DEVELOPER_ID_APPLICATION ?? "-"');
     expect(appScript).toContain('identity === "-"');
     expect(packageScript).toContain("pkgbuild");

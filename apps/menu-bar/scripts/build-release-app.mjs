@@ -66,6 +66,31 @@ function copySparkleFramework(releaseDirectory, contentsDirectory) {
   });
 }
 
+const frameworkRpath = "@executable_path/../Frameworks";
+
+function readLoadCommands(executablePath) {
+  return execFileSync("otool", ["-l", executablePath], {
+    encoding: "utf-8",
+  });
+}
+
+function addFrameworkRpath(executablePath) {
+  if (readLoadCommands(executablePath).includes(frameworkRpath)) {
+    return;
+  }
+
+  run("install_name_tool", ["-add_rpath", frameworkRpath, executablePath]);
+}
+
+function verifyFrameworkRpath(executablePath) {
+  const loadCommands = readLoadCommands(executablePath);
+  if (!loadCommands.includes(frameworkRpath)) {
+    throw new Error(
+      `Release executable is missing framework rpath: ${executablePath}`,
+    );
+  }
+}
+
 function signAppBundle(appDirectory) {
   const identity = process.env.DEVELOPER_ID_APPLICATION ?? "-";
   const developerIdArgs =
@@ -116,6 +141,9 @@ export function buildReleaseApp({
     join(releaseDirectory, "YTMMenuBarConnector"),
     join(macOSDirectory, "YTMMenuBarConnector"),
   );
+  const executablePath = join(macOSDirectory, "YTMMenuBarConnector");
+  addFrameworkRpath(executablePath);
+  verifyFrameworkRpath(executablePath);
   copySparkleFramework(releaseDirectory, contentsDirectory);
   copyResourceBundles(releaseDirectory, resourcesDirectory);
 
