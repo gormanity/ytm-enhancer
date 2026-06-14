@@ -203,6 +203,31 @@ automatically. Run the printed commands on a test machine or macOS runner.
 6. Run `brew update` and `brew upgrade --cask ytm-menu-bar`.
 7. Confirm the app updates and Sparkle remains disabled.
 
+## CI Update Path Tests
+
+`.github/workflows/menu-bar-update-path.yml` runs macOS update-path checks for
+pull requests, pushes to `main`, and manual dispatches when menu bar release
+files change.
+
+Sparkle CI:
+
+- Generates a throwaway Sparkle EdDSA key on the runner.
+- Prepares an older direct package and newer signed update archive.
+- Serves the local appcast, archive, and release notes over HTTP.
+- Verifies appcast version metadata, archive reachability, checksum/signature
+  presence, and old package installation.
+
+The in-app Sparkle relaunch flow is still covered by manual acceptance because
+it requires interactive macOS update UI.
+
+Homebrew CI:
+
+- Creates a temporary local git-backed tap with `file://` package URLs.
+- Installs the older cask through Homebrew.
+- Promotes the tap to the newer cask.
+- Runs `brew update` and `brew upgrade --cask ytm-menu-bar`.
+- Verifies the installed app version and uninstalls the cask.
+
 ## Release Steps
 
 1. Update `apps/menu-bar/release/metadata.json`.

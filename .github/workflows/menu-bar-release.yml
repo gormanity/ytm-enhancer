@@ -57,7 +57,13 @@ jobs:
           SPARKLE_PRIVATE_ED_KEY_BASE64: ${{ secrets.SPARKLE_PRIVATE_ED_KEY_BASE64 }}
         run: |
           printf "%s" "$SPARKLE_PRIVATE_ED_KEY_BASE64" | base64 --decode > sparkle_ed_private_key
-          SIGN_UPDATE="$(find apps/menu-bar/.build -path '*/bin/sign_update' -type f | head -n 1)"
+          SIGN_UPDATE="apps/menu-bar/.build/artifacts/sparkle/Sparkle/bin/sign_update"
+          if [ ! -x "$SIGN_UPDATE" ]; then
+            SIGN_UPDATE="$(find apps/menu-bar/.build \
+              -path '*/bin/sign_update' \
+              ! -path '*/old_dsa_scripts/*' \
+              -type f | head -n 1)"
+          fi
           SIGN_OUTPUT="$("$SIGN_UPDATE" --ed-key-file sparkle_ed_private_key "apps/menu-bar/.build/sparkle/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.zip")"
           ED_SIGNATURE="$(printf "%s\n" "$SIGN_OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
           pnpm run menu-bar:appcast -- \

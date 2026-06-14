@@ -1208,8 +1208,38 @@ describe("menu bar connector app scaffold", () => {
 
     expect(workflow).toContain("SPARKLE_PRIVATE_ED_KEY_BASE64");
     expect(workflow).toContain("--ed-key-file sparkle_ed_private_key");
+    expect(workflow).toContain("Sparkle/bin/sign_update");
+    expect(workflow).toContain("! -path '*/old_dsa_scripts/*'");
     expect(workflow).toContain("sparkle:edSignature");
     expect(workflow).not.toContain("generate_keys");
+  });
+
+  it("runs menu bar update path harnesses in macOS CI", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-update-path.yml"),
+      "utf-8",
+    );
+    const releaseDocs = readFileSync(
+      resolve(process.cwd(), "docs/menu-bar-release.md"),
+      "utf-8",
+    );
+
+    expect(workflow).toContain("Menu Bar Update Path Tests");
+    expect(workflow).toContain("workflow_dispatch");
+    expect(workflow).toContain("runs-on: macos-latest");
+    expect(workflow).toContain("pnpm run menu-bar:update-test:sparkle");
+    expect(workflow).toContain("pnpm run menu-bar:update-test:homebrew");
+    expect(workflow).toContain("generate_keys");
+    expect(workflow).toContain("curl -fsS");
+    expect(workflow).toContain("sudo installer");
+    expect(workflow).toContain("brew install --cask");
+    expect(workflow).toContain("brew update");
+    expect(workflow).toContain("brew upgrade --cask ytm-menu-bar");
+    expect(workflow).toContain("brew uninstall --cask ytm-menu-bar");
+    expect(workflow).not.toContain("SPARKLE_PRIVATE_ED_KEY_BASE64");
+    expect(releaseDocs).toContain("CI Update Path Tests");
+    expect(releaseDocs).toContain("throwaway Sparkle EdDSA key");
+    expect(releaseDocs).toContain("interactive macOS update UI");
   });
 
   it("updates the Homebrew tap through a repository deploy key", () => {

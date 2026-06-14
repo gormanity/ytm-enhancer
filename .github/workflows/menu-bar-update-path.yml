@@ -1,0 +1,176 @@
+name: Menu Bar Update Path Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/menu-bar-update-path.yml"
+      - "apps/menu-bar/**"
+      - "docs/menu-bar-release.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tests/apps/menu-bar-scaffold.test.ts"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/menu-bar-update-path.yml"
+      - "apps/menu-bar/**"
+      - "docs/menu-bar-release.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tests/apps/menu-bar-scaffold.test.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  sparkle:
+    name: Sparkle update path
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare CI Sparkle key
+        run: |
+          swift build --package-path apps/menu-bar -c release
+          generate_keys="apps/menu-bar/.build/artifacts/sparkle/Sparkle/bin/generate_keys"
+          account="gormanity.ytm-enhancer.menu-bar.ci.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          private_key="${TMPDIR:-/tmp}/sparkle_ed_private_key"
+
+          "$generate_keys" --account "$account" >/dev/null
+          "$generate_keys" --account "$account" -x "$private_key"
+          public_key="$("$generate_keys" --account "$account" -p)"
+
+          {
+            echo "SPARKLE_TEST_PRIVATE_KEY=$private_key"
+            echo "SPARKLE_TEST_PUBLIC_KEY=$public_key"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare Sparkle update artifacts
+        run: |
+          test_root="${TMPDIR:-/tmp}/ytm-menu-bar-sparkle-update-test"
+          echo "SPARKLE_TEST_ROOT=$test_root" >> "$GITHUB_ENV"
+
+          pnpm run menu-bar:update-test:sparkle -- \
+            --old-version=0.0.1 \
+            --old-build=1 \
+            --new-version=0.0.2 \
+            --new-build=2 \
+            --port=8787 \
+            --ed-key-file="$SPARKLE_TEST_PRIVATE_KEY" \
+            --public-ed-key="$SPARKLE_TEST_PUBLIC_KEY" \
+            --output="$test_root"
+
+      - name: Validate Sparkle feed and direct package
+        run: |
+          python3 -m http.server 8787 --directory "$SPARKLE_TEST_ROOT/feed" &
+          server_pid="$!"
+          trap 'kill "$server_pid"' EXIT
+          sleep 1
+
+          curl -fsS \
+            http://127.0.0.1:8787/menu-bar/appcast.xml \
+            --output "${TMPDIR:-/tmp}/appcast.xml"
+          curl -fsS \
+            http://127.0.0.1:8787/YTM-Menu-Bar-0.0.2.zip \
+            --output "${TMPDIR:-/tmp}/YTM-Menu-Bar-0.0.2.zip"
+          curl -fsS \
+            http://127.0.0.1:8787/release-notes.html \
+            --output "${TMPDIR:-/tmp}/release-notes.html"
+
+          test -s "${TMPDIR:-/tmp}/YTM-Menu-Bar-0.0.2.zip"
+          grep -q "<sparkle:version>2</sparkle:version>" \
+            "${TMPDIR:-/tmp}/appcast.xml"
+          grep -q "sparkle:edSignature=" "${TMPDIR:-/tmp}/appcast.xml"
+
+          sudo installer \
+            -pkg "$SPARKLE_TEST_ROOT/old-package/YTM-Menu-Bar-0.0.1.pkg" \
+            -target /
+          installed_version="$(plutil -extract CFBundleShortVersionString raw \
+            "/Applications/YTM Menu Bar.app/Contents/Info.plist")"
+          test "$installed_version" = "0.0.1"
+
+          update_version="$(plutil -extract CFBundleShortVersionString raw \
+            "$SPARKLE_TEST_ROOT/new-app/direct/YTM Menu Bar.app/Contents/Info.plist")"
+          test "$update_version" = "0.0.2"
+
+      - name: Clean up direct install
+        if: always()
+        run: |
+          sudo rm -rf "/Applications/YTM Menu Bar.app"
+          sudo rm -f \
+            "/Library/Google/Chrome/NativeMessagingHosts/com.gormanity.ytm_enhancer.menu_bar.json" \
+            "/Library/Application Support/Chromium/NativeMessagingHosts/com.gormanity.ytm_enhancer.menu_bar.json" \
+            "/Library/Application Support/Mozilla/NativeMessagingHosts/com.gormanity.ytm_enhancer.menu_bar.json"
+          sudo pkgutil --forget com.gormanity.ytm-enhancer.menu-bar.app || true
+          sudo pkgutil --forget com.gormanity.ytm-enhancer.menu-bar.native-hosts || true
+
+  homebrew:
+    name: Homebrew update path
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare Homebrew update tap
+        run: |
+          test_root="${TMPDIR:-/tmp}/ytm-menu-bar-homebrew-update-test"
+          echo "HOMEBREW_TEST_ROOT=$test_root" >> "$GITHUB_ENV"
+
+          pnpm run menu-bar:update-test:homebrew -- \
+            --old-version=0.0.1 \
+            --old-build=1 \
+            --new-version=0.0.2 \
+            --new-build=2 \
+            --output="$test_root"
+
+      - name: Install and upgrade through Homebrew
+        run: |
+          brew tap ytm-enhancer/local-update-test "$HOMEBREW_TEST_ROOT/tap"
+          brew install --cask ytm-enhancer/local-update-test/ytm-menu-bar
+
+          installed_version="$(plutil -extract CFBundleShortVersionString raw \
+            "/Applications/YTM Menu Bar.app/Contents/Info.plist")"
+          test "$installed_version" = "0.0.1"
+
+          sh "$HOMEBREW_TEST_ROOT/promote-new-cask.sh"
+          brew update
+          brew upgrade --cask ytm-menu-bar
+
+          upgraded_version="$(plutil -extract CFBundleShortVersionString raw \
+            "/Applications/YTM Menu Bar.app/Contents/Info.plist")"
+          test "$upgraded_version" = "0.0.2"
+
+      - name: Clean up Homebrew install
+        if: always()
+        run: |
+          brew uninstall --cask ytm-menu-bar || true
+          brew untap ytm-enhancer/local-update-test || true
