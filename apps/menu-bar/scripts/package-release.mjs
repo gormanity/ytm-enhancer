@@ -1,5 +1,12 @@
 #!/usr/bin/env node
-import { cpSync, mkdirSync, rmSync } from "node:fs";
+import {
+  cpSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readlinkSync,
+  rmSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { buildReleaseApp } from "./build-release-app.mjs";
@@ -16,6 +23,24 @@ function argValue(name, fallback) {
 
 function run(command, args) {
   execFileSync(command, args.filter(Boolean), { stdio: "inherit" });
+}
+
+function verifyRelativeSymlinks(directory) {
+  for (const entry of readdirSync(directory)) {
+    const path = join(directory, entry);
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) {
+      const target = readlinkSync(path);
+      if (target.startsWith("/")) {
+        throw new Error(`Package payload symlink must be relative: ${path}`);
+      }
+      continue;
+    }
+
+    if (stat.isDirectory()) {
+      verifyRelativeSymlinks(path);
+    }
+  }
 }
 
 export function packageRelease({
@@ -49,7 +74,16 @@ export function packageRelease({
     join(appPayloadRoot, "Applications", `${metadata.appName}.app`),
     {
       recursive: true,
+      verbatimSymlinks: true,
     },
+  );
+  verifyRelativeSymlinks(
+    join(
+      appPayloadRoot,
+      "Applications",
+      `${metadata.appName}.app`,
+      "Contents/Frameworks/Sparkle.framework",
+    ),
   );
   writeNativeHostManifests(hostPayloadRoot);
 

@@ -1113,6 +1113,9 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain('identity === "-"');
     expect(packageScript).toContain("pkgbuild");
     expect(packageScript).toContain("productbuild");
+    expect(packageScript).toContain("verbatimSymlinks: true");
+    expect(packageScript).toContain("verifyRelativeSymlinks");
+    expect(packageScript).toContain("Package payload symlink must be relative");
     expect(appcastScript).toContain("sparkle:edSignature");
     expect(appcastScript).toContain("menu-bar/appcast.xml");
     expect(packageJson.scripts["menu-bar:update-test:sparkle"]).toBe(
