@@ -218,6 +218,12 @@ private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
   }
 
   func updater(_ updater: SPUUpdater, didAbortWithError error: Error) {
+    if Self.isNoUpdateError(error) {
+      logger.log("sparkle update probe aborted after finding no update")
+      onNoUpdateAvailable?()
+      return
+    }
+
     logger.log("sparkle update check failed error=\(error.localizedDescription)")
     onUpdateError?(error)
   }
@@ -232,5 +238,13 @@ private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
     logger.log(
       "sparkle update cycle finished with error check=\(updateCheck.rawValue) error=\(error.localizedDescription)"
     )
+  }
+
+  private static func isNoUpdateError(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    // Sparkle's SUNoUpdateError enum value is exported to Objective-C but not
+    // to this Swift module interface.
+    return nsError.domain == SUSparkleErrorDomain
+      && nsError.code == 1001
   }
 }

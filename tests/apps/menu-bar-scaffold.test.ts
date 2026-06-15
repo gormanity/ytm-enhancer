@@ -1112,6 +1112,10 @@ describe("menu bar connector app scaffold", () => {
     expect(updaterSource).toContain("Updates Unavailable");
     expect(updaterSource).toContain("checkForUpdateInformation");
     expect(updaterSource).toContain("startBackgroundUpdateCheck");
+    expect(updaterSource).toContain("isNoUpdateError");
+    expect(updaterSource).toContain(
+      "sparkle update probe aborted after finding no update",
+    );
     expect(mainSource).toContain("SparkleUpdater");
     expect(mainSource).toContain("SparkleUpdater(logger: logger)");
     expect(mainSource).toContain("AboutWindowController");
