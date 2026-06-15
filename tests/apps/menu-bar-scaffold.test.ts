@@ -52,6 +52,48 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("FileHandle.standardOutput");
   });
 
+  it("separates direct menu bar launches from native messaging host launches", () => {
+    const mainSource = read("Sources/YTMMenuBarConnector/main.swift");
+    const launchSource = read(
+      "Sources/YTMMenuBarConnector/NativeMessagingLaunch.swift",
+    );
+    const connectionSource = read(
+      "Sources/YTMMenuBarConnector/ConnectorConnection.swift",
+    );
+
+    expect(connectionSource).toContain("protocol ConnectorConnection");
+    expect(mainSource).toContain("hasNativeMessagingPipe");
+    expect(mainSource).toContain("hasExistingMenuBarInstance");
+    expect(mainSource).toContain("BridgeUiConnection");
+    expect(mainSource).toContain("NativeMessagingRelay");
+    expect(mainSource).toContain('"Waiting for YTM Enhancer"');
+    expect(launchSource).toContain("fstat");
+    expect(launchSource).toContain("S_IFIFO");
+    expect(launchSource).toContain("S_IFSOCK");
+    expect(launchSource).toContain("runningApplications");
+  });
+
+  it("bridges browser-launched native hosts into an existing menu bar UI", () => {
+    const bridgeSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarBridge.swift",
+    );
+    const relaySource = read(
+      "Sources/YTMMenuBarConnector/NativeMessagingRelay.swift",
+    );
+
+    expect(bridgeSource).toContain("AF_UNIX");
+    expect(bridgeSource).toContain("sockaddr_un");
+    expect(bridgeSource).toContain("MenuBarBridgeServer");
+    expect(bridgeSource).toContain("MenuBarBridgeClient");
+    expect(bridgeSource).toContain("BridgeUiConnection");
+    expect(bridgeSource).toContain("lastHelloMessage");
+    expect(bridgeSource).toContain("flushPendingMessages");
+    expect(relaySource).toContain("nativeConnection.start");
+    expect(relaySource).toContain("bridgeClient.start");
+    expect(relaySource).toContain("nativeConnection.send");
+    expect(relaySource).toContain("bridgeClient.send");
+  });
+
   it("writes local debug logs for connector diagnostics", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
@@ -998,6 +1040,9 @@ describe("menu bar connector app scaffold", () => {
     expect(script).toContain("Mozilla/NativeMessagingHosts");
     expect(script).toContain("allowed_origins");
     expect(script).toContain("allowed_extensions");
+    expect(script).toContain("YTM_ENHANCER_NATIVE_HOST_PATH");
+    expect(script).toContain("DEFAULT_BINARY_PATH");
+    expect(script).toContain("swift build -c release");
   });
 
   it("includes a macOS native host uninstaller", () => {

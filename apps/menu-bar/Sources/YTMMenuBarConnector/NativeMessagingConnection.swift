@@ -1,6 +1,6 @@
 import Foundation
 
-final class NativeMessagingConnection {
+final class NativeMessagingConnection: ConnectorConnection {
   private let input: FileHandle
   private let output: FileHandle
   private let logger: NativeAppLogger

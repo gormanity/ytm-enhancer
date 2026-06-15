@@ -5,7 +5,7 @@ final class ConnectorApp {
   private static let playbackStateRetryDelaySeconds: TimeInterval = 2
   private static let playbackStateStaleTimeoutSeconds: TimeInterval = 8
 
-  private let connection: NativeMessagingConnection
+  private let connection: ConnectorConnection
   private let menu: MenuBarController
   private let logger: NativeAppLogger
   private var nextRequestNumber = 0
@@ -14,7 +14,7 @@ final class ConnectorApp {
   private var playbackStateStaleTimeout: DispatchWorkItem?
 
   init(
-    connection: NativeMessagingConnection,
+    connection: ConnectorConnection,
     menu: MenuBarController,
     logger: NativeAppLogger = NativeAppLogger()
   ) {

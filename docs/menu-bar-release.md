@@ -289,9 +289,24 @@ Direct install:
 - Approve the package through the macOS Gatekeeper prompt.
 - Confirm `/Applications/YTM Menu Bar.app` exists.
 - Confirm native host manifests exist under `/Library`.
+- Open `YTM Menu Bar.app` directly and confirm it shows a single waiting menu
+  bar item.
 - Enable Connected Apps in the extension.
+- Confirm no duplicate menu bar item appears.
 - Confirm playback state and controls work.
 - Confirm `Check for Updates...` can reach the appcast.
+
+When testing a direct package with the local dev extension, install user-local
+developer manifests that point at the installed app before checking connector
+behavior:
+
+```sh
+YTM_ENHANCER_NATIVE_HOST_PATH="/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector" \
+  apps/menu-bar/scripts/install-native-hosts.sh
+```
+
+This is only a development override. Public direct-install users should rely on
+the production native host manifests installed under `/Library`.
 
 Homebrew install:
 

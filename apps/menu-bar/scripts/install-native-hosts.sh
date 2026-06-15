@@ -5,7 +5,8 @@ HOST_NAME="com.gormanity.ytm_enhancer.menu_bar"
 DESCRIPTION="YTM Enhancer Menu Bar Connector"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BINARY_PATH="$APP_ROOT/.build/release/YTMMenuBarConnector"
+DEFAULT_BINARY_PATH="$APP_ROOT/.build/release/YTMMenuBarConnector"
+BINARY_PATH="${YTM_ENHANCER_NATIVE_HOST_PATH:-$DEFAULT_BINARY_PATH}"
 UNINSTALL_SCRIPT="$APP_ROOT/scripts/uninstall-native-hosts.sh"
 
 CHROMIUM_ORIGINS=(
@@ -76,7 +77,15 @@ JSON
 
 cd "$APP_ROOT"
 "$UNINSTALL_SCRIPT"
-swift build -c release
+
+if [[ -z "${YTM_ENHANCER_NATIVE_HOST_PATH:-}" ]]; then
+  swift build -c release
+fi
+
+if [[ ! -x "$BINARY_PATH" ]]; then
+  echo "Native host executable not found or not executable: $BINARY_PATH" >&2
+  exit 1
+fi
 
 write_chromium_manifest \
   "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"

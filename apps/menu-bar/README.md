@@ -60,6 +60,17 @@ YTM_ENHANCER_EXTENSION_ORIGINS="chrome-extension://<extension-id>/" \
   apps/menu-bar/scripts/install-native-hosts.sh
 ```
 
+To test an installed release package against the local dev extension, point the
+developer manifests at the installed app:
+
+```sh
+YTM_ENHANCER_NATIVE_HOST_PATH="/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector" \
+  apps/menu-bar/scripts/install-native-hosts.sh
+```
+
+This writes user-local manifests that take precedence during development. The
+public release package still installs production manifests under `/Library`.
+
 ## Release Channels
 
 The public macOS connector has two supported install channels.
@@ -151,6 +162,13 @@ pnpm run menu-bar:update-test:homebrew -- \
 
 When connector support starts, the extension launches the native messaging host
 and the menu bar item appears.
+
+The app supports two launch paths:
+
+- Opening `YTM Menu Bar.app` starts the menu bar UI and waits for YTM Enhancer.
+- Enabling Connected Apps starts the browser native messaging host. If the UI is
+  already open, the host runs headless and bridges into that UI instead of
+  creating a duplicate menu bar item.
 
 ## Debug Logs
 
