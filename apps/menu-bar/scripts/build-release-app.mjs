@@ -41,12 +41,12 @@ function run(command, args) {
   execFileSync(command, args.filter(Boolean), { stdio: "inherit" });
 }
 
-function copyResourceBundles(releaseDirectory, resourcesDirectory) {
+function copyResourceBundles(releaseDirectory, destinationDirectory) {
   for (const entry of readdirSync(releaseDirectory)) {
     if (!entry.endsWith(".bundle") || !entry.includes("YTMMenuBarConnector")) {
       continue;
     }
-    cpSync(join(releaseDirectory, entry), join(resourcesDirectory, entry), {
+    cpSync(join(releaseDirectory, entry), join(destinationDirectory, entry), {
       recursive: true,
     });
   }

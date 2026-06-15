@@ -201,7 +201,8 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("enum MenuBarControlIcon");
     expect(sources).toContain('resourceName: "playback-play"');
     expect(sources).toContain('resourceName: "playback-repeat-one"');
-    expect(sources).toContain("Bundle.module.url(forResource: resourceName");
+    expect(sources).toContain("enum MenuBarResources");
+    expect(sources).toContain("MenuBarResources.url(forResource: resourceName");
     expect(sources).toContain("image.isTemplate = true");
 
     const controlsSource = sources.match(
@@ -900,9 +901,8 @@ describe("menu bar connector app scaffold", () => {
     expect(sourceFiles).toContain(
       "Sources/YTMMenuBarConnector/Resources/extension-icon.svg",
     );
-    expect(sources).toContain(
-      'Bundle.module.url(forResource: "extension-icon", withExtension: "svg")',
-    );
+    expect(sources).toContain("MenuBarResources.url(");
+    expect(sources).toContain('forResource: "extension-icon"');
     expect(sources).toContain("MenuBarStatusIcon.extensionIcon()");
     expect(sources).not.toContain(
       'systemSymbolName: isPlaying ? "music.note" : "music.note.list"',
@@ -923,9 +923,8 @@ describe("menu bar connector app scaffold", () => {
     expect(sourceFiles).toContain(
       "Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome.svg",
     );
-    expect(sources).toContain(
-      'Bundle.module.url(forResource: "extension-icon-monochrome", withExtension: "svg")',
-    );
+    expect(sources).toContain("MenuBarResources.url(");
+    expect(sources).toContain('forResource: "extension-icon-monochrome"');
     expect(sources).toContain("MenuBarStatusIcon.monochromeIcon()");
     expect(sources).toContain("image.isTemplate = true");
     expect(icon).toContain('fill="#000000"');
@@ -1103,6 +1102,9 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain("Info.plist.template");
     expect(appScript).toContain("Sparkle.framework");
     expect(appScript).toContain("verbatimSymlinks: true");
+    expect(appScript).toContain(
+      "copyResourceBundles(releaseDirectory, resourcesDirectory)",
+    );
     expect(appScript).toContain("install_name_tool");
     expect(appScript).toContain("@executable_path/../Frameworks");
     expect(appScript).toContain("otool");

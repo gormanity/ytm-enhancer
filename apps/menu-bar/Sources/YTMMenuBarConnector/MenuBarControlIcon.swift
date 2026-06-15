@@ -38,7 +38,7 @@ enum MenuBarControlIcon {
 
   func image(accessibilityDescription: String?) -> NSImage? {
     guard
-      let url = Bundle.module.url(forResource: resourceName, withExtension: "svg"),
+      let url = MenuBarResources.url(forResource: resourceName, withExtension: "svg"),
       let image = NSImage(contentsOf: url)
     else {
       return nil
