@@ -55,8 +55,7 @@ final class AboutWindowController: NSObject {
     switch status {
     case .homebrew:
       updateStatusLabel.stringValue = "Updates are managed by Homebrew."
-      updateDetailLabel.stringValue =
-        "Use Homebrew to update this install. The button below copies the update command."
+      updateDetailLabel.stringValue = "Use Homebrew to update this install."
       updateButton.title = "Copy Update Command"
       updateButton.isEnabled = true
       updateAction = .copyHomebrewCommand

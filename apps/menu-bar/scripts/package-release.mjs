@@ -6,6 +6,7 @@ import {
   readdirSync,
   readlinkSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -41,6 +42,41 @@ function verifyRelativeSymlinks(directory) {
       verifyRelativeSymlinks(path);
     }
   }
+}
+
+function escapeXml(value) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function writeAppComponentPlist(path, appName) {
+  const rootRelativeBundlePath = `Applications/${appName}.app`;
+  writeFileSync(
+    path,
+    `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+  <dict>
+    <key>BundleHasStrictIdentifier</key>
+    <true/>
+    <key>BundleIsRelocatable</key>
+    <false/>
+    <key>BundleIsVersionChecked</key>
+    <false/>
+    <key>BundleOverwriteAction</key>
+    <string>upgrade</string>
+    <key>RootRelativeBundlePath</key>
+    <string>${escapeXml(rootRelativeBundlePath)}</string>
+  </dict>
+</array>
+</plist>
+`,
+  );
 }
 
 export function packageRelease({
@@ -92,10 +128,16 @@ export function packageRelease({
 
   const appComponent = join(componentRoot, "app.pkg");
   const hostComponent = join(componentRoot, "native-hosts.pkg");
+  const appComponentPlist = join(componentRoot, "app-components.plist");
+  writeAppComponentPlist(appComponentPlist, metadata.appName);
 
   run("pkgbuild", [
     "--root",
     appPayloadRoot,
+    "--install-location",
+    "/",
+    "--component-plist",
+    appComponentPlist,
     "--identifier",
     `${metadata.bundleIdentifier}.app`,
     "--version",
@@ -105,6 +147,8 @@ export function packageRelease({
   run("pkgbuild", [
     "--root",
     hostPayloadRoot,
+    "--install-location",
+    "/",
     "--identifier",
     `${metadata.bundleIdentifier}.native-hosts`,
     "--version",

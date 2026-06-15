@@ -1122,6 +1122,8 @@ describe("menu bar connector app scaffold", () => {
     expect(controllerSource).toContain("About YTM Menu Bar");
     expect(controllerSource).toContain("Update Available");
     expect(aboutSource).toContain("Updates are managed by Homebrew");
+    expect(aboutSource).toContain("Use Homebrew to update this install.");
+    expect(aboutSource).not.toContain("button below copies");
     expect(aboutSource).toContain("Connected Apps enabled");
     expect(aboutSource).toContain("github.com/gormanity/ytm-enhancer");
     expect(aboutSource).toContain("Download and Install");
@@ -1205,6 +1207,12 @@ describe("menu bar connector app scaffold", () => {
     expect(packageScript).toContain("verbatimSymlinks: true");
     expect(packageScript).toContain("verifyRelativeSymlinks");
     expect(packageScript).toContain("Package payload symlink must be relative");
+    expect(packageScript).toContain("writeAppComponentPlist");
+    expect(packageScript).toContain("BundleIsRelocatable");
+    expect(packageScript).toContain("BundleIsVersionChecked");
+    expect(packageScript).toContain("RootRelativeBundlePath");
+    expect(packageScript).toContain('"--install-location"');
+    expect(packageScript).toContain('"--component-plist"');
     expect(appcastScript).toContain("sparkle:edSignature");
     expect(appcastScript).toContain("menu-bar/appcast.xml");
     expect(appcastScript).toContain("writeDefaultReleaseNotes");
