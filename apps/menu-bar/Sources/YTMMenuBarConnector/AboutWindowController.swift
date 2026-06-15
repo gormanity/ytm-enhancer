@@ -9,6 +9,13 @@ private enum AboutUpdateAction {
 }
 
 final class AboutWindowController: NSObject {
+  private static let windowWidth: CGFloat = 420
+  private static let windowHeight: CGFloat = 500
+  private static let contentInset: CGFloat = 22
+  private static let contentWidth = windowWidth - (contentInset * 2)
+  private static let panelInset: CGFloat = 14
+  private static let panelContentWidth = contentWidth - (panelInset * 2)
+
   private var window: NSWindow!
   private let updateStatusLabel = NSTextField(wrappingLabelWithString: "")
   private let updateDetailLabel = NSTextField(wrappingLabelWithString: "")
@@ -94,11 +101,18 @@ final class AboutWindowController: NSObject {
       updateButton.isEnabled = true
       updateAction = .checkAgain
     }
+
+    window.contentView?.layoutSubtreeIfNeeded()
   }
 
   private static func makeWindow() -> NSWindow {
     let window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 420, height: 440),
+      contentRect: NSRect(
+        x: 0,
+        y: 0,
+        width: windowWidth,
+        height: windowHeight
+      ),
       styleMask: [.titled, .closable],
       backing: .buffered,
       defer: false
@@ -110,11 +124,12 @@ final class AboutWindowController: NSObject {
   }
 
   private func configure() {
+    let contentView = NSView()
+
     let root = NSStackView()
     root.orientation = .vertical
     root.alignment = .leading
     root.spacing = 16
-    root.edgeInsets = NSEdgeInsets(top: 22, left: 22, bottom: 22, right: 22)
     root.translatesAutoresizingMaskIntoConstraints = false
 
     let header = makeHeader()
@@ -125,18 +140,37 @@ final class AboutWindowController: NSObject {
       "It requires the YTM Enhancer browser extension with Connected Apps enabled. The app does not read YouTube Music pages directly."
     )
     let updateSection = makeUpdateSection()
+    let separator = makeSeparator()
     let links = makeLinkRow()
 
     root.addArrangedSubview(header)
-    root.addArrangedSubview(makeSeparator())
+    root.addArrangedSubview(separator)
     root.addArrangedSubview(connectorInfo)
     root.addArrangedSubview(dependencyInfo)
     root.addArrangedSubview(updateSection)
     root.addArrangedSubview(links)
 
-    window.contentView = root
+    contentView.addSubview(root)
+    window.contentView = contentView
     NSLayoutConstraint.activate([
-      root.widthAnchor.constraint(equalToConstant: 420)
+      root.topAnchor.constraint(
+        equalTo: contentView.topAnchor,
+        constant: Self.contentInset
+      ),
+      root.leadingAnchor.constraint(
+        equalTo: contentView.leadingAnchor,
+        constant: Self.contentInset
+      ),
+      root.trailingAnchor.constraint(
+        equalTo: contentView.trailingAnchor,
+        constant: -Self.contentInset
+      ),
+      root.bottomAnchor.constraint(
+        lessThanOrEqualTo: contentView.bottomAnchor,
+        constant: -Self.contentInset
+      ),
+      separator.widthAnchor.constraint(equalToConstant: Self.contentWidth),
+      updateSection.widthAnchor.constraint(equalToConstant: Self.contentWidth),
     ])
   }
 
@@ -174,35 +208,60 @@ final class AboutWindowController: NSObject {
   }
 
   private func makeUpdateSection() -> NSView {
-    let box = NSBox()
-    box.title = "Updates"
-    box.boxType = .primary
+    let panel = NSView()
+    panel.wantsLayer = true
+    panel.layer?.cornerRadius = 8
+    panel.layer?.borderWidth = 1
+    panel.layer?.borderColor = NSColor.separatorColor.cgColor
+    panel.translatesAutoresizingMaskIntoConstraints = false
 
     let stack = NSStackView()
     stack.orientation = .vertical
     stack.alignment = .leading
     stack.spacing = 8
-    stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
     stack.translatesAutoresizingMaskIntoConstraints = false
 
+    let titleLabel = makeSectionLabel("Updates")
     updateStatusLabel.font = .systemFont(ofSize: 13, weight: .semibold)
     updateStatusLabel.textColor = .labelColor
+    updateStatusLabel.maximumNumberOfLines = 0
+    updateStatusLabel.preferredMaxLayoutWidth = Self.panelContentWidth
+
     updateDetailLabel.font = .systemFont(ofSize: 12)
     updateDetailLabel.textColor = .secondaryLabelColor
+    updateDetailLabel.maximumNumberOfLines = 0
+    updateDetailLabel.preferredMaxLayoutWidth = Self.panelContentWidth
 
     updateButton.target = self
     updateButton.action = #selector(handleUpdateButton)
     updateButton.bezelStyle = .rounded
 
+    stack.addArrangedSubview(titleLabel)
     stack.addArrangedSubview(updateStatusLabel)
     stack.addArrangedSubview(updateDetailLabel)
     stack.addArrangedSubview(updateButton)
-    box.contentView = stack
+    panel.addSubview(stack)
 
     NSLayoutConstraint.activate([
-      stack.widthAnchor.constraint(equalToConstant: 350)
+      stack.topAnchor.constraint(
+        equalTo: panel.topAnchor,
+        constant: Self.panelInset
+      ),
+      stack.leadingAnchor.constraint(
+        equalTo: panel.leadingAnchor,
+        constant: Self.panelInset
+      ),
+      stack.trailingAnchor.constraint(
+        lessThanOrEqualTo: panel.trailingAnchor,
+        constant: -Self.panelInset
+      ),
+      stack.bottomAnchor.constraint(
+        equalTo: panel.bottomAnchor,
+        constant: -Self.panelInset
+      ),
+      stack.widthAnchor.constraint(equalToConstant: Self.panelContentWidth),
     ])
-    return box
+    return panel
   }
 
   private func makeLinkRow() -> NSView {
@@ -232,12 +291,19 @@ final class AboutWindowController: NSObject {
     return label
   }
 
+  private func makeSectionLabel(_ text: String) -> NSTextField {
+    let label = NSTextField(labelWithString: text)
+    label.font = .systemFont(ofSize: 12, weight: .semibold)
+    label.textColor = .secondaryLabelColor
+    return label
+  }
+
   private func makeBodyLabel(_ text: String) -> NSTextField {
     let label = NSTextField(wrappingLabelWithString: text)
     label.font = .systemFont(ofSize: 12)
     label.textColor = .secondaryLabelColor
     label.maximumNumberOfLines = 0
-    label.preferredMaxLayoutWidth = 360
+    label.preferredMaxLayoutWidth = Self.contentWidth
     return label
   }
 

@@ -1121,6 +1121,9 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("Connected Apps enabled");
     expect(aboutSource).toContain("github.com/gormanity/ytm-enhancer");
     expect(aboutSource).toContain("Download and Install");
+    expect(aboutSource).toContain("root.bottomAnchor.constraint");
+    expect(aboutSource).toContain("panel.addSubview(stack)");
+    expect(aboutSource).not.toContain('box.title = "Updates"');
     expect(plistTemplate).toContain("SUFeedURL");
     expect(plistTemplate).toContain("SUPublicEDKey");
     expect(plistTemplate).toContain("LSUIElement");
