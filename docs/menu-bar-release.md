@@ -258,7 +258,10 @@ swift build --package-path apps/menu-bar -c release
    - Homebrew `.pkg`
    - Sparkle `.zip`
    - `appcast.xml`
-7. Confirm GitHub Pages serves the updated appcast.
+   - standalone release notes at `menu-bar/release-notes/X.Y.Z.html`
+7. Confirm GitHub Pages serves the updated appcast and release notes. The
+   appcast must link to the standalone release notes, not a full GitHub release
+   page.
 8. Confirm the Homebrew tap cask was updated.
 
 The release workflow derives package, appcast, and cask versions from the

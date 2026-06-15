@@ -83,14 +83,14 @@ final class AboutWindowController: NSObject {
     case .upToDate:
       updateStatusLabel.stringValue = "YTM Menu Bar is up to date."
       updateDetailLabel.stringValue =
-        "No compatible update is currently available for this install."
+        "You are running the latest available version for this install."
       updateButton.title = "Check Again"
       updateButton.isEnabled = true
       updateAction = .checkAgain
     case let .updateAvailable(version):
       updateStatusLabel.stringValue = "YTM Menu Bar \(version) is available."
       updateDetailLabel.stringValue =
-        "Download and apply the update through Sparkle when you are ready."
+        "Download and install the update when you are ready."
       updateButton.title = "Download and Install..."
       updateButton.isEnabled = true
       updateAction = .showSparkleUpdate

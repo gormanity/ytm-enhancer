@@ -1125,6 +1125,10 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("Connected Apps enabled");
     expect(aboutSource).toContain("github.com/gormanity/ytm-enhancer");
     expect(aboutSource).toContain("Download and Install");
+    expect(aboutSource).toContain("Download and install the update");
+    expect(aboutSource).toContain("latest available version");
+    expect(aboutSource).not.toContain("through Sparkle");
+    expect(aboutSource).not.toContain("No compatible update");
     expect(aboutSource).toContain("root.bottomAnchor.constraint");
     expect(aboutSource).toContain("panel.addSubview(stack)");
     expect(aboutSource).not.toContain('box.title = "Updates"');
@@ -1203,6 +1207,9 @@ describe("menu bar connector app scaffold", () => {
     expect(packageScript).toContain("Package payload symlink must be relative");
     expect(appcastScript).toContain("sparkle:edSignature");
     expect(appcastScript).toContain("menu-bar/appcast.xml");
+    expect(appcastScript).toContain("writeDefaultReleaseNotes");
+    expect(appcastScript).toContain("release-notes/${metadata.version}.html");
+    expect(appcastScript).not.toContain("releases/tag/${tag}");
     expect(packageJson.scripts["menu-bar:update-test:sparkle"]).toBe(
       "node apps/menu-bar/scripts/prepare-sparkle-update-test.mjs",
     );
@@ -1233,6 +1240,7 @@ describe("menu bar connector app scaffold", () => {
     expect(appcastScript).toContain('"release-base-url"');
     expect(appcastScript).toContain('argValue("release-notes-url"');
     expect(appcastScript).toContain("archiveUrl || undefined");
+    expect(appcastScript).toContain("defaultReleaseNotesUrl");
     expect(releaseDocs).toContain("Keep production and test feeds separate");
     expect(releaseDocs).toContain("YTM_MENU_BAR_APPCAST_URL");
     expect(releaseDocs).toContain("Local Sparkle Update Test");

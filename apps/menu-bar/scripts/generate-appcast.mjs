@@ -20,8 +20,82 @@ function escapeXml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+function defaultReleaseNotesUrl(metadata) {
+  const url = new URL(metadata.appcastUrl);
+  url.pathname = url.pathname.replace(
+    /\/?appcast\.xml$/,
+    `/release-notes/${metadata.version}.html`,
+  );
+  return url.toString();
+}
+
+function writeDefaultReleaseNotes({ metadata, outputPath }) {
+  const notesPath = resolve(
+    dirname(outputPath),
+    "release-notes",
+    `${metadata.version}.html`,
+  );
+  const notesHtml = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escapeHtml(metadata.appName)} ${escapeHtml(metadata.version)} Release Notes</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        color: CanvasText;
+        background: Canvas;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 24px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>${escapeHtml(metadata.appName)} ${escapeHtml(metadata.version)}</h1>
+    <p>This release keeps the menu bar companion app up to date with YTM Enhancer.</p>
+    <ul>
+      <li>Includes the latest menu bar app improvements and maintenance fixes.</li>
+      <li>Recommended for all direct-install users.</li>
+    </ul>
+  </body>
+</html>
+`;
+
+  mkdirSync(dirname(notesPath), { recursive: true });
+  writeFileSync(notesPath, notesHtml);
+  return notesPath;
 }
 
 export function generateAppcast({
@@ -44,9 +118,7 @@ export function generateAppcast({
   const tag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
   const archiveName = archivePath.split("/").at(-1);
   const url = archiveUrl ?? `${releaseBaseUrl}/${tag}/${archiveName}`;
-  const notesUrl =
-    releaseNotesUrl ??
-    `https://github.com/gormanity/ytm-enhancer/releases/tag/${tag}`;
+  const notesUrl = releaseNotesUrl ?? defaultReleaseNotesUrl(metadata);
   const length = statSync(archivePath).size;
   const checksum = sha256(archivePath);
   const appcast = `<?xml version="1.0" encoding="utf-8"?>
@@ -75,6 +147,9 @@ export function generateAppcast({
 
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, appcast);
+  if (!releaseNotesUrl) {
+    writeDefaultReleaseNotes({ metadata, outputPath });
+  }
   return outputPath;
 }
 
