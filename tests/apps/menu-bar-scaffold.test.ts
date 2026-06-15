@@ -1152,6 +1152,43 @@ describe("menu bar connector app scaffold", () => {
     );
   });
 
+  it("generates a menu bar install landing page for GitHub Pages", () => {
+    const appcastScript = read("scripts/generate-appcast.mjs");
+    const popupSource = readFileSync(
+      resolve(process.cwd(), "src/core/connectors/popup.ts"),
+      "utf-8",
+    );
+    const popupTemplate = readFileSync(
+      resolve(process.cwd(), "src/core/connectors/popup.html"),
+      "utf-8",
+    );
+    const releaseDocs = readFileSync(
+      resolve(process.cwd(), "docs/menu-bar-release.md"),
+      "utf-8",
+    );
+
+    expect(appcastScript).toContain("function writeInstallPage");
+    expect(appcastScript).toContain('"install.html"');
+    expect(appcastScript).toContain("extension-icon.svg");
+    expect(appcastScript).toContain("Download for macOS");
+    expect(appcastScript).toContain(
+      "brew install --cask gormanity/tap/ytm-menu-bar",
+    );
+    expect(appcastScript).toContain("Direct installs update from the app");
+    expect(appcastScript).toContain("not notarized yet");
+    expect(appcastScript).toContain(
+      "does not read YouTube Music pages directly",
+    );
+    expect(appcastScript).not.toContain("through Sparkle");
+    expect(popupSource).toContain(
+      "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
+    );
+    expect(popupTemplate).toContain(
+      "Direct installs update from the app. Homebrew installs update with Homebrew.",
+    );
+    expect(releaseDocs).toContain("menu-bar/install.html");
+  });
+
   it("generates production native host manifests for app bundle installs", () => {
     const generator = read("scripts/generate-native-host-manifests.mjs");
 

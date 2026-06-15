@@ -137,6 +137,16 @@ The public release model has two install channels:
 - Homebrew install from `gormanity/homebrew-tap` with a cask named
   `ytm-menu-bar`.
 
+The Connected Apps popup links users to the stable install page:
+
+```text
+https://gormanity.github.io/ytm-enhancer/menu-bar/install.html
+```
+
+That page presents the direct package download, the Homebrew install command,
+setup guidance, update guidance, and macOS security notes for the current menu
+bar release.
+
 Direct installs are updated by the app through Sparkle. The stable appcast URL
 is:
 

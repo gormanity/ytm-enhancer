@@ -229,7 +229,7 @@ describe("Connected Apps popup view", () => {
         "brew install --cask gormanity/tap/ytm-menu-bar",
       );
       expect(container.textContent).toContain(
-        "Updates are handled by the menu bar app or Homebrew.",
+        "Direct installs update from the app. Homebrew installs update with Homebrew.",
       );
     });
 
@@ -240,7 +240,9 @@ describe("Connected Apps popup view", () => {
       '[data-role="connected-app-menu-bar-homebrew-command"]',
     );
 
-    expect(directLink?.href).toContain("/releases");
+    expect(directLink?.href).toBe(
+      "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
+    );
     expect(homebrewCode?.textContent).toBe(
       "brew install --cask gormanity/tap/ytm-menu-bar",
     );
@@ -274,7 +276,7 @@ describe("Connected Apps popup view", () => {
     await vi.waitFor(() => {
       expect(container.textContent).toContain("Update required");
       expect(container.textContent).toContain(
-        "Use Check for Updates in YTM Menu Bar, or run brew upgrade --cask ytm-menu-bar.",
+        "Open About YTM Menu Bar to download the update, or run brew upgrade --cask ytm-menu-bar.",
       );
     });
   });

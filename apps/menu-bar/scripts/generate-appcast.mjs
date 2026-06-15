@@ -40,6 +40,15 @@ function defaultReleaseNotesUrl(metadata) {
   return url.toString();
 }
 
+function packageUrl({ metadata, releaseBaseUrl, packageName }) {
+  const tag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
+  return `${releaseBaseUrl}/${tag}/${packageName}`;
+}
+
+function homebrewInstallCommand() {
+  return "brew install --cask gormanity/tap/ytm-menu-bar";
+}
+
 function writeDefaultReleaseNotes({ metadata, outputPath }) {
   const notesPath = resolve(
     dirname(outputPath),
@@ -98,6 +107,288 @@ function writeDefaultReleaseNotes({ metadata, outputPath }) {
   return notesPath;
 }
 
+function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
+  const installPath = resolve(dirname(outputPath), "install.html");
+  const iconSvg = readFileSync(
+    resolve(
+      appRoot,
+      "Sources/YTMMenuBarConnector/Resources/extension-icon.svg",
+    ),
+    "utf-8",
+  );
+  const directPackageName = `YTM-Menu-Bar-${metadata.version}.pkg`;
+  const directUrl = packageUrl({
+    metadata,
+    releaseBaseUrl,
+    packageName: directPackageName,
+  });
+  const releaseNotesUrl = defaultReleaseNotesUrl(metadata);
+  const command = homebrewInstallCommand();
+  const installHtml = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escapeHtml(metadata.appName)} for YTM Enhancer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background: #090909;
+        color: #f4f4f5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #121217 0%, #080808 58%, #130b18 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      main {
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 64px 20px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 48px;
+        align-items: center;
+        min-height: min(640px, calc(100vh - 128px));
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: #b9b9c4;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 72px;
+        line-height: 0.95;
+      }
+
+      .summary {
+        max-width: 680px;
+        margin: 24px 0 0;
+        color: #d0d0d8;
+        font-size: 20px;
+        line-height: 1.45;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 34px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 20px;
+        border: 1px solid rgb(255 255 255 / 0.16);
+        border-radius: 8px;
+        background: rgb(255 255 255 / 0.1);
+        font-size: 16px;
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      .button-primary {
+        border-color: #ff1f1f;
+        background: #ff1f1f;
+        color: #fff;
+      }
+
+      .icon-card {
+        display: grid;
+        place-items: center;
+        justify-self: end;
+        width: 280px;
+        aspect-ratio: 1;
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 28px;
+        background: rgb(255 255 255 / 0.08);
+        box-shadow: 0 26px 90px rgb(0 0 0 / 0.34);
+      }
+
+      .icon-card svg {
+        width: 188px;
+        height: 188px;
+      }
+
+      .panel-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 28px;
+      }
+
+      .panel {
+        min-height: 100%;
+        padding: 22px;
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 8px;
+        background: rgb(255 255 255 / 0.06);
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+
+      p {
+        margin: 0;
+        color: #c8c8d0;
+        font-size: 15px;
+        line-height: 1.55;
+      }
+
+      code {
+        display: block;
+        margin-top: 14px;
+        padding: 14px;
+        overflow-x: auto;
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 8px;
+        background: rgb(0 0 0 / 0.34);
+        color: #fff;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 14px;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          margin: 0;
+          max-width: 390px;
+          padding: 36px 24px;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+          min-height: auto;
+        }
+
+        .icon-card {
+          justify-self: start;
+          width: 180px;
+          border-radius: 20px;
+        }
+
+        .icon-card svg {
+          width: 122px;
+          height: 122px;
+        }
+
+        h1 {
+          font-size: 44px;
+        }
+
+        .actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .panel-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero" aria-labelledby="title">
+        <div>
+          <p class="eyebrow">YTM Enhancer companion app</p>
+          <h1 id="title">${escapeHtml(metadata.appName)}</h1>
+          <p class="summary">
+            Native macOS menu bar playback info and controls for YouTube Music,
+            powered by YTM Enhancer's Connected Apps API.
+          </p>
+          <div class="actions" aria-label="Install options">
+            <a class="button button-primary" href="${escapeHtml(directUrl)}">
+              Download for macOS
+            </a>
+            <a class="button" href="${escapeHtml(releaseNotesUrl)}">Release notes</a>
+          </div>
+        </div>
+        <div class="icon-card" aria-hidden="true">
+          ${iconSvg}
+        </div>
+      </section>
+
+      <section class="panel-grid" aria-label="Installation details">
+        <article class="panel">
+          <h2>Latest Version</h2>
+          <p>
+            Version ${escapeHtml(metadata.version)} for macOS
+            ${escapeHtml(metadata.minimumMacOSVersion)} or later.
+          </p>
+        </article>
+        <article class="panel">
+          <h2>Setup</h2>
+          <p>
+            After installing, open YTM Enhancer, enable Connected Apps, then
+            open YTM Menu Bar from macOS.
+          </p>
+        </article>
+        <article class="panel">
+          <h2>Homebrew</h2>
+          <p>Install the app with Homebrew if you prefer package manager updates.</p>
+          <code>${escapeHtml(command)}</code>
+        </article>
+        <article class="panel">
+          <h2>Updates</h2>
+          <p>
+            Direct installs update from the app. Homebrew installs update with
+          </p>
+          <code>brew update &amp;&amp; brew upgrade --cask ytm-menu-bar</code>
+        </article>
+        <article class="panel">
+          <h2>Privacy</h2>
+          <p>
+            YTM Menu Bar communicates with YTM Enhancer through the connector
+            API. It does not read YouTube Music pages directly.
+          </p>
+        </article>
+        <article class="panel">
+          <h2>macOS Security</h2>
+          <p>
+            Early builds are not notarized yet, so macOS may ask you to confirm
+            opening the installer or app in Privacy &amp; Security.
+          </p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
+`;
+
+  mkdirSync(dirname(installPath), { recursive: true });
+  writeFileSync(installPath, installHtml);
+  return installPath;
+}
+
 export function generateAppcast({
   archivePath,
   archiveUrl,
@@ -150,6 +441,7 @@ export function generateAppcast({
   if (!releaseNotesUrl) {
     writeDefaultReleaseNotes({ metadata, outputPath });
   }
+  writeInstallPage({ metadata, outputPath, releaseBaseUrl });
   return outputPath;
 }
 

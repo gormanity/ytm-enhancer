@@ -10,6 +10,8 @@ Direct install:
 
 - Asset: `YTM-Menu-Bar-<version>.pkg`.
 - Update archive: `YTM-Menu-Bar-<version>.zip`.
+- Install page:
+  `https://gormanity.github.io/ytm-enhancer/menu-bar/install.html`.
 - Update feed: `https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml`.
 - Updates are handled by Sparkle inside the app. Direct builds probe the appcast
   silently and expose download/install actions from `About YTM Menu Bar`.
@@ -259,15 +261,27 @@ swift build --package-path apps/menu-bar -c release
    - Sparkle `.zip`
    - `appcast.xml`
    - standalone release notes at `menu-bar/release-notes/X.Y.Z.html`
-7. Confirm GitHub Pages serves the updated appcast and release notes. The
-   appcast must link to the standalone release notes, not a full GitHub release
-   page.
+   - install landing page at `menu-bar/install.html`
+7. Confirm GitHub Pages serves the updated install page, appcast, and release
+   notes. The appcast must link to the standalone release notes, not a full
+   GitHub release page.
 8. Confirm the Homebrew tap cask was updated.
 
 The release workflow derives package, appcast, and cask versions from the
 `menu-bar-vX.Y.Z` tag. Use a lower numeric tag, such as `menu-bar-v0.0.1`, for a
 throwaway release dry run rather than a suffix tag such as
 `menu-bar-v0.1.0-test`.
+
+The workflow also publishes a stable install landing page at:
+
+```text
+https://gormanity.github.io/ytm-enhancer/menu-bar/install.html
+```
+
+The Connected Apps popup links to this page rather than the generic GitHub
+Releases listing. The page is generated from the release metadata so direct
+download, Homebrew, setup, update, privacy, and macOS security guidance stay
+aligned with the current menu bar release.
 
 ## Manual Validation Policy
 

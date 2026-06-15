@@ -24,12 +24,12 @@ const STATUS_LABELS: Record<ConnectorStatus, string> = {
 };
 
 const FIRST_PARTY_MENU_BAR_CONNECTOR_ID = "com.gormanity.ytm-enhancer.menu-bar";
-const MENU_BAR_RELEASES_URL =
-  "https://github.com/gormanity/ytm-enhancer/releases";
+const MENU_BAR_INSTALL_URL =
+  "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html";
 const MENU_BAR_HOMEBREW_COMMAND =
   "brew install --cask gormanity/tap/ytm-menu-bar";
 const MENU_BAR_UPDATE_GUIDANCE =
-  "Update required. Use Check for Updates in YTM Menu Bar, or run brew upgrade --cask ytm-menu-bar.";
+  "Update required. Open About YTM Menu Bar to download the update, or run brew upgrade --cask ytm-menu-bar.";
 
 function permissionLabel(permission: ConnectorPermission): string {
   return CONNECTOR_PERMISSION_LABELS[permission] ?? permission;
@@ -166,7 +166,7 @@ function renderMenuBarInstallCard(
     installCard,
     "connected-app-menu-bar-direct-link",
   );
-  if (directLink) directLink.href = MENU_BAR_RELEASES_URL;
+  if (directLink) directLink.href = MENU_BAR_INSTALL_URL;
 
   const homebrewCommand = queryRole<HTMLElement>(
     installCard,
