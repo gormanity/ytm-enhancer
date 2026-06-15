@@ -74,8 +74,11 @@ https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml
   HTTP server.
 - Homebrew builds keep Sparkle disabled and must never consume an appcast.
 
-Sparkle compares bundle versions. For every update test, increase
-`CFBundleVersion` even when `CFBundleShortVersionString` stays the same.
+Sparkle compares bundle versions. Public `menu-bar-vX.Y.Z` releases derive a
+monotonic `CFBundleVersion` as `major * 1000000 + minor * 1000 + patch`; for
+example, `menu-bar-v0.0.8` publishes build `8`. For every local update test,
+increase `CFBundleVersion` even when `CFBundleShortVersionString` stays the
+same.
 
 The release scripts support local metadata overrides for update validation:
 

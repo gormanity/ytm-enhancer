@@ -1303,8 +1303,18 @@ describe("menu bar connector app scaffold", () => {
 
     expect(workflow).toContain('version="${GITHUB_REF_NAME#menu-bar-v}"');
     expect(workflow).toContain("menu-bar-vX.Y.Z");
+    expect(workflow).toContain(
+      'IFS=. read -r major minor patch <<< "$version"',
+    );
+    expect(workflow).toContain(
+      "build_number=$((major * 1000000 + minor * 1000 + patch))",
+    );
     expect(workflow).toContain("YTM_MENU_BAR_VERSION=$version");
+    expect(workflow).toContain("YTM_MENU_BAR_BUILD_NUMBER=$build_number");
     expect(workflow).toContain('echo "YTM_MENU_BAR_VERSION=$version"');
+    expect(workflow).toContain(
+      'echo "YTM_MENU_BAR_BUILD_NUMBER=$build_number"',
+    );
   });
 
   it("signs Sparkle appcasts from the decoded CI key file", () => {
