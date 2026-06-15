@@ -29,6 +29,42 @@ function renderTemplate(template, values) {
   });
 }
 
+function validateSparklePublicEdKey(value) {
+  const key = value.trim();
+
+  if (!key || key === "__SPARKLE_PUBLIC_ED_KEY__") {
+    throw new Error("SPARKLE_PUBLIC_ED_KEY is required for direct packages.");
+  }
+
+  const decoded = Buffer.from(key, "base64");
+  if (decoded.length !== 32 || decoded.toString("base64") !== key) {
+    throw new Error(
+      "SPARKLE_PUBLIC_ED_KEY must be a base64-encoded 32-byte EdDSA public key.",
+    );
+  }
+
+  return key;
+}
+
+function resolveSparkleConfiguration({
+  sparkleEnabled,
+  requireSparklePublicKey,
+}) {
+  if (!sparkleEnabled) {
+    return { enabled: false, publicEdKey: "" };
+  }
+
+  const rawPublicKey = process.env.SPARKLE_PUBLIC_ED_KEY ?? "";
+  if (!rawPublicKey.trim() && !requireSparklePublicKey) {
+    return { enabled: false, publicEdKey: "" };
+  }
+
+  return {
+    enabled: true,
+    publicEdKey: validateSparklePublicEdKey(rawPublicKey),
+  };
+}
+
 function swiftBuild(channel) {
   const args = ["build", "--package-path", appRoot, "-c", "release"];
   if (channel === "homebrew") {
@@ -119,12 +155,18 @@ function signAppBundle(appDirectory) {
 export function buildReleaseApp({
   channel = "direct",
   outputRoot = resolve(appRoot, ".build/release-apps"),
+  requireSparklePublicKey = false,
 } = {}) {
   const metadata = readReleaseMetadata();
 
   if (!["direct", "homebrew"].includes(channel)) {
     throw new Error(`Unsupported release channel: ${channel}`);
   }
+
+  const sparkle = resolveSparkleConfiguration({
+    requireSparklePublicKey,
+    sparkleEnabled: metadata.channels[channel].sparkleEnabled,
+  });
 
   swiftBuild(channel);
 
@@ -147,7 +189,6 @@ export function buildReleaseApp({
   copySparkleFramework(releaseDirectory, contentsDirectory);
   copyResourceBundles(releaseDirectory, resourcesDirectory);
 
-  const sparkleEnabled = metadata.channels[channel].sparkleEnabled;
   const plist = renderTemplate(
     readFileSync(resolve(appRoot, "release/Info.plist.template"), "utf-8"),
     {
@@ -156,10 +197,9 @@ export function buildReleaseApp({
       BUILD_NUMBER: metadata.buildNumber,
       BUNDLE_IDENTIFIER: metadata.bundleIdentifier,
       MINIMUM_MACOS_VERSION: metadata.minimumMacOSVersion,
-      SPARKLE_ALLOWS_AUTOMATIC_UPDATES: sparkleEnabled ? "true" : "false",
-      SPARKLE_AUTOMATIC_CHECKS: sparkleEnabled ? "true" : "false",
-      SPARKLE_PUBLIC_ED_KEY:
-        process.env.SPARKLE_PUBLIC_ED_KEY ?? "__SPARKLE_PUBLIC_ED_KEY__",
+      SPARKLE_ALLOWS_AUTOMATIC_UPDATES: "false",
+      SPARKLE_AUTOMATIC_CHECKS: "false",
+      SPARKLE_PUBLIC_ED_KEY: sparkle.publicEdKey,
       VERSION: metadata.version,
     },
   );

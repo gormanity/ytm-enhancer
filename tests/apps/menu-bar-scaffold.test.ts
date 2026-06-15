@@ -1096,18 +1096,47 @@ describe("menu bar connector app scaffold", () => {
     const controllerSource = read(
       "Sources/YTMMenuBarConnector/MenuBarController.swift",
     );
+    const aboutSource = read(
+      "Sources/YTMMenuBarConnector/AboutWindowController.swift",
+    );
     const plistTemplate = read("release/Info.plist.template");
 
     expect(packageManifest).toContain("sparkle-project/Sparkle");
     expect(packageManifest).toContain('.product(name: "Sparkle"');
     expect(updaterSource).toContain("SPUStandardUpdaterController");
+    expect(updaterSource).toContain("SPUUpdaterDelegate");
     expect(updaterSource).toContain("DistributionChannel.current");
+    expect(updaterSource).toContain("SUPublicEDKey");
+    expect(updaterSource).toContain("Data(base64Encoded:");
+    expect(updaterSource).toContain("sparkle updater unavailable");
+    expect(updaterSource).toContain("Updates Unavailable");
+    expect(updaterSource).toContain("checkForUpdateInformation");
+    expect(updaterSource).toContain("startBackgroundUpdateCheck");
     expect(mainSource).toContain("SparkleUpdater");
-    expect(controllerSource).toContain("Check for Updates");
-    expect(controllerSource).toContain("Update with Homebrew");
+    expect(mainSource).toContain("SparkleUpdater(logger: logger)");
+    expect(mainSource).toContain("AboutWindowController");
+    expect(controllerSource).toContain("About YTM Menu Bar");
+    expect(controllerSource).toContain("Update Available");
+    expect(aboutSource).toContain("Updates are managed by Homebrew");
+    expect(aboutSource).toContain("Connected Apps enabled");
+    expect(aboutSource).toContain("github.com/gormanity/ytm-enhancer");
+    expect(aboutSource).toContain("Download and Install");
     expect(plistTemplate).toContain("SUFeedURL");
     expect(plistTemplate).toContain("SUPublicEDKey");
     expect(plistTemplate).toContain("LSUIElement");
+  });
+
+  it("requires Sparkle public keys for direct packages", () => {
+    const buildScript = read("scripts/build-release-app.mjs");
+    const packageScript = read("scripts/package-release.mjs");
+
+    expect(buildScript).toContain("validateSparklePublicEdKey");
+    expect(buildScript).toContain("requireSparklePublicKey");
+    expect(buildScript).toContain("SPARKLE_PUBLIC_ED_KEY is required");
+    expect(buildScript).toContain("SPARKLE_PUBLIC_ED_KEY must be");
+    expect(packageScript).toContain(
+      'requireSparklePublicKey: channel === "direct"',
+    );
   });
 
   it("generates production native host manifests for app bundle installs", () => {
@@ -1153,6 +1182,8 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain("install_name_tool");
     expect(appScript).toContain("@executable_path/../Frameworks");
     expect(appScript).toContain("otool");
+    expect(appScript).toContain('SPARKLE_AUTOMATIC_CHECKS: "false"');
+    expect(appScript).toContain('SPARKLE_ALLOWS_AUTOMATIC_UPDATES: "false"');
     expect(appScript).toContain(
       "Release executable is missing framework rpath",
     );

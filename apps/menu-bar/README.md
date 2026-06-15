@@ -80,7 +80,8 @@ Direct install:
 - Users install `YTM-Menu-Bar-<version>.pkg` from GitHub Releases.
 - The package installs `/Applications/YTM Menu Bar.app`.
 - The package installs production native host manifests under `/Library`.
-- The app uses Sparkle for `Check for Updates...`.
+- The app uses Sparkle from the `About YTM Menu Bar` window. It probes for
+  updates silently and marks the About menu item when an update is available.
 - Initial releases are ad-hoc signed and not notarized, so macOS will ask users
   to approve the package as coming from an unidentified developer.
 - The Sparkle appcast lives at:

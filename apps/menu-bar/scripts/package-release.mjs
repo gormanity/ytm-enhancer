@@ -53,7 +53,10 @@ export function packageRelease({
     throw new Error(`Unsupported release channel: ${channel}`);
   }
 
-  const appDirectory = buildReleaseApp({ channel });
+  const appDirectory = buildReleaseApp({
+    channel,
+    requireSparklePublicKey: channel === "direct",
+  });
   const workRoot = resolve(appRoot, ".build/package-work", channel);
   const appPayloadRoot = join(workRoot, "app-payload");
   const hostPayloadRoot = join(workRoot, "host-payload");

@@ -9,7 +9,7 @@ final class MenuBarController: NSObject {
   var onRepeat: (() -> Void)?
   var onSeek: ((Double) -> Void)?
   var onFocusYouTubeMusic: (() -> Void)?
-  var onCheckForUpdates: (() -> Void)?
+  var onShowAbout: (() -> Void)?
 
   private let barItem = NSStatusBar.system.statusItem(
     withLength: NSStatusItem.variableLength
@@ -24,11 +24,9 @@ final class MenuBarController: NSObject {
     action: #selector(focusYouTubeMusic),
     keyEquivalent: "f"
   )
-  private let updateItem = NSMenuItem(
-    title: DistributionChannel.current == .homebrew
-      ? "Update with Homebrew..."
-      : "Check for Updates...",
-    action: #selector(checkForUpdates),
+  private let aboutItem = NSMenuItem(
+    title: "About YTM Menu Bar",
+    action: #selector(showAbout),
     keyEquivalent: ""
   )
   private let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
@@ -59,14 +57,21 @@ final class MenuBarController: NSObject {
     nowPlayingView.updatePlayback(state)
   }
 
+  func setAboutUpdateAvailable(_ isAvailable: Bool) {
+    aboutItem.title =
+      isAvailable
+      ? "About YTM Menu Bar - Update Available"
+      : "About YTM Menu Bar"
+  }
+
   private func configureMenu() {
     focusItem.target = self
     focusItem.indentationLevel = 0
     focusItem.keyEquivalentModifierMask = [.command]
     focusItem.image = Self.menuItemIcon("arrow.up.forward.app", accessibilityDescription: "Focus YouTube Music")
-    updateItem.target = self
-    updateItem.indentationLevel = 0
-    updateItem.image = Self.menuItemIcon("arrow.triangle.2.circlepath", accessibilityDescription: "Check for Updates")
+    aboutItem.target = self
+    aboutItem.indentationLevel = 0
+    aboutItem.image = Self.menuItemIcon("info.circle", accessibilityDescription: "About YTM Menu Bar")
     quitItem.target = self
     quitItem.indentationLevel = 0
     quitItem.image = Self.menuItemIcon("xmark.circle", accessibilityDescription: "Quit")
@@ -85,7 +90,7 @@ final class MenuBarController: NSObject {
     menu.addItem(nowPlayingItem)
     menu.addItem(.separator())
     menu.addItem(focusItem)
-    menu.addItem(updateItem)
+    menu.addItem(aboutItem)
     menu.addItem(quitItem)
     barItem.menu = menu
   }
@@ -141,8 +146,8 @@ final class MenuBarController: NSObject {
     onFocusYouTubeMusic?()
   }
 
-  @objc private func checkForUpdates() {
-    onCheckForUpdates?()
+  @objc private func showAbout() {
+    onShowAbout?()
   }
 
   @objc private func quit() {

@@ -11,7 +11,8 @@ Direct install:
 - Asset: `YTM-Menu-Bar-<version>.pkg`.
 - Update archive: `YTM-Menu-Bar-<version>.zip`.
 - Update feed: `https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml`.
-- Updates are handled by Sparkle inside the app.
+- Updates are handled by Sparkle inside the app. Direct builds probe the appcast
+  silently and expose download/install actions from `About YTM Menu Bar`.
 - Initial packages are unsigned and not notarized. They contain an ad-hoc signed
   app bundle, and users may need to approve the package through macOS Gatekeeper
   prompts.
@@ -49,6 +50,11 @@ without requiring a broad personal access token.
 
 The Sparkle keys were generated with the keychain account
 `gormanity.ytm-enhancer.menu-bar`.
+
+Direct packages require `SPARKLE_PUBLIC_ED_KEY`. Plain local app builds created
+without that environment variable disable Sparkle and show an "Updates
+Unavailable" state in `About YTM Menu Bar` instead of embedding a placeholder
+key.
 
 Developer ID certificates, Apple notarization credentials, and App Store Connect
 API keys are intentionally not required for the initial release. Add them only
@@ -101,8 +107,9 @@ pnpm run menu-bar:update-test:sparkle -- \
 ```
 
 It does not install or launch anything automatically. Run the printed commands
-to serve the local feed, install the old package, trigger
-`Check for Updates...`, and verify the installed version after relaunch.
+to serve the local feed, install the old package, open `About YTM Menu Bar`,
+trigger the Sparkle update action, and verify the installed version after
+relaunch.
 
 The app bundle must embed the public key that matches the private signing key.
 The harness reads `--public-ed-key`, `SPARKLE_PUBLIC_ED_KEY`, or the Sparkle
@@ -115,8 +122,9 @@ keychain account from `--key-account`.
 5. Build and install an older direct `.pkg` with the same local feed URL and a
    lower build number.
 6. Serve the local appcast and `.zip` over HTTP.
-7. Open `Check for Updates...` in the older installed app.
-8. Confirm Sparkle downloads, verifies, installs, and relaunches the newer app.
+7. Open `About YTM Menu Bar` in the older installed app.
+8. Confirm the About window detects the update.
+9. Confirm Sparkle downloads, verifies, installs, and relaunches the newer app.
 
 Example local feed values:
 
@@ -172,8 +180,8 @@ python3 -m http.server 8787 \
   --directory apps/menu-bar/.build/update-test/feed
 ```
 
-Then install the older `.pkg`, launch the app from `/Applications`, and run
-`Check for Updates...`.
+Then install the older `.pkg`, launch the app from `/Applications`, and open
+`About YTM Menu Bar` to run the update.
 
 ## Local Homebrew Update Test
 
@@ -294,7 +302,8 @@ Direct install:
 - Enable Connected Apps in the extension.
 - Confirm no duplicate menu bar item appears.
 - Confirm playback state and controls work.
-- Confirm `Check for Updates...` can reach the appcast.
+- Confirm `About YTM Menu Bar` can reach the appcast and presents the Sparkle
+  update action when an update is available.
 
 When testing a direct package with the local dev extension, install user-local
 developer manifests that point at the installed app before checking connector
@@ -326,8 +335,8 @@ Update path matrix:
 - Older direct install to newer direct update.
 - Direct beta or local feed build to newer beta or local feed build.
 - Direct beta or local feed build to production feed build before release.
-- Manual `Check for Updates...`.
-- Automatic Sparkle background check.
+- Manual update from `About YTM Menu Bar`.
+- Silent background update probe and About menu update-available label.
 - App installed in `/Applications`.
 - App installed in `~/Applications`.
 - Homebrew package upgrade through `brew upgrade --cask ytm-menu-bar`.

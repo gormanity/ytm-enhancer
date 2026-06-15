@@ -31,13 +31,28 @@ let connection: ConnectorConnection =
   hasNativeMessagingPipe
   ? NativeMessagingConnection(logger: logger)
   : BridgeUiConnection(logger: logger)
-let updater = SparkleUpdater()
+let updater = SparkleUpdater(logger: logger)
 let menu = MenuBarController()
+let aboutWindow = AboutWindowController()
 let connector = ConnectorApp(connection: connection, menu: menu, logger: logger)
 
-menu.onCheckForUpdates = {
-  updater.checkForUpdates()
+updater.onStatusChanged = { status in
+  menu.setAboutUpdateAvailable(status.hasUpdateAvailable)
+  aboutWindow.update(status: status)
 }
+menu.setAboutUpdateAvailable(updater.status.hasUpdateAvailable)
+menu.onShowAbout = {
+  aboutWindow.show(
+    status: updater.status,
+    onShowUpdateInterface: { updater.showUpdateInterface() },
+    onCheckUpdateAvailability: {
+      updater.checkForUpdateAvailability(reason: "about")
+    },
+    onCopyHomebrewCommand: { updater.copyHomebrewUpdateCommand() }
+  )
+  updater.checkForUpdateAvailability(reason: "about-open")
+}
+updater.startBackgroundUpdateCheck()
 connector.start()
 if !hasNativeMessagingPipe {
   menu.updateConnectionStatus("Waiting for YTM Enhancer")
