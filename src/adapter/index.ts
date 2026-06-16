@@ -352,12 +352,62 @@ export class YTMAdapter {
     const byline = item.querySelector<HTMLElement>(SELECTORS.queueItemByline);
     const { artist, album, year } = this.parseLinkedMetadata(byline);
     const artworkUrl = this.upscaleArtworkUrl(
-      this.trimmedText(
-        item.querySelector<HTMLImageElement>(SELECTORS.queueItemThumbnail)?.src,
-      ),
+      this.readQueueItemArtworkUrl(item),
     );
 
     return { title, artist, album, year, artworkUrl };
+  }
+
+  private readQueueItemArtworkUrl(item: HTMLElement): string | null {
+    const thumbnail = item.querySelector<HTMLElement>(
+      SELECTORS.queueItemThumbnail,
+    );
+    return this.readImageUrl(thumbnail);
+  }
+
+  private readImageUrl(element: Element | null): string | null {
+    if (!element) return null;
+
+    const image = element.matches("img")
+      ? (element as HTMLImageElement)
+      : element.querySelector<HTMLImageElement>("img");
+    const sources = element.querySelector<HTMLSourceElement>("source");
+
+    const candidates = [
+      image?.getAttribute("data-thumb"),
+      image?.getAttribute("data-src"),
+      image?.getAttribute("data-original"),
+      this.readSrcsetUrl(image?.getAttribute("data-srcset")),
+      this.readSrcsetUrl(image?.getAttribute("srcset")),
+      image?.getAttribute("src"),
+      element.getAttribute("data-thumb"),
+      element.getAttribute("data-src"),
+      element.getAttribute("data-original"),
+      this.readSrcsetUrl(sources?.getAttribute("srcset")),
+      this.readBackgroundImageUrl(element),
+    ];
+
+    for (const candidate of candidates) {
+      const url = this.normalizedImageUrl(candidate);
+      if (url) return url;
+    }
+
+    return null;
+  }
+
+  private readSrcsetUrl(srcset: string | null | undefined): string | null {
+    const candidates =
+      srcset
+        ?.split(",")
+        .map((candidate) => candidate.trim().split(/\s+/)[0])
+        .filter(Boolean) ?? [];
+
+    for (const candidate of candidates.reverse()) {
+      const url = this.normalizedImageUrl(candidate);
+      if (url) return url;
+    }
+
+    return null;
   }
 
   private readMediaSessionMetadata(): {
@@ -389,6 +439,29 @@ export class YTMAdapter {
   private trimmedText(value: string | null | undefined): string | null {
     const trimmed = value?.trim() ?? "";
     return trimmed ? trimmed : null;
+  }
+
+  private readBackgroundImageUrl(element: Element): string | null {
+    const backgroundImage =
+      element instanceof HTMLElement
+        ? element.style.backgroundImage || element.getAttribute("style")
+        : element.getAttribute("style");
+    const match = backgroundImage?.match(/url\((['"]?)(.*?)\1\)/);
+    return this.trimmedText(match?.[2]);
+  }
+
+  private normalizedImageUrl(value: string | null | undefined): string | null {
+    const trimmed = this.trimmedText(value);
+    if (!trimmed || trimmed === "none") return null;
+
+    try {
+      const url = new URL(trimmed, document.baseURI);
+      if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+      if (url.href === document.location.href) return null;
+      return url.href;
+    } catch {
+      return null;
+    }
   }
 
   private upscaleArtworkUrl(url: string | null): string | null {
