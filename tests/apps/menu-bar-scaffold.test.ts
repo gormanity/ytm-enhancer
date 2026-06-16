@@ -5,6 +5,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -1213,7 +1214,7 @@ describe("menu bar connector app scaffold", () => {
     const packageJson = JSON.parse(
       readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
     ) as { version: string };
-    const outputRoot = mkdtempSync("/private/tmp/ytm-release-index-");
+    const outputRoot = mkdtempSync(join(tmpdir(), "ytm-release-index-"));
     const archivePath = resolve(outputRoot, "YTM-Menu-Bar-0.1.0.zip");
     const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
 
