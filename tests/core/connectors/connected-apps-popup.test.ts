@@ -130,9 +130,8 @@ describe("Connected Apps popup view", () => {
 
     await vi.waitFor(() => {
       expect(
-        container.querySelectorAll(
-          '[data-app-id="com.example.menu-bar"]',
-        ).length,
+        container.querySelectorAll('[data-app-id="com.example.menu-bar"]')
+          .length,
       ).toBe(1);
     });
     expect(container.textContent).not.toContain("Registered Apps");
@@ -248,7 +247,7 @@ describe("Connected Apps popup view", () => {
       expect(
         container.querySelector('[data-connector-id="com.example.menu-bar"]'),
       ).toBeNull();
-      expect(container.textContent).toContain("No connected apps registered");
+      expect(container.textContent).toContain("YTM Menu Bar");
     });
   });
 

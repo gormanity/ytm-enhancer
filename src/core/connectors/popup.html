@@ -17,46 +17,6 @@
   </label>
 </div>
 
-<div
-  class="settings-card connected-app-menu-bar-card"
-  data-role="connected-app-menu-bar-card"
->
-  <div class="connected-app-header">
-    <div class="connected-app-title-group">
-      <h3>YTM Menu Bar</h3>
-      <p
-        class="status-hint connected-app-version"
-        data-role="connected-app-menu-bar-description"
-      >
-        Native macOS menu bar controls for YouTube Music.
-      </p>
-    </div>
-    <span
-      class="connected-app-status"
-      data-role="connected-app-menu-bar-status"
-    ></span>
-  </div>
-
-  <p
-    class="status-hint connected-app-menu-bar-guidance"
-    data-role="connected-app-menu-bar-guidance"
-  ></p>
-
-  <div class="connected-app-install-actions">
-    <a
-      class="secondary-btn connected-app-install-link"
-      data-role="connected-app-menu-bar-direct-link"
-      href="https://gormanity.github.io/ytm-enhancer/menu-bar/install.html"
-      target="_blank"
-      rel="noreferrer"
-    >
-      Download for macOS
-    </a>
-  </div>
-</div>
-
-<h3 class="connected-apps-section-heading">Registered Apps</h3>
-
 <div data-role="connected-apps-list"></div>
 
 <div
@@ -67,53 +27,71 @@
 </div>
 
 <template data-role="connected-app-template">
-  <div class="settings-card connected-app-card">
-    <div class="connected-app-header">
+  <details class="settings-card connected-app-card">
+    <summary class="connected-app-summary-row">
       <div class="connected-app-title-group">
-        <h3 data-role="connected-app-name"></h3>
-        <p
-          class="status-hint connected-app-version"
-          data-role="connected-app-version"
-        ></p>
+        <span class="connected-app-title-line">
+          <h3 data-role="connected-app-name"></h3>
+          <span
+            class="connected-app-status"
+            data-role="connected-app-status"
+          ></span>
+        </span>
+        <span
+          class="status-hint connected-app-summary"
+          data-role="connected-app-summary"
+        ></span>
       </div>
-      <span
-        class="connected-app-status"
-        data-role="connected-app-header-status"
-      ></span>
+      <span class="connected-app-expand-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="connected-app-details">
+      <p
+        class="status-hint connected-app-guidance"
+        data-role="connected-app-guidance"
+      ></p>
+
+      <p
+        class="status-hint connected-app-version"
+        data-role="connected-app-version"
+      ></p>
+
+      <div class="connected-app-section">
+        <h3>Shared by YTM Enhancer</h3>
+        <ul
+          class="connected-app-shared-list"
+          data-role="connected-app-shared-list"
+        ></ul>
+      </div>
+
+      <label class="card-row" data-role="connected-app-enabled-row">
+        <span class="card-row-copy">
+          <span>Enabled</span>
+          <small class="status-hint">
+            Allow this app to connect when Connected Apps is enabled.
+          </small>
+        </span>
+        <input type="checkbox" data-role="connected-app-enabled-toggle" />
+      </label>
+
+      <div class="connected-app-actions">
+        <a
+          class="secondary-btn connected-app-install-link is-hidden"
+          data-role="connected-app-install-link"
+          href="https://gormanity.github.io/ytm-enhancer/menu-bar/install.html"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Download for macOS
+        </a>
+        <button
+          type="button"
+          class="secondary-btn connected-app-forget-button is-hidden"
+          data-role="connected-app-forget-button"
+        >
+          Forget App
+        </button>
+      </div>
     </div>
-
-    <div class="card-row">
-      <span>Status</span>
-      <span class="connected-app-status" data-role="connected-app-status">
-      </span>
-    </div>
-
-    <p
-      class="status-hint connected-app-update-guidance is-hidden"
-      data-role="connected-app-update-guidance"
-    ></p>
-
-    <div class="connected-app-section">
-      <h3>Permissions</h3>
-      <ul
-        class="connected-app-permissions"
-        data-role="connected-app-permissions"
-      ></ul>
-    </div>
-
-    <label class="card-row">
-      <span>Enabled</span>
-      <input type="checkbox" data-role="connected-app-enabled-toggle" />
-    </label>
-
-    <div class="connected-app-actions">
-      <button
-        type="button"
-        class="secondary-btn connected-app-forget-button"
-        data-role="connected-app-forget-button"
-      >
-        Forget App
-      </button>
-    </div>
-  </div>
+  </details>
 </template>

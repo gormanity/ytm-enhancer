@@ -8,8 +8,8 @@ import {
   type ConnectedAppsSettings,
 } from "./client";
 import {
-  CONNECTOR_PERMISSION_LABELS,
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+  MENU_BAR_INSTALL_URL,
   type ConnectedApp,
   type ConnectorStatus,
 } from "./settings";
@@ -27,8 +27,31 @@ const STATUS_LABELS: Record<ConnectorStatus, string> = {
 const MENU_BAR_UPDATE_GUIDANCE =
   "Update required. Open About YTM Menu Bar to download the update, or run brew upgrade --cask ytm-menu-bar.";
 
-function permissionLabel(permission: ConnectorPermission): string {
-  return CONNECTOR_PERMISSION_LABELS[permission] ?? permission;
+const MENU_BAR_ACCESS: ConnectorPermission[] = [
+  "playback:read",
+  "track:read",
+  "playback:control",
+  "ytm:focus",
+];
+
+const CONNECTED_APP_ACCESS_LABELS: Record<ConnectorPermission, string> = {
+  "playback:read": "Playback info and progress",
+  "track:read": "Track details, artwork, and Up Next",
+  "playback:control": "Playback controls",
+  "ytm:focus": "Focus YouTube Music",
+};
+
+interface ConnectedAppCardModel {
+  id: string;
+  name: string;
+  summary: string;
+  status: ConnectorStatus;
+  statusLabel: string;
+  guidance: string;
+  access: ConnectorPermission[];
+  connector?: ConnectedApp;
+  installUrl?: string;
+  installLabel?: string;
 }
 
 function setStatus(
@@ -55,14 +78,19 @@ function setStatus(
   element.textContent = label;
 }
 
-function renderPermissionList(
+function renderAccessList(
   list: HTMLElement,
-  connector: ConnectedApp,
+  permissions: ConnectorPermission[],
 ): void {
   const items: HTMLElement[] = [];
-  for (const permission of connector.permissions) {
+  for (const permission of permissions) {
     const item = document.createElement("li");
-    item.textContent = permissionLabel(permission);
+    item.textContent = CONNECTED_APP_ACCESS_LABELS[permission] ?? permission;
+    items.push(item);
+  }
+  if (items.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "No playback information is shared yet.";
     items.push(item);
   }
   list.replaceChildren(...items);
@@ -75,9 +103,9 @@ function queryRole<TElement extends HTMLElement>(
   return container.querySelector<TElement>(`[data-role="${role}"]`);
 }
 
-function createConnectorCard(
+function createConnectedAppCard(
   template: HTMLTemplateElement,
-  connector: ConnectedApp,
+  app: ConnectedAppCardModel,
   client: ConnectedAppsClient,
   refresh: () => void,
 ): HTMLElement | null {
@@ -85,65 +113,81 @@ function createConnectorCard(
   const card = fragment.firstElementChild as HTMLElement | null;
   if (!card) return null;
 
-  card.dataset.connectorId = connector.id;
+  card.dataset.appId = app.id;
+  if (app.connector) {
+    card.dataset.connectorId = app.connector.id;
+  }
 
   const title = queryRole(card, "connected-app-name");
-  if (title) title.textContent = connector.name;
+  if (title) title.textContent = app.name;
+
+  const summary = queryRole(card, "connected-app-summary");
+  if (summary) summary.textContent = app.summary;
+
+  const status = queryRole(card, "connected-app-status");
+  if (status) setStatus(status, app.status, app.statusLabel);
+
+  const guidance = queryRole(card, "connected-app-guidance");
+  if (guidance) guidance.textContent = app.guidance;
 
   const version = queryRole(card, "connected-app-version");
   if (version) {
-    version.textContent = `Version ${connector.version} - Protocol ${connector.protocolVersion}`;
+    version.textContent = app.connector
+      ? `Version ${app.connector.version} - Protocol ${app.connector.protocolVersion}`
+      : "Not connected yet.";
   }
 
-  const headerStatus = queryRole(card, "connected-app-header-status");
-  if (headerStatus) setStatus(headerStatus, connector.status);
+  const access = queryRole(card, "connected-app-shared-list");
+  if (access) renderAccessList(access, app.access);
 
-  const status = queryRole(card, "connected-app-status");
-  if (status) setStatus(status, connector.status);
-
-  const updateGuidance = queryRole(card, "connected-app-update-guidance");
-  if (
-    updateGuidance &&
-    connector.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID &&
-    connector.status === "incompatible"
-  ) {
-    updateGuidance.textContent = MENU_BAR_UPDATE_GUIDANCE;
-    updateGuidance.classList.remove("is-hidden");
+  const installLink = queryRole<HTMLAnchorElement>(
+    card,
+    "connected-app-install-link",
+  );
+  if (installLink && app.installUrl) {
+    installLink.href = app.installUrl;
+    installLink.textContent = app.installLabel ?? "Install";
+    installLink.classList.remove("is-hidden");
   }
 
-  const permissions = queryRole(card, "connected-app-permissions");
-  if (permissions) renderPermissionList(permissions, connector);
-
+  const enabledRow = queryRole(card, "connected-app-enabled-row");
   const enabledToggle = queryRole<HTMLInputElement>(
     card,
     "connected-app-enabled-toggle",
   );
-  if (!enabledToggle) return card;
-  enabledToggle.dataset.connectorId = connector.id;
-  enabledToggle.checked = connector.enabled;
-  enabledToggle.disabled = connector.status === "incompatible";
-  enabledToggle.addEventListener("change", () => {
-    void client
-      .setConnectorEnabled(connector.id, enabledToggle.checked)
-      .then(refresh)
-      .catch(() => undefined);
-  });
+  if (enabledToggle && app.connector) {
+    enabledToggle.dataset.connectorId = app.connector.id;
+    enabledToggle.checked = app.connector.enabled;
+    enabledToggle.disabled = app.connector.status === "incompatible";
+    enabledToggle.addEventListener("change", () => {
+      void client
+        .setConnectorEnabled(app.connector!.id, enabledToggle.checked)
+        .then(refresh)
+        .catch(() => undefined);
+    });
+  } else {
+    enabledRow?.remove();
+  }
 
   const forgetButton = queryRole<HTMLButtonElement>(
     card,
     "connected-app-forget-button",
   );
-  if (!forgetButton) return card;
-  forgetButton.dataset.connectorId = connector.id;
-  forgetButton.addEventListener("click", () => {
-    forgetButton.disabled = true;
-    void client
-      .forgetConnector(connector.id)
-      .then(refresh)
-      .finally(() => {
-        forgetButton.disabled = false;
-      });
-  });
+  if (forgetButton && app.connector) {
+    forgetButton.dataset.connectorId = app.connector.id;
+    forgetButton.classList.remove("is-hidden");
+    forgetButton.addEventListener("click", () => {
+      forgetButton.disabled = true;
+      void client
+        .forgetConnector(app.connector!.id)
+        .then(refresh)
+        .finally(() => {
+          forgetButton.disabled = false;
+        });
+    });
+  } else {
+    forgetButton?.remove();
+  }
 
   return card;
 }
@@ -220,43 +264,76 @@ function menuBarGuidance(
   return "Add playback info and controls to the macOS menu bar with the first YTM Enhancer connected app.";
 }
 
-function renderMenuBarAppCard(
-  container: HTMLElement,
+function menuBarInstallLabel(
   settings: ConnectedAppsSettings,
-): void {
-  const appCard = container.querySelector<HTMLElement>(
-    '[data-role="connected-app-menu-bar-card"]',
-  );
-  if (!appCard) return;
-
-  const connector = firstPartyMenuBarConnector(settings);
-  const badge = menuBarStatus(settings, connector);
-
-  const status = queryRole(appCard, "connected-app-menu-bar-status");
-  if (status) setStatus(status, badge.status, badge.label);
-
-  const description = queryRole(appCard, "connected-app-menu-bar-description");
-  if (description) description.textContent = settings.menuBarApp.description;
-
-  const guidance = queryRole(appCard, "connected-app-menu-bar-guidance");
-  if (guidance) guidance.textContent = menuBarGuidance(settings, connector);
-
-  const directLink = queryRole<HTMLAnchorElement>(
-    appCard,
-    "connected-app-menu-bar-direct-link",
-  );
-  if (directLink) {
-    directLink.href = settings.menuBarApp.installUrl;
-    directLink.textContent =
-      connector?.status === "incompatible"
-        ? "Update YTM Menu Bar"
-        : connector || settings.menuBarApp.availability !== "unknown"
-          ? "Install or Reinstall"
-          : "Download for macOS";
+  connector: ConnectedApp | undefined,
+): string {
+  if (connector?.status === "incompatible") return "Update YTM Menu Bar";
+  if (connector || settings.menuBarApp.availability !== "unknown") {
+    return "Install or Reinstall";
   }
+  return "Download for macOS";
 }
 
-function renderConnectorList(
+function createMenuBarCardModel(
+  settings: ConnectedAppsSettings,
+): ConnectedAppCardModel {
+  const connector = firstPartyMenuBarConnector(settings);
+  const status = menuBarStatus(settings, connector);
+  return {
+    id: FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+    name: settings.menuBarApp.name,
+    summary: settings.menuBarApp.description,
+    status: status.status,
+    statusLabel: status.label,
+    guidance: menuBarGuidance(settings, connector),
+    access: connector?.permissions ?? MENU_BAR_ACCESS,
+    connector,
+    installUrl: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
+    installLabel: menuBarInstallLabel(settings, connector),
+  };
+}
+
+function genericConnectorGuidance(connector: ConnectedApp): string {
+  if (connector.status === "connected") {
+    return "This app is connected through YTM Enhancer.";
+  }
+  if (connector.status === "blocked") {
+    return "This app is disabled and cannot connect until it is enabled.";
+  }
+  if (connector.status === "incompatible") {
+    return "This app uses an unsupported connector protocol.";
+  }
+  return "Open the app to reconnect it.";
+}
+
+function createGenericConnectorCardModel(
+  connector: ConnectedApp,
+): ConnectedAppCardModel {
+  return {
+    id: connector.id,
+    name: connector.name,
+    summary: "External app connected to YTM Enhancer.",
+    status: connector.status,
+    statusLabel: STATUS_LABELS[connector.status],
+    guidance: genericConnectorGuidance(connector),
+    access: connector.permissions,
+    connector,
+  };
+}
+
+function createConnectedAppCardModels(
+  settings: ConnectedAppsSettings,
+): ConnectedAppCardModel[] {
+  return [
+    createMenuBarCardModel(settings),
+    ...settings.connectors
+      .filter((connector) => connector.id !== FIRST_PARTY_MENU_BAR_CONNECTOR_ID)
+      .map(createGenericConnectorCardModel),
+  ];
+}
+
+function renderConnectedAppList(
   container: HTMLElement,
   settings: ConnectedAppsSettings,
   client: ConnectedAppsClient,
@@ -273,15 +350,14 @@ function renderConnectorList(
   );
   if (!list || !empty || !template) return;
 
-  renderMenuBarAppCard(container, settings);
-
+  const apps = createConnectedAppCardModels(settings);
   list.replaceChildren(
-    ...settings.connectors.flatMap((connector) => {
-      const card = createConnectorCard(template, connector, client, refresh);
+    ...apps.flatMap((app) => {
+      const card = createConnectedAppCard(template, app, client, refresh);
       return card ? [card] : [];
     }),
   );
-  empty.classList.toggle("is-hidden", settings.connectors.length > 0);
+  empty.classList.toggle("is-hidden", apps.length > 0);
 }
 
 export function createConnectedAppsPopupView(
@@ -298,7 +374,7 @@ export function createConnectedAppsPopupView(
         void client
           .getSettings()
           .then((settings) => {
-            renderConnectorList(container, settings, client, refresh);
+            renderConnectedAppList(container, settings, client, refresh);
           })
           .catch(() => undefined);
       };
@@ -306,7 +382,7 @@ export function createConnectedAppsPopupView(
       bindModuleToggle(container, "connected-apps-enabled-toggle", {
         get: async () => {
           const settings = await client.getSettings();
-          renderConnectorList(container, settings, client, refresh);
+          renderConnectedAppList(container, settings, client, refresh);
           return settings.enabled;
         },
         set: async (enabled) => {
