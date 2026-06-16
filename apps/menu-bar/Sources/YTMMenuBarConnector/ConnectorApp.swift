@@ -85,11 +85,20 @@ final class ConnectorApp {
     case "connector.error":
       let label = userFacingStatus(code: message.code, message: message.message)
       logger.log("connector error \(label)")
+      if message.code == "connector_not_registered" {
+        restartHandshake(reason: label)
+        return
+      }
       if isPlaybackStateRequestError(message) {
         logger.log("Waiting for YouTube Music")
         menu.updateConnectionStatus(label)
         schedulePlaybackStateRetry(reason: label)
         return
+      }
+      if isConnectorAvailabilityError(message.code) {
+        isReady = false
+        clearPlaybackStateRetry()
+        clearPlaybackStateStaleTimeout()
       }
       menu.updateConnectionStatus(label)
     default:
@@ -222,6 +231,15 @@ final class ConnectorApp {
     requestPlaybackState()
   }
 
+  private func restartHandshake(reason: String) {
+    isReady = false
+    clearPlaybackStateRetry()
+    clearPlaybackStateStaleTimeout()
+    logger.log("connector handshake restarting reason=\(reason)")
+    menu.updateConnectionStatus(reason)
+    connection.send(ConnectorProtocol.hello(requestId: nextRequestId("hello")))
+  }
+
   private func clearPlaybackStateRetry() {
     playbackStateRetry?.cancel()
     playbackStateRetry = nil
@@ -232,12 +250,23 @@ final class ConnectorApp {
     playbackStateStaleTimeout = nil
   }
 
+  private func isConnectorAvailabilityError(_ code: String?) -> Bool {
+    switch code {
+    case "host_disabled", "connector_blocked", "unsupported_protocol":
+      return true
+    default:
+      return false
+    }
+  }
+
   private func userFacingStatus(code: String?, message: String?) -> String {
     switch code {
     case "host_disabled":
       return "Connected Apps disabled"
     case "connector_blocked":
       return "Connector disabled"
+    case "connector_not_registered":
+      return "Reconnecting..."
     case "unsupported_protocol":
       return "Update required"
     default:

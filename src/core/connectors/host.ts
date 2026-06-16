@@ -160,7 +160,7 @@ export function createConnectorHost(
     if (session) return session;
     return errorResult(
       "connector_not_registered",
-      "Connector must complete connector.hello first",
+      "Connector session expired; reconnect the app.",
     );
   };
 

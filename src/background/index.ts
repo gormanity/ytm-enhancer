@@ -23,7 +23,6 @@ import {
   createConnectedAppsSettings,
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
   normalizeKnownConnectors,
-  removeKnownConnector,
   setKnownConnectorEnabled,
   upsertKnownConnector,
   type ConnectedAppAvailability,
@@ -525,18 +524,6 @@ handler.on("set-connector-enabled", async (message) => {
   } else {
     disconnectConnector(message.connectorId);
   }
-  await saveKnownConnectors();
-  notifyConnectedAppsChanged();
-  return { ok: true };
-});
-
-handler.on("forget-connector", async (message) => {
-  if (typeof message.connectorId !== "string") {
-    return { ok: false, error: "Invalid connector ID" };
-  }
-
-  disconnectConnector(message.connectorId);
-  knownConnectors = removeKnownConnector(knownConnectors, message.connectorId);
   await saveKnownConnectors();
   notifyConnectedAppsChanged();
   return { ok: true };

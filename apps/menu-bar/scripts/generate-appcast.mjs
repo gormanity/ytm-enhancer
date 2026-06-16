@@ -467,7 +467,7 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
           <code>brew update &amp;&amp; brew upgrade --cask ytm-menu-bar</code>
         </article>
         <article class="panel">
-          <h2>Uninstall</h2>
+          <h2 id="uninstall">Uninstall</h2>
           <p>
             Direct installs include an uninstaller in Applications. Homebrew
             installs uninstall through Homebrew.

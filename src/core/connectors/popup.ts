@@ -10,7 +10,9 @@ import {
 import {
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
   MENU_BAR_INSTALL_URL,
+  MENU_BAR_UNINSTALL_URL,
   type ConnectedApp,
+  type ConnectedAppAvailability,
   type ConnectorStatus,
 } from "./settings";
 import templateHtml from "./popup.html?raw";
@@ -20,7 +22,7 @@ export type { ConnectedAppsClient, ConnectedAppsSettings } from "./client";
 const STATUS_LABELS: Record<ConnectorStatus, string> = {
   connected: "Connected",
   disconnected: "Disconnected",
-  blocked: "Blocked",
+  blocked: "Disabled",
   incompatible: "Incompatible",
 };
 
@@ -52,6 +54,15 @@ interface ConnectedAppCardModel {
   connector?: ConnectedApp;
   installUrl?: string;
   installLabel?: string;
+}
+
+function isMenuBarInstalled(
+  availability: ConnectedAppAvailability,
+  connector: ConnectedApp | undefined,
+): boolean {
+  if (availability === "missing") return false;
+  if (availability === "available") return true;
+  return connector !== undefined;
 }
 
 function setStatus(
@@ -160,43 +171,27 @@ function createConnectedAppCard(
     installLink.classList.remove("is-hidden");
   }
 
-  const enabledRow = queryRole(card, "connected-app-enabled-row");
-  const enabledToggle = queryRole<HTMLInputElement>(
+  const lifecycleButton = queryRole<HTMLButtonElement>(
     card,
-    "connected-app-enabled-toggle",
+    "connected-app-lifecycle-button",
   );
-  if (enabledToggle && app.connector) {
-    enabledToggle.dataset.connectorId = app.connector.id;
-    enabledToggle.checked = app.connector.enabled;
-    enabledToggle.disabled = app.connector.status === "incompatible";
-    enabledToggle.addEventListener("change", () => {
+  if (lifecycleButton && app.connector) {
+    lifecycleButton.dataset.connectorId = app.connector.id;
+    lifecycleButton.textContent = app.connector.enabled
+      ? "Disable App"
+      : "Enable App";
+    lifecycleButton.classList.remove("is-hidden");
+    lifecycleButton.addEventListener("click", () => {
+      lifecycleButton.disabled = true;
       void client
-        .setConnectorEnabled(app.connector!.id, enabledToggle.checked)
-        .then(refresh)
-        .catch(() => undefined);
-    });
-  } else {
-    enabledRow?.remove();
-  }
-
-  const forgetButton = queryRole<HTMLButtonElement>(
-    card,
-    "connected-app-forget-button",
-  );
-  if (forgetButton && app.connector) {
-    forgetButton.dataset.connectorId = app.connector.id;
-    forgetButton.classList.remove("is-hidden");
-    forgetButton.addEventListener("click", () => {
-      forgetButton.disabled = true;
-      void client
-        .forgetConnector(app.connector!.id)
+        .setConnectorEnabled(app.connector!.id, !app.connector!.enabled)
         .then(refresh)
         .finally(() => {
-          forgetButton.disabled = false;
+          lifecycleButton.disabled = false;
         });
     });
   } else {
-    forgetButton?.remove();
+    lifecycleButton?.remove();
   }
 
   return card;
@@ -255,10 +250,10 @@ function menuBarGuidance(
     return "Install YTM Menu Bar, then enable Connected Apps to allow it to connect.";
   }
   if (connector?.status === "blocked") {
-    return "YTM Menu Bar is registered but disabled below.";
+    return "YTM Menu Bar is disabled. Enable it below when you want it to reconnect.";
   }
   if (settings.menuBarApp.availability === "missing") {
-    return "YTM Menu Bar or its native host was not detected. Reinstall it, or use Forget App below if you removed it.";
+    return "YTM Menu Bar or its native host was not detected. Reinstall it from the button below if you want to use it again.";
   }
   if (settings.menuBarApp.availability === "error") {
     return settings.menuBarApp.lastError
@@ -269,20 +264,33 @@ function menuBarGuidance(
     return "YTM Menu Bar is connected and can control playback through YTM Enhancer.";
   }
   if (connector !== undefined) {
-    return "Open YTM Menu Bar from Applications to connect. If you removed it, reinstall it or use Forget App below.";
+    return "Open YTM Menu Bar from Applications to connect. If you removed it, reinstall it from the button below.";
   }
   return "Add playback info and controls to the macOS menu bar with the first YTM Enhancer connected app.";
 }
 
-function menuBarInstallLabel(
+function menuBarAction(
   settings: ConnectedAppsSettings,
   connector: ConnectedApp | undefined,
-): string {
-  if (connector?.status === "incompatible") return "Update YTM Menu Bar";
-  if (connector || settings.menuBarApp.availability !== "unknown") {
-    return "Install or Reinstall";
+): { url: string; label: string } {
+  if (connector?.status === "incompatible") {
+    return {
+      url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
+      label: "Update YTM Menu Bar",
+    };
   }
-  return "Download for macOS";
+
+  if (isMenuBarInstalled(settings.menuBarApp.availability, connector)) {
+    return {
+      url: MENU_BAR_UNINSTALL_URL,
+      label: "Uninstall...",
+    };
+  }
+
+  return {
+    url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
+    label: "Download for macOS",
+  };
 }
 
 function createMenuBarCardModel(
@@ -290,6 +298,7 @@ function createMenuBarCardModel(
 ): ConnectedAppCardModel {
   const connector = firstPartyMenuBarConnector(settings);
   const status = menuBarStatus(settings, connector);
+  const action = menuBarAction(settings, connector);
   return {
     id: FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
     name: settings.menuBarApp.name,
@@ -299,8 +308,8 @@ function createMenuBarCardModel(
     guidance: menuBarGuidance(settings, connector),
     access: connector?.permissions ?? MENU_BAR_ACCESS,
     connector,
-    installUrl: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
-    installLabel: menuBarInstallLabel(settings, connector),
+    installUrl: action.url,
+    installLabel: action.label,
   };
 }
 

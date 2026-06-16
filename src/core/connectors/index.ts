@@ -16,7 +16,6 @@ export {
   CONNECTORS_KNOWN_STATE_KEY,
   createConnectedAppsSettings,
   normalizeKnownConnectors,
-  removeKnownConnector,
   setKnownConnectorEnabled,
   upsertKnownConnector,
   type ConnectedApp,

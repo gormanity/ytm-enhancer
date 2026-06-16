@@ -679,11 +679,11 @@ h3 {
   margin: 0;
 }
 
-.connected-app-forget-button {
+.connected-app-lifecycle-button {
   appearance: none;
 }
 
-.connected-app-forget-button:disabled {
+.connected-app-lifecycle-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

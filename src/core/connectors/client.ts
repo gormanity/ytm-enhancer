@@ -7,7 +7,6 @@ export interface ConnectedAppsClient {
   getSettings(): Promise<ConnectedAppsSettings>;
   setGlobalEnabled(enabled: boolean): Promise<void>;
   setConnectorEnabled(id: string, enabled: boolean): Promise<void>;
-  forgetConnector(id: string): Promise<void>;
   subscribeChanged(listener: () => void): () => void;
 }
 
@@ -33,13 +32,6 @@ export function createConnectedAppsClient(
         type: "set-connector-enabled",
         connectorId: id,
         enabled,
-      });
-    },
-
-    forgetConnector(id) {
-      return runtime.command({
-        type: "forget-connector",
-        connectorId: id,
       });
     },
 

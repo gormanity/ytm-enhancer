@@ -44,14 +44,6 @@ function createClient(
         ),
       };
     }),
-    forgetConnector: vi.fn(async (id: string) => {
-      settings = {
-        ...settings,
-        connectors: settings.connectors.filter(
-          (connector) => connector.id !== id,
-        ),
-      };
-    }),
     subscribeChanged: vi.fn(() => () => undefined),
   };
 }
@@ -154,13 +146,13 @@ describe("Connected Apps popup view", () => {
     expect(card?.textContent).toContain("Playback controls");
     expect(card?.textContent).toContain("Focus YouTube Music");
 
-    const connectorToggle = container.querySelector<HTMLInputElement>(
-      '[data-role="connected-app-enabled-toggle"][data-connector-id="com.example.menu-bar"]',
+    const lifecycleButton = container.querySelector<HTMLButtonElement>(
+      '[data-role="connected-app-lifecycle-button"][data-connector-id="com.example.menu-bar"]',
     );
-    expect(connectorToggle?.checked).toBe(true);
+    expect(lifecycleButton?.textContent).toContain("Disable App");
   });
 
-  it("persists individual connector enablement", async () => {
+  it("disables a connector without removing it from the app list", async () => {
     const client = createClient(
       createSettings({
         enabled: true,
@@ -197,16 +189,16 @@ describe("Connected Apps popup view", () => {
     card.open = true;
     card.dispatchEvent(new Event("toggle"));
 
-    const toggle = await vi.waitFor(() => {
-      const input = container.querySelector<HTMLInputElement>(
-        '[data-role="connected-app-enabled-toggle"]',
+    const button = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLButtonElement>(
+        '[data-role="connected-app-lifecycle-button"]',
       );
-      expect(input).not.toBeNull();
-      return input!;
+      expect(element).not.toBeNull();
+      return element!;
     });
+    expect(button.textContent).toContain("Disable App");
 
-    toggle.checked = false;
-    toggle.dispatchEvent(new Event("change"));
+    button.click();
 
     expect(client.setConnectorEnabled).toHaveBeenCalledWith(
       "com.example.menu-bar",
@@ -218,10 +210,17 @@ describe("Connected Apps popup view", () => {
       );
       expect(refreshedCard).not.toBe(card);
       expect(refreshedCard?.open).toBe(true);
+      expect(refreshedCard?.textContent).toContain("Disabled");
+      expect(refreshedCard?.textContent).toContain("Enable App");
+      expect(
+        refreshedCard?.querySelector(
+          '[data-connector-id="com.example.menu-bar"]',
+        ),
+      ).not.toBeNull();
     });
   });
 
-  it("forgets a connector and refreshes the registered app list", async () => {
+  it("re-enables a disabled connector from the app action", async () => {
     const client = createClient(
       createSettings({
         enabled: true,
@@ -232,8 +231,8 @@ describe("Connected Apps popup view", () => {
             version: "0.1.0",
             protocolVersion: "1.0.0",
             permissions: ["playback:read"],
-            enabled: true,
-            status: "disconnected",
+            enabled: false,
+            status: "blocked",
             lastSeenAt: null,
             lastConnectedAt: null,
           },
@@ -250,22 +249,69 @@ describe("Connected Apps popup view", () => {
 
     const button = await vi.waitFor(() => {
       const element = container.querySelector<HTMLButtonElement>(
-        '[data-role="connected-app-forget-button"]',
+        '[data-role="connected-app-lifecycle-button"]',
       );
       expect(element).not.toBeNull();
       return element!;
     });
-    expect(button.textContent).toContain("Forget App");
+    expect(button.textContent).toContain("Enable App");
 
     button.click();
 
-    expect(client.forgetConnector).toHaveBeenCalledWith("com.example.menu-bar");
+    expect(client.setConnectorEnabled).toHaveBeenCalledWith(
+      "com.example.menu-bar",
+      true,
+    );
     await vi.waitFor(() => {
       expect(
         container.querySelector('[data-connector-id="com.example.menu-bar"]'),
-      ).toBeNull();
-      expect(container.textContent).toContain("YTM Menu Bar");
+      ).not.toBeNull();
+      expect(container.textContent).toContain("Disconnected");
+      expect(container.textContent).toContain("Disable App");
     });
+  });
+
+  it("shows uninstall as the install action for disabled installed menu bar apps", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: false,
+            status: "blocked",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: { availability: "available" },
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const uninstallLink = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLAnchorElement>(
+        '[data-role="connected-app-install-link"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+
+    expect(uninstallLink.textContent).toContain("Uninstall...");
+    expect(uninstallLink.href).toBe(
+      "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html#uninstall",
+    );
+    expect(container.textContent).toContain("Enable App");
   });
 
   it("shows first-party menu bar install options before it is registered", async () => {
@@ -306,7 +352,7 @@ describe("Connected Apps popup view", () => {
     );
   });
 
-  it("uses a shared action style for install and forget actions", async () => {
+  it("uses a shared action style for install and lifecycle actions", async () => {
     const client = createClient(
       createSettings({
         enabled: true,
@@ -341,12 +387,14 @@ describe("Connected Apps popup view", () => {
       expect(element).not.toBeNull();
       return element!;
     });
-    const forgetButton = container.querySelector<HTMLElement>(
-      '[data-role="connected-app-forget-button"]',
+    const lifecycleButton = container.querySelector<HTMLElement>(
+      '[data-role="connected-app-lifecycle-button"]',
     );
 
     expect(installLink.classList.contains("connected-app-action")).toBe(true);
-    expect(forgetButton?.classList.contains("connected-app-action")).toBe(true);
+    expect(lifecycleButton?.classList.contains("connected-app-action")).toBe(
+      true,
+    );
   });
 
   it("does not duplicate the first-party menu bar app after registration", async () => {
@@ -389,7 +437,15 @@ describe("Connected Apps popup view", () => {
     const card = container.querySelector<HTMLDetailsElement>(
       '[data-app-id="com.gormanity.ytm-enhancer.menu-bar"]',
     );
-    expect(card?.textContent).toContain("Install or Reinstall");
+    expect(card?.textContent).toContain("Uninstall...");
+    expect(card?.textContent).toContain("Disable App");
+    expect(
+      card
+        ?.querySelector<HTMLAnchorElement>(
+          '[data-role="connected-app-install-link"]',
+        )
+        ?.href.endsWith("/menu-bar/install.html#uninstall"),
+    ).toBe(true);
     expect(card?.textContent).toContain(
       "Open YTM Menu Bar from Applications to connect.",
     );
@@ -436,8 +492,8 @@ describe("Connected Apps popup view", () => {
       expect(container.textContent).toContain(
         "YTM Menu Bar or its native host was not detected.",
       );
-      expect(container.textContent).toContain("Install or Reinstall");
-      expect(container.textContent).toContain("Forget App");
+      expect(container.textContent).toContain("Download for macOS");
+      expect(container.textContent).toContain("Disable App");
     });
   });
 

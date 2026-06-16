@@ -99,8 +99,8 @@ To uninstall a direct install, double-click:
 
 The uninstaller removes the app, production native host manifests, package
 receipts, and development manifest overrides for the current user. It does not
-remove extension settings; use Forget App in Connected Apps to remove the
-remembered app registration.
+remove extension settings; use Disable App in Connected Apps if you want to keep
+YTM Menu Bar from reconnecting.
 
 Homebrew install:
 

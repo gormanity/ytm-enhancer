@@ -197,6 +197,8 @@ describe("menu bar connector app scaffold", () => {
     expect(appSource).toContain("userFacingStatus");
     expect(appSource).toContain('"Connected Apps disabled"');
     expect(appSource).toContain('"Connector disabled"');
+    expect(appSource).toContain('"Reconnecting..."');
+    expect(appSource).toContain('case "connector_not_registered":');
     expect(appSource).toContain('"Update required"');
     expect(appSource).toContain('"No YouTube Music tab"');
     expect(viewSource).toContain("isUnavailablePlaybackState");
@@ -1103,7 +1105,7 @@ describe("menu bar connector app scaffold", () => {
     expect(template).toContain("{{NATIVE_HOST_NAME}}");
     expect(template).toContain("/Applications/$APP_NAME.app");
     expect(template).toContain("$APP_NAME Uninstaller.command");
-    expect(template).toContain("Forget App in Connected Apps");
+    expect(template).toContain("Disable App in Connected Apps");
     expect(template).toContain("pkgutil --forget");
     expect(template).toContain("$BUNDLE_IDENTIFIER.app");
     expect(template).toContain("$BUNDLE_IDENTIFIER.native-hosts");
@@ -1307,6 +1309,7 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(appcastScript).toContain("Direct installs update from the app");
     expect(appcastScript).toContain("Direct installs include an uninstaller");
+    expect(appcastScript).toContain('id="uninstall"');
     expect(appcastScript).toContain(
       "/Applications/YTM Menu Bar Uninstaller.command",
     );
@@ -1320,6 +1323,8 @@ describe("menu bar connector app scaffold", () => {
     expect(settingsSource).toContain(
       "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
     );
+    expect(settingsSource).toContain("MENU_BAR_UNINSTALL_URL");
+    expect(settingsSource).toContain("#uninstall");
     expect(popupSource).toContain("settings.menuBarApp.installUrl");
     expect(popupTemplate).not.toContain(
       "Direct installs update from the app. Homebrew installs update with Homebrew.",

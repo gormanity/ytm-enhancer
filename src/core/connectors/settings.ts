@@ -11,6 +11,7 @@ export const FIRST_PARTY_MENU_BAR_CONNECTOR_ID =
   "com.gormanity.ytm-enhancer.menu-bar";
 export const MENU_BAR_INSTALL_URL =
   "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html";
+export const MENU_BAR_UNINSTALL_URL = `${MENU_BAR_INSTALL_URL}#uninstall`;
 export const MENU_BAR_HOMEBREW_COMMAND =
   "brew install --cask gormanity/tap/ytm-menu-bar";
 
@@ -175,15 +176,6 @@ export function setKnownConnectorEnabled(
 
   const next = new Map(connectors);
   next.set(connectorId, { ...existing, enabled });
-  return next;
-}
-
-export function removeKnownConnector(
-  connectors: Map<string, KnownConnector>,
-  connectorId: string,
-): Map<string, KnownConnector> {
-  const next = new Map(connectors);
-  next.delete(connectorId);
   return next;
 }
 

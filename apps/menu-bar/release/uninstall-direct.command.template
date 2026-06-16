@@ -23,7 +23,7 @@ echo "- Native messaging manifests installed under /Library"
 echo "- Package receipts for the direct installer"
 echo
 echo "YTM Enhancer extension settings are not removed."
-echo "Use Forget App in Connected Apps if you want to clear the remembered app."
+echo "Use Disable App in Connected Apps if you want to keep YTM Menu Bar from reconnecting."
 echo
 
 if [[ "${YTM_MENU_BAR_UNINSTALL_ASSUME_YES:-}" != "1" ]]; then
