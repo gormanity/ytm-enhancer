@@ -132,8 +132,8 @@ playback controls.
 
 The public release model has two install channels:
 
-- Direct install from GitHub Releases with an unsigned, unnotarized `.pkg`
-  containing an ad-hoc signed app bundle for the initial release phase.
+- Direct install from GitHub Releases with a Developer ID signed and notarized
+  `.pkg`.
 - Homebrew install from `gormanity/homebrew-tap` with a cask named
   `ytm-menu-bar`.
 
@@ -174,5 +174,3 @@ Remaining work before a public connector release:
 4. Add diagnostics for native host launch failures and disconnected hosts.
 5. Add connector-facing diagnostics for protocol mismatches and permission
    denials.
-6. Add Developer ID signing and notarization after the connector has enough user
-   adoption to justify Apple Developer Program membership.

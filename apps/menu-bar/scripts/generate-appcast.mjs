@@ -374,8 +374,8 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
         <article class="panel">
           <h2>macOS Security</h2>
           <p>
-            Early builds are not notarized yet, so macOS may ask you to confirm
-            opening the installer or app in Privacy &amp; Security.
+            Releases are signed with Developer ID and notarized by Apple for
+            distribution outside the Mac App Store.
           </p>
         </article>
       </section>

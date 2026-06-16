@@ -25,6 +25,7 @@
     "menu-bar:package:homebrew": "node apps/menu-bar/scripts/package-release.mjs --channel=homebrew",
     "menu-bar:cask": "node apps/menu-bar/scripts/generate-homebrew-cask.mjs",
     "menu-bar:appcast": "node apps/menu-bar/scripts/generate-appcast.mjs",
+    "menu-bar:notarize": "node apps/menu-bar/scripts/notarize-release-artifact.mjs",
     "menu-bar:update-test:sparkle": "node apps/menu-bar/scripts/prepare-sparkle-update-test.mjs",
     "menu-bar:update-test:homebrew": "node apps/menu-bar/scripts/prepare-homebrew-update-test.mjs",
     "package": "pnpm run build && node scripts/package.mjs",

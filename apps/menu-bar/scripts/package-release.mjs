@@ -82,6 +82,7 @@ function writeAppComponentPlist(path, appName) {
 export function packageRelease({
   channel = "direct",
   outputRoot = resolve(appRoot, ".build/packages"),
+  prebuiltAppDirectory,
 } = {}) {
   const metadata = readReleaseMetadata();
 
@@ -89,10 +90,12 @@ export function packageRelease({
     throw new Error(`Unsupported release channel: ${channel}`);
   }
 
-  const appDirectory = buildReleaseApp({
-    channel,
-    requireSparklePublicKey: channel === "direct",
-  });
+  const appDirectory =
+    prebuiltAppDirectory ??
+    buildReleaseApp({
+      channel,
+      requireSparklePublicKey: channel === "direct",
+    });
   const workRoot = resolve(appRoot, ".build/package-work", channel);
   const appPayloadRoot = join(workRoot, "app-payload");
   const hostPayloadRoot = join(workRoot, "host-payload");
@@ -174,6 +177,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const outputRoot = resolve(
     argValue("output", resolve(appRoot, ".build/packages")),
   );
-  const packagePath = packageRelease({ channel, outputRoot });
+  const app = argValue("app", "");
+  const packagePath = packageRelease({
+    channel,
+    outputRoot,
+    prebuiltAppDirectory: app ? resolve(app) : undefined,
+  });
   console.log(`Built ${channel} package at ${packagePath}`);
 }

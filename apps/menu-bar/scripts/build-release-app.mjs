@@ -20,6 +20,10 @@ function argValue(name, fallback) {
   );
 }
 
+function hasFlag(name) {
+  return process.argv.includes(`--${name}`);
+}
+
 function renderTemplate(template, values) {
   return template.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_, key) => {
     if (!(key in values)) {
@@ -215,6 +219,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const outputRoot = resolve(
     argValue("output", resolve(appRoot, ".build/release-apps")),
   );
-  const appDirectory = buildReleaseApp({ channel, outputRoot });
+  const appDirectory = buildReleaseApp({
+    channel,
+    outputRoot,
+    requireSparklePublicKey: hasFlag("require-sparkle-public-key"),
+  });
   console.log(`Built ${channel} app at ${appDirectory}`);
 }

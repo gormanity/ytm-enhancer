@@ -1175,7 +1175,8 @@ describe("menu bar connector app scaffold", () => {
       "brew install --cask gormanity/tap/ytm-menu-bar",
     );
     expect(appcastScript).toContain("Direct installs update from the app");
-    expect(appcastScript).toContain("not notarized yet");
+    expect(appcastScript).toContain("signed with Developer ID");
+    expect(appcastScript).toContain("notarized by Apple");
     expect(appcastScript).toContain(
       "does not read YouTube Music pages directly",
     );
@@ -1209,6 +1210,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sourceFiles).toContain("scripts/release-metadata.mjs");
     expect(sourceFiles).toContain("scripts/build-release-app.mjs");
     expect(sourceFiles).toContain("scripts/package-release.mjs");
+    expect(sourceFiles).toContain("scripts/notarize-release-artifact.mjs");
     expect(sourceFiles).toContain("scripts/generate-appcast.mjs");
     expect(sourceFiles).toContain("scripts/generate-homebrew-cask.mjs");
     expect(sourceFiles).toContain("scripts/prepare-sparkle-update-test.mjs");
@@ -1237,10 +1239,14 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain(
       "Release executable is missing framework rpath",
     );
+    expect(appScript).toContain("hasFlag");
+    expect(appScript).toContain("require-sparkle-public-key");
     expect(appScript).toContain('process.env.DEVELOPER_ID_APPLICATION ?? "-"');
     expect(appScript).toContain('identity === "-"');
     expect(packageScript).toContain("pkgbuild");
     expect(packageScript).toContain("productbuild");
+    expect(packageScript).toContain("prebuiltAppDirectory");
+    expect(packageScript).toContain('argValue("app"');
     expect(packageScript).toContain("verbatimSymlinks: true");
     expect(packageScript).toContain("verifyRelativeSymlinks");
     expect(packageScript).toContain("Package payload symlink must be relative");
@@ -1260,6 +1266,9 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(packageJson.scripts["menu-bar:update-test:homebrew"]).toBe(
       "node apps/menu-bar/scripts/prepare-homebrew-update-test.mjs",
+    );
+    expect(packageJson.scripts["menu-bar:notarize"]).toBe(
+      "node apps/menu-bar/scripts/notarize-release-artifact.mjs",
     );
   });
 
@@ -1328,7 +1337,7 @@ describe("menu bar connector app scaffold", () => {
     expect(template).toContain('url "{{URL}}"');
   });
 
-  it("ships initial menu bar releases without Apple notarization", () => {
+  it("ships menu bar releases with Developer ID signing and notarization", () => {
     const workflow = readFileSync(
       resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
       "utf-8",
@@ -1337,15 +1346,42 @@ describe("menu bar connector app scaffold", () => {
       resolve(process.cwd(), "docs/menu-bar-release.md"),
       "utf-8",
     );
+    const packageScript = read("scripts/package-release.mjs");
+    const notarizeScript = read("scripts/notarize-release-artifact.mjs");
 
-    expect(workflow).not.toContain("notarytool");
-    expect(workflow).not.toContain("stapler staple");
-    expect(workflow).not.toContain("CERTIFICATE_PASSWORD");
-    expect(workflow).not.toContain("DEVELOPER_ID_APPLICATION_P12_BASE64");
-    expect(workflow).not.toContain("DEVELOPER_ID_INSTALLER_P12_BASE64");
-    expect(workflow).not.toContain("APP_STORE_CONNECT_PRIVATE_KEY_BASE64");
-    expect(releaseDocs).toContain("not notarized");
-    expect(releaseDocs).toContain("ad-hoc signed");
+    expect(workflow).toContain("Import Developer ID certificates");
+    expect(workflow).toContain("CERTIFICATE_PASSWORD");
+    expect(workflow).toContain("DEVELOPER_ID_APPLICATION_P12_BASE64");
+    expect(workflow).toContain("DEVELOPER_ID_INSTALLER_P12_BASE64");
+    expect(workflow).toContain("APP_STORE_CONNECT_KEY_ID");
+    expect(workflow).toContain("APP_STORE_CONNECT_ISSUER_ID");
+    expect(workflow).toContain("APP_STORE_CONNECT_PRIVATE_KEY_BASE64");
+    expect(workflow).toContain("APP_STORE_CONNECT_PRIVATE_KEY=");
+    expect(workflow).toContain("security import");
+    expect(workflow).toContain("security set-key-partition-list");
+    expect(workflow).toContain("Developer ID Application identity");
+    expect(workflow).toContain("Developer ID Installer identity");
+    expect(workflow).toContain("Build direct app");
+    expect(workflow).toContain("--require-sparkle-public-key");
+    expect(workflow).toContain("Notarize direct app");
+    expect(workflow).toContain("Notarize direct package");
+    expect(workflow).toContain("Notarize Homebrew app");
+    expect(workflow).toContain("Notarize Homebrew package");
+    expect(workflow).toContain("menu-bar:notarize");
+    expect(workflow).toContain('--app="apps/menu-bar/.build/release-apps');
+    expect(workflow).toContain("Create Sparkle archive");
+    expect(packageScript).toContain("prebuiltAppDirectory");
+    expect(notarizeScript).toContain("notarytool");
+    expect(notarizeScript).toContain("--wait");
+    expect(notarizeScript).toContain("stapler");
+    expect(notarizeScript).toContain('stapler", "staple');
+    expect(notarizeScript).toContain('stapler", "validate');
+    expect(notarizeScript).toContain("ditto");
+    expect(notarizeScript).toContain("APP_STORE_CONNECT_PRIVATE_KEY");
+    expect(releaseDocs).toContain("signed with Developer ID");
+    expect(releaseDocs).toContain("notarized by");
+    expect(releaseDocs).toContain("APP_STORE_CONNECT_PRIVATE_KEY_BASE64");
+    expect(releaseDocs).not.toContain("ad-hoc signed");
   });
 
   it("builds menu bar release artifacts from the pushed tag version", () => {

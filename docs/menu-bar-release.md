@@ -15,9 +15,8 @@ Direct install:
 - Update feed: `https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml`.
 - Updates are handled by Sparkle inside the app. Direct builds probe the appcast
   silently and expose download/install actions from `About YTM Menu Bar`.
-- Initial packages are unsigned and not notarized. They contain an ad-hoc signed
-  app bundle, and users may need to approve the package through macOS Gatekeeper
-  prompts.
+- Direct packages and app bundles are signed with Developer ID, notarized by
+  Apple, and stapled before release upload.
 
 Homebrew install:
 
@@ -45,6 +44,11 @@ The `Menu Bar Release` workflow requires:
 - `SPARKLE_PUBLIC_ED_KEY`
 - `SPARKLE_PRIVATE_ED_KEY_BASE64`
 - `HOMEBREW_TAP_DEPLOY_KEY`
+- `CERTIFICATE_PASSWORD`
+- `DEVELOPER_ID_APPLICATION_P12_BASE64`
+- `DEVELOPER_ID_INSTALLER_P12_BASE64`
+- `APP_STORE_CONNECT_KEY_ID`
+- `APP_STORE_CONNECT_PRIVATE_KEY_BASE64`
 
 Sparkle keys sign app updates and do not require Apple Developer Program
 membership. The Homebrew tap deploy key updates the external tap repository
@@ -58,9 +62,14 @@ without that environment variable disable Sparkle and show an "Updates
 Unavailable" state in `About YTM Menu Bar` instead of embedding a placeholder
 key.
 
-Developer ID certificates, Apple notarization credentials, and App Store Connect
-API keys are intentionally not required for the initial release. Add them only
-after the project is ready to ship notarized macOS packages.
+The Developer ID `.p12` secrets import the Application and Installer signing
+identities into the release runner. `CERTIFICATE_PASSWORD` is the password used
+when exporting those `.p12` files from the login keychain.
+
+`APP_STORE_CONNECT_PRIVATE_KEY_BASE64` is the base64-encoded App Store Connect
+API `.p8` key. `APP_STORE_CONNECT_KEY_ID` is required. If the API key is a team
+key, also set `APP_STORE_CONNECT_ISSUER_ID`; individual API keys should leave
+that secret empty.
 
 ## Feed Strategy
 
@@ -256,9 +265,9 @@ swift build --package-path apps/menu-bar -c release
 4. Create a `menu-bar-vX.Y.Z` tag from the verified commit.
 5. Push the tag.
 6. Confirm the `Menu Bar Release` workflow publishes:
-   - direct `.pkg`
-   - Homebrew `.pkg`
-   - Sparkle `.zip`
+   - signed, notarized, and stapled direct `.pkg`
+   - signed, notarized, and stapled Homebrew `.pkg`
+   - Sparkle `.zip` generated from the notarized and stapled direct `.app`
    - `appcast.xml`
    - standalone release notes at `menu-bar/release-notes/X.Y.Z.html`
    - install landing page at `menu-bar/install.html`
@@ -313,8 +322,8 @@ confirm completion before creating or pushing the public release tag.
 Direct install:
 
 - Install the `.pkg` on a clean macOS account.
-- Confirm the expected macOS unidentified developer warning appears.
-- Approve the package through the macOS Gatekeeper prompt.
+- Confirm macOS accepts the Developer ID signed and notarized installer without
+  the unidentified developer warning.
 - Confirm `/Applications/YTM Menu Bar.app` exists.
 - Confirm native host manifests exist under `/Library`.
 - Open `YTM Menu Bar.app` directly and confirm it shows a single waiting menu
