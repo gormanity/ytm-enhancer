@@ -135,25 +135,33 @@ function signAppBundle(appDirectory) {
   const identity = process.env.DEVELOPER_ID_APPLICATION ?? "-";
   const developerIdArgs =
     identity === "-" ? [] : ["--options", "runtime", "--timestamp"];
+  const sign = (path) => {
+    run("codesign", ["--force", ...developerIdArgs, "--sign", identity, path]);
+  };
+  const verify = (path) => {
+    run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", path]);
+  };
 
   const sparkleFramework = join(
     appDirectory,
     "Contents/Frameworks/Sparkle.framework",
   );
-  run("codesign", [
-    "--force",
-    ...developerIdArgs,
-    "--sign",
-    identity,
-    sparkleFramework,
-  ]);
-  run("codesign", [
-    "--force",
-    ...developerIdArgs,
-    "--sign",
-    identity,
-    appDirectory,
-  ]);
+  const sparkleVersion = join(sparkleFramework, "Versions/B");
+  const sparkleNestedCode = [
+    join(sparkleVersion, "Updater.app"),
+    join(sparkleVersion, "XPCServices/Downloader.xpc"),
+    join(sparkleVersion, "XPCServices/Installer.xpc"),
+    join(sparkleVersion, "Autoupdate"),
+  ];
+
+  for (const nestedPath of sparkleNestedCode) {
+    sign(nestedPath);
+  }
+  sign(sparkleFramework);
+  verify(sparkleFramework);
+
+  sign(appDirectory);
+  verify(appDirectory);
 }
 
 export function buildReleaseApp({

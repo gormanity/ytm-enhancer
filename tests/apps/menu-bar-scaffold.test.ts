@@ -1430,6 +1430,7 @@ describe("menu bar connector app scaffold", () => {
       resolve(process.cwd(), "docs/menu-bar-release.md"),
       "utf-8",
     );
+    const buildScript = read("scripts/build-release-app.mjs");
     const packageScript = read("scripts/package-release.mjs");
     const notarizeScript = read("scripts/notarize-release-artifact.mjs");
 
@@ -1461,6 +1462,12 @@ describe("menu bar connector app scaffold", () => {
       "name: YTM Menu Bar ${{ env.YTM_MENU_BAR_VERSION }}",
     );
     expect(workflow).toContain("make_latest: false");
+    expect(buildScript).toContain("sparkleNestedCode");
+    expect(buildScript).toContain("Updater.app");
+    expect(buildScript).toContain("XPCServices/Downloader.xpc");
+    expect(buildScript).toContain("XPCServices/Installer.xpc");
+    expect(buildScript).toContain("Autoupdate");
+    expect(buildScript).toContain('"--deep", "--strict"');
     expect(packageScript).toContain("prebuiltAppDirectory");
     expect(notarizeScript).toContain("notarytool");
     expect(notarizeScript).toContain("--wait");
