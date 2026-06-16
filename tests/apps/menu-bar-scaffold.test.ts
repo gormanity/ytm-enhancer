@@ -366,6 +366,9 @@ describe("menu bar connector app scaffold", () => {
     expect(appSource).toContain(
       '"nextTrack=\\(logValue(state.nextTrack?.title))"',
     );
+    expect(appSource).toContain(
+      '"nextTrackArtwork=\\(logValue(state.nextTrack?.artworkUrl))"',
+    );
   });
 
   it("displays the next track below current playback and above Quit", () => {
@@ -434,6 +437,9 @@ describe("menu bar connector app scaffold", () => {
 
     expect(nextTrackArtworkSource).toBeDefined();
     expect(nextTrackArtworkSource).toContain("NSImageView");
+    expect(nextTrackArtworkSource).toContain("requestedArtworkUrl");
+    expect(nextTrackArtworkSource).toContain("loadingArtworkUrl");
+    expect(nextTrackArtworkSource).toContain("displayedArtworkUrl");
     expect(nextTrackArtworkSource).toContain("CIPhotoEffectMono");
     expect(nextTrackArtworkSource).toContain("alphaValue = 0.34");
     expect(nextTrackArtworkSource).toContain(

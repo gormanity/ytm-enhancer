@@ -1055,7 +1055,9 @@ final class MenuBarControlsView: NSView {
 
 private final class MenuBarArtworkView: NSView {
   private let imageView = NSImageView()
-  private var currentArtworkUrl: String?
+  private var requestedArtworkUrl: String?
+  private var loadingArtworkUrl: String?
+  private var displayedArtworkUrl: String?
 
   override var isFlipped: Bool { true }
 
@@ -1076,23 +1078,30 @@ private final class MenuBarArtworkView: NSView {
       let scheme = url.scheme?.lowercased(),
       scheme == "https" || scheme == "http"
     else {
-      currentArtworkUrl = nil
+      requestedArtworkUrl = nil
+      loadingArtworkUrl = nil
+      displayedArtworkUrl = nil
       showPlaceholder()
       return
     }
 
-    if artworkUrl == currentArtworkUrl { return }
-    currentArtworkUrl = artworkUrl
+    if artworkUrl == displayedArtworkUrl || artworkUrl == loadingArtworkUrl {
+      return
+    }
+    requestedArtworkUrl = artworkUrl
+    loadingArtworkUrl = artworkUrl
 
     URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
       guard
         let self,
-        self.currentArtworkUrl == artworkUrl,
+        self.requestedArtworkUrl == artworkUrl,
         let data,
         let image = NSImage(data: data)
       else {
         DispatchQueue.main.async {
-          if self?.currentArtworkUrl == artworkUrl {
+          if self?.requestedArtworkUrl == artworkUrl {
+            self?.loadingArtworkUrl = nil
+            self?.displayedArtworkUrl = nil
             self?.showPlaceholder()
           }
         }
@@ -1100,7 +1109,9 @@ private final class MenuBarArtworkView: NSView {
       }
 
       DispatchQueue.main.async {
-        guard self.currentArtworkUrl == artworkUrl else { return }
+        guard self.requestedArtworkUrl == artworkUrl else { return }
+        self.loadingArtworkUrl = nil
+        self.displayedArtworkUrl = artworkUrl
         self.imageView.image = image
         self.imageView.contentTintColor = nil
       }
@@ -1141,7 +1152,9 @@ private final class MenuBarArtworkView: NSView {
 private final class MenuBarNextTrackArtworkView: NSView {
   private let imageView = NSImageView()
   private let monochromeContext = CIContext()
-  private var currentArtworkUrl: String?
+  private var requestedArtworkUrl: String?
+  private var loadingArtworkUrl: String?
+  private var displayedArtworkUrl: String?
 
   override var isFlipped: Bool { true }
 
@@ -1162,23 +1175,30 @@ private final class MenuBarNextTrackArtworkView: NSView {
       let scheme = url.scheme?.lowercased(),
       scheme == "https" || scheme == "http"
     else {
-      currentArtworkUrl = nil
+      requestedArtworkUrl = nil
+      loadingArtworkUrl = nil
+      displayedArtworkUrl = nil
       showPlaceholder()
       return
     }
 
-    if artworkUrl == currentArtworkUrl { return }
-    currentArtworkUrl = artworkUrl
+    if artworkUrl == displayedArtworkUrl || artworkUrl == loadingArtworkUrl {
+      return
+    }
+    requestedArtworkUrl = artworkUrl
+    loadingArtworkUrl = artworkUrl
 
     URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
       guard
         let self,
-        self.currentArtworkUrl == artworkUrl,
+        self.requestedArtworkUrl == artworkUrl,
         let data,
         let image = NSImage(data: data)
       else {
         DispatchQueue.main.async {
-          if self?.currentArtworkUrl == artworkUrl {
+          if self?.requestedArtworkUrl == artworkUrl {
+            self?.loadingArtworkUrl = nil
+            self?.displayedArtworkUrl = nil
             self?.showPlaceholder()
           }
         }
@@ -1188,7 +1208,9 @@ private final class MenuBarNextTrackArtworkView: NSView {
       let mutedImage = self.monochromeImage(from: image) ?? image
 
       DispatchQueue.main.async {
-        guard self.currentArtworkUrl == artworkUrl else { return }
+        guard self.requestedArtworkUrl == artworkUrl else { return }
+        self.loadingArtworkUrl = nil
+        self.displayedArtworkUrl = artworkUrl
         self.imageView.image = mutedImage
         self.imageView.contentTintColor = nil
       }
