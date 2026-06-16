@@ -14,6 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
         with:
@@ -30,6 +32,20 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium firefox msedge
 
+      - name: Resolve extension release metadata
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Extension releases must use vX.Y.Z tags."
+            exit 1
+          fi
+          previous_tag="$(git tag -l 'v[0-9]*' --sort=-v:refname | \
+            grep -v "^${GITHUB_REF_NAME}$" | head -n 1)"
+          {
+            echo "YTM_EXTENSION_VERSION=$version"
+            echo "PREVIOUS_EXTENSION_TAG=$previous_tag"
+          } >> "$GITHUB_ENV"
+
       - name: Run checks
         run: pnpm run check
 
@@ -42,7 +58,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: YTM Enhancer ${{ github.ref_name }}
+          name: YTM Enhancer ${{ env.YTM_EXTENSION_VERSION }}
           generate_release_notes: true
+          previous_tag: ${{ env.PREVIOUS_EXTENSION_TAG }}
           make_latest: true
           files: releases/*.zip

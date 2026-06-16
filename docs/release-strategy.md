@@ -46,6 +46,8 @@ For this repository:
 - Extension releases set `make_latest: true`.
 - Menu bar releases set `make_latest: false`.
 - Connector users find current versions through component-specific surfaces.
+- Generated release notes compare against the previous tag for the same
+  component, not the previous repository tag.
 
 This keeps the repository latest badge meaningful for the primary browser
 extension while preserving independent connector releases.

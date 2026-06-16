@@ -1496,13 +1496,32 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseStrategy).toContain(
       "Menu bar releases set `make_latest: false`",
     );
+    expect(releaseStrategy).toContain(
+      "Generated release notes compare against the previous tag",
+    );
+    expect(extensionWorkflow).toContain("fetch-depth: 0");
+    expect(extensionWorkflow).toContain("Resolve extension release metadata");
+    expect(extensionWorkflow).toContain(
+      "Extension releases must use vX.Y.Z tags",
+    );
+    expect(extensionWorkflow).toContain("PREVIOUS_EXTENSION_TAG");
+    expect(extensionWorkflow).toContain("git tag -l 'v[0-9]*'");
+    expect(extensionWorkflow).toContain(
+      "previous_tag: ${{ env.PREVIOUS_EXTENSION_TAG }}",
+    );
     expect(releaseStrategy).toContain("menu-bar/install.html");
     expect(releaseStrategy).toContain("menu-bar/appcast.xml");
     expect(releaseStrategy).toContain("releases.json");
     expect(extensionWorkflow).toContain(
-      "name: YTM Enhancer ${{ github.ref_name }}",
+      "name: YTM Enhancer ${{ env.YTM_EXTENSION_VERSION }}",
     );
     expect(extensionWorkflow).toContain("make_latest: true");
+    expect(menuBarWorkflow).toContain("fetch-depth: 0");
+    expect(menuBarWorkflow).toContain("PREVIOUS_MENU_BAR_TAG");
+    expect(menuBarWorkflow).toContain("git tag -l 'menu-bar-v[0-9]*'");
+    expect(menuBarWorkflow).toContain(
+      "previous_tag: ${{ env.PREVIOUS_MENU_BAR_TAG }}",
+    );
     expect(menuBarWorkflow).toContain("make_latest: false");
   });
 
