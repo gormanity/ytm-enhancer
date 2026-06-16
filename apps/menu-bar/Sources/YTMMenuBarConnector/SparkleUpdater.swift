@@ -22,6 +22,7 @@ enum MenuBarUpdateStatus: Equatable {
 final class SparkleUpdater {
   static let homebrewUpdateCommand =
     "brew update && brew upgrade --cask ytm-menu-bar"
+  static let homebrewUninstallCommand = "brew uninstall --cask ytm-menu-bar"
 
   var onStatusChanged: ((MenuBarUpdateStatus) -> Void)?
 

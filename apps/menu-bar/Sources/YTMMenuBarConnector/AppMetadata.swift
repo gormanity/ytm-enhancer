@@ -10,6 +10,8 @@ enum AppMetadata {
     "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml"
   static let nativeHostExecutablePath =
     "/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector"
+  static let directUninstallerPath =
+    "/Applications/YTM Menu Bar Uninstaller.command"
 }
 
 enum DistributionChannel: String {

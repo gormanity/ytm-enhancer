@@ -1145,6 +1145,52 @@ describe("menu bar connector app scaffold", () => {
     expect(metadata.channels.homebrew.sparkleEnabled).toBe(false);
   });
 
+  it("links to uninstall actions from the About window", () => {
+    const metadataSource = read(
+      "Sources/YTMMenuBarConnector/AppMetadata.swift",
+    );
+    const updaterSource = read(
+      "Sources/YTMMenuBarConnector/SparkleUpdater.swift",
+    );
+    const aboutSource = read(
+      "Sources/YTMMenuBarConnector/AboutWindowController.swift",
+    );
+
+    expect(metadataSource).toContain("directUninstallerPath");
+    expect(metadataSource).toContain(
+      "/Applications/YTM Menu Bar Uninstaller.command",
+    );
+    expect(updaterSource).toContain("homebrewUninstallCommand");
+    expect(updaterSource).toContain("brew uninstall --cask ytm-menu-bar");
+    expect(aboutSource).toContain("makeUninstallRow");
+    expect(aboutSource).toContain("companion app for YTM Enhancer");
+    expect(aboutSource).toContain("makeStoreLinkSection");
+    expect(aboutSource).toContain("Get YTM Enhancer");
+    expect(aboutSource).toContain("openChromeStore");
+    expect(aboutSource).toContain("openEdgeStore");
+    expect(aboutSource).toContain("openFirefoxStore");
+    expect(aboutSource).toContain(
+      "https://chromewebstore.google.com/detail/ytm-enhancer/bilcedjabgiedoamakekncokccabdccp",
+    );
+    expect(aboutSource).toContain(
+      "https://microsoftedge.microsoft.com/addons/detail/ytm-enhancer/gamefnibdabclmkngggcjghpbhjmajkm",
+    );
+    expect(aboutSource).toContain(
+      "https://addons.mozilla.org/en-US/firefox/addon/ytm-enhancer/",
+    );
+    expect(aboutSource).toContain("Need to remove the app?");
+    expect(aboutSource).toContain("Uninstall...");
+    expect(aboutSource).toContain("Copy Uninstall Command");
+    expect(aboutSource).toContain("handleUninstallButton");
+    expect(aboutSource).toContain("DistributionChannel.current");
+    expect(aboutSource).toContain("openDirectUninstaller");
+    expect(aboutSource).toContain("AppMetadata.directUninstallerPath");
+    expect(aboutSource).toContain("SparkleUpdater.homebrewUninstallCommand");
+    expect(aboutSource).toContain("YTM Menu Bar Uninstaller Was Not Found");
+    expect(aboutSource).toContain("NSWorkspace.shared.open(");
+    expect(aboutSource).toContain("URL(fileURLWithPath:");
+  });
+
   it("scaffolds Sparkle app updates for direct installs", () => {
     const packageManifest = read("Package.swift");
     const updaterSource = read(

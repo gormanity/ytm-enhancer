@@ -10,7 +10,7 @@ private enum AboutUpdateAction {
 
 final class AboutWindowController: NSObject {
   private static let windowWidth: CGFloat = 420
-  private static let windowHeight: CGFloat = 500
+  private static let windowHeight: CGFloat = 590
   private static let contentInset: CGFloat = 22
   private static let contentWidth = windowWidth - (contentInset * 2)
   private static let panelInset: CGFloat = 14
@@ -133,21 +133,25 @@ final class AboutWindowController: NSObject {
 
     let header = makeHeader()
     let connectorInfo = makeBodyLabel(
-      "YTM Menu Bar is a companion app for YTM Enhancer. It shows YouTube Music playback in the macOS menu bar and sends controls through the extension connector API."
+      "YTM Menu Bar is a companion app for YTM Enhancer, a browser extension that gives YouTube Music richer playback controls and connected-app support."
     )
     let dependencyInfo = makeBodyLabel(
-      "It requires the YTM Enhancer browser extension with Connected Apps enabled. The app does not read YouTube Music pages directly."
+      "Install YTM Enhancer in your browser with Connected Apps enabled before using the menu bar app. The app does not read YouTube Music pages directly."
     )
+    let storeLinks = makeStoreLinkSection()
     let updateSection = makeUpdateSection()
     let separator = makeSeparator()
     let links = makeLinkRow()
+    let uninstallRow = makeUninstallRow()
 
     root.addArrangedSubview(header)
     root.addArrangedSubview(separator)
     root.addArrangedSubview(connectorInfo)
     root.addArrangedSubview(dependencyInfo)
+    root.addArrangedSubview(storeLinks)
     root.addArrangedSubview(updateSection)
     root.addArrangedSubview(links)
+    root.addArrangedSubview(uninstallRow)
 
     contentView.addSubview(root)
     window.contentView = contentView
@@ -169,6 +173,7 @@ final class AboutWindowController: NSObject {
         constant: -Self.contentInset
       ),
       separator.widthAnchor.constraint(equalToConstant: Self.contentWidth),
+      storeLinks.widthAnchor.constraint(equalToConstant: Self.contentWidth),
       updateSection.widthAnchor.constraint(equalToConstant: Self.contentWidth),
     ])
   }
@@ -277,6 +282,58 @@ final class AboutWindowController: NSObject {
     return row
   }
 
+  private func makeStoreLinkSection() -> NSView {
+    let stack = NSStackView()
+    stack.orientation = .vertical
+    stack.alignment = .leading
+    stack.spacing = 8
+    stack.translatesAutoresizingMaskIntoConstraints = false
+
+    let row = NSStackView()
+    row.orientation = .horizontal
+    row.alignment = .centerY
+    row.spacing = 8
+    row.addArrangedSubview(
+      makeLinkButton(title: "Chrome", action: #selector(openChromeStore))
+    )
+    row.addArrangedSubview(
+      makeLinkButton(title: "Edge", action: #selector(openEdgeStore))
+    )
+    row.addArrangedSubview(
+      makeLinkButton(title: "Firefox", action: #selector(openFirefoxStore))
+    )
+
+    stack.addArrangedSubview(makeSectionLabel("Get YTM Enhancer"))
+    stack.addArrangedSubview(row)
+    return stack
+  }
+
+  private func makeUninstallRow() -> NSView {
+    let stack = NSStackView()
+    stack.orientation = .vertical
+    stack.alignment = .leading
+    stack.spacing = 8
+
+    let text: String
+    let buttonTitle: String
+    switch DistributionChannel.current {
+    case .direct:
+      text = "Need to remove the app? The direct install includes an uninstaller."
+      buttonTitle = "Uninstall..."
+    case .homebrew:
+      text = "Need to remove the app? Homebrew owns this install."
+      buttonTitle = "Copy Uninstall Command"
+    }
+
+    let label = makeBodyLabel(text)
+    label.preferredMaxLayoutWidth = Self.contentWidth
+    stack.addArrangedSubview(label)
+    stack.addArrangedSubview(
+      makeLinkButton(title: buttonTitle, action: #selector(handleUninstallButton))
+    )
+    return stack
+  }
+
   private func makeSeparator() -> NSView {
     let separator = NSBox()
     separator.boxType = .separator
@@ -333,6 +390,66 @@ final class AboutWindowController: NSObject {
 
   @objc private func openReleases() {
     open("https://github.com/gormanity/ytm-enhancer/releases")
+  }
+
+  @objc private func openChromeStore() {
+    open(
+      "https://chromewebstore.google.com/detail/ytm-enhancer/bilcedjabgiedoamakekncokccabdccp"
+    )
+  }
+
+  @objc private func openEdgeStore() {
+    open(
+      "https://microsoftedge.microsoft.com/addons/detail/ytm-enhancer/gamefnibdabclmkngggcjghpbhjmajkm"
+    )
+  }
+
+  @objc private func openFirefoxStore() {
+    open("https://addons.mozilla.org/en-US/firefox/addon/ytm-enhancer/")
+  }
+
+  @objc private func handleUninstallButton() {
+    switch DistributionChannel.current {
+    case .direct:
+      openDirectUninstaller()
+    case .homebrew:
+      NSPasteboard.general.clearContents()
+      NSPasteboard.general.setString(
+        SparkleUpdater.homebrewUninstallCommand,
+        forType: .string
+      )
+      showAlert(
+        title: "Uninstall Command Copied",
+        message: "Run \(SparkleUpdater.homebrewUninstallCommand) in Terminal."
+      )
+    }
+  }
+
+  private func openDirectUninstaller() {
+    guard
+      FileManager.default.fileExists(
+        atPath: AppMetadata.directUninstallerPath
+      )
+    else {
+      showAlert(
+        title: "YTM Menu Bar Uninstaller Was Not Found",
+        message:
+          "Install the latest direct package to add the uninstaller, or remove the app manually from Applications."
+      )
+      return
+    }
+
+    NSWorkspace.shared.open(
+      URL(fileURLWithPath: AppMetadata.directUninstallerPath)
+    )
+  }
+
+  private func showAlert(title: String, message: String) {
+    let alert = NSAlert()
+    alert.messageText = title
+    alert.informativeText = message
+    alert.addButton(withTitle: "OK")
+    alert.runModal()
   }
 
   private func open(_ url: String) {
