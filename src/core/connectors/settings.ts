@@ -7,12 +7,24 @@ import {
 
 export const CONNECTORS_ENABLED_STATE_KEY = "connectors.enabled";
 export const CONNECTORS_KNOWN_STATE_KEY = "connectors.known";
+export const FIRST_PARTY_MENU_BAR_CONNECTOR_ID =
+  "com.gormanity.ytm-enhancer.menu-bar";
+export const MENU_BAR_INSTALL_URL =
+  "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html";
+export const MENU_BAR_HOMEBREW_COMMAND =
+  "brew install --cask gormanity/tap/ytm-menu-bar";
 
 export type ConnectorStatus =
   | "connected"
   | "disconnected"
   | "blocked"
   | "incompatible";
+
+export type ConnectedAppAvailability =
+  | "unknown"
+  | "available"
+  | "missing"
+  | "error";
 
 export interface KnownConnector {
   id: string;
@@ -38,8 +50,20 @@ export interface ConnectedApp {
   lastConnectedAt: number | null;
 }
 
+export interface MenuBarConnectedApp {
+  id: string;
+  name: string;
+  description: string;
+  installUrl: string;
+  homebrewCommand: string;
+  availability: ConnectedAppAvailability;
+  lastError: string | null;
+  lastCheckedAt: number | null;
+}
+
 export interface ConnectedAppsSettings {
   enabled: boolean;
+  menuBarApp: MenuBarConnectedApp;
   connectors: ConnectedApp[];
 }
 
@@ -163,13 +187,31 @@ export function removeKnownConnector(
   return next;
 }
 
+export function createMenuBarConnectedApp(
+  overrides: Partial<MenuBarConnectedApp> = {},
+): MenuBarConnectedApp {
+  return {
+    id: FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+    name: "YTM Menu Bar",
+    description: "Native macOS menu bar controls for YouTube Music.",
+    installUrl: MENU_BAR_INSTALL_URL,
+    homebrewCommand: MENU_BAR_HOMEBREW_COMMAND,
+    availability: "unknown",
+    lastError: null,
+    lastCheckedAt: null,
+    ...overrides,
+  };
+}
+
 export function createConnectedAppsSettings(
   enabled: boolean,
   connectors: Map<string, KnownConnector>,
   connectedConnectorIds: Set<string> = new Set(),
+  menuBarApp: Partial<MenuBarConnectedApp> = {},
 ): ConnectedAppsSettings {
   return {
     enabled,
+    menuBarApp: createMenuBarConnectedApp(menuBarApp),
     connectors: Array.from(connectors.values())
       .map((connector): ConnectedApp => {
         const status: ConnectorStatus = connector.incompatible

@@ -1,5 +1,10 @@
 <h2>Connected Apps</h2>
 
+<p class="status-hint connected-apps-intro">
+  Connect approved external apps to YTM Enhancer without giving them direct
+  access to YouTube Music pages.
+</p>
+
 <div class="settings-card">
   <label class="card-row">
     <span class="card-row-copy">
@@ -12,20 +17,30 @@
   </label>
 </div>
 
-<div data-role="connected-apps-list"></div>
-
 <div
-  class="settings-card connected-app-install-card"
-  data-role="connected-app-menu-bar-install"
+  class="settings-card connected-app-menu-bar-card"
+  data-role="connected-app-menu-bar-card"
 >
   <div class="connected-app-header">
     <div class="connected-app-title-group">
       <h3>YTM Menu Bar</h3>
-      <p class="status-hint connected-app-version">
+      <p
+        class="status-hint connected-app-version"
+        data-role="connected-app-menu-bar-description"
+      >
         Native macOS menu bar controls for YouTube Music.
       </p>
     </div>
+    <span
+      class="connected-app-status"
+      data-role="connected-app-menu-bar-status"
+    ></span>
   </div>
+
+  <p
+    class="status-hint connected-app-menu-bar-guidance"
+    data-role="connected-app-menu-bar-guidance"
+  ></p>
 
   <div class="connected-app-install-actions">
     <a
@@ -50,6 +65,10 @@
     Direct installs update from the app. Homebrew installs update with Homebrew.
   </p>
 </div>
+
+<h3 class="connected-apps-section-heading">Registered Apps</h3>
+
+<div data-role="connected-apps-list"></div>
 
 <div
   class="settings-card connected-apps-empty"
@@ -104,7 +123,7 @@
         class="secondary-btn connected-app-forget-button"
         data-role="connected-app-forget-button"
       >
-        Forget Connector
+        Forget App
       </button>
     </div>
   </div>

@@ -1166,6 +1166,10 @@ describe("menu bar connector app scaffold", () => {
       resolve(process.cwd(), "src/core/connectors/popup.ts"),
       "utf-8",
     );
+    const settingsSource = readFileSync(
+      resolve(process.cwd(), "src/core/connectors/settings.ts"),
+      "utf-8",
+    );
     const popupTemplate = readFileSync(
       resolve(process.cwd(), "src/core/connectors/popup.html"),
       "utf-8",
@@ -1191,9 +1195,10 @@ describe("menu bar connector app scaffold", () => {
       "does not read YouTube Music pages directly",
     );
     expect(appcastScript).not.toContain("through Sparkle");
-    expect(popupSource).toContain(
+    expect(settingsSource).toContain(
       "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
     );
+    expect(popupSource).toContain("settings.menuBarApp.installUrl");
     expect(popupTemplate).toContain(
       "Direct installs update from the app. Homebrew installs update with Homebrew.",
     );

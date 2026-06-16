@@ -9,6 +9,7 @@ import {
 } from "./client";
 import {
   CONNECTOR_PERMISSION_LABELS,
+  FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
   type ConnectedApp,
   type ConnectorStatus,
 } from "./settings";
@@ -23,11 +24,6 @@ const STATUS_LABELS: Record<ConnectorStatus, string> = {
   incompatible: "Incompatible",
 };
 
-const FIRST_PARTY_MENU_BAR_CONNECTOR_ID = "com.gormanity.ytm-enhancer.menu-bar";
-const MENU_BAR_INSTALL_URL =
-  "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html";
-const MENU_BAR_HOMEBREW_COMMAND =
-  "brew install --cask gormanity/tap/ytm-menu-bar";
 const MENU_BAR_UPDATE_GUIDANCE =
   "Update required. Open About YTM Menu Bar to download the update, or run brew upgrade --cask ytm-menu-bar.";
 
@@ -35,7 +31,11 @@ function permissionLabel(permission: ConnectorPermission): string {
   return CONNECTOR_PERMISSION_LABELS[permission] ?? permission;
 }
 
-function setStatus(element: HTMLElement, status: ConnectorStatus): void {
+function setStatus(
+  element: HTMLElement,
+  status: ConnectorStatus,
+  label = STATUS_LABELS[status],
+): void {
   element.classList.remove(
     "connected-app-status-connected",
     "connected-app-status-blocked",
@@ -52,7 +52,7 @@ function setStatus(element: HTMLElement, status: ConnectorStatus): void {
     element.classList.add("connected-app-status-incompatible");
   }
 
-  element.textContent = STATUS_LABELS[status];
+  element.textContent = label;
 }
 
 function renderPermissionList(
@@ -148,31 +148,120 @@ function createConnectorCard(
   return card;
 }
 
-function renderMenuBarInstallCard(
+function firstPartyMenuBarConnector(
+  settings: ConnectedAppsSettings,
+): ConnectedApp | undefined {
+  return settings.connectors.find(
+    (connector) => connector.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+  );
+}
+
+function menuBarStatus(
+  settings: ConnectedAppsSettings,
+  connector: ConnectedApp | undefined,
+): { status: ConnectorStatus; label: string } {
+  if (connector?.status === "connected") {
+    return { status: "connected", label: "Connected" };
+  }
+  if (connector?.status === "incompatible") {
+    return { status: "incompatible", label: "Update Required" };
+  }
+  if (!settings.enabled && connector !== undefined) {
+    return { status: "disconnected", label: "Off" };
+  }
+  if (connector?.status === "blocked") {
+    return { status: "blocked", label: "Disabled" };
+  }
+  if (settings.menuBarApp.availability === "missing") {
+    return { status: "blocked", label: "Not Installed" };
+  }
+  if (settings.menuBarApp.availability === "error") {
+    return { status: "incompatible", label: "Needs Attention" };
+  }
+  if (connector !== undefined) {
+    return { status: "disconnected", label: "Installed" };
+  }
+  if (settings.menuBarApp.availability === "available") {
+    return { status: "disconnected", label: "Installed" };
+  }
+  return { status: "disconnected", label: "Available" };
+}
+
+function menuBarGuidance(
+  settings: ConnectedAppsSettings,
+  connector: ConnectedApp | undefined,
+): string {
+  if (connector?.status === "incompatible") {
+    return MENU_BAR_UPDATE_GUIDANCE;
+  }
+  if (!settings.enabled && connector !== undefined) {
+    return "Connected Apps is off, so YTM Menu Bar cannot connect.";
+  }
+  if (!settings.enabled) {
+    return "Install YTM Menu Bar, then enable Connected Apps to allow it to connect.";
+  }
+  if (connector?.status === "blocked") {
+    return "YTM Menu Bar is registered but disabled below.";
+  }
+  if (settings.menuBarApp.availability === "missing") {
+    return "YTM Menu Bar or its native host was not detected. Reinstall it, or use Forget App below if you removed it.";
+  }
+  if (settings.menuBarApp.availability === "error") {
+    return settings.menuBarApp.lastError
+      ? `YTM Enhancer could not start YTM Menu Bar. Last error: ${settings.menuBarApp.lastError}`
+      : "YTM Enhancer could not start YTM Menu Bar. Open or reinstall the app if this keeps happening.";
+  }
+  if (connector?.status === "connected") {
+    return "YTM Menu Bar is connected and can control playback through YTM Enhancer.";
+  }
+  if (connector !== undefined) {
+    return "Open YTM Menu Bar from Applications to connect. If you removed it, reinstall it or use Forget App below.";
+  }
+  return "Add playback info and controls to the macOS menu bar with the first YTM Enhancer connected app.";
+}
+
+function renderMenuBarAppCard(
   container: HTMLElement,
   settings: ConnectedAppsSettings,
 ): void {
-  const installCard = container.querySelector<HTMLElement>(
-    '[data-role="connected-app-menu-bar-install"]',
+  const appCard = container.querySelector<HTMLElement>(
+    '[data-role="connected-app-menu-bar-card"]',
   );
-  if (!installCard) return;
+  if (!appCard) return;
 
-  const menuBarConnector = settings.connectors.find(
-    (connector) => connector.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
-  );
-  installCard.classList.toggle("is-hidden", menuBarConnector !== undefined);
+  const connector = firstPartyMenuBarConnector(settings);
+  const badge = menuBarStatus(settings, connector);
+
+  const status = queryRole(appCard, "connected-app-menu-bar-status");
+  if (status) setStatus(status, badge.status, badge.label);
+
+  const description = queryRole(appCard, "connected-app-menu-bar-description");
+  if (description) description.textContent = settings.menuBarApp.description;
+
+  const guidance = queryRole(appCard, "connected-app-menu-bar-guidance");
+  if (guidance) guidance.textContent = menuBarGuidance(settings, connector);
 
   const directLink = queryRole<HTMLAnchorElement>(
-    installCard,
+    appCard,
     "connected-app-menu-bar-direct-link",
   );
-  if (directLink) directLink.href = MENU_BAR_INSTALL_URL;
+  if (directLink) {
+    directLink.href = settings.menuBarApp.installUrl;
+    directLink.textContent =
+      connector?.status === "incompatible"
+        ? "Update YTM Menu Bar"
+        : connector || settings.menuBarApp.availability !== "unknown"
+          ? "Install or Reinstall"
+          : "Download for macOS";
+  }
 
   const homebrewCommand = queryRole<HTMLElement>(
-    installCard,
+    appCard,
     "connected-app-menu-bar-homebrew-command",
   );
-  if (homebrewCommand) homebrewCommand.textContent = MENU_BAR_HOMEBREW_COMMAND;
+  if (homebrewCommand) {
+    homebrewCommand.textContent = settings.menuBarApp.homebrewCommand;
+  }
 }
 
 function renderConnectorList(
@@ -192,7 +281,7 @@ function renderConnectorList(
   );
   if (!list || !empty || !template) return;
 
-  renderMenuBarInstallCard(container, settings);
+  renderMenuBarAppCard(container, settings);
 
   list.replaceChildren(
     ...settings.connectors.flatMap((connector) => {

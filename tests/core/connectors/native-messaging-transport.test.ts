@@ -48,6 +48,57 @@ describe("native messaging connector transport", () => {
     );
   });
 
+  it("reports successful native host startup", () => {
+    const port = createPort();
+    const runtime = {
+      connectNative: vi.fn(() => port),
+    };
+    const onConnect = vi.fn();
+    const transport = createNativeMessagingTransport({ runtime, onConnect });
+
+    transport.start(vi.fn());
+
+    expect(onConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports native host startup failures", () => {
+    const onError = vi.fn();
+    const runtime = {
+      connectNative: vi.fn(() => {
+        throw new Error("Specified native messaging host not found.");
+      }),
+    };
+    const transport = createNativeMessagingTransport({ runtime, onError });
+
+    transport.start(vi.fn());
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Specified native messaging host not found.",
+      }),
+    );
+  });
+
+  it("reports native host disconnect errors", () => {
+    const port = createPort();
+    const runtime = {
+      connectNative: vi.fn((_hostName: string) => port),
+      lastError: undefined as { message?: string } | undefined,
+    };
+    const onError = vi.fn();
+    const transport = createNativeMessagingTransport({ runtime, onError });
+
+    transport.start(vi.fn());
+    runtime.lastError = { message: "Native host exited unexpectedly." };
+    port.onDisconnect.emit();
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Native host exited unexpectedly.",
+      }),
+    );
+  });
+
   it("routes native messages through the connector host handler", async () => {
     const port = createPort();
     const runtime = {

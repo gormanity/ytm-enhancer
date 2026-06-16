@@ -29,6 +29,7 @@ export interface NativeMessagingTransportOptions {
   hostName?: string;
   connectionId?: string;
   runtime?: NativeMessagingRuntime;
+  onConnect?: () => void;
   onError?: (error: Error) => void;
 }
 
@@ -61,6 +62,15 @@ function reportError(
   if (!onError) return;
   try {
     onError(error instanceof Error ? error : new Error(String(error)));
+  } catch {
+    // Transport diagnostics must not affect connector host behavior.
+  }
+}
+
+function reportConnect(onConnect: (() => void) | undefined): void {
+  if (!onConnect) return;
+  try {
+    onConnect();
   } catch {
     // Transport diagnostics must not affect connector host behavior.
   }
@@ -106,6 +116,7 @@ export function createNativeMessagingTransport(
         port = null;
         return;
       }
+      reportConnect(options.onConnect);
 
       messageListener = (message: unknown) => {
         if (!handler) return;

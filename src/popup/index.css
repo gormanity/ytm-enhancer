@@ -499,6 +499,14 @@ h3 {
 }
 
 /* Connected Apps */
+.connected-apps-intro {
+  margin: -4px 0 14px;
+}
+
+.connected-apps-section-heading {
+  margin: 16px 0 8px;
+}
+
 .connected-app-card {
   display: flex;
   flex-direction: column;
@@ -605,7 +613,7 @@ h3 {
   display: flex;
 }
 
-.connected-app-install-card {
+.connected-app-menu-bar-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -646,6 +654,7 @@ h3 {
 }
 
 .connected-app-install-note,
+.connected-app-menu-bar-guidance,
 .connected-app-update-guidance {
   margin: 0;
 }

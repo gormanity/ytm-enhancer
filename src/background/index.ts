@@ -21,10 +21,12 @@ import {
   CONNECTORS_ENABLED_STATE_KEY,
   CONNECTORS_KNOWN_STATE_KEY,
   createConnectedAppsSettings,
+  FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
   normalizeKnownConnectors,
   removeKnownConnector,
   setKnownConnectorEnabled,
   upsertKnownConnector,
+  type ConnectedAppAvailability,
   type ConnectorStatus,
   type KnownConnector,
 } from "@/core/connectors/settings";
@@ -91,6 +93,9 @@ let selectedTabId: number | null = null;
 let connectorHost: ConnectorHost | null = null;
 let connectorSupportEnabled = false;
 let knownConnectors = new Map<string, KnownConnector>();
+let menuBarNativeHostAvailability: ConnectedAppAvailability = "unknown";
+let menuBarNativeHostLastError: string | null = null;
+let menuBarNativeHostLastCheckedAt: number | null = null;
 const devBuildSuspendedTabIds = new Set<number>();
 const devBuildConflictState: DevBuildConflictState = {
   suspendedTabIds: devBuildSuspendedTabIds,
@@ -156,6 +161,29 @@ function setConnectorPlaybackStateStreaming(enabled: boolean): void {
     .catch(() => undefined);
 }
 
+function isMissingNativeHostError(message: string): boolean {
+  return /native messaging host.*not found|specified native messaging host not found|no such native application|native host.*not found|host not found|manifest.*not found/i.test(
+    message,
+  );
+}
+
+function recordMenuBarNativeHostAvailable(shouldNotify = true): void {
+  menuBarNativeHostAvailability = "available";
+  menuBarNativeHostLastError = null;
+  menuBarNativeHostLastCheckedAt = Date.now();
+  if (shouldNotify) notifyConnectedAppsChanged();
+}
+
+function recordMenuBarNativeHostError(error: Error): void {
+  const message = error.message || String(error);
+  menuBarNativeHostAvailability = isMissingNativeHostError(message)
+    ? "missing"
+    : "error";
+  menuBarNativeHostLastError = message;
+  menuBarNativeHostLastCheckedAt = Date.now();
+  notifyConnectedAppsChanged();
+}
+
 async function enableConnectorSupport(): Promise<void> {
   if (connectorHost !== null) return;
 
@@ -167,7 +195,12 @@ async function enableConnectorSupport(): Promise<void> {
     },
     onConnectorSeen: rememberConnector,
     onPlaybackStateSubscriptionChanged: setConnectorPlaybackStateStreaming,
-    transports: [createNativeMessagingTransport()],
+    transports: [
+      createNativeMessagingTransport({
+        onConnect: recordMenuBarNativeHostAvailable,
+        onError: recordMenuBarNativeHostError,
+      }),
+    ],
   });
   connectorHost.start();
 }
@@ -196,6 +229,11 @@ function connectedAppsSettings() {
     connectorSupportEnabled,
     knownConnectors,
     connectedConnectorIds(),
+    {
+      availability: menuBarNativeHostAvailability,
+      lastError: menuBarNativeHostLastError,
+      lastCheckedAt: menuBarNativeHostLastCheckedAt,
+    },
   );
 }
 
@@ -218,6 +256,9 @@ function rememberConnector(
   manifest: ConnectorManifest,
   status: ConnectorStatus,
 ): void {
+  if (manifest.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID) {
+    recordMenuBarNativeHostAvailable(false);
+  }
   knownConnectors = upsertKnownConnector(knownConnectors, manifest, {
     now: Date.now(),
     status,

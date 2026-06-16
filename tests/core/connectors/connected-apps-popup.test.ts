@@ -4,7 +4,21 @@ import {
   type ConnectedAppsClient,
   type ConnectedAppsSettings,
 } from "@/core/connectors/popup";
+import { createMenuBarConnectedApp } from "@/core/connectors/settings";
 import { createTestModuleContext } from "../../helpers/module-context";
+
+type SettingsInput = Omit<Partial<ConnectedAppsSettings>, "menuBarApp"> & {
+  menuBarApp?: Partial<ConnectedAppsSettings["menuBarApp"]>;
+};
+
+function createSettings(input: SettingsInput = {}): ConnectedAppsSettings {
+  return {
+    enabled: false,
+    connectors: [],
+    ...input,
+    menuBarApp: createMenuBarConnectedApp(input.menuBarApp),
+  };
+}
 
 function createClient(
   initialSettings: ConnectedAppsSettings,
@@ -63,7 +77,7 @@ describe("Connected Apps popup view", () => {
   });
 
   it("loads and persists the global Connected Apps toggle", async () => {
-    const client = createClient({ enabled: false, connectors: [] });
+    const client = createClient(createSettings({ enabled: false }));
     const view = createConnectedAppsPopupView(
       createTestModuleContext(),
       client,
@@ -88,22 +102,24 @@ describe("Connected Apps popup view", () => {
   });
 
   it("renders known connectors with status and permission labels", async () => {
-    const client = createClient({
-      enabled: true,
-      connectors: [
-        {
-          id: "com.example.menu-bar",
-          name: "YTM Menu Bar",
-          version: "0.1.0",
-          protocolVersion: "1.0.0",
-          permissions: ["playback:read", "playback:control", "ytm:focus"],
-          enabled: true,
-          status: "connected",
-          lastSeenAt: null,
-          lastConnectedAt: null,
-        },
-      ],
-    });
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.example.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read", "playback:control", "ytm:focus"],
+            enabled: true,
+            status: "connected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+      }),
+    );
     const view = createConnectedAppsPopupView(
       createTestModuleContext(),
       client,
@@ -127,22 +143,24 @@ describe("Connected Apps popup view", () => {
   });
 
   it("persists individual connector enablement", async () => {
-    const client = createClient({
-      enabled: true,
-      connectors: [
-        {
-          id: "com.example.menu-bar",
-          name: "YTM Menu Bar",
-          version: "0.1.0",
-          protocolVersion: "1.0.0",
-          permissions: ["playback:read"],
-          enabled: true,
-          status: "disconnected",
-          lastSeenAt: null,
-          lastConnectedAt: null,
-        },
-      ],
-    });
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.example.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+      }),
+    );
     const view = createConnectedAppsPopupView(
       createTestModuleContext(),
       client,
@@ -169,22 +187,24 @@ describe("Connected Apps popup view", () => {
   });
 
   it("forgets a connector and refreshes the registered app list", async () => {
-    const client = createClient({
-      enabled: true,
-      connectors: [
-        {
-          id: "com.example.menu-bar",
-          name: "YTM Menu Bar",
-          version: "0.1.0",
-          protocolVersion: "1.0.0",
-          permissions: ["playback:read"],
-          enabled: true,
-          status: "disconnected",
-          lastSeenAt: null,
-          lastConnectedAt: null,
-        },
-      ],
-    });
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.example.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+      }),
+    );
     const view = createConnectedAppsPopupView(
       createTestModuleContext(),
       client,
@@ -200,6 +220,7 @@ describe("Connected Apps popup view", () => {
       expect(element).not.toBeNull();
       return element!;
     });
+    expect(button.textContent).toContain("Forget App");
 
     button.click();
 
@@ -213,7 +234,7 @@ describe("Connected Apps popup view", () => {
   });
 
   it("shows first-party menu bar install options before it is registered", async () => {
-    const client = createClient({ enabled: true, connectors: [] });
+    const client = createClient(createSettings({ enabled: true }));
     const view = createConnectedAppsPopupView(
       createTestModuleContext(),
       client,
@@ -224,6 +245,7 @@ describe("Connected Apps popup view", () => {
 
     await vi.waitFor(() => {
       expect(container.textContent).toContain("YTM Menu Bar");
+      expect(container.textContent).toContain("Available");
       expect(container.textContent).toContain("Download for macOS");
       expect(container.textContent).toContain(
         "brew install --cask gormanity/tap/ytm-menu-bar",
@@ -248,23 +270,107 @@ describe("Connected Apps popup view", () => {
     );
   });
 
-  it("shows update guidance for incompatible first-party menu bar connectors", async () => {
-    const client = createClient({
-      enabled: true,
-      connectors: [
-        {
-          id: "com.gormanity.ytm-enhancer.menu-bar",
-          name: "YTM Menu Bar",
-          version: "0.0.1",
-          protocolVersion: "0.1.0",
-          permissions: ["playback:read"],
-          enabled: true,
-          status: "incompatible",
-          lastSeenAt: null,
-          lastConnectedAt: null,
-        },
-      ],
+  it("keeps first-party menu bar install actions visible after registration", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: { availability: "available" },
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Install or Reinstall");
+      expect(container.textContent).toContain(
+        "Open YTM Menu Bar from Applications to connect.",
+      );
+      expect(
+        container.querySelector(
+          '[data-connector-id="com.gormanity.ytm-enhancer.menu-bar"]',
+        ),
+      ).not.toBeNull();
     });
+  });
+
+  it("shows recovery guidance when the first-party native host is missing", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: {
+          availability: "missing",
+          lastError: "Specified native messaging host not found.",
+        },
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Not Installed");
+      expect(container.textContent).toContain(
+        "YTM Menu Bar or its native host was not detected.",
+      );
+      expect(container.textContent).toContain("Install or Reinstall");
+      expect(container.textContent).toContain("Forget App");
+    });
+  });
+
+  it("shows update guidance for incompatible first-party menu bar connectors", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.0.1",
+            protocolVersion: "0.1.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "incompatible",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+      }),
+    );
     const view = createConnectedAppsPopupView(
       createTestModuleContext(),
       client,

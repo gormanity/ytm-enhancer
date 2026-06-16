@@ -83,6 +83,12 @@ Users manage this state from the popup's Connected Apps page. The page behaves
 like the module pages in the sidebar, but it is backed by the core connector
 subsystem rather than a `FeatureModule`.
 
+Use "Connected Apps" for user-facing copy. Keep "connector" for protocol,
+source, and architecture docs where the stable public API boundary matters. The
+popup keeps the first-party YTM Menu Bar app discoverable even before it is
+registered, and treats the registered connector list as the approval and
+lifecycle control surface.
+
 ## Transport
 
 The first transport is browser native messaging for the first-party macOS menu
@@ -99,6 +105,13 @@ com.gormanity.ytm_enhancer.menu_bar
 The background service worker attaches the transport only when Connected Apps is
 enabled. When connector support is disabled, the host is not created and the
 native messaging connection is not opened.
+
+Browsers do not expose a native-host installation query. The extension infers
+first-party install state from the native messaging startup path instead:
+successful `connectNative()` startup marks YTM Menu Bar as available, and
+browser-reported startup or disconnect failures mark it as missing or needing
+attention in the Connected Apps page. These diagnostics are intentionally
+transient and are not part of the connector protocol.
 
 Future transports, such as extension runtime messaging for another extension or
 a constrained browser-local bridge, must preserve the same host validation path.
@@ -171,6 +184,5 @@ Remaining work before a public connector release:
 1. Publish the `menu-bar-v*` GitHub Release workflow.
 2. Publish the `gormanity/homebrew-tap` cask repository.
 3. Add a clearer approval flow for newly seen connectors.
-4. Add diagnostics for native host launch failures and disconnected hosts.
-5. Add connector-facing diagnostics for protocol mismatches and permission
+4. Add connector-facing diagnostics for protocol mismatches and permission
    denials.

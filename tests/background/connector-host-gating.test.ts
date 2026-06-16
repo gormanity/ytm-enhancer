@@ -55,10 +55,28 @@ describe("connector host background gating", () => {
       "createConnectorHost",
     );
     expect(functionBody("enableConnectorSupport")).toContain(
-      "transports: [createNativeMessagingTransport()]",
+      "createNativeMessagingTransport({",
+    );
+    expect(functionBody("enableConnectorSupport")).toContain(
+      "onConnect: recordMenuBarNativeHostAvailable",
+    );
+    expect(functionBody("enableConnectorSupport")).toContain(
+      "onError: recordMenuBarNativeHostError",
     );
     expect(functionBody("enableConnectorSupport")).toContain(
       "connectorHost.start();",
+    );
+  });
+
+  it("reports native host diagnostics through Connected Apps settings", () => {
+    expect(backgroundSource).toContain("menuBarNativeHostAvailability");
+    expect(backgroundSource).toContain("recordMenuBarNativeHostError");
+    expect(backgroundSource).toContain("isMissingNativeHostError");
+    expect(functionBody("connectedAppsSettings", false)).toContain(
+      "availability: menuBarNativeHostAvailability",
+    );
+    expect(functionBody("connectedAppsSettings", false)).toContain(
+      "lastError: menuBarNativeHostLastError",
     );
   });
 
