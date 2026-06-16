@@ -187,6 +187,16 @@ describe("Connected Apps popup view", () => {
 
     view.render(container);
 
+    const card = await vi.waitFor(() => {
+      const card = container.querySelector<HTMLDetailsElement>(
+        '[data-app-id="com.example.menu-bar"]',
+      );
+      expect(card).not.toBeNull();
+      return card!;
+    });
+    card.open = true;
+    card.dispatchEvent(new Event("toggle"));
+
     const toggle = await vi.waitFor(() => {
       const input = container.querySelector<HTMLInputElement>(
         '[data-role="connected-app-enabled-toggle"]',
@@ -202,6 +212,13 @@ describe("Connected Apps popup view", () => {
       "com.example.menu-bar",
       false,
     );
+    await vi.waitFor(() => {
+      const refreshedCard = container.querySelector<HTMLDetailsElement>(
+        '[data-app-id="com.example.menu-bar"]',
+      );
+      expect(refreshedCard).not.toBe(card);
+      expect(refreshedCard?.open).toBe(true);
+    });
   });
 
   it("forgets a connector and refreshes the registered app list", async () => {
