@@ -81,6 +81,10 @@ This file covers **how to work**, not what the project is.
   - After approval, add the approved notes to the GitHub release.
 - Menu bar connector releases are separate from extension releases. Use
   `menu-bar-vX.Y.Z` tags and follow `docs/menu-bar-release.md`.
+- Extension releases own GitHub's repo-wide latest release. Component-scoped
+  connector releases must not take over the repo-wide latest badge; users
+  discover connector updates through component install pages, appcasts, package
+  managers, and component release links.
 - Before cutting a menu bar connector release, decide whether manual validation
   is required or optional using `docs/menu-bar-release.md`.
   - Required before the first public menu bar release, when release plumbing

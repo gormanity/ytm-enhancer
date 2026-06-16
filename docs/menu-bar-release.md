@@ -4,6 +4,12 @@ The YTM Menu Bar connector is versioned independently from the browser
 extension. Extension releases use `vX.Y.Z`; menu bar releases use
 `menu-bar-vX.Y.Z`.
 
+Menu bar GitHub Releases are component-scoped artifact pages. They do not become
+the repository-wide latest release because GitHub exposes only one latest
+release per repository and YTM Enhancer's browser extension owns that badge.
+Users should discover the newest menu bar app through the install page, Sparkle
+appcast, Homebrew cask, or a direct component release link.
+
 ## Channels
 
 Direct install:
@@ -265,6 +271,8 @@ swift build --package-path apps/menu-bar -c release
 4. Create a `menu-bar-vX.Y.Z` tag from the verified commit.
 5. Push the tag.
 6. Confirm the `Menu Bar Release` workflow publishes:
+   - a GitHub Release named `YTM Menu Bar X.Y.Z`
+   - a component release that does not replace GitHub's repo-wide latest release
    - signed, notarized, and stapled direct `.pkg`
    - signed, notarized, and stapled Homebrew `.pkg`
    - Sparkle `.zip` generated from the notarized and stapled direct `.app`

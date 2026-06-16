@@ -1370,6 +1370,10 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain("menu-bar:notarize");
     expect(workflow).toContain('--app="apps/menu-bar/.build/release-apps');
     expect(workflow).toContain("Create Sparkle archive");
+    expect(workflow).toContain(
+      "name: YTM Menu Bar ${{ env.YTM_MENU_BAR_VERSION }}",
+    );
+    expect(workflow).toContain("make_latest: false");
     expect(packageScript).toContain("prebuiltAppDirectory");
     expect(notarizeScript).toContain("notarytool");
     expect(notarizeScript).toContain("--wait");
@@ -1380,8 +1384,42 @@ describe("menu bar connector app scaffold", () => {
     expect(notarizeScript).toContain("APP_STORE_CONNECT_PRIVATE_KEY");
     expect(releaseDocs).toContain("signed with Developer ID");
     expect(releaseDocs).toContain("notarized by");
+    expect(releaseDocs).toContain("component-scoped artifact pages");
+    expect(releaseDocs).toContain("repository-wide latest release");
     expect(releaseDocs).toContain("APP_STORE_CONNECT_PRIVATE_KEY_BASE64");
     expect(releaseDocs).not.toContain("ad-hoc signed");
+  });
+
+  it("documents component-scoped release discovery", () => {
+    const releaseStrategy = readFileSync(
+      resolve(process.cwd(), "docs/release-strategy.md"),
+      "utf-8",
+    );
+    const extensionWorkflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/release.yml"),
+      "utf-8",
+    );
+    const menuBarWorkflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
+      "utf-8",
+    );
+
+    expect(releaseStrategy).toContain("vX.Y.Z");
+    expect(releaseStrategy).toContain("menu-bar-vX.Y.Z");
+    expect(releaseStrategy).toContain("GitHub exposes a single");
+    expect(releaseStrategy).toContain(
+      "Extension releases set `make_latest: true`",
+    );
+    expect(releaseStrategy).toContain(
+      "Menu bar releases set `make_latest: false`",
+    );
+    expect(releaseStrategy).toContain("menu-bar/install.html");
+    expect(releaseStrategy).toContain("menu-bar/appcast.xml");
+    expect(extensionWorkflow).toContain(
+      "name: YTM Enhancer ${{ github.ref_name }}",
+    );
+    expect(extensionWorkflow).toContain("make_latest: true");
+    expect(menuBarWorkflow).toContain("make_latest: false");
   });
 
   it("builds menu bar release artifacts from the pushed tag version", () => {

@@ -194,7 +194,9 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          name: YTM Menu Bar ${{ env.YTM_MENU_BAR_VERSION }}
           generate_release_notes: true
+          make_latest: false
           files: |
             apps/menu-bar/.build/packages/*.pkg
             apps/menu-bar/.build/sparkle/*.zip
