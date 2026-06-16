@@ -306,6 +306,49 @@ describe("Connected Apps popup view", () => {
     );
   });
 
+  it("uses a shared action style for install and forget actions", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: { availability: "available" },
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const installLink = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLElement>(
+        '[data-role="connected-app-install-link"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    const forgetButton = container.querySelector<HTMLElement>(
+      '[data-role="connected-app-forget-button"]',
+    );
+
+    expect(installLink.classList.contains("connected-app-action")).toBe(true);
+    expect(forgetButton?.classList.contains("connected-app-action")).toBe(true);
+  });
+
   it("does not duplicate the first-party menu bar app after registration", async () => {
     const client = createClient(
       createSettings({

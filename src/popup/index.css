@@ -459,7 +459,25 @@ h3 {
 }
 
 /* Shared Buttons */
+.primary-btn,
+.secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+}
+
 .primary-btn {
+  border: none;
+  background: var(--accent-color);
+  color: #fff;
   transition:
     background 0.2s,
     transform 0.1s;
@@ -468,12 +486,6 @@ h3 {
 .primary-btn--block {
   width: 100%;
   padding: 10px;
-  background: var(--accent-color);
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
 }
 
 .primary-btn:hover {
@@ -485,13 +497,18 @@ h3 {
 }
 
 .secondary-btn {
+  border: 1px solid var(--border-color);
+  background: #272727;
+  color: var(--text-color);
   transition:
+    border-color 0.2s,
     background 0.2s,
     transform 0.1s;
 }
 
 .secondary-btn:hover {
   background: #4f4f4f !important;
+  border-color: #5f5f5f;
 }
 
 .secondary-btn:active {
@@ -652,18 +669,10 @@ h3 {
   gap: 8px;
 }
 
-.connected-app-install-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: #272727;
-  color: var(--text-color);
-  font-weight: 600;
-  padding: 9px 10px;
-  text-decoration: none;
-  flex: 1 1 auto;
+.connected-app-action {
+  min-height: 38px;
+  padding: 8px 10px;
+  flex: 1 1 0;
 }
 
 .connected-app-guidance {
@@ -671,14 +680,7 @@ h3 {
 }
 
 .connected-app-forget-button {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: #272727;
-  color: var(--text-color);
-  cursor: pointer;
-  font-weight: 600;
-  padding: 9px 10px;
-  flex: 1 1 auto;
+  appearance: none;
 }
 
 .connected-app-forget-button:disabled {
