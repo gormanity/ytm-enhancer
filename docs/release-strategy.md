@@ -64,18 +64,21 @@ Automated discovery should use native channel mechanisms:
 - Sparkle uses `menu-bar/appcast.xml`.
 - Homebrew uses the generated cask in `gormanity/homebrew-tap`.
 - Browser stores own browser extension updates.
+- Component-aware tooling can read
+  `https://gormanity.github.io/ytm-enhancer/releases.json`.
 
 GitHub Releases host artifacts and release notes. They are not the source of
 truth for every product's latest version.
 
-## Future Release Index
+## Release Index
 
-A machine-readable release index may be useful once more first-party connectors
-or package consumers exist. If added, publish it on GitHub Pages, for example:
+The menu bar release workflow publishes a machine-readable release index on
+GitHub Pages:
 
 ```text
 https://gormanity.github.io/ytm-enhancer/releases.json
 ```
 
-That index should be informational and should not replace Sparkle, Homebrew, or
-browser store update mechanisms.
+The index lists products independently so consumers do not need to infer product
+identity from GitHub's repository-wide latest release. It is informational and
+does not replace Sparkle, Homebrew, or browser store update mechanisms.

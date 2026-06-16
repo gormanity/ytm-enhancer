@@ -19,6 +19,7 @@ Direct install:
 - Install page:
   `https://gormanity.github.io/ytm-enhancer/menu-bar/install.html`.
 - Update feed: `https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml`.
+- Release index: `https://gormanity.github.io/ytm-enhancer/releases.json`.
 - Updates are handled by Sparkle inside the app. Direct builds probe the appcast
   silently and expose download/install actions from `About YTM Menu Bar`.
 - Direct packages and app bundles are signed with Developer ID, notarized by
@@ -279,9 +280,11 @@ swift build --package-path apps/menu-bar -c release
    - `appcast.xml`
    - standalone release notes at `menu-bar/release-notes/X.Y.Z.html`
    - install landing page at `menu-bar/install.html`
+   - machine-readable release index at `releases.json`
 7. Confirm GitHub Pages serves the updated install page, appcast, and release
    notes. The appcast must link to the standalone release notes, not a full
-   GitHub release page.
+   GitHub release page. The release index must list the browser extension and
+   menu bar app as separate products.
 8. Confirm the Homebrew tap cask was updated.
 
 The release workflow derives package, appcast, and cask versions from the

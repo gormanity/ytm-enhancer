@@ -1,5 +1,12 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { NATIVE_MESSAGING_HOST_NAME } from "@/core/connectors/native-messaging-transport";
 
@@ -1168,7 +1175,9 @@ describe("menu bar connector app scaffold", () => {
     );
 
     expect(appcastScript).toContain("function writeInstallPage");
+    expect(appcastScript).toContain("function writeReleaseIndex");
     expect(appcastScript).toContain('"install.html"');
+    expect(appcastScript).toContain('"releases.json"');
     expect(appcastScript).toContain("extension-icon.svg");
     expect(appcastScript).toContain("Download for macOS");
     expect(appcastScript).toContain(
@@ -1188,6 +1197,80 @@ describe("menu bar connector app scaffold", () => {
       "Direct installs update from the app. Homebrew installs update with Homebrew.",
     );
     expect(releaseDocs).toContain("menu-bar/install.html");
+    expect(releaseDocs).toContain("releases.json");
+  });
+
+  it("writes a component-aware release index for GitHub Pages", async () => {
+    const { generateAppcast } = (await import(
+      pathToFileURL(resolve(appRoot, "scripts/generate-appcast.mjs")).href
+    )) as {
+      generateAppcast: (options: {
+        archivePath: string;
+        edSignature: string;
+        outputPath: string;
+      }) => string;
+    };
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
+    ) as { version: string };
+    const outputRoot = mkdtempSync("/private/tmp/ytm-release-index-");
+    const archivePath = resolve(outputRoot, "YTM-Menu-Bar-0.1.0.zip");
+    const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
+
+    writeFileSync(archivePath, "release archive");
+    generateAppcast({
+      archivePath,
+      edSignature: "test-signature",
+      outputPath,
+    });
+
+    const releaseIndex = JSON.parse(
+      readFileSync(resolve(outputRoot, "site/releases.json"), "utf-8"),
+    ) as {
+      schemaVersion: number;
+      products: {
+        extension: { latestVersion: string; tag: string; releaseUrl: string };
+        menuBar: {
+          latestVersion: string;
+          tag: string;
+          installPage: string;
+          appcast: string;
+          channels: {
+            direct: { packageUrl: string; updateFeed: string };
+            homebrew: { installCommand: string; updateCommand: string };
+          };
+        };
+      };
+    };
+
+    expect(releaseIndex.schemaVersion).toBe(1);
+    expect(releaseIndex.products.extension.latestVersion).toBe(
+      packageJson.version,
+    );
+    expect(releaseIndex.products.extension.tag).toBe(`v${packageJson.version}`);
+    expect(releaseIndex.products.extension.releaseUrl).toContain(
+      `/releases/tag/v${packageJson.version}`,
+    );
+    expect(releaseIndex.products.menuBar.latestVersion).toBe("0.1.0");
+    expect(releaseIndex.products.menuBar.tag).toBe("menu-bar-v0.1.0");
+    expect(releaseIndex.products.menuBar.installPage).toBe(
+      "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
+    );
+    expect(releaseIndex.products.menuBar.appcast).toBe(
+      "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
+    );
+    expect(releaseIndex.products.menuBar.channels.direct.packageUrl).toContain(
+      "/releases/download/menu-bar-v0.1.0/YTM-Menu-Bar-0.1.0.pkg",
+    );
+    expect(releaseIndex.products.menuBar.channels.direct.updateFeed).toBe(
+      releaseIndex.products.menuBar.appcast,
+    );
+    expect(releaseIndex.products.menuBar.channels.homebrew.installCommand).toBe(
+      "brew install --cask gormanity/tap/ytm-menu-bar",
+    );
+    expect(releaseIndex.products.menuBar.channels.homebrew.updateCommand).toBe(
+      "brew update && brew upgrade --cask ytm-menu-bar",
+    );
   });
 
   it("generates production native host manifests for app bundle installs", () => {
@@ -1259,8 +1342,8 @@ describe("menu bar connector app scaffold", () => {
     expect(appcastScript).toContain("sparkle:edSignature");
     expect(appcastScript).toContain("menu-bar/appcast.xml");
     expect(appcastScript).toContain("writeDefaultReleaseNotes");
+    expect(appcastScript).toContain("writeReleaseIndex");
     expect(appcastScript).toContain("release-notes/${metadata.version}.html");
-    expect(appcastScript).not.toContain("releases/tag/${tag}");
     expect(packageJson.scripts["menu-bar:update-test:sparkle"]).toBe(
       "node apps/menu-bar/scripts/prepare-sparkle-update-test.mjs",
     );
@@ -1415,6 +1498,7 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(releaseStrategy).toContain("menu-bar/install.html");
     expect(releaseStrategy).toContain("menu-bar/appcast.xml");
+    expect(releaseStrategy).toContain("releases.json");
     expect(extensionWorkflow).toContain(
       "name: YTM Enhancer ${{ github.ref_name }}",
     );

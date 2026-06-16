@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
+const repoRoot = resolve(appRoot, "../..");
+
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
   return (
@@ -40,6 +42,16 @@ function defaultReleaseNotesUrl(metadata) {
   return url.toString();
 }
 
+function defaultInstallPageUrl(metadata) {
+  const url = new URL(metadata.appcastUrl);
+  url.pathname = url.pathname.replace(/\/?appcast\.xml$/, "/install.html");
+  return url.toString();
+}
+
+function releasePageUrl(tag) {
+  return `https://github.com/gormanity/ytm-enhancer/releases/tag/${tag}`;
+}
+
 function packageUrl({ metadata, releaseBaseUrl, packageName }) {
   const tag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
   return `${releaseBaseUrl}/${tag}/${packageName}`;
@@ -47,6 +59,75 @@ function packageUrl({ metadata, releaseBaseUrl, packageName }) {
 
 function homebrewInstallCommand() {
   return "brew install --cask gormanity/tap/ytm-menu-bar";
+}
+
+function homebrewUpdateCommand() {
+  return "brew update && brew upgrade --cask ytm-menu-bar";
+}
+
+function readExtensionVersion() {
+  const packageJson = JSON.parse(
+    readFileSync(resolve(repoRoot, "package.json"), "utf-8"),
+  );
+
+  return packageJson.version;
+}
+
+function writeReleaseIndex({ metadata, outputPath, releaseBaseUrl }) {
+  const extensionVersion = readExtensionVersion();
+  const extensionTag = `v${extensionVersion}`;
+  const menuBarTag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
+  const directPackageName = `YTM-Menu-Bar-${metadata.version}.pkg`;
+  const homebrewPackageName = `YTM-Menu-Bar-Homebrew-${metadata.version}.pkg`;
+  const indexPath = resolve(dirname(outputPath), "..", "releases.json");
+  const index = {
+    schemaVersion: 1,
+    products: {
+      extension: {
+        id: "browser-extension",
+        name: "YTM Enhancer",
+        latestVersion: extensionVersion,
+        tag: extensionTag,
+        releaseUrl: releasePageUrl(extensionTag),
+        updateSources: ["browser-stores", "github-release-assets"],
+      },
+      menuBar: {
+        id: "menu-bar",
+        name: metadata.appName,
+        latestVersion: metadata.version,
+        buildNumber: metadata.buildNumber,
+        tag: menuBarTag,
+        releaseUrl: releasePageUrl(menuBarTag),
+        installPage: defaultInstallPageUrl(metadata),
+        appcast: metadata.appcastUrl,
+        minimumMacOSVersion: metadata.minimumMacOSVersion,
+        channels: {
+          direct: {
+            asset: directPackageName,
+            packageUrl: packageUrl({
+              metadata,
+              releaseBaseUrl,
+              packageName: directPackageName,
+            }),
+            updateFeed: metadata.appcastUrl,
+          },
+          homebrew: {
+            asset: homebrewPackageName,
+            packageUrl: packageUrl({
+              metadata,
+              releaseBaseUrl,
+              packageName: homebrewPackageName,
+            }),
+            installCommand: homebrewInstallCommand(),
+            updateCommand: homebrewUpdateCommand(),
+          },
+        },
+      },
+    },
+  };
+
+  writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+  return indexPath;
 }
 
 function writeDefaultReleaseNotes({ metadata, outputPath }) {
@@ -442,6 +523,7 @@ export function generateAppcast({
     writeDefaultReleaseNotes({ metadata, outputPath });
   }
   writeInstallPage({ metadata, outputPath, releaseBaseUrl });
+  writeReleaseIndex({ metadata, outputPath, releaseBaseUrl });
   return outputPath;
 }
 
