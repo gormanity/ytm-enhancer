@@ -1065,6 +1065,10 @@ describe("menu bar connector app scaffold", () => {
     expect(script).toContain("Mozilla/NativeMessagingHosts");
     expect(script).toContain("allowed_origins");
     expect(script).toContain("allowed_extensions");
+    expect(script).toContain("pggblbpjleekkobiinobaeeefnimgljh");
+    expect(script).toContain("akkbieodbakphpfdibailajdknnmmoca");
+    expect(script).toContain("bilcedjabgiedoamakekncokccabdccp");
+    expect(script).toContain("gamefnibdabclmkngggcjghpbhjmajkm");
     expect(script).toContain("YTM_ENHANCER_NATIVE_HOST_PATH");
     expect(script).toContain("DEFAULT_BINARY_PATH");
     expect(script).toContain("swift build -c release");
@@ -1300,8 +1304,11 @@ describe("menu bar connector app scaffold", () => {
       "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
     );
     expect(popupSource).toContain("settings.menuBarApp.installUrl");
-    expect(popupTemplate).toContain(
+    expect(popupTemplate).not.toContain(
       "Direct installs update from the app. Homebrew installs update with Homebrew.",
+    );
+    expect(popupTemplate).not.toContain(
+      "brew install --cask gormanity/tap/ytm-menu-bar",
     );
     expect(releaseDocs).toContain("menu-bar/install.html");
     expect(releaseDocs).toContain("releases.json");
@@ -1387,11 +1394,12 @@ describe("menu bar connector app scaffold", () => {
     expect(generator).toContain(
       "/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector",
     );
+    expect(generator).toContain("pggblbpjleekkobiinobaeeefnimgljh");
     expect(generator).toContain("bilcedjabgiedoamakekncokccabdccp");
+    expect(generator).toContain("gamefnibdabclmkngggcjghpbhjmajkm");
     expect(generator).toContain("ytm-enhancer@gormanity");
-    expect(generator).not.toContain("pggblbpjleekkobiinobaeeefnimgljh");
     expect(generator).not.toContain("akkbieodbakphpfdibailajdknnmmoca");
-    expect(generator).not.toContain("Microsoft Edge");
+    expect(generator).toContain("Microsoft Edge/NativeMessagingHosts");
   });
 
   it("defines release scripts for app, package, appcast, and Homebrew cask", () => {

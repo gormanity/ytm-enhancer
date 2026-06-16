@@ -364,7 +364,8 @@ YTM_ENHANCER_NATIVE_HOST_PATH="/Applications/YTM Menu Bar.app/Contents/MacOS/YTM
 ```
 
 This is only a development override. Public direct-install users should rely on
-the production native host manifests installed under `/Library`.
+the production native host manifests installed under `/Library` for Chrome,
+Chromium, Microsoft Edge, and Firefox.
 
 Homebrew install:
 

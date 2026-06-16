@@ -14,7 +14,9 @@ const metadata = JSON.parse(
 const productionExecutablePath =
   "/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector";
 const chromiumOrigins = [
+  "chrome-extension://pggblbpjleekkobiinobaeeefnimgljh/",
   "chrome-extension://bilcedjabgiedoamakekncokccabdccp/",
+  "chrome-extension://gamefnibdabclmkngggcjghpbhjmajkm/",
 ];
 const firefoxExtensions = ["ytm-enhancer@gormanity"];
 
@@ -50,6 +52,10 @@ export function createNativeHostManifests() {
     ],
     [
       "Library/Application Support/Chromium/NativeMessagingHosts",
+      hostManifest({ allowedOrigins: chromiumOrigins }),
+    ],
+    [
+      "Library/Application Support/Microsoft Edge/NativeMessagingHosts",
       hostManifest({ allowedOrigins: chromiumOrigins }),
     ],
     [

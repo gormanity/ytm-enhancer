@@ -13,6 +13,7 @@ CHROMIUM_ORIGINS=(
   "chrome-extension://pggblbpjleekkobiinobaeeefnimgljh/"
   "chrome-extension://akkbieodbakphpfdibailajdknnmmoca/"
   "chrome-extension://bilcedjabgiedoamakekncokccabdccp/"
+  "chrome-extension://gamefnibdabclmkngggcjghpbhjmajkm/"
 )
 FIREFOX_EXTENSIONS=(
   "ytm-enhancer@gormanity"

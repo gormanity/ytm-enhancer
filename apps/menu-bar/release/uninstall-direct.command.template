@@ -11,6 +11,7 @@ UNINSTALLER_PATH="/Applications/$APP_NAME Uninstaller.command"
 PRODUCTION_MANIFEST_PATHS=(
   "/Library/Google/Chrome/NativeMessagingHosts/$HOST_NAME.json"
   "/Library/Application Support/Chromium/NativeMessagingHosts/$HOST_NAME.json"
+  "/Library/Application Support/Microsoft Edge/NativeMessagingHosts/$HOST_NAME.json"
   "/Library/Application Support/Mozilla/NativeMessagingHosts/$HOST_NAME.json"
 )
 

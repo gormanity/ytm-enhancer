@@ -79,7 +79,8 @@ Direct install:
 - Users install `YTM-Menu-Bar-<version>.pkg` from GitHub Releases.
 - The package installs `/Applications/YTM Menu Bar.app`.
 - The package installs `/Applications/YTM Menu Bar Uninstaller.command`.
-- The package installs production native host manifests under `/Library`.
+- The package installs production native host manifests under `/Library` for
+  Chrome, Chromium, Microsoft Edge, and Firefox.
 - The app uses Sparkle from the `About YTM Menu Bar` window. It probes for
   updates silently and marks the About menu item when an update is available.
 - Releases are signed with Developer ID and notarized by Apple for distribution
