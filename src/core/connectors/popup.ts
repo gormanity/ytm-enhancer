@@ -108,12 +108,22 @@ function createConnectedAppCard(
   app: ConnectedAppCardModel,
   client: ConnectedAppsClient,
   refresh: () => void,
+  expandedAppIds: Set<string>,
 ): HTMLElement | null {
   const fragment = template.content.cloneNode(true) as DocumentFragment;
-  const card = fragment.firstElementChild as HTMLElement | null;
+  const card = fragment.firstElementChild as HTMLDetailsElement | null;
   if (!card) return null;
 
   card.dataset.appId = app.id;
+  card.open = expandedAppIds.has(app.id);
+  card.addEventListener("toggle", () => {
+    if (card.open) {
+      expandedAppIds.add(app.id);
+    } else {
+      expandedAppIds.delete(app.id);
+    }
+  });
+
   if (app.connector) {
     card.dataset.connectorId = app.connector.id;
   }
@@ -338,6 +348,7 @@ function renderConnectedAppList(
   settings: ConnectedAppsSettings,
   client: ConnectedAppsClient,
   refresh: () => void,
+  expandedAppIds: Set<string>,
 ): void {
   const list = container.querySelector<HTMLElement>(
     '[data-role="connected-apps-list"]',
@@ -351,9 +362,20 @@ function renderConnectedAppList(
   if (!list || !empty || !template) return;
 
   const apps = createConnectedAppCardModels(settings);
+  const visibleAppIds = new Set(apps.map((app) => app.id));
+  for (const appId of expandedAppIds) {
+    if (!visibleAppIds.has(appId)) expandedAppIds.delete(appId);
+  }
+
   list.replaceChildren(
     ...apps.flatMap((app) => {
-      const card = createConnectedAppCard(template, app, client, refresh);
+      const card = createConnectedAppCard(
+        template,
+        app,
+        client,
+        refresh,
+        expandedAppIds,
+      );
       return card ? [card] : [];
     }),
   );
@@ -369,12 +391,19 @@ export function createConnectedAppsPopupView(
     label: "Connected Apps",
     render(container: HTMLElement) {
       renderPopupTemplate(container, templateHtml);
+      const expandedAppIds = new Set<string>();
 
       const refresh = () => {
         void client
           .getSettings()
           .then((settings) => {
-            renderConnectedAppList(container, settings, client, refresh);
+            renderConnectedAppList(
+              container,
+              settings,
+              client,
+              refresh,
+              expandedAppIds,
+            );
           })
           .catch(() => undefined);
       };
@@ -382,7 +411,13 @@ export function createConnectedAppsPopupView(
       bindModuleToggle(container, "connected-apps-enabled-toggle", {
         get: async () => {
           const settings = await client.getSettings();
-          renderConnectedAppList(container, settings, client, refresh);
+          renderConnectedAppList(
+            container,
+            settings,
+            client,
+            refresh,
+            expandedAppIds,
+          );
           return settings.enabled;
         },
         set: async (enabled) => {
