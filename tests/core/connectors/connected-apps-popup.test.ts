@@ -101,7 +101,7 @@ describe("Connected Apps popup view", () => {
     expect(client.setGlobalEnabled).toHaveBeenCalledWith(true);
   });
 
-  it("renders known connectors with status and permission labels", async () => {
+  it("renders connected apps once with compact collapsed rows", async () => {
     const client = createClient(
       createSettings({
         enabled: true,
@@ -129,12 +129,31 @@ describe("Connected Apps popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("YTM Menu Bar");
-      expect(container.textContent).toContain("Connected");
-      expect(container.textContent).toContain("Playback Info");
-      expect(container.textContent).toContain("Playback Controls");
-      expect(container.textContent).toContain("Focus YouTube Music");
+      expect(
+        container.querySelectorAll(
+          '[data-app-id="com.example.menu-bar"]',
+        ).length,
+      ).toBe(1);
     });
+    expect(container.textContent).not.toContain("Registered Apps");
+
+    const card = container.querySelector<HTMLDetailsElement>(
+      '[data-app-id="com.example.menu-bar"]',
+    );
+    expect(card?.open).toBe(false);
+    expect(
+      card?.querySelector('[data-role="connected-app-name"]')?.textContent,
+    ).toContain("YTM Menu Bar");
+    expect(
+      card?.querySelector('[data-role="connected-app-status"]')?.textContent,
+    ).toContain("Connected");
+    expect(
+      card?.querySelector('[data-role="connected-app-summary"]')?.textContent,
+    ).toContain("External app connected to YTM Enhancer.");
+    expect(card?.textContent).toContain("Shared by YTM Enhancer");
+    expect(card?.textContent).toContain("Playback info and progress");
+    expect(card?.textContent).toContain("Playback controls");
+    expect(card?.textContent).toContain("Focus YouTube Music");
 
     const connectorToggle = container.querySelector<HTMLInputElement>(
       '[data-role="connected-app-enabled-toggle"][data-connector-id="com.example.menu-bar"]',
@@ -243,21 +262,27 @@ describe("Connected Apps popup view", () => {
 
     view.render(container);
 
-    await vi.waitFor(() => {
-      expect(container.textContent).toContain("YTM Menu Bar");
-      expect(container.textContent).toContain("Available");
-      expect(container.textContent).toContain("Download for macOS");
-      expect(container.textContent).not.toContain("Install with Homebrew");
-      expect(container.textContent).not.toContain(
-        "brew install --cask gormanity/tap/ytm-menu-bar",
+    const card = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLDetailsElement>(
+        '[data-app-id="com.gormanity.ytm-enhancer.menu-bar"]',
       );
-      expect(container.textContent).not.toContain(
-        "Direct installs update from the app. Homebrew installs update with Homebrew.",
-      );
+      expect(element).not.toBeNull();
+      return element!;
     });
+    expect(card.open).toBe(false);
+    expect(card.textContent).toContain("YTM Menu Bar");
+    expect(card.textContent).toContain("Available");
+    expect(card.textContent).toContain("Download for macOS");
+    expect(card.textContent).not.toContain("Install with Homebrew");
+    expect(card.textContent).not.toContain(
+      "brew install --cask gormanity/tap/ytm-menu-bar",
+    );
+    expect(card.textContent).not.toContain(
+      "Direct installs update from the app. Homebrew installs update with Homebrew.",
+    );
 
-    const directLink = container.querySelector<HTMLAnchorElement>(
-      '[data-role="connected-app-menu-bar-direct-link"]',
+    const directLink = card.querySelector<HTMLAnchorElement>(
+      '[data-role="connected-app-install-link"]',
     );
 
     expect(directLink?.href).toBe(
@@ -265,7 +290,7 @@ describe("Connected Apps popup view", () => {
     );
   });
 
-  it("keeps first-party menu bar install actions visible after registration", async () => {
+  it("does not duplicate the first-party menu bar app after registration", async () => {
     const client = createClient(
       createSettings({
         enabled: true,
@@ -294,16 +319,26 @@ describe("Connected Apps popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Install or Reinstall");
-      expect(container.textContent).toContain(
-        "Open YTM Menu Bar from Applications to connect.",
-      );
       expect(
-        container.querySelector(
-          '[data-connector-id="com.gormanity.ytm-enhancer.menu-bar"]',
-        ),
-      ).not.toBeNull();
+        container.querySelectorAll(
+          '[data-app-id="com.gormanity.ytm-enhancer.menu-bar"]',
+        ).length,
+      ).toBe(1);
     });
+    expect(container.textContent).not.toContain("Registered Apps");
+
+    const card = container.querySelector<HTMLDetailsElement>(
+      '[data-app-id="com.gormanity.ytm-enhancer.menu-bar"]',
+    );
+    expect(card?.textContent).toContain("Install or Reinstall");
+    expect(card?.textContent).toContain(
+      "Open YTM Menu Bar from Applications to connect.",
+    );
+    expect(
+      card?.querySelector(
+        '[data-connector-id="com.gormanity.ytm-enhancer.menu-bar"]',
+      ),
+    ).not.toBeNull();
   });
 
   it("shows recovery guidance when the first-party native host is missing", async () => {
