@@ -247,10 +247,11 @@ describe("Connected Apps popup view", () => {
       expect(container.textContent).toContain("YTM Menu Bar");
       expect(container.textContent).toContain("Available");
       expect(container.textContent).toContain("Download for macOS");
-      expect(container.textContent).toContain(
+      expect(container.textContent).not.toContain("Install with Homebrew");
+      expect(container.textContent).not.toContain(
         "brew install --cask gormanity/tap/ytm-menu-bar",
       );
-      expect(container.textContent).toContain(
+      expect(container.textContent).not.toContain(
         "Direct installs update from the app. Homebrew installs update with Homebrew.",
       );
     });
@@ -258,15 +259,9 @@ describe("Connected Apps popup view", () => {
     const directLink = container.querySelector<HTMLAnchorElement>(
       '[data-role="connected-app-menu-bar-direct-link"]',
     );
-    const homebrewCode = container.querySelector<HTMLElement>(
-      '[data-role="connected-app-menu-bar-homebrew-command"]',
-    );
 
     expect(directLink?.href).toBe(
       "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
-    );
-    expect(homebrewCode?.textContent).toBe(
-      "brew install --cask gormanity/tap/ytm-menu-bar",
     );
   });
 

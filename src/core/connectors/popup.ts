@@ -254,14 +254,6 @@ function renderMenuBarAppCard(
           ? "Install or Reinstall"
           : "Download for macOS";
   }
-
-  const homebrewCommand = queryRole<HTMLElement>(
-    appCard,
-    "connected-app-menu-bar-homebrew-command",
-  );
-  if (homebrewCommand) {
-    homebrewCommand.textContent = settings.menuBarApp.homebrewCommand;
-  }
 }
 
 function renderConnectorList(

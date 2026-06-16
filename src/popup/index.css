@@ -636,24 +636,6 @@ h3 {
   text-decoration: none;
 }
 
-.connected-app-homebrew {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.connected-app-homebrew code {
-  overflow-x: auto;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: #1a1a1a;
-  color: var(--text-color);
-  font-size: 11px;
-  padding: 8px;
-  white-space: nowrap;
-}
-
-.connected-app-install-note,
 .connected-app-menu-bar-guidance,
 .connected-app-update-guidance {
   margin: 0;
