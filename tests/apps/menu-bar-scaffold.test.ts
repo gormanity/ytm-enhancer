@@ -1464,6 +1464,8 @@ describe("menu bar connector app scaffold", () => {
     expect(packageScript).toContain("prebuiltAppDirectory");
     expect(notarizeScript).toContain("notarytool");
     expect(notarizeScript).toContain("--wait");
+    expect(notarizeScript).toContain('submitResult.status !== "Accepted"');
+    expect(notarizeScript).toContain('"log"');
     expect(notarizeScript).toContain("stapler");
     expect(notarizeScript).toContain('stapler", "staple');
     expect(notarizeScript).toContain('stapler", "validate');

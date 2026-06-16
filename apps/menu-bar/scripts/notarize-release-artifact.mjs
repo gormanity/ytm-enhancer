@@ -16,6 +16,26 @@ function run(command, args) {
   execFileSync(command, args.filter(Boolean), { stdio: "inherit" });
 }
 
+function runOutput(command, args) {
+  const output = execFileSync(command, args.filter(Boolean), {
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  process.stdout.write(output);
+  return output;
+}
+
+function credentialArgs(credentials) {
+  return [
+    "--key",
+    credentials.key,
+    "--key-id",
+    credentials.keyId,
+    credentials.issuer ? "--issuer" : "",
+    credentials.issuer,
+  ];
+}
+
 function resolveCredentials() {
   const key = argValue("key", process.env.APP_STORE_CONNECT_PRIVATE_KEY ?? "");
   const keyId = argValue("key-id", process.env.APP_STORE_CONNECT_KEY_ID ?? "");
@@ -74,20 +94,31 @@ export function notarizeReleaseArtifact({
 
   const credentials = resolveCredentials();
   const submitPath = notarizationSubmitPath({ artifactPath, outputRoot });
-  run("xcrun", [
+  const submitOutput = runOutput("xcrun", [
     "notarytool",
     "submit",
     submitPath,
-    "--key",
-    credentials.key,
-    "--key-id",
-    credentials.keyId,
-    credentials.issuer ? "--issuer" : "",
-    credentials.issuer,
+    ...credentialArgs(credentials),
     "--wait",
     "--output-format",
     "json",
   ]);
+
+  const submitResult = JSON.parse(submitOutput);
+  if (submitResult.status !== "Accepted") {
+    if (submitResult.id) {
+      run("xcrun", [
+        "notarytool",
+        "log",
+        submitResult.id,
+        ...credentialArgs(credentials),
+      ]);
+    }
+    throw new Error(
+      `Notarization failed with status ${submitResult.status ?? "unknown"}.`,
+    );
+  }
+
   run("xcrun", ["stapler", "staple", artifactPath]);
   run("xcrun", ["stapler", "validate", artifactPath]);
 
