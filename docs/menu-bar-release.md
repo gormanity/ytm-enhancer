@@ -341,6 +341,7 @@ Direct install:
 - Confirm macOS accepts the Developer ID signed and notarized installer without
   the unidentified developer warning.
 - Confirm `/Applications/YTM Menu Bar.app` exists.
+- Confirm `/Applications/YTM Menu Bar Uninstaller.command` exists.
 - Confirm native host manifests exist under `/Library`.
 - Open `YTM Menu Bar.app` directly and confirm it shows a single waiting menu
   bar item.
@@ -349,6 +350,9 @@ Direct install:
 - Confirm playback state and controls work.
 - Confirm `About YTM Menu Bar` can reach the appcast and presents the Sparkle
   update action when an update is available.
+- Run `/Applications/YTM Menu Bar Uninstaller.command` after testing and confirm
+  it removes the app, native host manifests, package receipts, and the
+  uninstaller.
 
 When testing a direct package with the local dev extension, install user-local
 developer manifests that point at the installed app before checking connector

@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_NAME="{{APP_NAME}}"
+BUNDLE_IDENTIFIER="{{BUNDLE_IDENTIFIER}}"
+HOST_NAME="{{NATIVE_HOST_NAME}}"
+EXECUTABLE_NAME="YTMMenuBarConnector"
+APP_PATH="/Applications/$APP_NAME.app"
+UNINSTALLER_PATH="/Applications/$APP_NAME Uninstaller.command"
+
+PRODUCTION_MANIFEST_PATHS=(
+  "/Library/Google/Chrome/NativeMessagingHosts/$HOST_NAME.json"
+  "/Library/Application Support/Chromium/NativeMessagingHosts/$HOST_NAME.json"
+  "/Library/Application Support/Mozilla/NativeMessagingHosts/$HOST_NAME.json"
+)
+
+echo "$APP_NAME Uninstaller"
+echo
+echo "This removes:"
+echo "- $APP_PATH"
+echo "- Native messaging manifests installed under /Library"
+echo "- Package receipts for the direct installer"
+echo
+echo "YTM Enhancer extension settings are not removed."
+echo "Use Forget App in Connected Apps if you want to clear the remembered app."
+echo
+
+if [[ "${YTM_MENU_BAR_UNINSTALL_ASSUME_YES:-}" != "1" ]]; then
+  read -r -p "Continue? [y/N] " answer
+  case "$answer" in
+    y | Y | yes | YES | Yes) ;;
+    *)
+      echo "Canceled."
+      exit 0
+      ;;
+  esac
+fi
+
+if [[ "$(id -u)" -ne 0 ]]; then
+  echo
+  echo "Administrator privileges are required."
+  export YTM_MENU_BAR_UNINSTALL_ASSUME_YES=1
+  exec sudo -E "$0" "$@"
+fi
+
+remove_path() {
+  local path="$1"
+  if [[ -e "$path" || -L "$path" ]]; then
+    rm -rf "$path"
+    echo "Removed $path"
+  fi
+}
+
+forget_receipt() {
+  local receipt="$1"
+  if pkgutil --pkg-info "$receipt" >/dev/null 2>&1; then
+    pkgutil --forget "$receipt" >/dev/null
+    echo "Forgot package receipt $receipt"
+  fi
+}
+
+user_home_for() {
+  local user="$1"
+  if [[ -z "$user" || "$user" == "root" ]]; then
+    return 1
+  fi
+
+  dscl . -read "/Users/$user" NFSHomeDirectory 2>/dev/null |
+    awk '{print $2}'
+}
+
+echo
+echo "Quitting $APP_NAME..."
+osascript -e "tell application \"$APP_NAME\" to quit" >/dev/null 2>&1 || true
+pkill -x "$EXECUTABLE_NAME" >/dev/null 2>&1 || true
+
+echo
+echo "Removing application files..."
+remove_path "$APP_PATH"
+
+echo
+echo "Removing production native messaging manifests..."
+for manifest_path in "${PRODUCTION_MANIFEST_PATHS[@]}"; do
+  remove_path "$manifest_path"
+done
+
+original_user="${SUDO_USER:-}"
+original_home="$(user_home_for "$original_user" || true)"
+if [[ -n "$original_home" ]]; then
+  echo
+  echo "Removing development native messaging overrides for $original_user..."
+  remove_path "$original_home/Library/Application Support/Google/Chrome/NativeMessagingHosts/$HOST_NAME.json"
+  remove_path "$original_home/Library/Application Support/Chromium/NativeMessagingHosts/$HOST_NAME.json"
+  remove_path "$original_home/Library/Application Support/Microsoft Edge/NativeMessagingHosts/$HOST_NAME.json"
+  remove_path "$original_home/Library/Application Support/Mozilla/NativeMessagingHosts/$HOST_NAME.json"
+fi
+
+echo
+echo "Forgetting package receipts..."
+forget_receipt "$BUNDLE_IDENTIFIER.app"
+forget_receipt "$BUNDLE_IDENTIFIER.native-hosts"
+
+remove_path "$UNINSTALLER_PATH"
+
+echo
+echo "$APP_NAME has been uninstalled."
+echo "Restart your browser if Connected Apps still shows the app as disconnected."

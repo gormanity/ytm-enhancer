@@ -1080,6 +1080,39 @@ describe("menu bar connector app scaffold", () => {
     expect(script).toContain("rm -f");
   });
 
+  it("packages a direct-install uninstaller for macOS users", () => {
+    const template = read("release/uninstall-direct.command.template");
+    const packageScript = read("scripts/package-release.mjs");
+    const releaseDocs = readFileSync(
+      resolve(process.cwd(), "docs/menu-bar-release.md"),
+      "utf-8",
+    );
+
+    expect(template).toContain("{{APP_NAME}}");
+    expect(template).toContain("{{BUNDLE_IDENTIFIER}}");
+    expect(template).toContain("{{NATIVE_HOST_NAME}}");
+    expect(template).toContain("/Applications/$APP_NAME.app");
+    expect(template).toContain("$APP_NAME Uninstaller.command");
+    expect(template).toContain("Forget App in Connected Apps");
+    expect(template).toContain("pkgutil --forget");
+    expect(template).toContain("$BUNDLE_IDENTIFIER.app");
+    expect(template).toContain("$BUNDLE_IDENTIFIER.native-hosts");
+    expect(template).toContain("Google/Chrome/NativeMessagingHosts");
+    expect(template).toContain("Microsoft Edge/NativeMessagingHosts");
+    expect(template).toContain("Mozilla/NativeMessagingHosts");
+    expect(template).toContain("YTM_MENU_BAR_UNINSTALL_ASSUME_YES");
+    expect(template).toContain("export YTM_MENU_BAR_UNINSTALL_ASSUME_YES=1");
+
+    expect(packageScript).toContain("writeDirectUninstaller");
+    expect(packageScript).toContain("uninstall-direct.command.template");
+    expect(packageScript).toContain("NATIVE_HOST_NAME");
+    expect(packageScript).toContain("chmodSync(outputPath, 0o755)");
+    expect(packageScript).toContain('channel === "direct"');
+    expect(packageScript).toContain("Uninstaller.command");
+
+    expect(releaseDocs).toContain("YTM Menu Bar Uninstaller.command");
+  });
+
   it("defines release metadata for direct and Homebrew channels", () => {
     const metadata = readJson<{
       appName: string;
@@ -1206,6 +1239,11 @@ describe("menu bar connector app scaffold", () => {
       "brew install --cask gormanity/tap/ytm-menu-bar",
     );
     expect(appcastScript).toContain("Direct installs update from the app");
+    expect(appcastScript).toContain("Direct installs include an uninstaller");
+    expect(appcastScript).toContain(
+      "/Applications/YTM Menu Bar Uninstaller.command",
+    );
+    expect(appcastScript).toContain("brew uninstall --cask ytm-menu-bar");
     expect(appcastScript).toContain("signed with Developer ID");
     expect(appcastScript).toContain("notarized by Apple");
     expect(appcastScript).toContain(

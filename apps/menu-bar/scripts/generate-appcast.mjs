@@ -446,6 +446,15 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
           <code>brew update &amp;&amp; brew upgrade --cask ytm-menu-bar</code>
         </article>
         <article class="panel">
+          <h2>Uninstall</h2>
+          <p>
+            Direct installs include an uninstaller in Applications. Homebrew
+            installs uninstall through Homebrew.
+          </p>
+          <code>/Applications/YTM Menu Bar Uninstaller.command</code>
+          <code>brew uninstall --cask ytm-menu-bar</code>
+        </article>
+        <article class="panel">
           <h2>Privacy</h2>
           <p>
             YTM Menu Bar communicates with YTM Enhancer through the connector

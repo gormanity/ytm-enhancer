@@ -78,6 +78,7 @@ Direct install:
 
 - Users install `YTM-Menu-Bar-<version>.pkg` from GitHub Releases.
 - The package installs `/Applications/YTM Menu Bar.app`.
+- The package installs `/Applications/YTM Menu Bar Uninstaller.command`.
 - The package installs production native host manifests under `/Library`.
 - The app uses Sparkle from the `About YTM Menu Bar` window. It probes for
   updates silently and marks the About menu item when an update is available.
@@ -88,6 +89,17 @@ Direct install:
 ```text
 https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml
 ```
+
+To uninstall a direct install, double-click:
+
+```text
+/Applications/YTM Menu Bar Uninstaller.command
+```
+
+The uninstaller removes the app, production native host manifests, package
+receipts, and development manifest overrides for the current user. It does not
+remove extension settings; use Forget App in Connected Apps to remove the
+remembered app registration.
 
 Homebrew install:
 

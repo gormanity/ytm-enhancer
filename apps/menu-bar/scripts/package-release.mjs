@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import {
+  chmodSync,
   cpSync,
   lstatSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   readlinkSync,
   rmSync,
   writeFileSync,
@@ -11,7 +13,10 @@ import {
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { buildReleaseApp } from "./build-release-app.mjs";
-import { writeNativeHostManifests } from "./generate-native-host-manifests.mjs";
+import {
+  NATIVE_HOST_NAME,
+  writeNativeHostManifests,
+} from "./generate-native-host-manifests.mjs";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
 function argValue(name, fallback) {
@@ -51,6 +56,36 @@ function escapeXml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+function renderUninstallerTemplate(template, values) {
+  return template.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_, key) => {
+    if (!(key in values)) {
+      throw new Error(`Missing uninstaller template value ${key}`);
+    }
+    return values[key];
+  });
+}
+
+function writeDirectUninstaller(appPayloadRoot, metadata) {
+  const template = readFileSync(
+    resolve(appRoot, "release/uninstall-direct.command.template"),
+    "utf-8",
+  );
+  const outputPath = join(
+    appPayloadRoot,
+    "Applications",
+    `${metadata.appName} Uninstaller.command`,
+  );
+  writeFileSync(
+    outputPath,
+    renderUninstallerTemplate(template, {
+      APP_NAME: metadata.appName,
+      BUNDLE_IDENTIFIER: metadata.bundleIdentifier,
+      NATIVE_HOST_NAME,
+    }),
+  );
+  chmodSync(outputPath, 0o755);
 }
 
 function writeAppComponentPlist(path, appName) {
@@ -119,6 +154,9 @@ export function packageRelease({
       verbatimSymlinks: true,
     },
   );
+  if (channel === "direct") {
+    writeDirectUninstaller(appPayloadRoot, metadata);
+  }
   verifyRelativeSymlinks(
     join(
       appPayloadRoot,
