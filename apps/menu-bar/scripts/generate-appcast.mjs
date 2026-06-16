@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
@@ -197,6 +203,8 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
     ),
     "utf-8",
   );
+  const screenshotFileName = "menu-bar-screenshot.png";
+  const screenshotPath = resolve(appRoot, "release", screenshotFileName);
   const directPackageName = `YTM-Menu-Bar-${metadata.version}.pkg`;
   const directUrl = packageUrl({
     metadata,
@@ -244,10 +252,26 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
 
       .hero {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 280px;
+        grid-template-columns: minmax(0, 0.94fr) minmax(320px, 440px);
         gap: 48px;
         align-items: center;
         min-height: min(640px, calc(100vh - 128px));
+      }
+
+      .app-mark {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        margin-bottom: 20px;
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 16px;
+        background: rgb(255 255 255 / 0.08);
+      }
+
+      .app-mark svg {
+        width: 42px;
+        height: 42px;
       }
 
       .eyebrow {
@@ -300,21 +324,18 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
         color: #fff;
       }
 
-      .icon-card {
-        display: grid;
-        place-items: center;
+      .screenshot-frame {
+        margin: 0;
         justify-self: end;
-        width: 280px;
-        aspect-ratio: 1;
-        border: 1px solid rgb(255 255 255 / 0.12);
-        border-radius: 28px;
-        background: rgb(255 255 255 / 0.08);
-        box-shadow: 0 26px 90px rgb(0 0 0 / 0.34);
+        width: min(440px, 100%);
       }
 
-      .icon-card svg {
-        width: 188px;
-        height: 188px;
+      .screenshot-frame img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 22px;
+        box-shadow: 0 26px 90px rgb(0 0 0 / 0.34);
       }
 
       .panel-grid {
@@ -370,15 +391,9 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
           min-height: auto;
         }
 
-        .icon-card {
+        .screenshot-frame {
           justify-self: start;
-          width: 180px;
-          border-radius: 20px;
-        }
-
-        .icon-card svg {
-          width: 122px;
-          height: 122px;
+          width: 100%;
         }
 
         h1 {
@@ -400,6 +415,9 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
     <main>
       <section class="hero" aria-labelledby="title">
         <div>
+          <div class="app-mark" aria-hidden="true">
+            ${iconSvg}
+          </div>
           <p class="eyebrow">YTM Enhancer companion app</p>
           <h1 id="title">${escapeHtml(metadata.appName)}</h1>
           <p class="summary">
@@ -413,9 +431,12 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
             <a class="button" href="${escapeHtml(releaseNotesUrl)}">Release notes</a>
           </div>
         </div>
-        <div class="icon-card" aria-hidden="true">
-          ${iconSvg}
-        </div>
+        <figure class="screenshot-frame">
+          <img
+            src="./${escapeHtml(screenshotFileName)}"
+            alt="YTM Menu Bar showing playback details, controls, and the next track"
+          >
+        </figure>
       </section>
 
       <section class="panel-grid" aria-label="Installation details">
@@ -475,6 +496,10 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
 `;
 
   mkdirSync(dirname(installPath), { recursive: true });
+  copyFileSync(
+    screenshotPath,
+    resolve(dirname(installPath), screenshotFileName),
+  );
   writeFileSync(installPath, installHtml);
   return installPath;
 }

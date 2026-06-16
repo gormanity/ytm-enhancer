@@ -1261,7 +1261,11 @@ describe("menu bar connector app scaffold", () => {
   });
 
   it("generates a menu bar install landing page for GitHub Pages", () => {
+    const sourceFiles = listFiles(".");
     const appcastScript = read("scripts/generate-appcast.mjs");
+    const screenshot = readFileSync(
+      resolve(appRoot, "release/menu-bar-screenshot.png"),
+    );
     const popupSource = readFileSync(
       resolve(process.cwd(), "src/core/connectors/popup.ts"),
       "utf-8",
@@ -1279,11 +1283,18 @@ describe("menu bar connector app scaffold", () => {
       "utf-8",
     );
 
+    expect(sourceFiles).toContain("release/menu-bar-screenshot.png");
+    expect([...screenshot.subarray(0, 8)]).toEqual([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
     expect(appcastScript).toContain("function writeInstallPage");
     expect(appcastScript).toContain("function writeReleaseIndex");
     expect(appcastScript).toContain('"install.html"');
     expect(appcastScript).toContain('"releases.json"');
     expect(appcastScript).toContain("extension-icon.svg");
+    expect(appcastScript).toContain("menu-bar-screenshot.png");
+    expect(appcastScript).toContain("copyFileSync");
+    expect(appcastScript).toContain("screenshot-frame");
     expect(appcastScript).toContain("Download for macOS");
     expect(appcastScript).toContain(
       "brew install --cask gormanity/tap/ytm-menu-bar",
