@@ -78,6 +78,10 @@ API `.p8` key. `APP_STORE_CONNECT_KEY_ID` is required. If the API key is a team
 key, also set `APP_STORE_CONNECT_ISSUER_ID`; individual API keys should leave
 that secret empty.
 
+The release workflow selects Xcode 26 or newer before notarization because older
+runner defaults may require an issuer ID even for individual App Store Connect
+API keys.
+
 ## Feed Strategy
 
 Keep production and test feeds separate.

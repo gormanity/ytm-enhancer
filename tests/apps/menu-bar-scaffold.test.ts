@@ -1441,6 +1441,9 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain("APP_STORE_CONNECT_ISSUER_ID");
     expect(workflow).toContain("APP_STORE_CONNECT_PRIVATE_KEY_BASE64");
     expect(workflow).toContain("APP_STORE_CONNECT_PRIVATE_KEY=");
+    expect(workflow).toContain("Select notarization-capable Xcode");
+    expect(workflow).toContain("Xcode_26*.app");
+    expect(workflow).toContain("Individual API Keys");
     expect(workflow).toContain("security import");
     expect(workflow).toContain("security set-key-partition-list");
     expect(workflow).toContain("Developer ID Application identity");
@@ -1468,6 +1471,7 @@ describe("menu bar connector app scaffold", () => {
     expect(notarizeScript).toContain("APP_STORE_CONNECT_PRIVATE_KEY");
     expect(releaseDocs).toContain("signed with Developer ID");
     expect(releaseDocs).toContain("notarized by");
+    expect(releaseDocs).toContain("selects Xcode 26 or newer");
     expect(releaseDocs).toContain("component-scoped artifact pages");
     expect(releaseDocs).toContain("repository-wide latest release");
     expect(releaseDocs).toContain("APP_STORE_CONNECT_PRIVATE_KEY_BASE64");
