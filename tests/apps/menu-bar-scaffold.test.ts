@@ -1462,6 +1462,8 @@ describe("menu bar connector app scaffold", () => {
       "name: YTM Menu Bar ${{ env.YTM_MENU_BAR_VERSION }}",
     );
     expect(workflow).toContain("make_latest: false");
+    expect(workflow).toContain("actions/upload-pages-artifact@v5");
+    expect(workflow).toContain("actions/deploy-pages@v5");
     expect(buildScript).toContain("sparkleNestedCode");
     expect(buildScript).toContain("Updater.app");
     expect(buildScript).toContain("XPCServices/Downloader.xpc");
