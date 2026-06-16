@@ -346,6 +346,32 @@ describe("YTMAdapter", () => {
       });
     });
 
+    it("should extract next track artwork from lazy queue thumbnails", () => {
+      document.body.innerHTML = `
+        <ytmusic-player-queue>
+          <ytmusic-player-queue-item selected>
+            <yt-formatted-string class="song-title">Current Song</yt-formatted-string>
+          </ytmusic-player-queue-item>
+          <ytmusic-player-queue-item>
+            <yt-img-shadow>
+              <img
+                id="img"
+                data-thumb="https://lh3.googleusercontent.com/lazy=w60-h60-l90-rj"
+                src=""
+              >
+            </yt-img-shadow>
+            <yt-formatted-string class="song-title">Next Song</yt-formatted-string>
+            <yt-formatted-string class="byline">Next Artist</yt-formatted-string>
+          </ytmusic-player-queue-item>
+        </ytmusic-player-queue>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.nextTrack?.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/lazy=w544-h544-l90-rj",
+      );
+    });
+
     it("should return null next track when the queue has no following item", () => {
       document.body.innerHTML = `
         <ytmusic-player-queue>
