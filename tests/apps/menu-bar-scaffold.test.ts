@@ -1027,6 +1027,23 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain('"YTM>"');
   });
 
+  it("bundles the extension icon as the macOS app icon", () => {
+    const plistTemplate = read("release/Info.plist.template");
+    const appScript = read("scripts/build-release-app.mjs");
+
+    expect(plistTemplate).toContain("CFBundleIconFile");
+    expect(plistTemplate).toContain("YTMMenuBarIcon");
+    expect(appScript).toContain('const APP_ICON_NAME = "YTMMenuBarIcon"');
+    expect(appScript).toContain("function createAppIcon");
+    expect(appScript).toContain(
+      "Sources/YTMMenuBarConnector/Resources/extension-icon.svg",
+    );
+    expect(appScript).toContain("qlmanage");
+    expect(appScript).toContain("iconutil");
+    expect(appScript).toContain("YTMMenuBarIcon.icns");
+    expect(appScript).toContain("createAppIcon(resourcesDirectory)");
+  });
+
   it("keeps the app isolated from extension internals", () => {
     const sources = listFiles(".")
       .filter((path) => /\.(swift|md|sh)$/.test(path))

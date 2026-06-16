@@ -11,6 +11,8 @@
   <string>{{BUNDLE_IDENTIFIER}}</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
+  <key>CFBundleIconFile</key>
+  <string>YTMMenuBarIcon</string>
   <key>CFBundleName</key>
   <string>{{APP_NAME}}</string>
   <key>CFBundlePackageType</key>

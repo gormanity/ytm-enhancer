@@ -1,16 +1,22 @@
 #!/usr/bin/env node
 import {
+  copyFileSync,
   cpSync,
   existsSync,
+  mkdtempSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
+
+const APP_ICON_NAME = "YTMMenuBarIcon";
+const APP_ICON_FILE_NAME = "YTMMenuBarIcon.icns";
 
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
@@ -104,6 +110,65 @@ function copySparkleFramework(releaseDirectory, contentsDirectory) {
     recursive: true,
     verbatimSymlinks: true,
   });
+}
+
+function renderIconPng(sourceSvg, destinationPng, pixelSize) {
+  const thumbnailDirectory = mkdtempSync(join(tmpdir(), "ytm-menu-bar-icon-"));
+  try {
+    execFileSync(
+      "qlmanage",
+      ["-t", "-s", String(pixelSize), "-o", thumbnailDirectory, sourceSvg],
+      { stdio: "ignore" },
+    );
+    const thumbnailPath = join(
+      thumbnailDirectory,
+      `${basename(sourceSvg)}.png`,
+    );
+    if (!existsSync(thumbnailPath)) {
+      throw new Error(`Quick Look did not create ${thumbnailPath}`);
+    }
+    copyFileSync(thumbnailPath, destinationPng);
+  } catch (error) {
+    throw new Error(
+      `Failed to render ${pixelSize}px app icon from ${sourceSvg}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  } finally {
+    rmSync(thumbnailDirectory, { recursive: true, force: true });
+  }
+}
+
+function createAppIcon(resourcesDirectory) {
+  const sourceSvg = resolve(
+    appRoot,
+    "Sources/YTMMenuBarConnector/Resources/extension-icon.svg",
+  );
+  const workDirectory = mkdtempSync(join(tmpdir(), "ytm-menu-bar-iconset-"));
+  const iconsetDirectory = join(workDirectory, `${APP_ICON_NAME}.iconset`);
+  const iconPath = join(resourcesDirectory, APP_ICON_FILE_NAME);
+  const iconsetEntries = [
+    ["icon_16x16.png", 16],
+    ["icon_16x16@2x.png", 32],
+    ["icon_32x32.png", 32],
+    ["icon_32x32@2x.png", 64],
+    ["icon_128x128.png", 128],
+    ["icon_128x128@2x.png", 256],
+    ["icon_256x256.png", 256],
+    ["icon_256x256@2x.png", 512],
+    ["icon_512x512.png", 512],
+    ["icon_512x512@2x.png", 1024],
+  ];
+
+  try {
+    mkdirSync(iconsetDirectory, { recursive: true });
+    for (const [fileName, pixelSize] of iconsetEntries) {
+      renderIconPng(sourceSvg, join(iconsetDirectory, fileName), pixelSize);
+    }
+    run("iconutil", ["-c", "icns", "-o", iconPath, iconsetDirectory]);
+  } finally {
+    rmSync(workDirectory, { recursive: true, force: true });
+  }
 }
 
 const frameworkRpath = "@executable_path/../Frameworks";
@@ -200,6 +265,7 @@ export function buildReleaseApp({
   verifyFrameworkRpath(executablePath);
   copySparkleFramework(releaseDirectory, contentsDirectory);
   copyResourceBundles(releaseDirectory, resourcesDirectory);
+  createAppIcon(resourcesDirectory);
 
   const plist = renderTemplate(
     readFileSync(resolve(appRoot, "release/Info.plist.template"), "utf-8"),
