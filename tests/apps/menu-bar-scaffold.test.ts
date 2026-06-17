@@ -1311,6 +1311,12 @@ describe("menu bar connector app scaffold", () => {
     expect(appcastScript).toContain('"install.html"');
     expect(appcastScript).toContain('"releases.json"');
     expect(appcastScript).toContain("extension-icon.svg");
+    expect(appcastScript).toContain('const faviconFileName = "favicon.svg"');
+    expect(appcastScript).toContain('rel="icon"');
+    expect(appcastScript).toContain('type="image/svg+xml"');
+    expect(appcastScript).toContain(
+      "writeFileSync(resolve(dirname(installPath), faviconFileName), iconSvg)",
+    );
     expect(appcastScript).toContain("menu-bar-screenshot.png");
     expect(appcastScript).toContain("copyFileSync");
     expect(appcastScript).toContain("screenshot-frame");

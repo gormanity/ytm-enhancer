@@ -203,6 +203,7 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
     ),
     "utf-8",
   );
+  const faviconFileName = "favicon.svg";
   const screenshotFileName = "menu-bar-screenshot.png";
   const screenshotPath = resolve(appRoot, "release", screenshotFileName);
   const directPackageName = `YTM-Menu-Bar-${metadata.version}.pkg`;
@@ -218,6 +219,7 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="./${escapeHtml(faviconFileName)}">
     <title>${escapeHtml(metadata.appName)} for YTM Enhancer</title>
     <style>
       :root {
@@ -516,6 +518,7 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
     screenshotPath,
     resolve(dirname(installPath), screenshotFileName),
   );
+  writeFileSync(resolve(dirname(installPath), faviconFileName), iconSvg);
   writeFileSync(installPath, installHtml);
   return installPath;
 }
