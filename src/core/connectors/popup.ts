@@ -10,7 +10,6 @@ import {
 import {
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
   MENU_BAR_INSTALL_URL,
-  MENU_BAR_UNINSTALL_URL,
   type ConnectedApp,
   type ConnectedAppAvailability,
   type ConnectorStatus,
@@ -54,6 +53,7 @@ interface ConnectedAppCardModel {
   connector?: ConnectedApp;
   installUrl?: string;
   installLabel?: string;
+  showUninstallInstructions?: boolean;
 }
 
 function isMenuBarInstalled(
@@ -169,6 +169,31 @@ function createConnectedAppCard(
     installLink.href = app.installUrl;
     installLink.textContent = app.installLabel ?? "Install";
     installLink.classList.remove("is-hidden");
+  } else {
+    installLink?.remove();
+  }
+
+  const uninstallButton = queryRole<HTMLButtonElement>(
+    card,
+    "connected-app-uninstall-button",
+  );
+  const uninstallInstructions = queryRole<HTMLElement>(
+    card,
+    "connected-app-uninstall-instructions",
+  );
+  if (
+    uninstallButton &&
+    uninstallInstructions &&
+    app.showUninstallInstructions
+  ) {
+    uninstallButton.classList.remove("is-hidden");
+    uninstallButton.addEventListener("click", () => {
+      const isHidden = uninstallInstructions.classList.toggle("is-hidden");
+      uninstallButton.setAttribute("aria-expanded", String(!isHidden));
+    });
+  } else {
+    uninstallButton?.remove();
+    uninstallInstructions?.remove();
   }
 
   const lifecycleButton = queryRole<HTMLButtonElement>(
@@ -272,7 +297,7 @@ function menuBarGuidance(
 function menuBarAction(
   settings: ConnectedAppsSettings,
   connector: ConnectedApp | undefined,
-): { url: string; label: string } {
+): { url?: string; label?: string; showUninstallInstructions?: boolean } {
   if (connector?.status === "incompatible") {
     return {
       url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
@@ -282,8 +307,7 @@ function menuBarAction(
 
   if (isMenuBarInstalled(settings.menuBarApp.availability, connector)) {
     return {
-      url: MENU_BAR_UNINSTALL_URL,
-      label: "Uninstall...",
+      showUninstallInstructions: true,
     };
   }
 
@@ -310,6 +334,7 @@ function createMenuBarCardModel(
     connector,
     installUrl: action.url,
     installLabel: action.label,
+    showUninstallInstructions: action.showUninstallInstructions,
   };
 }
 

@@ -271,7 +271,7 @@ describe("Connected Apps popup view", () => {
     });
   });
 
-  it("shows uninstall as the install action for disabled installed menu bar apps", async () => {
+  it("shows inline uninstall instructions for disabled installed menu bar apps", async () => {
     const client = createClient(
       createSettings({
         enabled: true,
@@ -299,17 +299,30 @@ describe("Connected Apps popup view", () => {
 
     view.render(container);
 
-    const uninstallLink = await vi.waitFor(() => {
-      const element = container.querySelector<HTMLAnchorElement>(
-        '[data-role="connected-app-install-link"]',
+    const uninstallButton = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLButtonElement>(
+        '[data-role="connected-app-uninstall-button"]',
       );
       expect(element).not.toBeNull();
       return element!;
     });
+    const installLink = container.querySelector<HTMLAnchorElement>(
+      '[data-role="connected-app-install-link"]',
+    );
 
-    expect(uninstallLink.textContent).toContain("Uninstall...");
-    expect(uninstallLink.href).toBe(
-      "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html#uninstall",
+    expect(installLink).toBeNull();
+    expect(uninstallButton.textContent).toContain("Uninstall Instructions");
+    expect(uninstallButton.getAttribute("aria-expanded")).toBe("false");
+    uninstallButton.click();
+    expect(uninstallButton.getAttribute("aria-expanded")).toBe("true");
+    expect(container.textContent).toContain(
+      "Open About YTM Menu Bar and choose Uninstall.",
+    );
+    expect(container.textContent).toContain(
+      "/Applications/YTM Menu Bar Uninstaller.command",
+    );
+    expect(container.textContent).toContain(
+      "brew uninstall --cask ytm-menu-bar",
     );
     expect(container.textContent).toContain("Enable App");
   });
@@ -380,9 +393,9 @@ describe("Connected Apps popup view", () => {
 
     view.render(container);
 
-    const installLink = await vi.waitFor(() => {
+    const uninstallButton = await vi.waitFor(() => {
       const element = container.querySelector<HTMLElement>(
-        '[data-role="connected-app-install-link"]',
+        '[data-role="connected-app-uninstall-button"]',
       );
       expect(element).not.toBeNull();
       return element!;
@@ -391,7 +404,9 @@ describe("Connected Apps popup view", () => {
       '[data-role="connected-app-lifecycle-button"]',
     );
 
-    expect(installLink.classList.contains("connected-app-action")).toBe(true);
+    expect(uninstallButton.classList.contains("connected-app-action")).toBe(
+      true,
+    );
     expect(lifecycleButton?.classList.contains("connected-app-action")).toBe(
       true,
     );
@@ -437,14 +452,19 @@ describe("Connected Apps popup view", () => {
     const card = container.querySelector<HTMLDetailsElement>(
       '[data-app-id="com.gormanity.ytm-enhancer.menu-bar"]',
     );
-    expect(card?.textContent).toContain("Uninstall...");
+    expect(card?.textContent).toContain("Uninstall Instructions");
     expect(card?.textContent).toContain("Disable App");
     expect(
+      card?.querySelector<HTMLAnchorElement>(
+        '[data-role="connected-app-install-link"]',
+      ),
+    ).toBeNull();
+    expect(
       card
-        ?.querySelector<HTMLAnchorElement>(
-          '[data-role="connected-app-install-link"]',
+        ?.querySelector<HTMLButtonElement>(
+          '[data-role="connected-app-uninstall-button"]',
         )
-        ?.href.endsWith("/menu-bar/install.html#uninstall"),
+        ?.classList.contains("connected-app-action"),
     ).toBe(true);
     expect(card?.textContent).toContain(
       "Open YTM Menu Bar from Applications to connect.",

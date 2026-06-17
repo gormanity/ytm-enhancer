@@ -81,6 +81,28 @@
         >
           Disable App
         </button>
+        <button
+          type="button"
+          class="secondary-btn connected-app-action connected-app-uninstall-button is-hidden"
+          data-role="connected-app-uninstall-button"
+          aria-expanded="false"
+        >
+          Uninstall Instructions
+        </button>
+      </div>
+
+      <div
+        class="connected-app-uninstall is-hidden"
+        data-role="connected-app-uninstall-instructions"
+      >
+        <h3>Uninstall YTM Menu Bar</h3>
+        <p class="status-hint">
+          Open About YTM Menu Bar and choose Uninstall. Direct package installs
+          can also run the uninstaller in Applications. Homebrew installs
+          uninstall through Homebrew.
+        </p>
+        <code>/Applications/YTM Menu Bar Uninstaller.command</code>
+        <code>brew uninstall --cask ytm-menu-bar</code>
       </div>
     </div>
   </details>
