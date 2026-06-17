@@ -324,6 +324,11 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
         color: #fff;
       }
 
+      .button-danger {
+        border-color: rgb(255 31 31 / 0.36);
+        color: #fff;
+      }
+
       .screenshot-frame {
         margin: 0;
         justify-self: end;
@@ -346,11 +351,18 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
       }
 
       .panel {
+        scroll-margin-top: 28px;
         min-height: 100%;
         padding: 22px;
         border: 1px solid rgb(255 255 255 / 0.12);
         border-radius: 8px;
         background: rgb(255 255 255 / 0.06);
+      }
+
+      .panel:target {
+        border-color: rgb(255 31 31 / 0.46);
+        background: rgb(255 31 31 / 0.08);
+        box-shadow: 0 0 0 1px rgb(255 31 31 / 0.18);
       }
 
       h2 {
@@ -429,6 +441,9 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
               Download for macOS
             </a>
             <a class="button" href="${escapeHtml(releaseNotesUrl)}">Release notes</a>
+            <a class="button button-danger" href="#uninstall">
+              Uninstall instructions
+            </a>
           </div>
         </div>
         <figure class="screenshot-frame">
@@ -466,11 +481,12 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
           </p>
           <code>brew update &amp;&amp; brew upgrade --cask ytm-menu-bar</code>
         </article>
-        <article class="panel">
-          <h2 id="uninstall">Uninstall</h2>
+        <article class="panel" id="uninstall">
+          <h2>Uninstall</h2>
           <p>
-            Direct installs include an uninstaller in Applications. Homebrew
-            installs uninstall through Homebrew.
+            Direct package installs include an uninstaller in Applications.
+            Open it to remove the app, native messaging host, and package
+            receipt. Homebrew installs uninstall through Homebrew.
           </p>
           <code>/Applications/YTM Menu Bar Uninstaller.command</code>
           <code>brew uninstall --cask ytm-menu-bar</code>

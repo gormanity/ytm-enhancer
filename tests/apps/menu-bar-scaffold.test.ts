@@ -1315,12 +1315,16 @@ describe("menu bar connector app scaffold", () => {
     expect(appcastScript).toContain("copyFileSync");
     expect(appcastScript).toContain("screenshot-frame");
     expect(appcastScript).toContain("Download for macOS");
+    expect(appcastScript).toContain("Uninstall instructions");
+    expect(appcastScript).toContain(".panel:target");
+    expect(appcastScript).toContain('class="panel" id="uninstall"');
     expect(appcastScript).toContain(
       "brew install --cask gormanity/tap/ytm-menu-bar",
     );
     expect(appcastScript).toContain("Direct installs update from the app");
-    expect(appcastScript).toContain("Direct installs include an uninstaller");
-    expect(appcastScript).toContain('id="uninstall"');
+    expect(appcastScript).toContain(
+      "Direct package installs include an uninstaller",
+    );
     expect(appcastScript).toContain(
       "/Applications/YTM Menu Bar Uninstaller.command",
     );
