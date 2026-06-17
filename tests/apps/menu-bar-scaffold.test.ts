@@ -1205,8 +1205,13 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("AppMetadata.directUninstallerPath");
     expect(aboutSource).toContain("SparkleUpdater.homebrewUninstallCommand");
     expect(aboutSource).toContain("YTM Menu Bar Uninstaller Was Not Found");
-    expect(aboutSource).toContain("NSWorkspace.shared.open(");
-    expect(aboutSource).toContain("URL(fileURLWithPath:");
+    expect(aboutSource).toContain("Uninstall YTM Menu Bar?");
+    expect(aboutSource).toContain("runDirectUninstaller");
+    expect(aboutSource).toContain("/usr/bin/osascript");
+    expect(aboutSource).toContain("with administrator privileges");
+    expect(aboutSource).toContain("YTM_MENU_BAR_UNINSTALL_ASSUME_YES=1");
+    expect(aboutSource).toContain("shellQuote");
+    expect(aboutSource).toContain("Uninstaller Did Not Complete");
   });
 
   it("scaffolds Sparkle app updates for direct installs", () => {

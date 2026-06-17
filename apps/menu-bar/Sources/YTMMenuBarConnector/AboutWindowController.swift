@@ -439,9 +439,54 @@ final class AboutWindowController: NSObject {
       return
     }
 
-    NSWorkspace.shared.open(
-      URL(fileURLWithPath: AppMetadata.directUninstallerPath)
-    )
+    let alert = NSAlert()
+    alert.messageText = "Uninstall YTM Menu Bar?"
+    alert.informativeText =
+      "This will close YTM Menu Bar and remove the app, native messaging manifests, and direct installer package receipts."
+    alert.addButton(withTitle: "Uninstall")
+    alert.addButton(withTitle: "Cancel")
+    guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+    runDirectUninstaller()
+  }
+
+  private func runDirectUninstaller() {
+    let process = Process()
+    let errorPipe = Pipe()
+    let script =
+      "do shell script \"SUDO_USER=\(shellQuote(NSUserName())) YTM_MENU_BAR_UNINSTALL_ASSUME_YES=1 \(shellQuote(AppMetadata.directUninstallerPath))\" with administrator privileges"
+
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+    process.arguments = ["-e", script]
+    process.standardError = errorPipe
+
+    do {
+      try process.run()
+      process.waitUntilExit()
+    } catch {
+      showAlert(
+        title: "Could Not Start Uninstaller",
+        message: error.localizedDescription
+      )
+      return
+    }
+
+    if process.terminationStatus != 0 {
+      let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+      let errorText =
+        String(data: errorData, encoding: .utf8)?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      showAlert(
+        title: "Uninstaller Did Not Complete",
+        message: errorText?.isEmpty == false
+          ? errorText!
+          : "macOS did not allow YTM Menu Bar to start the uninstaller."
+      )
+    }
+  }
+
+  private func shellQuote(_ value: String) -> String {
+    "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
   }
 
   private func showAlert(title: String, message: String) {
