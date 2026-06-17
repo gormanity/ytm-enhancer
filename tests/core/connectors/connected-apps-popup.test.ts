@@ -327,6 +327,90 @@ describe("Connected Apps popup view", () => {
     expect(container.textContent).toContain("Enable App");
   });
 
+  it("does not show connected when the menu bar native host has exited", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "connected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: {
+          availability: "error",
+          lastError: "Native host has exited.",
+        },
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      const status = container.querySelector<HTMLElement>(
+        '[data-role="connected-app-status"]',
+      );
+      expect(status?.textContent).toBe("Disconnected");
+      expect(container.textContent).toContain("YTM Menu Bar disconnected.");
+      expect(container.textContent).toContain("Download for macOS");
+    });
+  });
+
+  it("shows download action when a known menu bar connector is missing", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: {
+          availability: "missing",
+          lastError: "Specified native messaging host not found.",
+        },
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const downloadLink = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLAnchorElement>(
+        '[data-role="connected-app-install-link"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+
+    expect(downloadLink.textContent).toContain("Download for macOS");
+    expect(container.textContent).not.toContain("Uninstall Instructions");
+  });
+
   it("shows first-party menu bar install options before it is registered", async () => {
     const client = createClient(createSettings({ enabled: true }));
     const view = createConnectedAppsPopupView(

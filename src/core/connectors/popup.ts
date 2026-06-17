@@ -62,7 +62,12 @@ function isMenuBarInstalled(
 ): boolean {
   if (availability === "missing") return false;
   if (availability === "available") return true;
+  if (availability === "error") return false;
   return connector !== undefined;
+}
+
+function isNativeHostExitError(settings: ConnectedAppsSettings): boolean {
+  return /native host (has )?exited/i.test(settings.menuBarApp.lastError ?? "");
 }
 
 function setStatus(
@@ -234,9 +239,6 @@ function menuBarStatus(
   settings: ConnectedAppsSettings,
   connector: ConnectedApp | undefined,
 ): { status: ConnectorStatus; label: string } {
-  if (connector?.status === "connected") {
-    return { status: "connected", label: "Connected" };
-  }
   if (connector?.status === "incompatible") {
     return { status: "incompatible", label: "Update Required" };
   }
@@ -250,7 +252,13 @@ function menuBarStatus(
     return { status: "blocked", label: "Not Installed" };
   }
   if (settings.menuBarApp.availability === "error") {
+    if (isNativeHostExitError(settings)) {
+      return { status: "disconnected", label: "Disconnected" };
+    }
     return { status: "incompatible", label: "Needs Attention" };
+  }
+  if (connector?.status === "connected") {
+    return { status: "connected", label: "Connected" };
   }
   if (connector !== undefined) {
     return { status: "disconnected", label: "Installed" };
@@ -281,6 +289,9 @@ function menuBarGuidance(
     return "YTM Menu Bar or its native host was not detected. Reinstall it from the button below if you want to use it again.";
   }
   if (settings.menuBarApp.availability === "error") {
+    if (isNativeHostExitError(settings)) {
+      return "YTM Menu Bar disconnected. Open it again if it is still installed, or download it again below.";
+    }
     return settings.menuBarApp.lastError
       ? `YTM Enhancer could not start YTM Menu Bar. Last error: ${settings.menuBarApp.lastError}`
       : "YTM Enhancer could not start YTM Menu Bar. Open or reinstall the app if this keeps happening.";
@@ -302,6 +313,16 @@ function menuBarAction(
     return {
       url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
       label: "Update YTM Menu Bar",
+    };
+  }
+
+  if (
+    settings.menuBarApp.availability === "missing" ||
+    settings.menuBarApp.availability === "error"
+  ) {
+    return {
+      url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
+      label: "Download for macOS",
     };
   }
 

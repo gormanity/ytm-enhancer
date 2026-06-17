@@ -99,6 +99,22 @@ describe("native messaging connector transport", () => {
     );
   });
 
+  it("notifies when the native host disconnects", () => {
+    const port = createPort();
+    const runtime = {
+      connectNative: vi.fn((_hostName: string) => port),
+      lastError: undefined as { message?: string } | undefined,
+    };
+    const onDisconnect = vi.fn();
+    const transport = createNativeMessagingTransport({ runtime, onDisconnect });
+
+    transport.start(vi.fn());
+    runtime.lastError = { message: "Native host has exited." };
+    port.onDisconnect.emit();
+
+    expect(onDisconnect).toHaveBeenCalledTimes(1);
+  });
+
   it("routes native messages through the connector host handler", async () => {
     const port = createPort();
     const runtime = {

@@ -16,7 +16,10 @@ import {
   type PlaybackState,
 } from "@/core";
 import { createConnectorHost, type ConnectorHost } from "@/core/connectors";
-import { createNativeMessagingTransport } from "@/core/connectors/native-messaging-transport";
+import {
+  createNativeMessagingTransport,
+  NATIVE_MESSAGING_CONNECTION_ID,
+} from "@/core/connectors/native-messaging-transport";
 import {
   CONNECTORS_ENABLED_STATE_KEY,
   CONNECTORS_KNOWN_STATE_KEY,
@@ -197,6 +200,9 @@ async function enableConnectorSupport(): Promise<void> {
     transports: [
       createNativeMessagingTransport({
         onConnect: recordMenuBarNativeHostAvailable,
+        onDisconnect: () => {
+          connectorHost?.disconnect(NATIVE_MESSAGING_CONNECTION_ID);
+        },
         onError: recordMenuBarNativeHostError,
       }),
     ],

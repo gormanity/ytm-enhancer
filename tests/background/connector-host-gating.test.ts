@@ -63,6 +63,10 @@ describe("connector host background gating", () => {
     expect(functionBody("enableConnectorSupport")).toContain(
       "onError: recordMenuBarNativeHostError",
     );
+    expect(functionBody("enableConnectorSupport")).toContain("onDisconnect:");
+    expect(functionBody("enableConnectorSupport")).toContain(
+      "NATIVE_MESSAGING_CONNECTION_ID",
+    );
     expect(functionBody("enableConnectorSupport")).toContain(
       "connectorHost.start();",
     );
