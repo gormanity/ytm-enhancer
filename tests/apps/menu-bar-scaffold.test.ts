@@ -1146,6 +1146,12 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(metadata.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(metadata.buildNumber).toMatch(/^\d+$/);
+    const [major, minor, patch] = metadata.version
+      .split(".")
+      .map((part) => Number(part));
+    expect(Number(metadata.buildNumber)).toBe(
+      major * 1_000_000 + minor * 1_000 + patch,
+    );
     expect(metadata.minimumMacOSVersion).toBe("13.0");
     expect(metadata.appcastUrl).toBe(
       "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
@@ -1350,7 +1356,7 @@ describe("menu bar connector app scaffold", () => {
       readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
     ) as { version: string };
     const outputRoot = mkdtempSync(join(tmpdir(), "ytm-release-index-"));
-    const archivePath = resolve(outputRoot, "YTM-Menu-Bar-0.1.0.zip");
+    const archivePath = resolve(outputRoot, "YTM-Menu-Bar-0.1.1.zip");
     const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
 
     writeFileSync(archivePath, "release archive");
@@ -1387,8 +1393,8 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.extension.releaseUrl).toContain(
       `/releases/tag/v${packageJson.version}`,
     );
-    expect(releaseIndex.products.menuBar.latestVersion).toBe("0.1.0");
-    expect(releaseIndex.products.menuBar.tag).toBe("menu-bar-v0.1.0");
+    expect(releaseIndex.products.menuBar.latestVersion).toBe("0.1.1");
+    expect(releaseIndex.products.menuBar.tag).toBe("menu-bar-v0.1.1");
     expect(releaseIndex.products.menuBar.installPage).toBe(
       "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
     );
@@ -1396,7 +1402,7 @@ describe("menu bar connector app scaffold", () => {
       "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
     );
     expect(releaseIndex.products.menuBar.channels.direct.packageUrl).toContain(
-      "/releases/download/menu-bar-v0.1.0/YTM-Menu-Bar-0.1.0.pkg",
+      "/releases/download/menu-bar-v0.1.1/YTM-Menu-Bar-0.1.1.pkg",
     );
     expect(releaseIndex.products.menuBar.channels.direct.updateFeed).toBe(
       releaseIndex.products.menuBar.appcast,
