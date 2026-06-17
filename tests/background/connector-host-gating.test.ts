@@ -95,6 +95,19 @@ describe("connector host background gating", () => {
     );
   });
 
+  it("contains connector startup failures inside Connected Apps diagnostics", () => {
+    expect(functionBody("startConnectorSupport")).toContain("try {");
+    expect(functionBody("startConnectorSupport")).toContain(
+      "await enableConnectorSupport();",
+    );
+    expect(functionBody("startConnectorSupport")).toContain(
+      "recordMenuBarNativeHostError(",
+    );
+    expect(functionBody("startConnectorSupport")).toContain(
+      "disableConnectorSupport();",
+    );
+  });
+
   it("restarts connector support when a known connector is re-enabled", () => {
     expect(functionBody("restartConnectorSupport")).toContain(
       "connectorSupportEnabled",
@@ -103,7 +116,7 @@ describe("connector host background gating", () => {
       "disableConnectorSupport()",
     );
     expect(functionBody("restartConnectorSupport")).toContain(
-      "enableConnectorSupport()",
+      "startConnectorSupport()",
     );
     expect(handlerBody("set-connector-enabled")).toContain(
       "await restartConnectorSupport();",

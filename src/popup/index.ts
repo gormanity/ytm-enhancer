@@ -186,18 +186,45 @@ function switchView(viewId: string) {
   renderActiveView();
 }
 
+function renderViewError(section: HTMLElement, err: unknown): void {
+  console.error("Failed to render popup view:", err);
+
+  const card = document.createElement("div");
+  card.className = "settings-card";
+  card.dataset.role = "view-render-error";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "Unable to Open View";
+
+  const message = document.createElement("p");
+  message.className = "status-hint";
+  message.textContent =
+    "YTM Enhancer hit an error while opening this view. Reload the extension and try again.";
+
+  card.append(heading, message);
+  section.replaceChildren(card);
+}
+
 function renderActiveView() {
   if (!container) return;
-  activeViewCleanup?.();
+  try {
+    activeViewCleanup?.();
+  } catch (err) {
+    console.error("Failed to clean up popup view:", err);
+  }
   activeViewCleanup = null;
   container.replaceChildren();
 
   const view = views.find((v) => v.id === activeViewId) || views[0];
   if (view) {
     const section = document.createElement("section");
-    const cleanup = view.render(section);
-    if (typeof cleanup === "function") {
-      activeViewCleanup = cleanup;
+    try {
+      const cleanup = view.render(section);
+      if (typeof cleanup === "function") {
+        activeViewCleanup = cleanup;
+      }
+    } catch (err) {
+      renderViewError(section, err);
     }
     container.replaceChildren(section);
   }

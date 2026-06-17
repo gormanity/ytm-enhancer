@@ -204,6 +204,20 @@ async function enableConnectorSupport(): Promise<void> {
   connectorHost.start();
 }
 
+async function startConnectorSupport(): Promise<void> {
+  try {
+    await enableConnectorSupport();
+  } catch (err) {
+    const startupError =
+      err instanceof Error
+        ? err
+        : new Error(err == null ? "Unknown error" : String(err));
+    error("Failed to start connector support:", startupError);
+    recordMenuBarNativeHostError(startupError);
+    disableConnectorSupport();
+  }
+}
+
 function disableConnectorSupport(): void {
   connectorHost?.setEnabled(false);
   connectorHost = null;
@@ -214,7 +228,7 @@ async function restartConnectorSupport(): Promise<void> {
   if (!connectorSupportEnabled) return;
 
   disableConnectorSupport();
-  await enableConnectorSupport();
+  await startConnectorSupport();
 }
 
 function connectedConnectorIds(): Set<string> {
@@ -270,7 +284,7 @@ async function setConnectorSupportEnabled(enabled: boolean): Promise<void> {
   await saveModuleStateValue(CONNECTORS_ENABLED_STATE_KEY, enabled);
 
   if (enabled) {
-    await enableConnectorSupport();
+    await startConnectorSupport();
   } else {
     disableConnectorSupport();
   }
@@ -700,7 +714,7 @@ async function restoreModuleState(): Promise<void> {
   );
   connectorSupportEnabled = bool(CONNECTORS_ENABLED_STATE_KEY, false);
   if (connectorSupportEnabled) {
-    await enableConnectorSupport();
+    await startConnectorSupport();
   }
   selectedTabId = parseSelectedTabId(state["tabs.selectedTabId"]);
 

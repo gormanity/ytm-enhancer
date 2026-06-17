@@ -119,6 +119,30 @@ describe("popup index", () => {
     expect(cleanupOne).toHaveBeenCalledTimes(1);
   });
 
+  it("shows a fallback view when a popup view fails to render", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    renderTwo.mockImplementationOnce(() => {
+      throw new Error("View exploded");
+    });
+
+    await import("../../src/popup/index");
+
+    const navItems = document.querySelectorAll(".nav-item");
+    (navItems[3] as HTMLElement).click();
+
+    const fallback = document.querySelector<HTMLElement>(
+      '[data-role="view-render-error"]',
+    );
+    expect(fallback?.textContent).toContain("Unable to Open View");
+    expect(fallback?.textContent).toContain("YTM Enhancer hit an error");
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to render popup view:",
+      expect.any(Error),
+    );
+  });
+
   it("shows a dev build badge next to the app title in dev builds", async () => {
     await import("../../src/popup/index");
 
