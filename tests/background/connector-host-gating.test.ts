@@ -112,6 +112,30 @@ describe("connector host background gating", () => {
     );
   });
 
+  it("suspends production connector support while a dev build is active", () => {
+    expect(backgroundSource).toContain(
+      "isConnectorSupportSuspendedForDevBuildConflict",
+    );
+    expect(
+      functionBody("isConnectorSupportSuspendedForDevBuildConflict", false),
+    ).toContain("!__DEV__ && isDevBuildConflictActive(devBuildConflictState)");
+    expect(functionBody("startConnectorSupportIfAvailable")).toContain(
+      "disableConnectorSupport();",
+    );
+    expect(functionBody("startConnectorSupportIfAvailable")).toContain(
+      "await startConnectorSupport();",
+    );
+    expect(functionBody("setConnectorSupportEnabled")).toContain(
+      "await startConnectorSupportIfAvailable();",
+    );
+    expect(functionBody("restartConnectorSupport")).toContain(
+      "await startConnectorSupportIfAvailable();",
+    );
+    expect(functionBody("notifyDevBuildConflictStatusChanged")).toContain(
+      "await syncConnectorSupportForDevBuildConflict();",
+    );
+  });
+
   it("restarts connector support when a known connector is re-enabled", () => {
     expect(functionBody("restartConnectorSupport")).toContain(
       "connectorSupportEnabled",

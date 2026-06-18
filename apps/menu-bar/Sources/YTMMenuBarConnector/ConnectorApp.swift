@@ -171,6 +171,7 @@ final class ConnectorApp {
       "title=\(logValue(state.title))",
       "artist=\(logValue(state.artist))",
       "album=\(logValue(state.album))",
+      "artwork=\(logValue(state.artworkUrl))",
       "nextTrack=\(logValue(state.nextTrack?.title))",
       "nextTrackArtwork=\(logValue(state.nextTrack?.artworkUrl))",
       "year=\(state.year.map(String.init) ?? "nil")",

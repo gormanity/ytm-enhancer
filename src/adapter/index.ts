@@ -33,9 +33,6 @@ export class YTMAdapter {
 
   getPlaybackState(): PlaybackState {
     const titleEl = document.querySelector(SELECTORS.trackTitle);
-    const artworkEl = document.querySelector(
-      SELECTORS.albumArt,
-    ) as HTMLImageElement | null;
     const isPlaying = this.isPlaying();
 
     const { progress, duration } = this.readVideoTime();
@@ -58,9 +55,7 @@ export class YTMAdapter {
       artist: mediaSessionMetadata.artist ?? subtitleMetadata.artist,
       album: mediaSessionMetadata.album ?? subtitleMetadata.album,
       year: subtitleMetadata.year,
-      artworkUrl: this.upscaleArtworkUrl(
-        artworkEl?.src ?? mediaSessionMetadata.artworkUrl,
-      ),
+      artworkUrl: this.readCurrentArtworkUrl(mediaSessionMetadata.artworkUrl),
       nextTrack: this.readNextTrack(),
       isPlaying,
       progress,
@@ -302,6 +297,22 @@ export class YTMAdapter {
       );
   }
 
+  private readCurrentArtworkUrl(
+    mediaSessionArtworkUrl: string | null,
+  ): string | null {
+    const playerBarThumbnail = document.querySelector(
+      SELECTORS.playerBarThumbnail,
+    );
+    const songArtPanel = document.querySelector(SELECTORS.songArtPanel);
+
+    return this.upscaleArtworkUrl(
+      this.readImageUrl(playerBarThumbnail) ??
+        this.readImageUrl(songArtPanel) ??
+        this.readCurrentQueueItemArtworkUrl() ??
+        this.normalizedImageUrl(mediaSessionArtworkUrl),
+    );
+  }
+
   private readNextTrack(): TrackMetadata | null {
     const items = Array.from(
       document.querySelectorAll<HTMLElement>(SELECTORS.queueItem),
@@ -358,6 +369,16 @@ export class YTMAdapter {
     return { title, artist, album, year, artworkUrl };
   }
 
+  private readCurrentQueueItemArtworkUrl(): string | null {
+    const currentItem = Array.from(
+      document.querySelectorAll<HTMLElement>(SELECTORS.queueItem),
+    ).find((item) => this.isCurrentQueueItem(item));
+
+    if (!currentItem) return null;
+
+    return this.readQueueItemArtworkUrl(currentItem);
+  }
+
   private readQueueItemArtworkUrl(item: HTMLElement): string | null {
     const thumbnail = item.querySelector<HTMLElement>(
       SELECTORS.queueItemThumbnail,
@@ -368,22 +389,35 @@ export class YTMAdapter {
   private readImageUrl(element: Element | null): string | null {
     if (!element) return null;
 
-    const image = element.matches("img")
-      ? (element as HTMLImageElement)
-      : element.querySelector<HTMLImageElement>("img");
-    const sources = element.querySelector<HTMLSourceElement>("source");
+    const images = element.matches("img")
+      ? [element as HTMLImageElement]
+      : Array.from(element.querySelectorAll<HTMLImageElement>("img"));
+    const sources = Array.from(
+      element.querySelectorAll<HTMLSourceElement>("source"),
+    );
+
+    const imageCandidates = images.flatMap((image) => [
+      image.getAttribute("data-thumb"),
+      image.getAttribute("data-src"),
+      image.getAttribute("data-original"),
+      this.readSrcsetUrl(image.getAttribute("data-srcset")),
+      this.readSrcsetUrl(image.getAttribute("srcset")),
+      image.currentSrc,
+      image.getAttribute("src"),
+      image.src,
+      this.readBackgroundImageUrl(image),
+    ]);
+    const sourceCandidates = sources.flatMap((source) => [
+      this.readSrcsetUrl(source.getAttribute("data-srcset")),
+      this.readSrcsetUrl(source.getAttribute("srcset")),
+    ]);
 
     const candidates = [
-      image?.getAttribute("data-thumb"),
-      image?.getAttribute("data-src"),
-      image?.getAttribute("data-original"),
-      this.readSrcsetUrl(image?.getAttribute("data-srcset")),
-      this.readSrcsetUrl(image?.getAttribute("srcset")),
-      image?.getAttribute("src"),
+      ...imageCandidates,
+      ...sourceCandidates,
       element.getAttribute("data-thumb"),
       element.getAttribute("data-src"),
       element.getAttribute("data-original"),
-      this.readSrcsetUrl(sources?.getAttribute("srcset")),
       this.readBackgroundImageUrl(element),
     ];
 

@@ -424,6 +424,88 @@ describe("YTMAdapter", () => {
       expect(state.artworkUrl).toBe("https://lh3.googleusercontent.com/test");
     });
 
+    it("should extract current artwork from lazy player bar thumbnails", () => {
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img
+            class="image"
+            data-thumb="https://lh3.googleusercontent.com/lazy-current=w60-h60-l90-rj"
+            src=""
+          >
+        </div>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/lazy-current=w544-h544-l90-rj",
+      );
+    });
+
+    it("should scan all player bar thumbnail images for current artwork", () => {
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="">
+          <yt-img-shadow>
+            <img
+              id="img"
+              src="https://lh3.googleusercontent.com/nested-current=w60-h60-l90-rj"
+            >
+          </yt-img-shadow>
+        </div>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/nested-current=w544-h544-l90-rj",
+      );
+    });
+
+    it("should fall back to the song art panel for current artwork", () => {
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="">
+        </div>
+        <div id="song-image" class="ytmusic-player">
+          <yt-img-shadow>
+            <img
+              id="img"
+              src="https://lh3.googleusercontent.com/song-panel=w60-h60-l90-rj"
+            >
+          </yt-img-shadow>
+        </div>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/song-panel=w544-h544-l90-rj",
+      );
+    });
+
+    it("should fall back to current queue item artwork before playback starts", () => {
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="">
+        </div>
+        <ytmusic-player-queue>
+          <ytmusic-player-queue-item selected>
+            <yt-img-shadow>
+              <img
+                id="img"
+                data-thumb="https://lh3.googleusercontent.com/queue-current=w60-h60-l90-rj"
+                src=""
+              >
+            </yt-img-shadow>
+            <yt-formatted-string class="song-title">Current Song</yt-formatted-string>
+          </ytmusic-player-queue-item>
+        </ytmusic-player-queue>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/queue-current=w544-h544-l90-rj",
+      );
+    });
+
     it("should upscale artwork URL with size params", () => {
       document.body.innerHTML = `
         <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">

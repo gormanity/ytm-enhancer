@@ -1055,6 +1055,7 @@ final class MenuBarControlsView: NSView {
 
 private final class MenuBarArtworkView: NSView {
   private let imageView = NSImageView()
+  private let logger = NativeAppLogger()
   private var requestedArtworkUrl: String?
   private var loadingArtworkUrl: String?
   private var displayedArtworkUrl: String?
@@ -1090,23 +1091,39 @@ private final class MenuBarArtworkView: NSView {
     }
     requestedArtworkUrl = artworkUrl
     loadingArtworkUrl = artworkUrl
+    logger.log("current artwork loading url=\(artworkUrl)")
 
-    URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+    URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
       guard
         let self,
-        self.requestedArtworkUrl == artworkUrl,
+        self.requestedArtworkUrl == artworkUrl
+      else {
+        return
+      }
+
+      let statusCode = (response as? HTTPURLResponse)?.statusCode
+      let status = statusCode.map(String.init) ?? "none"
+      let errorMessage = error?.localizedDescription ?? "none"
+      guard
         let data,
         let image = NSImage(data: data)
       else {
+        self.logger.log(
+          "current artwork failed url=\(artworkUrl) status=\(status) bytes=\(data?.count ?? 0) error=\(errorMessage)"
+        )
         DispatchQueue.main.async {
-          if self?.requestedArtworkUrl == artworkUrl {
-            self?.loadingArtworkUrl = nil
-            self?.displayedArtworkUrl = nil
-            self?.showPlaceholder()
+          if self.requestedArtworkUrl == artworkUrl {
+            self.loadingArtworkUrl = nil
+            self.displayedArtworkUrl = nil
+            self.showPlaceholder()
           }
         }
         return
       }
+
+      self.logger.log(
+        "current artwork loaded url=\(artworkUrl) status=\(status) bytes=\(data.count)"
+      )
 
       DispatchQueue.main.async {
         guard self.requestedArtworkUrl == artworkUrl else { return }

@@ -230,11 +230,35 @@ function disableConnectorSupport(): void {
   setConnectorPlaybackStateStreaming(false);
 }
 
+function isConnectorSupportSuspendedForDevBuildConflict(): boolean {
+  return !__DEV__ && isDevBuildConflictActive(devBuildConflictState);
+}
+
+async function startConnectorSupportIfAvailable(): Promise<void> {
+  if (isConnectorSupportSuspendedForDevBuildConflict()) {
+    disableConnectorSupport();
+    return;
+  }
+
+  await startConnectorSupport();
+}
+
+async function syncConnectorSupportForDevBuildConflict(): Promise<void> {
+  if (!connectorSupportEnabled) return;
+
+  if (isConnectorSupportSuspendedForDevBuildConflict()) {
+    disableConnectorSupport();
+    return;
+  }
+
+  await startConnectorSupport();
+}
+
 async function restartConnectorSupport(): Promise<void> {
   if (!connectorSupportEnabled) return;
 
   disableConnectorSupport();
-  await startConnectorSupport();
+  await startConnectorSupportIfAvailable();
 }
 
 function connectedConnectorIds(): Set<string> {
@@ -290,7 +314,7 @@ async function setConnectorSupportEnabled(enabled: boolean): Promise<void> {
   await saveModuleStateValue(CONNECTORS_ENABLED_STATE_KEY, enabled);
 
   if (enabled) {
-    await startConnectorSupport();
+    await startConnectorSupportIfAvailable();
   } else {
     disableConnectorSupport();
   }
@@ -304,6 +328,7 @@ async function notifyDevBuildConflictStatusChanged(): Promise<void> {
   broadcastPopupMessage({ type: "dev-build-conflict-status-changed" });
   await setActionDevBuildConflictIndicator(duplicateDetected, __DEV__);
   setActionPlaybackIndicator(lastPlaybackStateIsPlaying, duplicateDetected);
+  await syncConnectorSupportForDevBuildConflict();
 }
 
 async function updateDevBuildConflictState(
@@ -720,7 +745,7 @@ async function restoreModuleState(): Promise<void> {
   );
   connectorSupportEnabled = bool(CONNECTORS_ENABLED_STATE_KEY, false);
   if (connectorSupportEnabled) {
-    await startConnectorSupport();
+    await startConnectorSupportIfAvailable();
   }
   selectedTabId = parseSelectedTabId(state["tabs.selectedTabId"]);
 
