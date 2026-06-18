@@ -87,13 +87,13 @@ jobs:
             http://127.0.0.1:8787/menu-bar/appcast.xml \
             --output "${TMPDIR:-/tmp}/appcast.xml"
           curl -fsS \
-            http://127.0.0.1:8787/YTM-Menu-Bar-0.0.2.zip \
-            --output "${TMPDIR:-/tmp}/YTM-Menu-Bar-0.0.2.zip"
+            http://127.0.0.1:8787/YTM-Menu-Bar-0.0.2.pkg \
+            --output "${TMPDIR:-/tmp}/YTM-Menu-Bar-0.0.2.pkg"
           curl -fsS \
             http://127.0.0.1:8787/release-notes.html \
             --output "${TMPDIR:-/tmp}/release-notes.html"
 
-          test -s "${TMPDIR:-/tmp}/YTM-Menu-Bar-0.0.2.zip"
+          test -s "${TMPDIR:-/tmp}/YTM-Menu-Bar-0.0.2.pkg"
           grep -q "<sparkle:version>2</sparkle:version>" \
             "${TMPDIR:-/tmp}/appcast.xml"
           grep -q "sparkle:edSignature=" "${TMPDIR:-/tmp}/appcast.xml"

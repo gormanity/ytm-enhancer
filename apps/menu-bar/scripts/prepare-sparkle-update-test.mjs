@@ -206,7 +206,7 @@ const publicEdKey = resolvePublicEdKey({
 });
 const feedRoot = join(outputRoot, "feed");
 const feedUrl = `http://127.0.0.1:${port}/menu-bar/appcast.xml`;
-const archiveName = `YTM-Menu-Bar-${newVersion}.zip`;
+const archiveName = `YTM-Menu-Bar-${newVersion}.pkg`;
 const archivePath = join(feedRoot, archiveName);
 const releaseNotesPath = join(feedRoot, "release-notes.html");
 const releaseNotesUrl = `http://127.0.0.1:${port}/release-notes.html`;
@@ -229,15 +229,20 @@ const newApp = withReleaseMetadata(
       outputRoot: join(outputRoot, "new-app"),
     }),
 );
-
-run("ditto", [
-  "-c",
-  "-k",
-  "--sequesterRsrc",
-  "--keepParent",
-  newApp,
-  archivePath,
-]);
+withReleaseMetadata(
+  {
+    appcastUrl: feedUrl,
+    buildNumber: newBuild,
+    publicEdKey,
+    version: newVersion,
+  },
+  () =>
+    packageRelease({
+      channel: "direct",
+      outputRoot: feedRoot,
+      prebuiltAppDirectory: newApp,
+    }),
+);
 const edSignature = signArchive({ archivePath, privateKeyFile });
 
 writeFileSync(
@@ -286,6 +291,7 @@ for (const expected of [
   feedUrl,
   archiveName,
   edSignature,
+  'type="application/octet-stream"',
   `<sparkle:version>${newBuild}</sparkle:version>`,
   `<sparkle:shortVersionString>${newVersion}</sparkle:shortVersionString>`,
   `<sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>`,

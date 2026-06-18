@@ -39,6 +39,14 @@ function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function updateArtifactContentType(path) {
+  if (path.endsWith(".zip")) {
+    return "application/zip";
+  }
+
+  return "application/octet-stream";
+}
+
 function defaultReleaseNotesUrl(metadata) {
   const url = new URL(metadata.appcastUrl);
   url.pathname = url.pathname.replace(
@@ -546,6 +554,7 @@ export function generateAppcast({
   const notesUrl = releaseNotesUrl ?? defaultReleaseNotesUrl(metadata);
   const length = statSync(archivePath).size;
   const checksum = sha256(archivePath);
+  const contentType = updateArtifactContentType(archivePath);
   const appcast = `<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0"
   xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
@@ -564,7 +573,7 @@ export function generateAppcast({
         sparkle:edSignature="${escapeXml(edSignature)}"
         sparkle:sha256="${checksum}"
         length="${length}"
-        type="application/zip" />
+        type="${escapeXml(contentType)}" />
     </item>
   </channel>
 </rss>

@@ -181,13 +181,6 @@ jobs:
           pnpm run menu-bar:notarize -- \
             --path="apps/menu-bar/.build/packages/YTM-Menu-Bar-Homebrew-${YTM_MENU_BAR_VERSION}.pkg"
 
-      - name: Create Sparkle archive
-        run: |
-          mkdir -p apps/menu-bar/.build/sparkle
-          ditto -c -k --sequesterRsrc --keepParent \
-            "apps/menu-bar/.build/release-apps/direct/YTM Menu Bar.app" \
-            "apps/menu-bar/.build/sparkle/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.zip"
-
       - name: Generate appcast
         env:
           SPARKLE_PRIVATE_ED_KEY_BASE64: ${{ secrets.SPARKLE_PRIVATE_ED_KEY_BASE64 }}
@@ -200,10 +193,10 @@ jobs:
               ! -path '*/old_dsa_scripts/*' \
               -type f | head -n 1)"
           fi
-          SIGN_OUTPUT="$("$SIGN_UPDATE" --ed-key-file sparkle_ed_private_key "apps/menu-bar/.build/sparkle/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.zip")"
+          SIGN_OUTPUT="$("$SIGN_UPDATE" --ed-key-file sparkle_ed_private_key "apps/menu-bar/.build/packages/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.pkg")"
           ED_SIGNATURE="$(printf "%s\n" "$SIGN_OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
           pnpm run menu-bar:appcast -- \
-            --archive="apps/menu-bar/.build/sparkle/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.zip" \
+            --archive="apps/menu-bar/.build/packages/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.pkg" \
             --ed-signature="$ED_SIGNATURE" \
             --output="apps/menu-bar/.build/appcast/menu-bar/appcast.xml"
 
@@ -222,7 +215,6 @@ jobs:
           make_latest: false
           files: |
             apps/menu-bar/.build/packages/*.pkg
-            apps/menu-bar/.build/sparkle/*.zip
             apps/menu-bar/.build/appcast/menu-bar/appcast.xml
 
       - name: Upload GitHub Pages artifact

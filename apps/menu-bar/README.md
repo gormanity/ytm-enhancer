@@ -83,6 +83,8 @@ Direct install:
   Chrome, Chromium, Microsoft Edge, and Firefox.
 - The app uses Sparkle from the `About YTM Menu Bar` window. It probes for
   updates silently and marks the About menu item when an update is available.
+- Sparkle updates install the direct `.pkg` so app, native host manifests,
+  package receipts, and uninstaller stay in sync.
 - Releases are signed with Developer ID and notarized by Apple for distribution
   outside the Mac App Store.
 - The Sparkle appcast lives at:
@@ -140,11 +142,11 @@ node apps/menu-bar/scripts/notarize-release-artifact.mjs \
   --path="apps/menu-bar/.build/release-apps/direct/YTM Menu Bar.app"
 ```
 
-Generate a Sparkle appcast after signing the direct update archive:
+Generate a Sparkle appcast after signing the direct update package:
 
 ```sh
 node apps/menu-bar/scripts/generate-appcast.mjs \
-  --archive=apps/menu-bar/.build/sparkle/YTM-Menu-Bar-0.1.0.zip \
+  --archive=apps/menu-bar/.build/packages/YTM-Menu-Bar-0.1.0.pkg \
   --ed-signature=<sparkle-ed-signature>
 ```
 

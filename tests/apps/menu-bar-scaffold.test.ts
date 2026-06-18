@@ -1371,7 +1371,7 @@ describe("menu bar connector app scaffold", () => {
       readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
     ) as { version: string };
     const outputRoot = mkdtempSync(join(tmpdir(), "ytm-release-index-"));
-    const archivePath = resolve(outputRoot, "YTM-Menu-Bar-0.1.1.zip");
+    const archivePath = resolve(outputRoot, "YTM-Menu-Bar-0.1.2.pkg");
     const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
 
     writeFileSync(archivePath, "release archive");
@@ -1380,6 +1380,7 @@ describe("menu bar connector app scaffold", () => {
       edSignature: "test-signature",
       outputPath,
     });
+    const appcast = readFileSync(outputPath, "utf-8");
 
     const releaseIndex = JSON.parse(
       readFileSync(resolve(outputRoot, "site/releases.json"), "utf-8"),
@@ -1408,8 +1409,8 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.extension.releaseUrl).toContain(
       `/releases/tag/v${packageJson.version}`,
     );
-    expect(releaseIndex.products.menuBar.latestVersion).toBe("0.1.1");
-    expect(releaseIndex.products.menuBar.tag).toBe("menu-bar-v0.1.1");
+    expect(releaseIndex.products.menuBar.latestVersion).toBe("0.1.2");
+    expect(releaseIndex.products.menuBar.tag).toBe("menu-bar-v0.1.2");
     expect(releaseIndex.products.menuBar.installPage).toBe(
       "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
     );
@@ -1417,11 +1418,15 @@ describe("menu bar connector app scaffold", () => {
       "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
     );
     expect(releaseIndex.products.menuBar.channels.direct.packageUrl).toContain(
-      "/releases/download/menu-bar-v0.1.1/YTM-Menu-Bar-0.1.1.pkg",
+      "/releases/download/menu-bar-v0.1.2/YTM-Menu-Bar-0.1.2.pkg",
     );
     expect(releaseIndex.products.menuBar.channels.direct.updateFeed).toBe(
       releaseIndex.products.menuBar.appcast,
     );
+    expect(appcast).toContain(
+      "/releases/download/menu-bar-v0.1.2/YTM-Menu-Bar-0.1.2.pkg",
+    );
+    expect(appcast).toContain('type="application/octet-stream"');
     expect(releaseIndex.products.menuBar.channels.homebrew.installCommand).toBe(
       "brew install --cask gormanity/tap/ytm-menu-bar",
     );
@@ -1556,7 +1561,10 @@ describe("menu bar connector app scaffold", () => {
     expect(sparkleHarness).toContain('argValue("key-account"');
     expect(sparkleHarness).toContain('argValue("public-ed-key"');
     expect(sparkleHarness).toContain("sign_update");
-    expect(sparkleHarness).toContain("ditto");
+    expect(sparkleHarness).toContain(
+      "const archiveName = `YTM-Menu-Bar-${newVersion}.pkg`",
+    );
+    expect(sparkleHarness).toContain('type="application/octet-stream"');
     expect(sparkleHarness).toContain("serveCommand");
     expect(sparkleHarness).toContain("installOldCommand");
     expect(sparkleHarness).toContain("verifyUpdatedVersionCommand");
@@ -1614,7 +1622,12 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain("Notarize Homebrew package");
     expect(workflow).toContain("menu-bar:notarize");
     expect(workflow).toContain('--app="apps/menu-bar/.build/release-apps');
-    expect(workflow).toContain("Create Sparkle archive");
+    expect(workflow).toContain("Generate appcast");
+    expect(workflow).toContain(
+      "apps/menu-bar/.build/packages/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.pkg",
+    );
+    expect(workflow).not.toContain("Create Sparkle archive");
+    expect(workflow).not.toContain("apps/menu-bar/.build/sparkle/*.zip");
     expect(workflow).toContain(
       "name: YTM Menu Bar ${{ env.YTM_MENU_BAR_VERSION }}",
     );

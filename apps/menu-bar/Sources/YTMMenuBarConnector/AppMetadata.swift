@@ -3,8 +3,8 @@ import Foundation
 enum AppMetadata {
   static let appName = "YTM Menu Bar"
   static let bundleIdentifier = "com.gormanity.ytm-enhancer.menu-bar"
-  static let version = "0.1.1"
-  static let buildNumber = "1001"
+  static let version = "0.1.2"
+  static let buildNumber = "1002"
   static let minimumMacOSVersion = "13.0"
   static let appcastUrl =
     "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml"

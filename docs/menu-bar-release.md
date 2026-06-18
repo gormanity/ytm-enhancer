@@ -15,13 +15,16 @@ appcast, Homebrew cask, or a direct component release link.
 Direct install:
 
 - Asset: `YTM-Menu-Bar-<version>.pkg`.
-- Update archive: `YTM-Menu-Bar-<version>.zip`.
+- Update artifact: `YTM-Menu-Bar-<version>.pkg`.
 - Install page:
   `https://gormanity.github.io/ytm-enhancer/menu-bar/install.html`.
 - Update feed: `https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml`.
 - Release index: `https://gormanity.github.io/ytm-enhancer/releases.json`.
 - Updates are handled by Sparkle inside the app. Direct builds probe the appcast
   silently and expose download/install actions from `About YTM Menu Bar`.
+- The appcast points at the direct `.pkg`, not an app-only archive, so updates
+  can refresh the app, native messaging manifests, package receipts, and
+  uninstaller together.
 - Direct packages and app bundles are signed with Developer ID, notarized by
   Apple, and stapled before release upload.
 
@@ -119,7 +122,7 @@ They do not edit `apps/menu-bar/release/metadata.json` or
 Use this path to validate Sparkle updates without publishing fake GitHub
 releases.
 
-The reusable harness prepares the old package, newer update archive, local
+The reusable harness prepares the old package, newer update package, local
 appcast, release notes, and a `summary.json` with the exact commands to run:
 
 ```sh
@@ -141,12 +144,12 @@ The harness reads `--public-ed-key`, `SPARKLE_PUBLIC_ED_KEY`, or the Sparkle
 keychain account from `--key-account`.
 
 1. Build the newer direct app with a local feed URL and higher build number.
-2. Create the Sparkle `.zip` from the newer `.app`.
-3. Sign the `.zip` with the local Sparkle private key.
-4. Generate a local appcast with `--archive-url` pointing at the local `.zip`.
+2. Build a newer direct `.pkg` from that app.
+3. Sign the `.pkg` with the local Sparkle private key.
+4. Generate a local appcast with `--archive-url` pointing at the local `.pkg`.
 5. Build and install an older direct `.pkg` with the same local feed URL and a
    lower build number.
-6. Serve the local appcast and `.zip` over HTTP.
+6. Serve the local appcast and `.pkg` over HTTP.
 7. Open `About YTM Menu Bar` in the older installed app.
 8. Confirm the About window detects the update.
 9. Confirm Sparkle downloads, verifies, installs, and relaunches the newer app.
@@ -158,7 +161,7 @@ export YTM_MENU_BAR_APPCAST_URL="http://127.0.0.1:8787/menu-bar/appcast.xml"
 export SPARKLE_PUBLIC_ED_KEY="<public-ed-key>"
 ```
 
-Build the newer update archive:
+Build the newer update package:
 
 ```sh
 YTM_MENU_BAR_VERSION=0.1.1 YTM_MENU_BAR_BUILD_NUMBER=2 \
@@ -166,17 +169,18 @@ YTM_MENU_BAR_VERSION=0.1.1 YTM_MENU_BAR_BUILD_NUMBER=2 \
   --channel=direct \
   --output=apps/menu-bar/.build/update-test/new
 
-ditto -c -k --sequesterRsrc --keepParent \
-  "apps/menu-bar/.build/update-test/new/direct/YTM Menu Bar.app" \
-  apps/menu-bar/.build/update-test/feed/YTM-Menu-Bar-0.1.1.zip
+YTM_MENU_BAR_VERSION=0.1.1 YTM_MENU_BAR_BUILD_NUMBER=2 \
+  pnpm run menu-bar:package:direct -- \
+  --app="apps/menu-bar/.build/update-test/new/direct/YTM Menu Bar.app" \
+  --output=apps/menu-bar/.build/update-test/feed
 ```
 
-Sign the archive with Sparkle:
+Sign the package with Sparkle:
 
 ```sh
 apps/menu-bar/.build/artifacts/sparkle/Sparkle/bin/sign_update \
   --ed-key-file sparkle_ed_private_key \
-  apps/menu-bar/.build/update-test/feed/YTM-Menu-Bar-0.1.1.zip
+  apps/menu-bar/.build/update-test/feed/YTM-Menu-Bar-0.1.1.pkg
 ```
 
 Generate the local appcast using the printed `sparkle:edSignature`:
@@ -184,8 +188,8 @@ Generate the local appcast using the printed `sparkle:edSignature`:
 ```sh
 YTM_MENU_BAR_VERSION=0.1.1 YTM_MENU_BAR_BUILD_NUMBER=2 \
   pnpm run menu-bar:appcast -- \
-  --archive=apps/menu-bar/.build/update-test/feed/YTM-Menu-Bar-0.1.1.zip \
-  --archive-url=http://127.0.0.1:8787/YTM-Menu-Bar-0.1.1.zip \
+  --archive=apps/menu-bar/.build/update-test/feed/YTM-Menu-Bar-0.1.1.pkg \
+  --archive-url=http://127.0.0.1:8787/YTM-Menu-Bar-0.1.1.pkg \
   --ed-signature=<sparkle-ed-signature> \
   --release-notes-url=http://127.0.0.1:8787/release-notes.html \
   --output=apps/menu-bar/.build/update-test/feed/menu-bar/appcast.xml
@@ -245,8 +249,8 @@ files change.
 Sparkle CI:
 
 - Generates a throwaway Sparkle EdDSA key on the runner.
-- Prepares an older direct package and newer signed update archive.
-- Serves the local appcast, archive, and release notes over HTTP.
+- Prepares an older direct package and newer signed update package.
+- Serves the local appcast, package, and release notes over HTTP.
 - Verifies appcast version metadata, archive reachability, checksum/signature
   presence, and old package installation.
 
@@ -280,7 +284,8 @@ swift build --package-path apps/menu-bar -c release
    - a component release that does not replace GitHub's repo-wide latest release
    - signed, notarized, and stapled direct `.pkg`
    - signed, notarized, and stapled Homebrew `.pkg`
-   - Sparkle `.zip` generated from the notarized and stapled direct `.app`
+   - Sparkle appcast pointing at the signed, notarized, and stapled direct
+     `.pkg`
    - `appcast.xml`
    - standalone release notes at `menu-bar/release-notes/X.Y.Z.html`
    - install landing page at `menu-bar/install.html`
