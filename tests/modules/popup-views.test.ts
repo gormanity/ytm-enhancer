@@ -30,4 +30,12 @@ describe("module popup view registry", () => {
     expect(labels).not.toContain("Auto-Play");
     expect(labels).not.toContain("Auto-Skip Disliked");
   });
+
+  it("includes Connected Apps as a first-class popup view", async () => {
+    const { getAllPopupViews } = await import("@/modules/popup-views");
+    const views = getAllPopupViews();
+
+    expect(views.map((view) => view.id)).toContain("connected-apps");
+    expect(views.map((view) => view.label)).toContain("Connected Apps");
+  });
 });
