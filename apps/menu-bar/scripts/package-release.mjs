@@ -114,7 +114,7 @@ function writeAppComponentPlist(path, appName) {
   );
 }
 
-export function packageRelease({
+export async function packageRelease({
   channel = "direct",
   outputRoot = resolve(appRoot, ".build/packages"),
   prebuiltAppDirectory,
@@ -127,10 +127,10 @@ export function packageRelease({
 
   const appDirectory =
     prebuiltAppDirectory ??
-    buildReleaseApp({
+    (await buildReleaseApp({
       channel,
       requireSparklePublicKey: channel === "direct",
-    });
+    }));
   const workRoot = resolve(appRoot, ".build/package-work", channel);
   const appPayloadRoot = join(workRoot, "app-payload");
   const hostPayloadRoot = join(workRoot, "host-payload");
@@ -216,7 +216,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     argValue("output", resolve(appRoot, ".build/packages")),
   );
   const app = argValue("app", "");
-  const packagePath = packageRelease({
+  const packagePath = await packageRelease({
     channel,
     outputRoot,
     prebuiltAppDirectory: app ? resolve(app) : undefined,

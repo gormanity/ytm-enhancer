@@ -32,7 +32,7 @@ function run(command, args, options = {}) {
   });
 }
 
-function withReleaseMetadata(
+async function withReleaseMetadata(
   { appcastUrl, buildNumber, publicEdKey, version },
   fn,
 ) {
@@ -49,7 +49,7 @@ function withReleaseMetadata(
   process.env.YTM_MENU_BAR_VERSION = version;
 
   try {
-    return fn();
+    return await fn();
   } finally {
     restoreEnv("YTM_MENU_BAR_APPCAST_URL", previous.appcastUrl);
     restoreEnv("YTM_MENU_BAR_BUILD_NUMBER", previous.buildNumber);
@@ -216,7 +216,7 @@ assertSafeOutputRoot(outputRoot);
 rmSync(outputRoot, { recursive: true, force: true });
 mkdirSync(feedRoot, { recursive: true });
 
-const newApp = withReleaseMetadata(
+const newApp = await withReleaseMetadata(
   {
     appcastUrl: feedUrl,
     buildNumber: newBuild,
@@ -229,7 +229,7 @@ const newApp = withReleaseMetadata(
       outputRoot: join(outputRoot, "new-app"),
     }),
 );
-withReleaseMetadata(
+await withReleaseMetadata(
   {
     appcastUrl: feedUrl,
     buildNumber: newBuild,
@@ -255,7 +255,7 @@ writeFileSync(
 `,
 );
 
-withReleaseMetadata(
+await withReleaseMetadata(
   {
     appcastUrl: feedUrl,
     buildNumber: newBuild,
@@ -272,7 +272,7 @@ withReleaseMetadata(
     }),
 );
 
-const oldPackage = withReleaseMetadata(
+const oldPackage = await withReleaseMetadata(
   {
     appcastUrl: feedUrl,
     buildNumber: oldBuild,

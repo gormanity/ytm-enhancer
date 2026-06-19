@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import {
-  copyFileSync,
   cpSync,
   existsSync,
   mkdtempSync,
@@ -10,13 +9,17 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
+import sharp from "sharp";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
 const APP_ICON_NAME = "YTMMenuBarIcon";
 const APP_ICON_FILE_NAME = "YTMMenuBarIcon.icns";
+const APP_ICON_SAFE_AREA_TRANSFORM = "translate(6 6) scale(0.90625)";
+const APP_ICON_ACCENT_RING =
+  /[ \t]*<circle cx="64" cy="64" r="41" fill="none" stroke="#FFFFFF" stroke-opacity="0\.12" stroke-width="1" \/>\n?/;
 
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
@@ -112,40 +115,29 @@ function copySparkleFramework(releaseDirectory, contentsDirectory) {
   });
 }
 
-function renderIconPng(sourceSvg, destinationPng, pixelSize) {
-  const thumbnailDirectory = mkdtempSync(join(tmpdir(), "ytm-menu-bar-icon-"));
+async function renderIconPng(sourceSvg, destinationPng, pixelSize) {
   try {
-    execFileSync(
-      "qlmanage",
-      ["-t", "-s", String(pixelSize), "-o", thumbnailDirectory, sourceSvg],
-      { stdio: "ignore" },
-    );
-    const thumbnailPath = join(
-      thumbnailDirectory,
-      `${basename(sourceSvg)}.png`,
-    );
-    if (!existsSync(thumbnailPath)) {
-      throw new Error(`Quick Look did not create ${thumbnailPath}`);
-    }
-    copyFileSync(thumbnailPath, destinationPng);
+    await sharp(sourceSvg)
+      .resize(pixelSize, pixelSize)
+      .png()
+      .toFile(destinationPng);
   } catch (error) {
     throw new Error(
       `Failed to render ${pixelSize}px app icon from ${sourceSvg}: ${
         error instanceof Error ? error.message : String(error)
       }`,
     );
-  } finally {
-    rmSync(thumbnailDirectory, { recursive: true, force: true });
   }
 }
 
-function createAppIcon(resourcesDirectory) {
+async function createAppIcon(resourcesDirectory) {
   const sourceSvg = resolve(
     appRoot,
     "Sources/YTMMenuBarConnector/Resources/extension-icon.svg",
   );
   const workDirectory = mkdtempSync(join(tmpdir(), "ytm-menu-bar-iconset-"));
   const iconsetDirectory = join(workDirectory, `${APP_ICON_NAME}.iconset`);
+  const appIconSvg = join(workDirectory, "app-icon.svg");
   const iconPath = join(resourcesDirectory, APP_ICON_FILE_NAME);
   const iconsetEntries = [
     ["icon_16x16.png", 16],
@@ -161,14 +153,41 @@ function createAppIcon(resourcesDirectory) {
   ];
 
   try {
+    writeFileSync(appIconSvg, appIconSvgSource(sourceSvg));
     mkdirSync(iconsetDirectory, { recursive: true });
     for (const [fileName, pixelSize] of iconsetEntries) {
-      renderIconPng(sourceSvg, join(iconsetDirectory, fileName), pixelSize);
+      await renderIconPng(
+        appIconSvg,
+        join(iconsetDirectory, fileName),
+        pixelSize,
+      );
     }
     run("iconutil", ["-c", "icns", "-o", iconPath, iconsetDirectory]);
   } finally {
     rmSync(workDirectory, { recursive: true, force: true });
   }
+}
+
+function appIconSvgSource(sourceSvg) {
+  const source = readFileSync(sourceSvg, "utf-8");
+  const withoutAccentRing = source.replace(APP_ICON_ACCENT_RING, "");
+
+  if (withoutAccentRing === source) {
+    throw new Error("Failed to remove app icon accent ring from source SVG.");
+  }
+
+  const appIconSource = withoutAccentRing
+    .replace(
+      "</defs>\n\n",
+      `</defs>\n\n  <g transform="${APP_ICON_SAFE_AREA_TRANSFORM}">\n`,
+    )
+    .replace(/\n<\/svg>\s*$/, "\n  </g>\n</svg>\n");
+
+  if (appIconSource === withoutAccentRing) {
+    throw new Error("Failed to inset app icon artwork.");
+  }
+
+  return appIconSource;
 }
 
 const frameworkRpath = "@executable_path/../Frameworks";
@@ -229,7 +248,7 @@ function signAppBundle(appDirectory) {
   verify(appDirectory);
 }
 
-export function buildReleaseApp({
+export async function buildReleaseApp({
   channel = "direct",
   outputRoot = resolve(appRoot, ".build/release-apps"),
   requireSparklePublicKey = false,
@@ -265,7 +284,7 @@ export function buildReleaseApp({
   verifyFrameworkRpath(executablePath);
   copySparkleFramework(releaseDirectory, contentsDirectory);
   copyResourceBundles(releaseDirectory, resourcesDirectory);
-  createAppIcon(resourcesDirectory);
+  await createAppIcon(resourcesDirectory);
 
   const plist = renderTemplate(
     readFileSync(resolve(appRoot, "release/Info.plist.template"), "utf-8"),
@@ -293,7 +312,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const outputRoot = resolve(
     argValue("output", resolve(appRoot, ".build/release-apps")),
   );
-  const appDirectory = buildReleaseApp({
+  const appDirectory = await buildReleaseApp({
     channel,
     outputRoot,
     requireSparklePublicKey: hasFlag("require-sparkle-public-key"),

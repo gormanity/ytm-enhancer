@@ -1035,7 +1035,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain('"YTM>"');
   });
 
-  it("bundles the extension icon as the macOS app icon", () => {
+  it("generates a macOS app icon from the extension icon", () => {
     const plistTemplate = read("release/Info.plist.template");
     const appScript = read("scripts/build-release-app.mjs");
 
@@ -1046,7 +1046,14 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain(
       "Sources/YTMMenuBarConnector/Resources/extension-icon.svg",
     );
-    expect(appScript).toContain("qlmanage");
+    expect(appScript).toContain("function appIconSvgSource");
+    expect(appScript).toContain("APP_ICON_SAFE_AREA_TRANSFORM");
+    expect(appScript).toContain("APP_ICON_ACCENT_RING");
+    expect(appScript).toContain(
+      "Failed to remove app icon accent ring from source SVG.",
+    );
+    expect(appScript).toContain("Failed to inset app icon artwork.");
+    expect(appScript).toContain('import sharp from "sharp"');
     expect(appScript).toContain("iconutil");
     expect(appScript).toContain("YTMMenuBarIcon.icns");
     expect(appScript).toContain("createAppIcon(resourcesDirectory)");
