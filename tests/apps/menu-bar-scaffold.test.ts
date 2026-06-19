@@ -1207,9 +1207,13 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("SparkleUpdater.homebrewUninstallCommand");
     expect(aboutSource).toContain("YTM Menu Bar Cannot Uninstall This Build");
     expect(aboutSource).toContain("directUninstallerMissingMessage");
+    expect(aboutSource).toContain("directUninstallFallbackAppPath");
     expect(aboutSource).toContain("writeFallbackDirectUninstaller");
     expect(aboutSource).toContain("fallbackDirectUninstallerScript");
     expect(aboutSource).toContain("directUninstallConfirmationMessage");
+    expect(aboutSource).toContain(
+      "guard hasPackagedUninstaller || fallbackAppPath != nil",
+    );
     expect(aboutSource).toContain(
       "AppMetadata.productionNativeHostManifestPaths",
     );
@@ -1220,6 +1224,7 @@ describe("menu bar connector app scaffold", () => {
       "This install does not include the standalone uninstaller",
     );
     expect(aboutSource).toContain("Uninstall YTM Menu Bar?");
+    expect(aboutSource).toContain("hasPackagedUninstaller");
     expect(aboutSource).toContain("runDirectUninstaller(atPath:");
     expect(aboutSource).toContain("/usr/bin/osascript");
     expect(aboutSource).toContain("with administrator privileges");

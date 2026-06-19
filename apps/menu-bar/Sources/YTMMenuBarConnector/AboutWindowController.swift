@@ -431,22 +431,38 @@ final class AboutWindowController: NSObject {
   }
 
   private func openDirectUninstaller() {
+    let hasPackagedUninstaller = FileManager.default.fileExists(
+      atPath: AppMetadata.directUninstallerPath
+    )
+    let fallbackAppPath = directUninstallFallbackAppPath()
+
+    guard hasPackagedUninstaller || fallbackAppPath != nil else {
+      showAlert(
+        title: "YTM Menu Bar Cannot Uninstall This Build",
+        message: directUninstallerMissingMessage()
+      )
+      return
+    }
+
     let alert = NSAlert()
     alert.messageText = "Uninstall YTM Menu Bar?"
     alert.informativeText =
-      directUninstallConfirmationMessage()
+      directUninstallConfirmationMessage(
+        hasPackagedUninstaller: hasPackagedUninstaller
+      )
     alert.addButton(withTitle: "Uninstall")
     alert.addButton(withTitle: "Cancel")
     guard alert.runModal() == .alertFirstButtonReturn else { return }
 
-    if FileManager.default.fileExists(
-      atPath: AppMetadata.directUninstallerPath
-    ) {
+    if hasPackagedUninstaller {
       runDirectUninstaller(atPath: AppMetadata.directUninstallerPath)
       return
     }
 
-    guard let fallbackPath = writeFallbackDirectUninstaller() else {
+    guard
+      let fallbackAppPath,
+      let fallbackPath = writeFallbackDirectUninstaller(appPath: fallbackAppPath)
+    else {
       showAlert(
         title: "YTM Menu Bar Cannot Uninstall This Build",
         message: directUninstallerMissingMessage()
@@ -492,7 +508,7 @@ final class AboutWindowController: NSObject {
     }
   }
 
-  private func writeFallbackDirectUninstaller() -> String? {
+  private func directUninstallFallbackAppPath() -> String? {
     guard Bundle.main.bundleURL.pathExtension == "app" else {
       return nil
     }
@@ -504,6 +520,10 @@ final class AboutWindowController: NSObject {
       return nil
     }
 
+    return appPath
+  }
+
+  private func writeFallbackDirectUninstaller(appPath: String) -> String? {
     let temporaryPath = URL(fileURLWithPath: NSTemporaryDirectory())
       .appendingPathComponent(
         "ytm-menu-bar-uninstall-\(UUID().uuidString).command"
@@ -593,10 +613,10 @@ final class AboutWindowController: NSObject {
       """
   }
 
-  private func directUninstallConfirmationMessage() -> String {
-    if FileManager.default.fileExists(
-      atPath: AppMetadata.directUninstallerPath
-    ) {
+  private func directUninstallConfirmationMessage(
+    hasPackagedUninstaller: Bool
+  ) -> String {
+    if hasPackagedUninstaller {
       return "This will close YTM Menu Bar and remove the app, native messaging manifests, and direct installer package receipts."
     }
 
