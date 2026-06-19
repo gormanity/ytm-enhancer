@@ -386,6 +386,36 @@ describe("ConnectorHost", () => {
     expect(ytm.focusTab).not.toHaveBeenCalled();
   });
 
+  it("can request uninstall from a connected connector session", async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const host = createConnectorHost({
+      enabled: true,
+      ytm: createMockYtmRuntimeClient(),
+      transports: [{ start: vi.fn(), stop: vi.fn(), send }],
+    });
+    await connect(host);
+
+    await expect(host.requestUninstall(validManifest.id)).resolves.toBe(true);
+    expect(send).toHaveBeenCalledWith("connection-1", {
+      type: "connector.uninstallRequested",
+    });
+  });
+
+  it("does not request uninstall when no connector session matches", async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const host = createConnectorHost({
+      enabled: true,
+      ytm: createMockYtmRuntimeClient(),
+      transports: [{ start: vi.fn(), stop: vi.fn(), send }],
+    });
+    await connect(host);
+
+    await expect(host.requestUninstall("com.example.other")).resolves.toBe(
+      false,
+    );
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("notifies when playback state subscribers become active and inactive", async () => {
     const onPlaybackStateSubscriptionChanged = vi.fn();
     const host = createConnectorHost({

@@ -104,6 +104,10 @@ receipts, and development manifest overrides for the current user. It does not
 remove extension settings; use Disable App in Connected Apps if you want to keep
 YTM Menu Bar from reconnecting.
 
+The Connected Apps popup can ask a connected YTM Menu Bar instance to start this
+uninstall flow. The app still shows native confirmation and owns the direct vs.
+Homebrew uninstall behavior.
+
 Homebrew install:
 
 ```sh

@@ -136,6 +136,21 @@ describe("connector host background gating", () => {
     );
   });
 
+  it("routes menu bar uninstall requests through the connected first-party session", () => {
+    expect(functionBody("requestMenuBarUninstall")).toContain(
+      "connectorHost?.requestUninstall",
+    );
+    expect(functionBody("requestMenuBarUninstall")).toContain(
+      "FIRST_PARTY_MENU_BAR_CONNECTOR_ID",
+    );
+    expect(handlerBody("request-menu-bar-uninstall")).toContain(
+      "await requestMenuBarUninstall()",
+    );
+    expect(handlerBody("request-menu-bar-uninstall")).toContain(
+      "Open YTM Menu Bar before requesting uninstall.",
+    );
+  });
+
   it("restarts connector support when a known connector is re-enabled", () => {
     expect(functionBody("restartConnectorSupport")).toContain(
       "connectorSupportEnabled",

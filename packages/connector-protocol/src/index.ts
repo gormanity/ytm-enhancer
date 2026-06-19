@@ -124,11 +124,16 @@ export interface StateUpdateMessage {
   state: ConnectorPlaybackState;
 }
 
+export interface ConnectorUninstallRequestedMessage {
+  type: "connector.uninstallRequested";
+}
+
 export type ConnectorOutboundMessage =
   | ConnectorReadyMessage
   | ConnectorAckMessage
   | ConnectorErrorMessage
-  | StateUpdateMessage;
+  | StateUpdateMessage
+  | ConnectorUninstallRequestedMessage;
 
 export type ConnectorValidationResult<T> =
   | { ok: true; value: T }

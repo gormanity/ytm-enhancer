@@ -104,6 +104,11 @@ final class AboutWindowController: NSObject {
     window.contentView?.layoutSubtreeIfNeeded()
   }
 
+  func requestUninstall() {
+    NSApp.activate(ignoringOtherApps: true)
+    handleUninstallButton()
+  }
+
   private static func makeWindow() -> NSWindow {
     let window = NSWindow(
       contentRect: NSRect(
@@ -426,35 +431,37 @@ final class AboutWindowController: NSObject {
   }
 
   private func openDirectUninstaller() {
-    guard
-      FileManager.default.fileExists(
-        atPath: AppMetadata.directUninstallerPath
-      )
-    else {
-      showAlert(
-        title: "YTM Menu Bar Uninstaller Was Not Found",
-        message:
-          "Install the latest direct package to add the uninstaller, or remove the app manually from Applications."
-      )
-      return
-    }
-
     let alert = NSAlert()
     alert.messageText = "Uninstall YTM Menu Bar?"
     alert.informativeText =
-      "This will close YTM Menu Bar and remove the app, native messaging manifests, and direct installer package receipts."
+      directUninstallConfirmationMessage()
     alert.addButton(withTitle: "Uninstall")
     alert.addButton(withTitle: "Cancel")
     guard alert.runModal() == .alertFirstButtonReturn else { return }
 
-    runDirectUninstaller()
+    if FileManager.default.fileExists(
+      atPath: AppMetadata.directUninstallerPath
+    ) {
+      runDirectUninstaller(atPath: AppMetadata.directUninstallerPath)
+      return
+    }
+
+    guard let fallbackPath = writeFallbackDirectUninstaller() else {
+      showAlert(
+        title: "YTM Menu Bar Cannot Uninstall This Build",
+        message: directUninstallerMissingMessage()
+      )
+      return
+    }
+
+    runDirectUninstaller(atPath: fallbackPath)
   }
 
-  private func runDirectUninstaller() {
+  private func runDirectUninstaller(atPath uninstallerPath: String) {
     let process = Process()
     let errorPipe = Pipe()
     let script =
-      "do shell script \"SUDO_USER=\(shellQuote(NSUserName())) YTM_MENU_BAR_UNINSTALL_ASSUME_YES=1 \(shellQuote(AppMetadata.directUninstallerPath))\" with administrator privileges"
+      "do shell script \"SUDO_USER=\(shellQuote(NSUserName())) YTM_MENU_BAR_UNINSTALL_ASSUME_YES=1 \(shellQuote(uninstallerPath))\" with administrator privileges"
 
     process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
     process.arguments = ["-e", script]
@@ -483,6 +490,125 @@ final class AboutWindowController: NSObject {
           : "macOS did not allow YTM Menu Bar to start the uninstaller."
       )
     }
+  }
+
+  private func writeFallbackDirectUninstaller() -> String? {
+    guard Bundle.main.bundleURL.pathExtension == "app" else {
+      return nil
+    }
+
+    let appPath = Bundle.main.bundleURL.path
+    guard appPath.hasPrefix("/Applications/")
+      || appPath.hasPrefix("\(NSHomeDirectory())/Applications/")
+    else {
+      return nil
+    }
+
+    let temporaryPath = URL(fileURLWithPath: NSTemporaryDirectory())
+      .appendingPathComponent(
+        "ytm-menu-bar-uninstall-\(UUID().uuidString).command"
+      )
+    do {
+      try fallbackDirectUninstallerScript(appPath: appPath).write(
+        to: temporaryPath,
+        atomically: true,
+        encoding: .utf8
+      )
+      try FileManager.default.setAttributes(
+        [.posixPermissions: 0o755],
+        ofItemAtPath: temporaryPath.path
+      )
+      return temporaryPath.path
+    } catch {
+      logger.log("failed to write fallback uninstaller error=\(error)")
+      return nil
+    }
+  }
+
+  private func fallbackDirectUninstallerScript(appPath: String) -> String {
+    let manifests = AppMetadata.productionNativeHostManifestPaths
+      .map { "\"\($0.replacingOccurrences(of: "\"", with: "\\\""))\"" }
+      .joined(separator: "\n  ")
+
+    return """
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      APP_NAME=\(shellQuote(AppMetadata.appName))
+      APP_PATH=\(shellQuote(appPath))
+      UNINSTALLER_PATH=\(shellQuote(AppMetadata.directUninstallerPath))
+      EXECUTABLE_NAME=\(shellQuote(AppMetadata.executableName))
+      HOST_NAME=\(shellQuote(AppMetadata.nativeHostName))
+
+      PRODUCTION_MANIFEST_PATHS=(
+        \(manifests)
+      )
+
+      remove_path() {
+        local path="$1"
+        if [[ -e "$path" || -L "$path" ]]; then
+          rm -rf "$path"
+        fi
+      }
+
+      forget_receipt() {
+        local receipt="$1"
+        if pkgutil --pkg-info "$receipt" >/dev/null 2>&1; then
+          pkgutil --forget "$receipt" >/dev/null
+        fi
+      }
+
+      user_home_for() {
+        local user="$1"
+        if [[ -z "$user" || "$user" == "root" ]]; then
+          return 1
+        fi
+
+        dscl . -read "/Users/$user" NFSHomeDirectory 2>/dev/null |
+          awk '{print $2}'
+      }
+
+      osascript -e "tell application \\"$APP_NAME\\" to quit" >/dev/null 2>&1 || true
+      pkill -x "$EXECUTABLE_NAME" >/dev/null 2>&1 || true
+
+      remove_path "$APP_PATH"
+
+      for manifest_path in "${PRODUCTION_MANIFEST_PATHS[@]}"; do
+        remove_path "$manifest_path"
+      done
+
+      original_user="${SUDO_USER:-}"
+      original_home="$(user_home_for "$original_user" || true)"
+      if [[ -n "$original_home" ]]; then
+        remove_path "$original_home/Library/Application Support/Google/Chrome/NativeMessagingHosts/$HOST_NAME.json"
+        remove_path "$original_home/Library/Application Support/Chromium/NativeMessagingHosts/$HOST_NAME.json"
+        remove_path "$original_home/Library/Application Support/Microsoft Edge/NativeMessagingHosts/$HOST_NAME.json"
+        remove_path "$original_home/Library/Application Support/Mozilla/NativeMessagingHosts/$HOST_NAME.json"
+      fi
+
+      forget_receipt \(shellQuote(AppMetadata.appPackageReceiptIdentifier))
+      forget_receipt \(shellQuote(AppMetadata.nativeHostsPackageReceiptIdentifier))
+      remove_path "$UNINSTALLER_PATH"
+      remove_path "$0"
+      """
+  }
+
+  private func directUninstallConfirmationMessage() -> String {
+    if FileManager.default.fileExists(
+      atPath: AppMetadata.directUninstallerPath
+    ) {
+      return "This will close YTM Menu Bar and remove the app, native messaging manifests, and direct installer package receipts."
+    }
+
+    return "This install does not include the standalone uninstaller, so YTM Menu Bar will use its built-in uninstall flow. This will close the app and remove native messaging manifests and package receipts."
+  }
+
+  private func directUninstallerMissingMessage() -> String {
+    if Bundle.main.bundleURL.pathExtension != "app" {
+      return "This local build was not installed from a direct package, so it does not include the packaged uninstaller."
+    }
+
+    return "This app is not installed in Applications, so it cannot safely uninstall itself. Remove the app manually from its current location."
   }
 
   private func shellQuote(_ value: String) -> String {

@@ -295,6 +295,14 @@ function disconnectConnector(connectorId: string): void {
   }
 }
 
+async function requestMenuBarUninstall(): Promise<boolean> {
+  return (
+    (await connectorHost?.requestUninstall(
+      FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+    )) ?? false
+  );
+}
+
 function rememberConnector(
   manifest: ConnectorManifest,
   status: ConnectorStatus,
@@ -571,6 +579,17 @@ handler.on("set-connector-enabled", async (message) => {
   }
   await saveKnownConnectors();
   notifyConnectedAppsChanged();
+  return { ok: true };
+});
+
+handler.on("request-menu-bar-uninstall", async () => {
+  const requested = await requestMenuBarUninstall();
+  if (!requested) {
+    return {
+      ok: false,
+      error: "Open YTM Menu Bar before requesting uninstall.",
+    };
+  }
   return { ok: true };
 });
 

@@ -6,6 +6,7 @@ enum ConnectorProtocol {
   static let connectorName = "YTM Menu Bar"
   static let connectorVersion = AppMetadata.version
   static let protocolVersion = "1.0.0"
+  static let uninstallRequestedType = "connector.uninstallRequested"
   static let permissions = [
     "playback:read",
     "playback:control",

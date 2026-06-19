@@ -7,6 +7,7 @@ export interface ConnectedAppsClient {
   getSettings(): Promise<ConnectedAppsSettings>;
   setGlobalEnabled(enabled: boolean): Promise<void>;
   setConnectorEnabled(id: string, enabled: boolean): Promise<void>;
+  requestMenuBarUninstall(): Promise<void>;
   subscribeChanged(listener: () => void): () => void;
 }
 
@@ -32,6 +33,12 @@ export function createConnectedAppsClient(
         type: "set-connector-enabled",
         connectorId: id,
         enabled,
+      });
+    },
+
+    requestMenuBarUninstall() {
+      return runtime.command({
+        type: "request-menu-bar-uninstall",
       });
     },
 

@@ -35,6 +35,9 @@ let updater = SparkleUpdater(logger: logger)
 let menu = MenuBarController()
 let aboutWindow = AboutWindowController()
 let connector = ConnectorApp(connection: connection, menu: menu, logger: logger)
+connector.onRequestUninstall = {
+  aboutWindow.requestUninstall()
+}
 
 updater.onStatusChanged = { status in
   menu.setAboutUpdateAvailable(status.hasUpdateAvailable)

@@ -12,6 +12,7 @@ final class ConnectorApp {
   private var isReady = false
   private var playbackStateRetry: DispatchWorkItem?
   private var playbackStateStaleTimeout: DispatchWorkItem?
+  var onRequestUninstall: (() -> Void)?
 
   init(
     connection: ConnectorConnection,
@@ -101,6 +102,9 @@ final class ConnectorApp {
         clearPlaybackStateStaleTimeout()
       }
       menu.updateConnectionStatus(label)
+    case ConnectorProtocol.uninstallRequestedType:
+      logger.log("connector uninstall requested")
+      onRequestUninstall?()
     default:
       logger.log("received message ignored type=\(message.type)")
       break

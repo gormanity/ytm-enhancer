@@ -64,6 +64,7 @@ export interface ConnectorHost {
   hasPlaybackStateSubscribers(): boolean;
   listSessions(): ConnectorSessionSnapshot[];
   disconnect(connectionId: string): void;
+  requestUninstall(connectorId: string): Promise<boolean>;
 }
 
 export interface ConnectorHostOptions {
@@ -454,6 +455,24 @@ export function createConnectorHost(
     disconnect(connectionId: string) {
       sessions.delete(connectionId);
       notifyPlaybackStateSubscriptionChanged();
+    },
+
+    async requestUninstall(connectorId: string): Promise<boolean> {
+      if (!enabled) return false;
+
+      const matchingSessions = Array.from(sessions.values()).filter(
+        (session) => session.manifest.id === connectorId,
+      );
+      if (matchingSessions.length === 0) return false;
+
+      await Promise.allSettled(
+        matchingSessions.map((session) =>
+          deliver(session.connectionId, {
+            type: "connector.uninstallRequested",
+          }),
+        ),
+      );
+      return true;
     },
   };
 }

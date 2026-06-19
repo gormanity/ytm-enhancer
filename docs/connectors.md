@@ -179,6 +179,11 @@ page may link to install and update instructions, but native app distribution,
 native host manifest installation, signing, notarization, and updates are owned
 by the menu bar app release channel.
 
+Connected Apps may request that a connected app begin its native uninstall flow.
+The browser extension must not run uninstall commands itself. The native app
+owns user confirmation, install-channel-specific behavior, elevated permissions,
+and shutdown.
+
 Remaining work before a public connector release:
 
 1. Publish the `menu-bar-v*` GitHub Release workflow.

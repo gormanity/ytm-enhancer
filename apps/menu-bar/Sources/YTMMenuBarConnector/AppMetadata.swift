@@ -12,6 +12,18 @@ enum AppMetadata {
     "/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector"
   static let directUninstallerPath =
     "/Applications/YTM Menu Bar Uninstaller.command"
+  static let executableName = "YTMMenuBarConnector"
+  static let nativeHostName = "com.gormanity.ytm_enhancer.menu_bar"
+  static let appPackageReceiptIdentifier =
+    "com.gormanity.ytm-enhancer.menu-bar.app"
+  static let nativeHostsPackageReceiptIdentifier =
+    "com.gormanity.ytm-enhancer.menu-bar.native-hosts"
+  static let productionNativeHostManifestPaths = [
+    "/Library/Google/Chrome/NativeMessagingHosts/com.gormanity.ytm_enhancer.menu_bar.json",
+    "/Library/Application Support/Chromium/NativeMessagingHosts/com.gormanity.ytm_enhancer.menu_bar.json",
+    "/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.gormanity.ytm_enhancer.menu_bar.json",
+    "/Library/Application Support/Mozilla/NativeMessagingHosts/com.gormanity.ytm_enhancer.menu_bar.json",
+  ]
 }
 
 enum DistributionChannel: String {

@@ -1200,18 +1200,49 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("Uninstall...");
     expect(aboutSource).toContain("Copy Uninstall Command");
     expect(aboutSource).toContain("handleUninstallButton");
+    expect(aboutSource).toContain("requestUninstall");
     expect(aboutSource).toContain("DistributionChannel.current");
     expect(aboutSource).toContain("openDirectUninstaller");
     expect(aboutSource).toContain("AppMetadata.directUninstallerPath");
     expect(aboutSource).toContain("SparkleUpdater.homebrewUninstallCommand");
-    expect(aboutSource).toContain("YTM Menu Bar Uninstaller Was Not Found");
+    expect(aboutSource).toContain("YTM Menu Bar Cannot Uninstall This Build");
+    expect(aboutSource).toContain("directUninstallerMissingMessage");
+    expect(aboutSource).toContain("writeFallbackDirectUninstaller");
+    expect(aboutSource).toContain("fallbackDirectUninstallerScript");
+    expect(aboutSource).toContain("directUninstallConfirmationMessage");
+    expect(aboutSource).toContain(
+      "AppMetadata.productionNativeHostManifestPaths",
+    );
+    expect(aboutSource).toContain(
+      "This local build was not installed from a direct package",
+    );
+    expect(aboutSource).toContain(
+      "This install does not include the standalone uninstaller",
+    );
     expect(aboutSource).toContain("Uninstall YTM Menu Bar?");
-    expect(aboutSource).toContain("runDirectUninstaller");
+    expect(aboutSource).toContain("runDirectUninstaller(atPath:");
     expect(aboutSource).toContain("/usr/bin/osascript");
     expect(aboutSource).toContain("with administrator privileges");
     expect(aboutSource).toContain("YTM_MENU_BAR_UNINSTALL_ASSUME_YES=1");
     expect(aboutSource).toContain("shellQuote");
     expect(aboutSource).toContain("Uninstaller Did Not Complete");
+  });
+
+  it("can request uninstall through the connector protocol", () => {
+    const protocolSource = read(
+      "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
+    );
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+    const mainSource = read("Sources/YTMMenuBarConnector/main.swift");
+
+    expect(protocolSource).toContain("connector.uninstallRequested");
+    expect(appSource).toContain(
+      "case ConnectorProtocol.uninstallRequestedType:",
+    );
+    expect(appSource).toContain("onRequestUninstall");
+    expect(appSource).toContain("connector uninstall requested");
+    expect(mainSource).toContain("connector.onRequestUninstall");
+    expect(mainSource).toContain("aboutWindow.requestUninstall()");
   });
 
   it("scaffolds Sparkle app updates for direct installs", () => {

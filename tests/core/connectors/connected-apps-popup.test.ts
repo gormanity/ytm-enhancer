@@ -44,6 +44,7 @@ function createClient(
         ),
       };
     }),
+    requestMenuBarUninstall: vi.fn(async () => undefined),
     subscribeChanged: vi.fn(() => () => undefined),
   };
 }
@@ -271,7 +272,7 @@ describe("Connected Apps popup view", () => {
     });
   });
 
-  it("shows inline uninstall instructions for disabled installed menu bar apps", async () => {
+  it("requests native uninstall for disabled installed menu bar apps", async () => {
     const client = createClient(
       createSettings({
         enabled: true,
@@ -311,20 +312,63 @@ describe("Connected Apps popup view", () => {
     );
 
     expect(installLink).toBeNull();
-    expect(uninstallButton.textContent).toContain("Uninstall Instructions");
-    expect(uninstallButton.getAttribute("aria-expanded")).toBe("false");
+    expect(uninstallButton.textContent).toContain("Uninstall App");
     uninstallButton.click();
-    expect(uninstallButton.getAttribute("aria-expanded")).toBe("true");
-    expect(container.textContent).toContain(
-      "Open About YTM Menu Bar and choose Uninstall.",
-    );
-    expect(container.textContent).toContain(
-      "/Applications/YTM Menu Bar Uninstaller.command",
-    );
-    expect(container.textContent).toContain(
-      "brew uninstall --cask ytm-menu-bar",
-    );
+
+    expect(client.requestMenuBarUninstall).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain(
+        "Check YTM Menu Bar to confirm uninstall.",
+      );
+    });
     expect(container.textContent).toContain("Enable App");
+  });
+
+  it("shows a request failure when the menu bar app is not connected", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: { availability: "available" },
+      }),
+    );
+    vi.mocked(client.requestMenuBarUninstall).mockRejectedValueOnce(
+      new Error("Open YTM Menu Bar before requesting uninstall."),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const uninstallButton = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLButtonElement>(
+        '[data-role="connected-app-uninstall-button"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    uninstallButton.click();
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain(
+        "Open YTM Menu Bar before requesting uninstall.",
+      );
+    });
   });
 
   it("does not show connected when the menu bar native host has exited", async () => {
@@ -408,7 +452,7 @@ describe("Connected Apps popup view", () => {
     });
 
     expect(downloadLink.textContent).toContain("Download for macOS");
-    expect(container.textContent).not.toContain("Uninstall Instructions");
+    expect(container.textContent).not.toContain("Uninstall App");
   });
 
   it("shows first-party menu bar install options before it is registered", async () => {
@@ -536,7 +580,7 @@ describe("Connected Apps popup view", () => {
     const card = container.querySelector<HTMLDetailsElement>(
       '[data-app-id="com.gormanity.ytm-enhancer.menu-bar"]',
     );
-    expect(card?.textContent).toContain("Uninstall Instructions");
+    expect(card?.textContent).toContain("Uninstall App");
     expect(card?.textContent).toContain("Disable App");
     expect(
       card?.querySelector<HTMLAnchorElement>(

@@ -53,7 +53,7 @@ interface ConnectedAppCardModel {
   connector?: ConnectedApp;
   installUrl?: string;
   installLabel?: string;
-  showUninstallInstructions?: boolean;
+  showUninstallRequest?: boolean;
 }
 
 function isMenuBarInstalled(
@@ -182,23 +182,38 @@ function createConnectedAppCard(
     card,
     "connected-app-uninstall-button",
   );
-  const uninstallInstructions = queryRole<HTMLElement>(
+  const uninstallStatus = queryRole<HTMLElement>(
     card,
-    "connected-app-uninstall-instructions",
+    "connected-app-uninstall-status",
   );
-  if (
-    uninstallButton &&
-    uninstallInstructions &&
-    app.showUninstallInstructions
-  ) {
+  if (uninstallButton && uninstallStatus && app.showUninstallRequest) {
     uninstallButton.classList.remove("is-hidden");
     uninstallButton.addEventListener("click", () => {
-      const isHidden = uninstallInstructions.classList.toggle("is-hidden");
-      uninstallButton.setAttribute("aria-expanded", String(!isHidden));
+      uninstallButton.disabled = true;
+      uninstallButton.textContent = "Requesting...";
+      uninstallStatus.classList.add("is-hidden");
+      void client
+        .requestMenuBarUninstall()
+        .then(() => {
+          uninstallStatus.textContent =
+            "Check YTM Menu Bar to confirm uninstall.";
+          uninstallStatus.classList.remove("is-hidden");
+        })
+        .catch((error: unknown) => {
+          uninstallStatus.textContent =
+            error instanceof Error
+              ? error.message
+              : "YTM Menu Bar could not be asked to uninstall.";
+          uninstallStatus.classList.remove("is-hidden");
+        })
+        .finally(() => {
+          uninstallButton.disabled = false;
+          uninstallButton.textContent = "Uninstall App";
+        });
     });
   } else {
     uninstallButton?.remove();
-    uninstallInstructions?.remove();
+    uninstallStatus?.remove();
   }
 
   const lifecycleButton = queryRole<HTMLButtonElement>(
@@ -308,7 +323,7 @@ function menuBarGuidance(
 function menuBarAction(
   settings: ConnectedAppsSettings,
   connector: ConnectedApp | undefined,
-): { url?: string; label?: string; showUninstallInstructions?: boolean } {
+): { url?: string; label?: string; showUninstallRequest?: boolean } {
   if (connector?.status === "incompatible") {
     return {
       url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
@@ -328,7 +343,7 @@ function menuBarAction(
 
   if (isMenuBarInstalled(settings.menuBarApp.availability, connector)) {
     return {
-      showUninstallInstructions: true,
+      showUninstallRequest: true,
     };
   }
 
@@ -355,7 +370,7 @@ function createMenuBarCardModel(
     connector,
     installUrl: action.url,
     installLabel: action.label,
-    showUninstallInstructions: action.showUninstallInstructions,
+    showUninstallRequest: action.showUninstallRequest,
   };
 }
 
