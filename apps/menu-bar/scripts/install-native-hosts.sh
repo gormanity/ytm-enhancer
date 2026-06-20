@@ -5,9 +5,15 @@ HOST_NAME="com.gormanity.ytm_enhancer.menu_bar"
 DESCRIPTION="YTM Enhancer Menu Bar Connector"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-DEFAULT_BINARY_PATH="$APP_ROOT/.build/release/YTMMenuBarConnector"
+APP_NAME="YTM Menu Bar"
+LOCAL_APPLICATIONS_DIR="$HOME/Applications"
+LOCAL_APP_PATH="${YTM_ENHANCER_LOCAL_APP_PATH:-$LOCAL_APPLICATIONS_DIR/$APP_NAME.app}"
+LOCAL_APP_BUILD_ROOT="$APP_ROOT/.build/local-apps"
+LOCAL_BUILT_APP_PATH="$LOCAL_APP_BUILD_ROOT/direct/$APP_NAME.app"
+DEFAULT_BINARY_PATH="$LOCAL_APP_PATH/Contents/MacOS/YTMMenuBarConnector"
 BINARY_PATH="${YTM_ENHANCER_NATIVE_HOST_PATH:-$DEFAULT_BINARY_PATH}"
 UNINSTALL_SCRIPT="$APP_ROOT/scripts/uninstall-native-hosts.sh"
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
 CHROMIUM_ORIGINS=(
   "chrome-extension://pggblbpjleekkobiinobaeeefnimgljh/"
@@ -76,11 +82,32 @@ JSON
   echo "Installed $manifest_path"
 }
 
+install_local_app() {
+  YTM_MENU_BAR_LOCAL_BUILD=1 node "$APP_ROOT/scripts/build-release-app.mjs" \
+    --channel=direct \
+    --output="$LOCAL_APP_BUILD_ROOT"
+
+  if [[ ! -d "$LOCAL_BUILT_APP_PATH" ]]; then
+    echo "Built app bundle not found: $LOCAL_BUILT_APP_PATH" >&2
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$LOCAL_APP_PATH")"
+  rm -rf "$LOCAL_APP_PATH"
+  cp -R "$LOCAL_BUILT_APP_PATH" "$LOCAL_APP_PATH"
+
+  if [[ -x "$LSREGISTER" ]]; then
+    "$LSREGISTER" -f "$LOCAL_APP_PATH" >/dev/null 2>&1 || true
+  fi
+
+  echo "Installed $LOCAL_APP_PATH"
+}
+
 cd "$APP_ROOT"
 "$UNINSTALL_SCRIPT"
 
 if [[ -z "${YTM_ENHANCER_NATIVE_HOST_PATH:-}" ]]; then
-  swift build -c release
+  install_local_app
 fi
 
 if [[ ! -x "$BINARY_PATH" ]]; then

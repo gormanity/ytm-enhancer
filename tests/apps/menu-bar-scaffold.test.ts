@@ -1097,8 +1097,16 @@ describe("menu bar connector app scaffold", () => {
     expect(script).toContain("bilcedjabgiedoamakekncokccabdccp");
     expect(script).toContain("gamefnibdabclmkngggcjghpbhjmajkm");
     expect(script).toContain("YTM_ENHANCER_NATIVE_HOST_PATH");
+    expect(script).toContain("YTM_ENHANCER_LOCAL_APP_PATH");
+    expect(script).toContain("YTM_MENU_BAR_LOCAL_BUILD=1");
+    expect(script).toContain("scripts/build-release-app.mjs");
+    expect(script).toContain("$HOME/Applications");
+    expect(script).toContain('APP_NAME="YTM Menu Bar"');
+    expect(script).toContain("$APP_NAME.app");
+    expect(script).toContain("Contents/MacOS/YTMMenuBarConnector");
+    expect(script).toContain("lsregister");
     expect(script).toContain("DEFAULT_BINARY_PATH");
-    expect(script).toContain("swift build -c release");
+    expect(script).not.toContain("swift build -c release");
   });
 
   it("includes a macOS native host uninstaller", () => {
@@ -1109,6 +1117,11 @@ describe("menu bar connector app scaffold", () => {
     expect(script).toContain("Microsoft Edge/NativeMessagingHosts");
     expect(script).toContain("Mozilla/NativeMessagingHosts");
     expect(script).toContain("rm -f");
+    expect(script).toContain("YTM_ENHANCER_LOCAL_APP_PATH");
+    expect(script).toContain("YTM_ENHANCER_KEEP_LOCAL_APP");
+    expect(script).toContain('APP_NAME="YTM Menu Bar"');
+    expect(script).toContain("$APP_NAME.app");
+    expect(script).toContain("rm -rf");
   });
 
   it("packages a direct-install uninstaller for macOS users", () => {

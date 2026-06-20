@@ -54,8 +54,17 @@ version from `Info.plist`.
 apps/menu-bar/scripts/install-native-hosts.sh
 ```
 
-The development installer builds the release executable and writes user-local
-browser native host manifests under the current user's Library folder.
+The development installer builds a local release-style app bundle, copies it to
+`~/Applications/YTM Menu Bar.app`, and writes user-local browser native host
+manifests under the current user's Library folder. The manifests point at:
+
+```text
+~/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector
+```
+
+Installing the local app bundle into `~/Applications` keeps local development
+installs discoverable by Spotlight, Raycast, and other app launchers. Re-run the
+installer after menu bar app changes to refresh the installed local bundle.
 
 Before writing new manifests, it removes any existing manifests for the same
 native host name. This prevents stale executable paths or extension allow-lists
@@ -230,9 +239,9 @@ playback state summaries.
 apps/menu-bar/scripts/uninstall-native-hosts.sh
 ```
 
-This removes the browser native host manifests created by the development
-installer. It does not remove Swift build output. To remove local build
-artifacts too:
+This removes the browser native host manifests and the
+`~/Applications/YTM Menu Bar.app` bundle created by the development installer.
+It does not remove Swift build output. To remove local build artifacts too:
 
 ```sh
 rm -rf apps/menu-bar/.build
