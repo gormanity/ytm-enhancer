@@ -87,6 +87,27 @@ describe("connector host background gating", () => {
     );
   });
 
+  it("rechecks native host availability when Connected Apps settings are opened", () => {
+    expect(backgroundSource).toContain(
+      "MENU_BAR_NATIVE_HOST_RECHECK_COOLDOWN_MS",
+    );
+    expect(backgroundSource).toContain(
+      "shouldRecheckMenuBarNativeHostAvailability",
+    );
+    expect(
+      functionBody("shouldRecheckMenuBarNativeHostAvailability", false),
+    ).toContain('menuBarNativeHostAvailability === "missing"');
+    expect(
+      functionBody("shouldRecheckMenuBarNativeHostAvailability", false),
+    ).toContain("isNativeHostExitError(menuBarNativeHostLastError)");
+    expect(functionBody("recheckMenuBarNativeHostAvailability")).toContain(
+      "await restartConnectorSupport();",
+    );
+    expect(handlerBody("get-connected-apps-settings")).toContain(
+      "await recheckMenuBarNativeHostAvailability();",
+    );
+  });
+
   it("can stop and discard the connector host when the popup disables support", () => {
     expect(backgroundSource).toContain(
       'handler.on("set-connected-apps-enabled"',

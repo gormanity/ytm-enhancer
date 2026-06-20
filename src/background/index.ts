@@ -98,6 +98,7 @@ let knownConnectors = new Map<string, KnownConnector>();
 let menuBarNativeHostAvailability: ConnectedAppAvailability = "unknown";
 let menuBarNativeHostLastError: string | null = null;
 let menuBarNativeHostLastCheckedAt: number | null = null;
+const MENU_BAR_NATIVE_HOST_RECHECK_COOLDOWN_MS = 1000;
 const devBuildSuspendedTabIds = new Set<number>();
 const devBuildConflictState: DevBuildConflictState = {
   suspendedTabIds: devBuildSuspendedTabIds,
@@ -167,6 +168,10 @@ function isMissingNativeHostError(message: string): boolean {
   return /native messaging host.*not found|specified native messaging host not found|no such native application|native host.*not found|host not found|manifest.*not found|error when communicating with the native messaging host/i.test(
     message,
   );
+}
+
+function isNativeHostExitError(message: string | null): boolean {
+  return /native host (has )?exited/i.test(message ?? "");
 }
 
 function recordMenuBarNativeHostAvailable(shouldNotify = true): void {
@@ -259,6 +264,35 @@ async function restartConnectorSupport(): Promise<void> {
 
   disableConnectorSupport();
   await startConnectorSupportIfAvailable();
+}
+
+function shouldRecheckMenuBarNativeHostAvailability(): boolean {
+  if (!connectorSupportEnabled) return false;
+  if (menuBarNativeHostAvailability === "available") return false;
+  if (
+    menuBarNativeHostAvailability === "error" &&
+    isNativeHostExitError(menuBarNativeHostLastError)
+  ) {
+    return false;
+  }
+  if (
+    menuBarNativeHostLastCheckedAt !== null &&
+    Date.now() - menuBarNativeHostLastCheckedAt <
+      MENU_BAR_NATIVE_HOST_RECHECK_COOLDOWN_MS
+  ) {
+    return false;
+  }
+
+  return (
+    menuBarNativeHostAvailability === "unknown" ||
+    menuBarNativeHostAvailability === "missing" ||
+    menuBarNativeHostAvailability === "error"
+  );
+}
+
+async function recheckMenuBarNativeHostAvailability(): Promise<void> {
+  if (!shouldRecheckMenuBarNativeHostAvailability()) return;
+  await restartConnectorSupport();
 }
 
 function connectedConnectorIds(): Set<string> {
@@ -545,6 +579,7 @@ handler.on("get-dev-build-conflict-status", async () => {
 });
 
 handler.on("get-connected-apps-settings", async () => {
+  await recheckMenuBarNativeHostAvailability();
   return { ok: true, data: connectedAppsSettings() };
 });
 
