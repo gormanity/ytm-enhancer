@@ -164,7 +164,7 @@ function setConnectorPlaybackStateStreaming(enabled: boolean): void {
 }
 
 function isMissingNativeHostError(message: string): boolean {
-  return /native messaging host.*not found|specified native messaging host not found|no such native application|native host.*not found|host not found|manifest.*not found/i.test(
+  return /native messaging host.*not found|specified native messaging host not found|no such native application|native host.*not found|host not found|manifest.*not found|error when communicating with the native messaging host/i.test(
     message,
   );
 }

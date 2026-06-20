@@ -453,6 +453,95 @@ describe("Connected Apps popup view", () => {
 
     expect(downloadLink.textContent).toContain("Download for macOS");
     expect(container.textContent).not.toContain("Uninstall App");
+    expect(
+      container.querySelector('[data-role="connected-app-lifecycle-button"]'),
+    ).toBeNull();
+  });
+
+  it("does not show lifecycle actions for stale menu bar connector records", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: { availability: "unknown" },
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const downloadLink = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLAnchorElement>(
+        '[data-role="connected-app-install-link"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+
+    expect(downloadLink.textContent).toContain("Download for macOS");
+    expect(container.textContent).toContain("Not Detected");
+    expect(container.textContent).toContain("not currently detected");
+    expect(container.textContent).not.toContain("Uninstall App");
+    expect(container.textContent).not.toContain("Disable App");
+    expect(container.textContent).not.toContain("Enable App");
+    expect(
+      container.querySelector('[data-role="connected-app-lifecycle-button"]'),
+    ).toBeNull();
+  });
+
+  it("does not offer to re-enable stale disabled menu bar connector records", async () => {
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.menu-bar",
+            name: "YTM Menu Bar",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: false,
+            status: "blocked",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+        menuBarApp: { availability: "unknown" },
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("Not Detected");
+      expect(container.textContent).toContain("Download for macOS");
+      expect(container.textContent).not.toContain("Disabled");
+      expect(container.textContent).not.toContain("Enable App");
+    });
+    expect(
+      container.querySelector('[data-role="connected-app-lifecycle-button"]'),
+    ).toBeNull();
   });
 
   it("shows first-party menu bar install options before it is registered", async () => {
@@ -641,7 +730,7 @@ describe("Connected Apps popup view", () => {
         "YTM Menu Bar or its native host was not detected.",
       );
       expect(container.textContent).toContain("Download for macOS");
-      expect(container.textContent).toContain("Disable App");
+      expect(container.textContent).not.toContain("Disable App");
     });
   });
 

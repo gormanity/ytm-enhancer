@@ -76,6 +76,9 @@ describe("connector host background gating", () => {
     expect(backgroundSource).toContain("menuBarNativeHostAvailability");
     expect(backgroundSource).toContain("recordMenuBarNativeHostError");
     expect(backgroundSource).toContain("isMissingNativeHostError");
+    expect(functionBody("isMissingNativeHostError", false)).toContain(
+      "error when communicating with the native messaging host",
+    );
     expect(functionBody("connectedAppsSettings", false)).toContain(
       "availability: menuBarNativeHostAvailability",
     );

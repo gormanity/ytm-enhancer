@@ -54,16 +54,12 @@ interface ConnectedAppCardModel {
   installUrl?: string;
   installLabel?: string;
   showUninstallRequest?: boolean;
+  showLifecycleControl?: boolean;
 }
 
-function isMenuBarInstalled(
-  availability: ConnectedAppAvailability,
-  connector: ConnectedApp | undefined,
-): boolean {
-  if (availability === "missing") return false;
+function isMenuBarInstalled(availability: ConnectedAppAvailability): boolean {
   if (availability === "available") return true;
-  if (availability === "error") return false;
-  return connector !== undefined;
+  return false;
 }
 
 function isNativeHostExitError(settings: ConnectedAppsSettings): boolean {
@@ -220,7 +216,7 @@ function createConnectedAppCard(
     card,
     "connected-app-lifecycle-button",
   );
-  if (lifecycleButton && app.connector) {
+  if (lifecycleButton && app.connector && app.showLifecycleControl !== false) {
     lifecycleButton.dataset.connectorId = app.connector.id;
     lifecycleButton.textContent = app.connector.enabled
       ? "Disable App"
@@ -257,14 +253,17 @@ function menuBarStatus(
   if (connector?.status === "incompatible") {
     return { status: "incompatible", label: "Update Required" };
   }
+  if (settings.menuBarApp.availability === "missing") {
+    return { status: "blocked", label: "Not Installed" };
+  }
   if (!settings.enabled && connector !== undefined) {
     return { status: "disconnected", label: "Off" };
   }
-  if (connector?.status === "blocked") {
+  if (
+    connector?.status === "blocked" &&
+    settings.menuBarApp.availability === "available"
+  ) {
     return { status: "blocked", label: "Disabled" };
-  }
-  if (settings.menuBarApp.availability === "missing") {
-    return { status: "blocked", label: "Not Installed" };
   }
   if (settings.menuBarApp.availability === "error") {
     if (isNativeHostExitError(settings)) {
@@ -275,11 +274,11 @@ function menuBarStatus(
   if (connector?.status === "connected") {
     return { status: "connected", label: "Connected" };
   }
-  if (connector !== undefined) {
-    return { status: "disconnected", label: "Installed" };
-  }
   if (settings.menuBarApp.availability === "available") {
     return { status: "disconnected", label: "Installed" };
+  }
+  if (connector !== undefined) {
+    return { status: "blocked", label: "Not Detected" };
   }
   return { status: "disconnected", label: "Available" };
 }
@@ -291,17 +290,20 @@ function menuBarGuidance(
   if (connector?.status === "incompatible") {
     return MENU_BAR_UPDATE_GUIDANCE;
   }
+  if (settings.menuBarApp.availability === "missing") {
+    return "YTM Menu Bar or its native host was not detected. Reinstall it from the button below if you want to use it again.";
+  }
   if (!settings.enabled && connector !== undefined) {
     return "Connected Apps is off, so YTM Menu Bar cannot connect.";
   }
   if (!settings.enabled) {
     return "Install YTM Menu Bar, then enable Connected Apps to allow it to connect.";
   }
-  if (connector?.status === "blocked") {
+  if (
+    connector?.status === "blocked" &&
+    settings.menuBarApp.availability === "available"
+  ) {
     return "YTM Menu Bar is disabled. Enable it below when you want it to reconnect.";
-  }
-  if (settings.menuBarApp.availability === "missing") {
-    return "YTM Menu Bar or its native host was not detected. Reinstall it from the button below if you want to use it again.";
   }
   if (settings.menuBarApp.availability === "error") {
     if (isNativeHostExitError(settings)) {
@@ -314,8 +316,11 @@ function menuBarGuidance(
   if (connector?.status === "connected") {
     return "YTM Menu Bar is connected and can control playback through YTM Enhancer.";
   }
+  if (settings.menuBarApp.availability === "available") {
+    return "Open YTM Menu Bar from Applications to connect.";
+  }
   if (connector !== undefined) {
-    return "Open YTM Menu Bar from Applications to connect. If you removed it, reinstall it from the button below.";
+    return "YTM Menu Bar is not currently detected. Download it if you removed it, or open it from Applications if it is installed.";
   }
   return "Add playback info and controls to the macOS menu bar with the first YTM Enhancer connected app.";
 }
@@ -341,7 +346,7 @@ function menuBarAction(
     };
   }
 
-  if (isMenuBarInstalled(settings.menuBarApp.availability, connector)) {
+  if (isMenuBarInstalled(settings.menuBarApp.availability)) {
     return {
       showUninstallRequest: true,
     };
@@ -371,6 +376,7 @@ function createMenuBarCardModel(
     installUrl: action.url,
     installLabel: action.label,
     showUninstallRequest: action.showUninstallRequest,
+    showLifecycleControl: settings.menuBarApp.availability === "available",
   };
 }
 
