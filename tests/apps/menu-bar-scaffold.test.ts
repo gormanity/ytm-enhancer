@@ -1299,6 +1299,12 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("Download and Install");
     expect(aboutSource).toContain("Download and install the update");
     expect(aboutSource).toContain("latest available version");
+    expect(aboutSource).toContain("NSProgressIndicator");
+    expect(aboutSource).toContain("updateProgressIndicator.style = .spinning");
+    expect(aboutSource).toContain("updateProgressIndicator.startAnimation");
+    expect(aboutSource).toContain("updateProgressIndicator.stopAnimation");
+    expect(aboutSource).toContain('updateButton.title = "Check Again"');
+    expect(aboutSource).not.toContain('updateButton.title = "Checking..."');
     expect(aboutSource).not.toContain("through Sparkle");
     expect(aboutSource).not.toContain("No compatible update");
     expect(aboutSource).toContain("root.bottomAnchor.constraint");

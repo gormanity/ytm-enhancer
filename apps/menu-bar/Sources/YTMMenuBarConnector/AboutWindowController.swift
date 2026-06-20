@@ -20,6 +20,7 @@ final class AboutWindowController: NSObject {
   private let updateStatusLabel = NSTextField(wrappingLabelWithString: "")
   private let updateDetailLabel = NSTextField(wrappingLabelWithString: "")
   private let updateButton = NSButton(title: "", target: nil, action: nil)
+  private let updateProgressIndicator = NSProgressIndicator()
 
   private var updateAction: AboutUpdateAction = .none
   private var onShowUpdateInterface: (() -> Void)?
@@ -52,6 +53,8 @@ final class AboutWindowController: NSObject {
   }
 
   func update(status: MenuBarUpdateStatus) {
+    setUpdateChecking(false)
+
     switch status {
     case .homebrew:
       updateStatusLabel.stringValue = "Updates are managed by Homebrew."
@@ -73,12 +76,17 @@ final class AboutWindowController: NSObject {
       updateButton.isEnabled = true
       updateAction = .checkAgain
     case .checking:
-      updateStatusLabel.stringValue = "Checking for updates..."
-      updateDetailLabel.stringValue =
-        "YTM Menu Bar is checking the direct install appcast in the background."
-      updateButton.title = "Checking..."
+      if updateStatusLabel.stringValue.isEmpty {
+        updateStatusLabel.stringValue = "Checking for updates."
+      }
+      if updateDetailLabel.stringValue.isEmpty {
+        updateDetailLabel.stringValue =
+          "YTM Menu Bar is checking for an app update in the background."
+      }
+      updateButton.title = "Check Again"
       updateButton.isEnabled = false
       updateAction = .none
+      setUpdateChecking(true)
     case .upToDate:
       updateStatusLabel.stringValue = "YTM Menu Bar is up to date."
       updateDetailLabel.stringValue =
@@ -102,6 +110,16 @@ final class AboutWindowController: NSObject {
     }
 
     window.contentView?.layoutSubtreeIfNeeded()
+  }
+
+  private func setUpdateChecking(_ isChecking: Bool) {
+    updateProgressIndicator.isHidden = !isChecking
+
+    if isChecking {
+      updateProgressIndicator.startAnimation(nil)
+    } else {
+      updateProgressIndicator.stopAnimation(nil)
+    }
   }
 
   func requestUninstall() {
@@ -245,13 +263,29 @@ final class AboutWindowController: NSObject {
     updateButton.action = #selector(handleUpdateButton)
     updateButton.bezelStyle = .rounded
 
+    updateProgressIndicator.style = .spinning
+    updateProgressIndicator.controlSize = .small
+    updateProgressIndicator.isDisplayedWhenStopped = false
+    updateProgressIndicator.isIndeterminate = true
+    updateProgressIndicator.isHidden = true
+    updateProgressIndicator.translatesAutoresizingMaskIntoConstraints = false
+
+    let updateActionRow = NSStackView()
+    updateActionRow.orientation = .horizontal
+    updateActionRow.alignment = .centerY
+    updateActionRow.spacing = 8
+    updateActionRow.addArrangedSubview(updateButton)
+    updateActionRow.addArrangedSubview(updateProgressIndicator)
+
     stack.addArrangedSubview(titleLabel)
     stack.addArrangedSubview(updateStatusLabel)
     stack.addArrangedSubview(updateDetailLabel)
-    stack.addArrangedSubview(updateButton)
+    stack.addArrangedSubview(updateActionRow)
     panel.addSubview(stack)
 
     NSLayoutConstraint.activate([
+      updateProgressIndicator.widthAnchor.constraint(equalToConstant: 16),
+      updateProgressIndicator.heightAnchor.constraint(equalToConstant: 16),
       stack.topAnchor.constraint(
         equalTo: panel.topAnchor,
         constant: Self.panelInset
