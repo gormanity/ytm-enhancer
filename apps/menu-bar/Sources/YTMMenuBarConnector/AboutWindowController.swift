@@ -21,6 +21,7 @@ final class AboutWindowController: NSObject {
   private let updateDetailLabel = NSTextField(wrappingLabelWithString: "")
   private let updateButton = NSButton(title: "", target: nil, action: nil)
   private let updateProgressIndicator = NSProgressIndicator()
+  private let updateCheckmarkImageView = NSImageView()
 
   private var updateAction: AboutUpdateAction = .none
   private var onShowUpdateInterface: (() -> Void)?
@@ -55,6 +56,7 @@ final class AboutWindowController: NSObject {
 
   func update(status: MenuBarUpdateStatus) {
     setUpdateChecking(false)
+    setUpdateCheckComplete(false)
 
     switch status {
     case .homebrew:
@@ -95,6 +97,7 @@ final class AboutWindowController: NSObject {
       updateButton.title = "Check Again"
       updateButton.isEnabled = true
       updateAction = .checkAgain
+      setUpdateCheckComplete(true)
     case let .updateAvailable(version):
       updateStatusLabel.stringValue = "YTM Menu Bar \(version) is available."
       updateDetailLabel.stringValue =
@@ -117,10 +120,15 @@ final class AboutWindowController: NSObject {
     updateProgressIndicator.isHidden = !isChecking
 
     if isChecking {
+      setUpdateCheckComplete(false)
       updateProgressIndicator.startAnimation(nil)
     } else {
       updateProgressIndicator.stopAnimation(nil)
     }
+  }
+
+  private func setUpdateCheckComplete(_ isComplete: Bool) {
+    updateCheckmarkImageView.isHidden = !isComplete
   }
 
   func requestUninstall() {
@@ -271,12 +279,25 @@ final class AboutWindowController: NSObject {
     updateProgressIndicator.isHidden = true
     updateProgressIndicator.translatesAutoresizingMaskIntoConstraints = false
 
+    updateCheckmarkImageView.image = NSImage(
+      systemSymbolName: "checkmark.circle.fill",
+      accessibilityDescription: "Update check complete"
+    )
+    updateCheckmarkImageView.symbolConfiguration = NSImage.SymbolConfiguration(
+      pointSize: 13,
+      weight: .semibold
+    )
+    updateCheckmarkImageView.contentTintColor = .systemGreen
+    updateCheckmarkImageView.isHidden = true
+    updateCheckmarkImageView.translatesAutoresizingMaskIntoConstraints = false
+
     let updateActionRow = NSStackView()
     updateActionRow.orientation = .horizontal
     updateActionRow.alignment = .centerY
     updateActionRow.spacing = 8
     updateActionRow.addArrangedSubview(updateButton)
     updateActionRow.addArrangedSubview(updateProgressIndicator)
+    updateActionRow.addArrangedSubview(updateCheckmarkImageView)
 
     stack.addArrangedSubview(titleLabel)
     stack.addArrangedSubview(updateStatusLabel)
@@ -287,6 +308,8 @@ final class AboutWindowController: NSObject {
     NSLayoutConstraint.activate([
       updateProgressIndicator.widthAnchor.constraint(equalToConstant: 16),
       updateProgressIndicator.heightAnchor.constraint(equalToConstant: 16),
+      updateCheckmarkImageView.widthAnchor.constraint(equalToConstant: 16),
+      updateCheckmarkImageView.heightAnchor.constraint(equalToConstant: 16),
       stack.topAnchor.constraint(
         equalTo: panel.topAnchor,
         constant: Self.panelInset

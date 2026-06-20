@@ -1307,6 +1307,9 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("updateProgressIndicator.style = .spinning");
     expect(aboutSource).toContain("updateProgressIndicator.startAnimation");
     expect(aboutSource).toContain("updateProgressIndicator.stopAnimation");
+    expect(aboutSource).toContain("updateCheckmarkImageView");
+    expect(aboutSource).toContain("checkmark.circle.fill");
+    expect(aboutSource).toContain("setUpdateCheckComplete(true)");
     expect(aboutSource).toContain('updateButton.title = "Check Again"');
     expect(aboutSource).not.toContain('updateButton.title = "Checking..."');
     expect(aboutSource).not.toContain("through Sparkle");
