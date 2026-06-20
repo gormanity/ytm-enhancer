@@ -42,6 +42,7 @@ vi.mock("@/content/audio-bridge-injector", () => ({
         onFrame: vi.fn(),
         resume: vi.fn(),
         stop: vi.fn(),
+        destroy: vi.fn(),
       };
     }),
 }));
@@ -52,6 +53,7 @@ vi.mock("@/content/quality-bridge-injector", () => ({
     .mockImplementation(function MockQualityBridgeInjector() {
       return {
         getQuality: vi.fn().mockResolvedValue({ current: "auto", options: [] }),
+        destroy: vi.fn(),
         inject: vi.fn().mockResolvedValue(undefined),
         setQuality: vi.fn(),
       };
@@ -63,6 +65,7 @@ vi.mock("@/content/auto-play", () => ({
     .fn()
     .mockImplementation(function MockAutoPlayController() {
       return {
+        destroy: vi.fn(),
         init: vi.fn(),
       };
     }),
@@ -73,6 +76,7 @@ vi.mock("@/content/dislike-observer", () => ({
     return {
       reobserve: vi.fn(),
       start: vi.fn(),
+      stop: vi.fn(),
     };
   }),
 }));
@@ -81,8 +85,20 @@ vi.mock("@/content/track-observer", () => ({
   TrackObserver: vi.fn().mockImplementation(function MockTrackObserver() {
     return {
       start: vi.fn(),
+      stop: vi.fn(),
     };
   }),
+}));
+
+vi.mock("@/content/dev-build-coordinator", () => ({
+  createDevBuildRuntimeCoordinator: vi.fn(
+    (options: { onResume: () => void; onSuspend: () => void }) => ({
+      start: () => {
+        options.onResume();
+        return options.onSuspend;
+      },
+    }),
+  ),
 }));
 
 vi.mock("@/modules/audio-visualizer/overlay-manager", () => ({
@@ -111,6 +127,7 @@ vi.mock("@/modules/mini-player/controller", () => ({
     .fn()
     .mockImplementation(function MockMiniPlayerController() {
       return {
+        destroy: vi.fn(),
         init: vi.fn().mockResolvedValue(undefined),
       };
     }),
@@ -118,19 +135,26 @@ vi.mock("@/modules/mini-player/controller", () => ({
 
 describe("content playback action handler", () => {
   let listener: RuntimeListener;
+  let runtimeListeners: RuntimeListener[];
 
   beforeEach(async () => {
     vi.resetModules();
     executeActionMock.mockClear();
     seekToMock.mockClear();
+    runtimeListeners = [];
 
     vi.stubGlobal("chrome", {
       runtime: {
         onMessage: {
           addListener: vi.fn((registered: RuntimeListener) => {
+            runtimeListeners.push(registered);
             listener = registered;
           }),
-          removeListener: vi.fn(),
+          removeListener: vi.fn((registered: RuntimeListener) => {
+            runtimeListeners = runtimeListeners.filter(
+              (candidate) => candidate !== registered,
+            );
+          }),
         },
         sendMessage: vi.fn(
           (
@@ -147,6 +171,11 @@ describe("content playback action handler", () => {
   });
 
   afterEach(() => {
+    (
+      globalThis as typeof globalThis & {
+        __ytmEnhancerContentRuntime?: { stop: () => void };
+      }
+    ).__ytmEnhancerContentRuntime?.stop();
     vi.unstubAllGlobals();
   });
 
@@ -163,6 +192,24 @@ describe("content playback action handler", () => {
     });
   }
 
+  function broadcastPlaybackAction(message: {
+    action: string;
+    time?: number;
+  }): Promise<MessageResponse[]> {
+    return Promise.all(
+      runtimeListeners.map(
+        (runtimeListener) =>
+          new Promise<MessageResponse>((resolve) => {
+            runtimeListener(
+              { type: "playback-action", ...message },
+              {} as chrome.runtime.MessageSender,
+              resolve,
+            );
+          }),
+      ),
+    );
+  }
+
   it("seeks directly when playback action includes a seek time", async () => {
     const response = await sendPlaybackAction({ action: "seekTo", time: 87.5 });
 
@@ -176,5 +223,20 @@ describe("content playback action handler", () => {
 
     expect(response).toEqual({ ok: false, error: "Invalid seek time" });
     expect(seekToMock).not.toHaveBeenCalled();
+  });
+
+  it("stops the previous content runtime when content is reinjected", async () => {
+    expect(runtimeListeners).toHaveLength(1);
+
+    vi.resetModules();
+    await import("@/content/index");
+
+    expect(runtimeListeners).toHaveLength(1);
+
+    const responses = await broadcastPlaybackAction({ action: "next" });
+
+    expect(responses).toEqual([{ ok: true }]);
+    expect(executeActionMock).toHaveBeenCalledTimes(1);
+    expect(executeActionMock).toHaveBeenCalledWith("next");
   });
 });

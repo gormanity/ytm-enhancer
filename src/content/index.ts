@@ -24,6 +24,15 @@ import { TrackObserver } from "./track-observer";
 
 const adapter = new YTMAdapter();
 const handler = createMessageHandler();
+const CONTENT_RUNTIME_GLOBAL_KEY = "__ytmEnhancerContentRuntime";
+
+interface ContentRuntimeHandle {
+  stop: () => void;
+}
+
+const contentRuntimeGlobal = globalThis as typeof globalThis & {
+  [CONTENT_RUNTIME_GLOBAL_KEY]?: ContentRuntimeHandle;
+};
 
 handler.on("playback-action", async (message) => {
   if (message.action === "seekTo") {
@@ -398,6 +407,7 @@ let miniPlayerController: MiniPlayerController | null = null;
 let autoPlayController: AutoPlayController | null = null;
 let tooltipDismissalCleanup: (() => void) | null = null;
 let devBuildSuspensionReportTimer: ReturnType<typeof setInterval> | null = null;
+let stopDevBuildCoordinator: (() => void) | null = null;
 
 function queryInitialRuntimeState(): void {
   safeSendMessage<{ ok: boolean; data?: boolean }>(
@@ -558,7 +568,30 @@ function stopDevBuildSuspensionReporting(): void {
   reportDevBuildSuspension(false);
 }
 
-createDevBuildRuntimeCoordinator({
+function stopExistingContentRuntime(): void {
+  contentRuntimeGlobal[CONTENT_RUNTIME_GLOBAL_KEY]?.stop();
+}
+
+function registerContentRuntimeHandle(): void {
+  const handle: ContentRuntimeHandle = {
+    stop: () => {
+      stopDevBuildCoordinator?.();
+      stopDevBuildCoordinator = null;
+      stopDevBuildSuspensionReporting();
+      stopContentRuntime();
+      if (contentRuntimeGlobal[CONTENT_RUNTIME_GLOBAL_KEY] === handle) {
+        delete contentRuntimeGlobal[CONTENT_RUNTIME_GLOBAL_KEY];
+      }
+    },
+  };
+
+  contentRuntimeGlobal[CONTENT_RUNTIME_GLOBAL_KEY] = handle;
+}
+
+stopExistingContentRuntime();
+registerContentRuntimeHandle();
+
+stopDevBuildCoordinator = createDevBuildRuntimeCoordinator({
   isDevBuild: __DEV__,
   onResume: () => {
     stopDevBuildSuspensionReporting();
