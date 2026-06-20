@@ -27,6 +27,10 @@
   <true/>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>YTMMenuBarDisplayVersion</key>
+  <string>{{DISPLAY_VERSION}}</string>
+  <key>YTMMenuBarBaseVersion</key>
+  <string>{{BASE_VERSION}}</string>
   <key>SUEnableAutomaticChecks</key>
   <{{SPARKLE_AUTOMATIC_CHECKS}}/>
   <key>SUAllowsAutomaticUpdates</key>

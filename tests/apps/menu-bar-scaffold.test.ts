@@ -1133,6 +1133,9 @@ describe("menu bar connector app scaffold", () => {
   });
 
   it("defines release metadata for direct and Homebrew channels", () => {
+    const metadataSource = read(
+      "Sources/YTMMenuBarConnector/AppMetadata.swift",
+    );
     const metadata = readJson<{
       appName: string;
       bundleIdentifier: string;
@@ -1153,6 +1156,10 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(metadata.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(metadata.buildNumber).toMatch(/^\d+$/);
+    expect(metadataSource).toContain(`baseVersion = "${metadata.version}"`);
+    expect(metadataSource).toContain(
+      `baseBuildNumber = "${metadata.buildNumber}"`,
+    );
     const [major, minor, patch] = metadata.version
       .split(".")
       .map((part) => Number(part));
@@ -1168,6 +1175,35 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(metadata.channels.direct.sparkleEnabled).toBe(true);
     expect(metadata.channels.homebrew.sparkleEnabled).toBe(false);
+  });
+
+  it("reports timestamped versions for local menu bar builds", () => {
+    const metadataSource = read(
+      "Sources/YTMMenuBarConnector/AppMetadata.swift",
+    );
+    const aboutSource = read(
+      "Sources/YTMMenuBarConnector/AboutWindowController.swift",
+    );
+    const connectorSource = read(
+      "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
+    );
+
+    expect(metadataSource).toContain("static let baseVersion");
+    expect(metadataSource).toContain("static let baseBuildNumber");
+    expect(metadataSource).toContain("Bundle.main.bundleURL.pathExtension");
+    expect(metadataSource).toContain('"app"');
+    expect(metadataSource).toContain("YTMMenuBarDisplayVersion");
+    expect(metadataSource).toContain("CFBundleShortVersionString");
+    expect(metadataSource).toContain("CFBundleVersion");
+    expect(metadataSource).toContain('"yyyy.MM.dd.HHmm"');
+    expect(metadataSource).toContain('"yyyyMMddHHmm"');
+    expect(metadataSource).toContain("Bundle.main.executableURL");
+    expect(metadataSource).toContain("attributesOfItem");
+    expect(metadataSource).toContain("(base v\\(baseVersion))");
+    expect(aboutSource).toContain("AppMetadata.versionText");
+    expect(connectorSource).toContain(
+      "static let connectorVersion = AppMetadata.version",
+    );
   });
 
   it("links to uninstall actions from the About window", () => {
@@ -1319,6 +1355,8 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).not.toContain('box.title = "Updates"');
     expect(plistTemplate).toContain("SUFeedURL");
     expect(plistTemplate).toContain("SUPublicEDKey");
+    expect(plistTemplate).toContain("YTMMenuBarDisplayVersion");
+    expect(plistTemplate).toContain("YTMMenuBarBaseVersion");
     expect(plistTemplate).toContain("LSUIElement");
   });
 
@@ -1537,6 +1575,8 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain("direct");
     expect(appScript).toContain("homebrew");
     expect(appScript).toContain("Info.plist.template");
+    expect(appScript).toContain("BASE_VERSION: metadata.baseVersion");
+    expect(appScript).toContain("DISPLAY_VERSION: metadata.displayVersion");
     expect(appScript).toContain("Sparkle.framework");
     expect(appScript).toContain("verbatimSymlinks: true");
     expect(appScript).toContain(
@@ -1572,11 +1612,20 @@ describe("menu bar connector app scaffold", () => {
     expect(appcastScript).toContain("writeDefaultReleaseNotes");
     expect(appcastScript).toContain("writeReleaseIndex");
     expect(appcastScript).toContain("release-notes/${metadata.version}.html");
-    expect(packageJson.scripts["menu-bar:update-test:sparkle"]).toBe(
-      "node apps/menu-bar/scripts/prepare-sparkle-update-test.mjs",
+    expect(packageJson.scripts["menu-bar:build:app"]).toBe(
+      "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/build-release-app.mjs",
+    );
+    expect(packageJson.scripts["menu-bar:package:direct"]).toBe(
+      "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/package-release.mjs --channel=direct",
+    );
+    expect(packageJson.scripts["menu-bar:package:homebrew"]).toBe(
+      "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/package-release.mjs --channel=homebrew",
     );
     expect(packageJson.scripts["menu-bar:update-test:homebrew"]).toBe(
       "node apps/menu-bar/scripts/prepare-homebrew-update-test.mjs",
+    );
+    expect(packageJson.scripts["menu-bar:update-test:sparkle"]).toBe(
+      "node apps/menu-bar/scripts/prepare-sparkle-update-test.mjs",
     );
     expect(packageJson.scripts["menu-bar:notarize"]).toBe(
       "node apps/menu-bar/scripts/notarize-release-artifact.mjs",
@@ -1597,6 +1646,11 @@ describe("menu bar connector app scaffold", () => {
     expect(metadataScript).toContain("YTM_MENU_BAR_VERSION");
     expect(metadataScript).toContain("YTM_MENU_BAR_BUILD_NUMBER");
     expect(metadataScript).toContain("YTM_MENU_BAR_APPCAST_URL");
+    expect(metadataScript).toContain("YTM_MENU_BAR_LOCAL_BUILD");
+    expect(metadataScript).toContain("function localBuildVersion");
+    expect(metadataScript).toContain("function localBuildNumber");
+    expect(metadataScript).toContain("displayVersion");
+    expect(metadataScript).toContain("baseVersion");
     expect(appScript).toContain("readReleaseMetadata");
     expect(packageScript).toContain("readReleaseMetadata");
     expect(caskScript).toContain("readReleaseMetadata");

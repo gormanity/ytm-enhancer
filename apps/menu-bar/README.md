@@ -38,6 +38,16 @@ The development executable is written to:
 apps/menu-bar/.build/release/YTMMenuBarConnector
 ```
 
+Bare local executable builds report a timestamped app version derived from the
+executable modification time, with the current release base included, such as:
+
+```text
+2026.06.20.1405 (base v0.1.3)
+```
+
+Packaged direct and Homebrew builds continue to report their semantic bundle
+version from `Info.plist`.
+
 ## Development Native Host Manifests
 
 ```sh

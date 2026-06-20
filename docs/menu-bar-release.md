@@ -268,7 +268,12 @@ Homebrew CI:
 ## Release Steps
 
 1. Update `apps/menu-bar/release/metadata.json`.
-2. Update `apps/menu-bar/Sources/YTMMenuBarConnector/AppMetadata.swift`.
+2. Update `baseVersion` and `baseBuildNumber` in
+   `apps/menu-bar/Sources/YTMMenuBarConnector/AppMetadata.swift`.
+   - Packaged releases read the app version from the generated bundle
+     `Info.plist`.
+   - Bare local executable builds report a timestamped version with the base
+     release included, for example `2026.06.20.1405 (base v0.1.3)`.
 3. Run targeted tests:
 
 ```sh

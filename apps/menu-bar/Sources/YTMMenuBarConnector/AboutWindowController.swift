@@ -713,11 +713,6 @@ final class AboutWindowController: NSObject {
   }
 
   private static var versionText: String {
-    let info = Bundle.main.infoDictionary
-    let version = info?["CFBundleShortVersionString"] as? String
-      ?? AppMetadata.version
-    let build = info?["CFBundleVersion"] as? String
-      ?? AppMetadata.buildNumber
-    return "Version \(version) (Build \(build))"
+    AppMetadata.versionText
   }
 }

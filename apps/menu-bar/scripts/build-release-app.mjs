@@ -291,8 +291,10 @@ export async function buildReleaseApp({
     {
       APP_NAME: metadata.appName,
       APPCAST_URL: metadata.appcastUrl,
+      BASE_VERSION: metadata.baseVersion,
       BUILD_NUMBER: metadata.buildNumber,
       BUNDLE_IDENTIFIER: metadata.bundleIdentifier,
+      DISPLAY_VERSION: metadata.displayVersion,
       MINIMUM_MACOS_VERSION: metadata.minimumMacOSVersion,
       SPARKLE_ALLOWS_AUTOMATIC_UPDATES: "false",
       SPARKLE_AUTOMATIC_CHECKS: "false",
