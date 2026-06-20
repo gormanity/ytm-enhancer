@@ -1628,6 +1628,12 @@ describe("menu bar connector app scaffold", () => {
     expect(homebrewHarness).toContain("packageRelease");
     expect(homebrewHarness).toContain("generateHomebrewCask");
     expect(homebrewHarness).toContain("pathToFileURL");
+    expect(homebrewHarness).toContain(
+      "const oldPackage = await withReleaseMetadata",
+    );
+    expect(homebrewHarness).toContain(
+      "const newPackage = await withReleaseMetadata",
+    );
     expect(homebrewHarness).toContain("HOMEBREW_NO_REQUIRE_TAP_TRUST=1");
     expect(homebrewHarness).toContain("brew tap");
     expect(homebrewHarness).toContain("brew upgrade --cask ytm-menu-bar");

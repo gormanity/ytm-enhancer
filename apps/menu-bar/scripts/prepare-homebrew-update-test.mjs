@@ -95,7 +95,7 @@ rmSync(outputRoot, { recursive: true, force: true });
 mkdirSync(dirname(caskPath), { recursive: true });
 mkdirSync(dirname(nextCaskPath), { recursive: true });
 
-const oldPackage = withReleaseMetadata(
+const oldPackage = await withReleaseMetadata(
   { buildNumber: oldBuild, version: oldVersion },
   () =>
     packageRelease({
@@ -122,7 +122,7 @@ git(tapRoot, [
 git(tapRoot, ["add", "Casks/ytm-menu-bar.rb"]);
 git(tapRoot, ["commit", "-m", `Add ytm-menu-bar ${oldVersion}`]);
 
-const newPackage = withReleaseMetadata(
+const newPackage = await withReleaseMetadata(
   { buildNumber: newBuild, version: newVersion },
   () =>
     packageRelease({
