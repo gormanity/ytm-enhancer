@@ -1423,8 +1423,17 @@ describe("menu bar connector app scaffold", () => {
     const packageJson = JSON.parse(
       readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
     ) as { version: string };
+    const menuBarMetadata = readJson<{ version: string }>(
+      "release/metadata.json",
+    );
+    const menuBarVersion =
+      process.env.YTM_MENU_BAR_VERSION ?? menuBarMetadata.version;
+    const menuBarTag = `menu-bar-v${menuBarVersion}`;
     const outputRoot = mkdtempSync(join(tmpdir(), "ytm-release-index-"));
-    const archivePath = resolve(outputRoot, "YTM-Menu-Bar-0.1.2.pkg");
+    const archivePath = resolve(
+      outputRoot,
+      `YTM-Menu-Bar-${menuBarVersion}.pkg`,
+    );
     const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
 
     writeFileSync(archivePath, "release archive");
@@ -1462,8 +1471,8 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.extension.releaseUrl).toContain(
       `/releases/tag/v${packageJson.version}`,
     );
-    expect(releaseIndex.products.menuBar.latestVersion).toBe("0.1.2");
-    expect(releaseIndex.products.menuBar.tag).toBe("menu-bar-v0.1.2");
+    expect(releaseIndex.products.menuBar.latestVersion).toBe(menuBarVersion);
+    expect(releaseIndex.products.menuBar.tag).toBe(menuBarTag);
     expect(releaseIndex.products.menuBar.installPage).toBe(
       "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
     );
@@ -1471,13 +1480,13 @@ describe("menu bar connector app scaffold", () => {
       "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
     );
     expect(releaseIndex.products.menuBar.channels.direct.packageUrl).toContain(
-      "/releases/download/menu-bar-v0.1.2/YTM-Menu-Bar-0.1.2.pkg",
+      `/releases/download/${menuBarTag}/YTM-Menu-Bar-${menuBarVersion}.pkg`,
     );
     expect(releaseIndex.products.menuBar.channels.direct.updateFeed).toBe(
       releaseIndex.products.menuBar.appcast,
     );
     expect(appcast).toContain(
-      "/releases/download/menu-bar-v0.1.2/YTM-Menu-Bar-0.1.2.pkg",
+      `/releases/download/${menuBarTag}/YTM-Menu-Bar-${menuBarVersion}.pkg`,
     );
     expect(appcast).toContain('type="application/octet-stream"');
     expect(releaseIndex.products.menuBar.channels.homebrew.installCommand).toBe(
