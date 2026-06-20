@@ -4,6 +4,7 @@ import Foundation
 final class ConnectorApp {
   private static let playbackStateRetryDelaySeconds: TimeInterval = 2
   private static let playbackStateStaleTimeoutSeconds: TimeInterval = 8
+  private static let staleProgressToleranceSeconds: Double = 0.25
 
   private let connection: ConnectorConnection
   private let menu: MenuBarController
@@ -12,6 +13,8 @@ final class ConnectorApp {
   private var isReady = false
   private var playbackStateRetry: DispatchWorkItem?
   private var playbackStateStaleTimeout: DispatchWorkItem?
+  private var lastAcceptedPlaybackState: PlaybackState?
+  private var isPlaybackStateStale = false
   var onRequestUninstall: (() -> Void)?
 
   init(
@@ -41,6 +44,8 @@ final class ConnectorApp {
       onDisconnect: { [weak self] in
         self?.logger.log("connector disconnected")
         self?.isReady = false
+        self?.isPlaybackStateStale = false
+        self?.lastAcceptedPlaybackState = nil
         self?.clearPlaybackStateRetry()
         self?.clearPlaybackStateStaleTimeout()
         self?.menu.updateConnectionStatus("Disconnected")
@@ -75,11 +80,7 @@ final class ConnectorApp {
       requestPlaybackState()
     case "playback.state":
       if let state = message.state {
-        clearPlaybackStateRetry()
-        clearPlaybackStateStaleTimeout()
-        logger.log(playbackStateSummary(state))
-        menu.updatePlayback(state)
-        schedulePlaybackStateStaleTimeout()
+        handlePlaybackState(state)
       } else {
         logger.log("playback state message missing state payload")
       }
@@ -98,6 +99,8 @@ final class ConnectorApp {
       }
       if isConnectorAvailabilityError(message.code) {
         isReady = false
+        isPlaybackStateStale = false
+        lastAcceptedPlaybackState = nil
         clearPlaybackStateRetry()
         clearPlaybackStateStaleTimeout()
       }
@@ -108,6 +111,27 @@ final class ConnectorApp {
     default:
       logger.log("received message ignored type=\(message.type)")
       break
+    }
+  }
+
+  private func handlePlaybackState(_ state: PlaybackState) {
+    clearPlaybackStateRetry()
+    clearPlaybackStateStaleTimeout()
+    logger.log(playbackStateSummary(state))
+
+    if shouldKeepStalePlaybackState(state) {
+      logger.log("playback state still stale; ignoring non-advancing playing poll")
+      menu.setStalePlaybackState()
+      schedulePlaybackStateStaleTimeout()
+      return
+    }
+
+    isPlaybackStateStale = false
+    lastAcceptedPlaybackState = state
+    menu.updatePlayback(state)
+
+    if state.isPlaying {
+      schedulePlaybackStateStaleTimeout()
     }
   }
 
@@ -231,6 +255,7 @@ final class ConnectorApp {
   }
 
   private func markPlaybackStateStale() {
+    isPlaybackStateStale = true
     logger.log("playback state stale; marking controls as reconnecting")
     menu.setStalePlaybackState()
     requestPlaybackState()
@@ -238,6 +263,8 @@ final class ConnectorApp {
 
   private func restartHandshake(reason: String) {
     isReady = false
+    isPlaybackStateStale = false
+    lastAcceptedPlaybackState = nil
     clearPlaybackStateRetry()
     clearPlaybackStateStaleTimeout()
     logger.log("connector handshake restarting reason=\(reason)")
@@ -262,6 +289,31 @@ final class ConnectorApp {
     default:
       return false
     }
+  }
+
+  private func shouldKeepStalePlaybackState(_ state: PlaybackState) -> Bool {
+    guard
+      isPlaybackStateStale,
+      state.isPlaying,
+      state.duration > 0,
+      let previous = lastAcceptedPlaybackState,
+      samePlaybackItem(previous, state)
+    else {
+      return false
+    }
+
+    return abs(state.progress - previous.progress) <= Self.staleProgressToleranceSeconds
+  }
+
+  private func samePlaybackItem(_ lhs: PlaybackState, _ rhs: PlaybackState) -> Bool {
+    normalizedPlaybackValue(lhs.title) == normalizedPlaybackValue(rhs.title)
+      && normalizedPlaybackValue(lhs.artist) == normalizedPlaybackValue(rhs.artist)
+      && normalizedPlaybackValue(lhs.album) == normalizedPlaybackValue(rhs.album)
+      && abs(lhs.duration - rhs.duration) <= Self.staleProgressToleranceSeconds
+  }
+
+  private func normalizedPlaybackValue(_ value: String?) -> String {
+    value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
   }
 
   private func userFacingStatus(code: String?, message: String?) -> String {

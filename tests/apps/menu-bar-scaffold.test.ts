@@ -133,8 +133,14 @@ describe("menu bar connector app scaffold", () => {
     const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
 
     expect(appSource).toContain("playbackStateStaleTimeoutSeconds");
+    expect(appSource).toContain("staleProgressToleranceSeconds");
+    expect(appSource).toContain("lastAcceptedPlaybackState");
+    expect(appSource).toContain("isPlaybackStateStale");
     expect(appSource).toContain("schedulePlaybackStateStaleTimeout");
     expect(appSource).toContain("markPlaybackStateStale");
+    expect(appSource).toContain("shouldKeepStalePlaybackState");
+    expect(appSource).toContain("samePlaybackItem");
+    expect(appSource).toContain("playback state still stale");
     expect(appSource).toContain("clearPlaybackStateStaleTimeout");
     expect(viewSource).toContain("setStalePlaybackState");
     expect(viewSource).toContain('"Reconnecting..."');
