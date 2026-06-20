@@ -1223,10 +1223,15 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(updaterSource).toContain("homebrewUninstallCommand");
     expect(updaterSource).toContain("brew uninstall --cask ytm-menu-bar");
-    expect(aboutSource).toContain("makeUninstallRow");
-    expect(aboutSource).toContain("companion app for YTM Enhancer");
-    expect(aboutSource).toContain("makeStoreLinkSection");
-    expect(aboutSource).toContain("Get YTM Enhancer");
+    expect(aboutSource).toContain("makeExtensionSection");
+    expect(aboutSource).toContain("makeFooterActions");
+    expect(aboutSource).toContain("Browser Extension");
+    expect(aboutSource).toContain(
+      "Menu bar playback controls for YouTube Music through the YTM Enhancer browser extension.",
+    );
+    expect(aboutSource).toContain(
+      "Install YTM Enhancer and enable Connected Apps",
+    );
     expect(aboutSource).toContain("openChromeStore");
     expect(aboutSource).toContain("openEdgeStore");
     expect(aboutSource).toContain("openFirefoxStore");
@@ -1239,9 +1244,11 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain(
       "https://addons.mozilla.org/en-US/firefox/addon/ytm-enhancer/",
     );
-    expect(aboutSource).toContain("Need to remove the app?");
     expect(aboutSource).toContain("Uninstall...");
-    expect(aboutSource).toContain("Copy Uninstall Command");
+    expect(aboutSource).toContain("Copy Brew Uninstall");
+    expect(aboutSource).toContain("makePanel");
+    expect(aboutSource).toContain("makePanelStack");
+    expect(aboutSource).toContain("constrainPanelStack");
     expect(aboutSource).toContain("handleUninstallButton");
     expect(aboutSource).toContain("requestUninstall");
     expect(aboutSource).toContain("DistributionChannel.current");
@@ -1334,7 +1341,7 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("Updates are managed by Homebrew");
     expect(aboutSource).toContain("Use Homebrew to update this install.");
     expect(aboutSource).not.toContain("button below copies");
-    expect(aboutSource).toContain("Connected Apps enabled");
+    expect(aboutSource).toContain("enable Connected Apps");
     expect(aboutSource).toContain("github.com/gormanity/ytm-enhancer");
     expect(aboutSource).toContain("Download and Install");
     expect(aboutSource).toContain("Download and install the update");

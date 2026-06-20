@@ -10,7 +10,7 @@ private enum AboutUpdateAction {
 
 final class AboutWindowController: NSObject {
   private static let windowWidth: CGFloat = 420
-  private static let windowHeight: CGFloat = 590
+  private static let windowHeight: CGFloat = 500
   private static let contentInset: CGFloat = 22
   private static let contentWidth = windowWidth - (contentInset * 2)
   private static let panelInset: CGFloat = 14
@@ -160,30 +160,24 @@ final class AboutWindowController: NSObject {
     let root = NSStackView()
     root.orientation = .vertical
     root.alignment = .leading
-    root.spacing = 16
+    root.spacing = 14
     root.translatesAutoresizingMaskIntoConstraints = false
 
     let header = makeHeader()
-    let connectorInfo = makeBodyLabel(
-      "YTM Menu Bar is a companion app for YTM Enhancer, a browser extension that gives YouTube Music richer playback controls and connected-app support."
+    let summary = makeBodyLabel(
+      "Menu bar playback controls for YouTube Music through the YTM Enhancer browser extension."
     )
-    let dependencyInfo = makeBodyLabel(
-      "Install YTM Enhancer in your browser with Connected Apps enabled before using the menu bar app. The app does not read YouTube Music pages directly."
-    )
-    let storeLinks = makeStoreLinkSection()
+    let extensionSection = makeExtensionSection()
     let updateSection = makeUpdateSection()
     let separator = makeSeparator()
-    let links = makeLinkRow()
-    let uninstallRow = makeUninstallRow()
+    let footerActions = makeFooterActions()
 
     root.addArrangedSubview(header)
-    root.addArrangedSubview(separator)
-    root.addArrangedSubview(connectorInfo)
-    root.addArrangedSubview(dependencyInfo)
-    root.addArrangedSubview(storeLinks)
+    root.addArrangedSubview(summary)
+    root.addArrangedSubview(extensionSection)
     root.addArrangedSubview(updateSection)
-    root.addArrangedSubview(links)
-    root.addArrangedSubview(uninstallRow)
+    root.addArrangedSubview(separator)
+    root.addArrangedSubview(footerActions)
 
     contentView.addSubview(root)
     window.contentView = contentView
@@ -205,7 +199,7 @@ final class AboutWindowController: NSObject {
         constant: -Self.contentInset
       ),
       separator.widthAnchor.constraint(equalToConstant: Self.contentWidth),
-      storeLinks.widthAnchor.constraint(equalToConstant: Self.contentWidth),
+      extensionSection.widthAnchor.constraint(equalToConstant: Self.contentWidth),
       updateSection.widthAnchor.constraint(equalToConstant: Self.contentWidth),
     ])
   }
@@ -244,18 +238,8 @@ final class AboutWindowController: NSObject {
   }
 
   private func makeUpdateSection() -> NSView {
-    let panel = NSView()
-    panel.wantsLayer = true
-    panel.layer?.cornerRadius = 8
-    panel.layer?.borderWidth = 1
-    panel.layer?.borderColor = NSColor.separatorColor.cgColor
-    panel.translatesAutoresizingMaskIntoConstraints = false
-
-    let stack = NSStackView()
-    stack.orientation = .vertical
-    stack.alignment = .leading
-    stack.spacing = 8
-    stack.translatesAutoresizingMaskIntoConstraints = false
+    let panel = makePanel()
+    let stack = makePanelStack()
 
     let titleLabel = makeSectionLabel("Updates")
     updateStatusLabel.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -305,11 +289,95 @@ final class AboutWindowController: NSObject {
     stack.addArrangedSubview(updateActionRow)
     panel.addSubview(stack)
 
+    constrainPanelStack(stack, in: panel)
     NSLayoutConstraint.activate([
       updateProgressIndicator.widthAnchor.constraint(equalToConstant: 16),
       updateProgressIndicator.heightAnchor.constraint(equalToConstant: 16),
       updateCheckmarkImageView.widthAnchor.constraint(equalToConstant: 16),
       updateCheckmarkImageView.heightAnchor.constraint(equalToConstant: 16),
+    ])
+    return panel
+  }
+
+  private func makeExtensionSection() -> NSView {
+    let panel = makePanel()
+
+    let stack = makePanelStack()
+    let titleLabel = makeSectionLabel("Browser Extension")
+    let detailLabel = makeBodyLabel(
+      "Install YTM Enhancer and enable Connected Apps before using the menu bar app."
+    )
+    detailLabel.preferredMaxLayoutWidth = Self.panelContentWidth
+    let row = NSStackView()
+    row.orientation = .horizontal
+    row.alignment = .centerY
+    row.spacing = 8
+    row.addArrangedSubview(
+      makeLinkButton(title: "Chrome", action: #selector(openChromeStore))
+    )
+    row.addArrangedSubview(
+      makeLinkButton(title: "Edge", action: #selector(openEdgeStore))
+    )
+    row.addArrangedSubview(
+      makeLinkButton(title: "Firefox", action: #selector(openFirefoxStore))
+    )
+
+    stack.addArrangedSubview(titleLabel)
+    stack.addArrangedSubview(detailLabel)
+    stack.addArrangedSubview(row)
+    panel.addSubview(stack)
+
+    constrainPanelStack(stack, in: panel)
+    return panel
+  }
+
+  private func makeFooterActions() -> NSView {
+    let row = NSStackView()
+    row.orientation = .horizontal
+    row.alignment = .centerY
+    row.spacing = 8
+    row.addArrangedSubview(
+      makeLinkButton(title: "GitHub", action: #selector(openGitHub))
+    )
+    row.addArrangedSubview(
+      makeLinkButton(title: "Releases", action: #selector(openReleases))
+    )
+
+    let buttonTitle: String
+    switch DistributionChannel.current {
+    case .direct:
+      buttonTitle = "Uninstall..."
+    case .homebrew:
+      buttonTitle = "Copy Brew Uninstall"
+    }
+
+    row.addArrangedSubview(
+      makeLinkButton(title: buttonTitle, action: #selector(handleUninstallButton))
+    )
+    return row
+  }
+
+  private func makePanel() -> NSView {
+    let panel = NSView()
+    panel.wantsLayer = true
+    panel.layer?.cornerRadius = 8
+    panel.layer?.borderWidth = 1
+    panel.layer?.borderColor = NSColor.separatorColor.cgColor
+    panel.translatesAutoresizingMaskIntoConstraints = false
+    return panel
+  }
+
+  private func makePanelStack() -> NSStackView {
+    let stack = NSStackView()
+    stack.orientation = .vertical
+    stack.alignment = .leading
+    stack.spacing = 8
+    stack.translatesAutoresizingMaskIntoConstraints = false
+    return stack
+  }
+
+  private func constrainPanelStack(_ stack: NSStackView, in panel: NSView) {
+    NSLayoutConstraint.activate([
       stack.topAnchor.constraint(
         equalTo: panel.topAnchor,
         constant: Self.panelInset
@@ -328,73 +396,6 @@ final class AboutWindowController: NSObject {
       ),
       stack.widthAnchor.constraint(equalToConstant: Self.panelContentWidth),
     ])
-    return panel
-  }
-
-  private func makeLinkRow() -> NSView {
-    let row = NSStackView()
-    row.orientation = .horizontal
-    row.alignment = .centerY
-    row.spacing = 8
-    row.addArrangedSubview(
-      makeLinkButton(title: "GitHub", action: #selector(openGitHub))
-    )
-    row.addArrangedSubview(
-      makeLinkButton(title: "Releases", action: #selector(openReleases))
-    )
-    return row
-  }
-
-  private func makeStoreLinkSection() -> NSView {
-    let stack = NSStackView()
-    stack.orientation = .vertical
-    stack.alignment = .leading
-    stack.spacing = 8
-    stack.translatesAutoresizingMaskIntoConstraints = false
-
-    let row = NSStackView()
-    row.orientation = .horizontal
-    row.alignment = .centerY
-    row.spacing = 8
-    row.addArrangedSubview(
-      makeLinkButton(title: "Chrome", action: #selector(openChromeStore))
-    )
-    row.addArrangedSubview(
-      makeLinkButton(title: "Edge", action: #selector(openEdgeStore))
-    )
-    row.addArrangedSubview(
-      makeLinkButton(title: "Firefox", action: #selector(openFirefoxStore))
-    )
-
-    stack.addArrangedSubview(makeSectionLabel("Get YTM Enhancer"))
-    stack.addArrangedSubview(row)
-    return stack
-  }
-
-  private func makeUninstallRow() -> NSView {
-    let stack = NSStackView()
-    stack.orientation = .vertical
-    stack.alignment = .leading
-    stack.spacing = 8
-
-    let text: String
-    let buttonTitle: String
-    switch DistributionChannel.current {
-    case .direct:
-      text = "Need to remove the app? The direct install includes an uninstaller."
-      buttonTitle = "Uninstall..."
-    case .homebrew:
-      text = "Need to remove the app? Homebrew owns this install."
-      buttonTitle = "Copy Uninstall Command"
-    }
-
-    let label = makeBodyLabel(text)
-    label.preferredMaxLayoutWidth = Self.contentWidth
-    stack.addArrangedSubview(label)
-    stack.addArrangedSubview(
-      makeLinkButton(title: buttonTitle, action: #selector(handleUninstallButton))
-    )
-    return stack
   }
 
   private func makeSeparator() -> NSView {
