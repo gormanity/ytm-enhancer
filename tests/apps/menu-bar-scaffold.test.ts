@@ -143,7 +143,13 @@ describe("menu bar connector app scaffold", () => {
     expect(appSource).toContain("playback state still stale");
     expect(appSource).toContain("clearPlaybackStateStaleTimeout");
     expect(viewSource).toContain("setStalePlaybackState");
-    expect(viewSource).toContain('"Reconnecting..."');
+    expect(viewSource).toContain('"Waiting for playback updates..."');
+    expect(viewSource).toContain("MenuBarStyle.staleText");
+    expect(viewSource).toContain("setCurrentPlaybackDimmed");
+    expect(viewSource).toContain("emphasizeStaleStatusStyle");
+    expect(viewSource).toContain("restoreMetadataStatusStyle");
+    expect(viewSource).toContain("titleTextView.setDimmed");
+    expect(viewSource).toContain("artworkView.setDimmed");
     expect(viewSource).toContain("controlsView.setPlaybackControlsDimmed");
   });
 

@@ -13,6 +13,7 @@ private enum MenuBarStyle {
   static let primaryText = NSColor.white
   static let secondaryText = NSColor(calibratedWhite: 0.68, alpha: 1)
   static let tertiaryText = NSColor(calibratedWhite: 0.45, alpha: 1)
+  static let staleText = NSColor(calibratedRed: 1, green: 0.62, blue: 0.24, alpha: 1)
   static let accent = NSColor(calibratedRed: 1, green: 0, blue: 0, alpha: 1)
   static let controlInactiveTint = NSColor(calibratedWhite: 0.46, alpha: 1)
   static let controlHoverBackground = NSColor(calibratedWhite: 1, alpha: 0.28)
@@ -99,6 +100,8 @@ final class MenuBarNowPlayingView: NSView {
   }
 
   func updateConnectionStatus(_ status: String) {
+    setCurrentPlaybackDimmed(false)
+    restoreMetadataStatusStyle()
     titleTextView.stringValue = "YTM Enhancer"
     albumTextView.stringValue = ""
     artistYearTextView.stringValue = status
@@ -119,13 +122,18 @@ final class MenuBarNowPlayingView: NSView {
   }
 
   func setStalePlaybackState() {
-    artistYearTextView.stringValue = "Reconnecting..."
+    setCurrentPlaybackDimmed(true)
+    emphasizeStaleStatusStyle()
+    artistYearTextView.stringValue = "Waiting for playback updates..."
     seekBarView.setDimmed(true)
     controlsView.setPlaybackControlsDimmed(true)
     clearHoverSurfaces()
   }
 
   func updatePlayback(_ state: PlaybackState) {
+    setCurrentPlaybackDimmed(false)
+    restoreMetadataStatusStyle()
+
     if isUnavailablePlaybackState(state) {
       titleTextView.stringValue = "No track loaded"
       albumTextView.stringValue = ""
@@ -428,6 +436,28 @@ final class MenuBarNowPlayingView: NSView {
     controlsView.clearHoverState()
     seekBarView.clearHoverState()
   }
+
+  private func setCurrentPlaybackDimmed(_ dimmed: Bool) {
+    titleTextView.setDimmed(dimmed)
+    albumTextView.setDimmed(dimmed)
+    artworkView.setDimmed(dimmed)
+    elapsedLabel.alphaValue = dimmed ? 0.5 : 1
+    durationLabel.alphaValue = dimmed ? 0.5 : 1
+  }
+
+  private func emphasizeStaleStatusStyle() {
+    artistYearTextView.configure(
+      font: .systemFont(ofSize: 12, weight: .semibold),
+      textColor: MenuBarStyle.staleText
+    )
+  }
+
+  private func restoreMetadataStatusStyle() {
+    artistYearTextView.configure(
+      font: .systemFont(ofSize: 12, weight: .regular),
+      textColor: MenuBarStyle.tertiaryText
+    )
+  }
 }
 
 private final class MenuBarSeekBarView: NSView {
@@ -697,6 +727,10 @@ private final class MenuBarScrollingTextView: NSView {
     setScrollProgress(0)
     needsLayout = true
     needsDisplay = true
+  }
+
+  func setDimmed(_ dimmed: Bool) {
+    alphaValue = dimmed ? 0.5 : 1
   }
 
   override func layout() {
@@ -1133,6 +1167,10 @@ private final class MenuBarArtworkView: NSView {
         self.imageView.contentTintColor = nil
       }
     }.resume()
+  }
+
+  func setDimmed(_ dimmed: Bool) {
+    alphaValue = dimmed ? 0.55 : 1
   }
 
   func showPlaceholder() {
