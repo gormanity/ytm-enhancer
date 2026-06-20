@@ -1236,6 +1236,10 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("/usr/bin/osascript");
     expect(aboutSource).toContain("with administrator privileges");
     expect(aboutSource).toContain("YTM_MENU_BAR_UNINSTALL_ASSUME_YES=1");
+    expect(aboutSource).toContain("private var uninstallProcess: Process?");
+    expect(aboutSource).toContain("process.terminationHandler");
+    expect(aboutSource).toContain("uninstallProcess = nil");
+    expect(aboutSource).not.toContain("process.waitUntilExit()");
     expect(aboutSource).toContain("shellQuote");
     expect(aboutSource).toContain("Uninstaller Did Not Complete");
   });

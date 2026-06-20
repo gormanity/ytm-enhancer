@@ -26,6 +26,7 @@ final class AboutWindowController: NSObject {
   private var onShowUpdateInterface: (() -> Void)?
   private var onCheckUpdateAvailability: (() -> Void)?
   private var onCopyHomebrewCommand: (() -> Void)?
+  private var uninstallProcess: Process?
 
   override init() {
     super.init()
@@ -516,29 +517,35 @@ final class AboutWindowController: NSObject {
     process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
     process.arguments = ["-e", script]
     process.standardError = errorPipe
+    process.terminationHandler = { [weak self] process in
+      let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+      let errorText =
+        String(data: errorData, encoding: .utf8)?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+      DispatchQueue.main.async {
+        self?.uninstallProcess = nil
+        guard process.terminationStatus != 0 else { return }
+
+        self?.showAlert(
+          title: "Uninstaller Did Not Complete",
+          message: errorText?.isEmpty == false
+            ? errorText!
+            : "macOS did not allow YTM Menu Bar to start the uninstaller."
+        )
+      }
+    }
 
     do {
+      uninstallProcess = process
       try process.run()
-      process.waitUntilExit()
     } catch {
+      uninstallProcess = nil
       showAlert(
         title: "Could Not Start Uninstaller",
         message: error.localizedDescription
       )
       return
-    }
-
-    if process.terminationStatus != 0 {
-      let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-      let errorText =
-        String(data: errorData, encoding: .utf8)?
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-      showAlert(
-        title: "Uninstaller Did Not Complete",
-        message: errorText?.isEmpty == false
-          ? errorText!
-          : "macOS did not allow YTM Menu Bar to start the uninstaller."
-      )
     }
   }
 
