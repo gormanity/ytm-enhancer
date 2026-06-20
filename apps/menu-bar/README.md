@@ -241,7 +241,10 @@ apps/menu-bar/scripts/uninstall-native-hosts.sh
 
 This removes the browser native host manifests and the
 `~/Applications/YTM Menu Bar.app` bundle created by the development installer.
-It does not remove Swift build output. To remove local build artifacts too:
+When that local app is running, the script stops only the process launched from
+that exact bundle path, unregisters the bundle from Launch Services, and then
+removes it. It does not remove `/Applications/YTM Menu Bar.app` or Swift build
+output. To remove local build artifacts too:
 
 ```sh
 rm -rf apps/menu-bar/.build

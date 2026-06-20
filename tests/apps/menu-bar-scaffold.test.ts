@@ -1121,6 +1121,17 @@ describe("menu bar connector app scaffold", () => {
     expect(script).toContain("YTM_ENHANCER_KEEP_LOCAL_APP");
     expect(script).toContain('APP_NAME="YTM Menu Bar"');
     expect(script).toContain("$APP_NAME.app");
+    expect(script).toContain("LOCAL_APP_EXECUTABLE");
+    expect(script).toContain("is_local_app_process");
+    expect(script).toContain('"$LOCAL_APP_EXECUTABLE"*');
+    expect(script).toContain("stop_local_app");
+    expect(script).toContain("YTMMenuBarConnector");
+    expect(script).toContain("kill -KILL");
+    expect(script).toContain("lsregister");
+    expect(script).toContain('-u "$LOCAL_APP_PATH"');
+    expect(script).toContain("touch");
+    expect(script).toContain("Local app not found");
+    expect(script).not.toContain("/Applications/YTM Menu Bar.app");
     expect(script).toContain("rm -rf");
   });
 
