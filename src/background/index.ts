@@ -313,6 +313,27 @@ async function restartConnectorSupport(): Promise<void> {
   await startConnectorSupportIfAvailable();
 }
 
+async function reconnectFirstPartyConnectedApp(
+  connectorId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const definition = firstPartyConnectedAppDefinition(connectorId);
+  if (!definition) {
+    return { ok: false, error: "Unknown first-party connected app" };
+  }
+  if (!connectorSupportEnabled) {
+    return { ok: false, error: "Connected Apps is off" };
+  }
+
+  setNativeHostDiagnostic(connectorId, {
+    availability: "unknown",
+    lastError: null,
+    lastCheckedAt: Date.now(),
+  });
+  await restartConnectorSupport();
+  notifyConnectedAppsChanged();
+  return { ok: true };
+}
+
 function shouldRecheckNativeHostAvailability(
   firstPartyApp: Pick<FirstPartyConnectedApp, "id">,
 ): boolean {
@@ -674,6 +695,14 @@ handler.on("set-connector-enabled", async (message) => {
   await saveKnownConnectors();
   notifyConnectedAppsChanged();
   return { ok: true };
+});
+
+handler.on("reconnect-first-party-connected-app", async (message) => {
+  if (typeof message.connectorId !== "string") {
+    return { ok: false, error: "Invalid connector ID" };
+  }
+
+  return reconnectFirstPartyConnectedApp(message.connectorId);
 });
 
 handler.on("request-menu-bar-uninstall", async () => {

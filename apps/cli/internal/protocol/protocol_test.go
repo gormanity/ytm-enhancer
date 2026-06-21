@@ -25,3 +25,13 @@ func TestHelloMessageUsesSharedConnectorManifest(t *testing.T) {
 		t.Fatalf("protocol version = %v, want %s", manifest["protocolVersion"], ProtocolVersion)
 	}
 }
+
+func TestYtmStatusRequest(t *testing.T) {
+	message := YtmStatusRequest("ytm-status-1")
+	if message["type"] != "ytm.getStatus" {
+		t.Fatalf("type = %v, want ytm.getStatus", message["type"])
+	}
+	if message["requestId"] != "ytm-status-1" {
+		t.Fatalf("requestId = %v, want ytm-status-1", message["requestId"])
+	}
+}

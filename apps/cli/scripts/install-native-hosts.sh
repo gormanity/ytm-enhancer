@@ -11,6 +11,8 @@ NATIVE_HOST_PATH="${YTME_NATIVE_HOST_PATH:-$DEFAULT_NATIVE_HOST_PATH}"
 CLI_BIN_DIR="${YTME_BIN_DIR:-$HOME/.local/bin}"
 CLI_PATH="$CLI_BIN_DIR/ytme"
 UNINSTALL_SCRIPT="$APP_ROOT/scripts/uninstall-native-hosts.sh"
+HOST_OS="${YTME_HOST_OS:-$(uname -s)}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 CHROMIUM_ORIGINS=(
   "chrome-extension://pggblbpjleekkobiinobaeeefnimgljh/"
@@ -79,9 +81,26 @@ JSON
   echo "Installed $manifest_path"
 }
 
-build_binaries() {
+path_contains_dir() {
+  local directory="$1"
+  local path_entry
+  local -a path_entries
+  IFS=":" read -r -a path_entries <<<"${PATH:-}"
+  for path_entry in "${path_entries[@]}"; do
+    if [[ "$path_entry" == "$directory" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+build_cli() {
   mkdir -p "$BUILD_DIR"
   go -C "$APP_ROOT" build -o "$BUILD_DIR/ytme" ./cmd/ytme
+}
+
+build_native_host() {
+  mkdir -p "$BUILD_DIR"
   go -C "$APP_ROOT" build -o "$BUILD_DIR/ytme-native-host" ./cmd/ytme-native-host
 }
 
@@ -91,11 +110,54 @@ install_cli() {
   echo "Installed $CLI_PATH"
 }
 
+print_next_steps() {
+  echo "Enable Connected Apps in YTM Enhancer."
+  if path_contains_dir "$CLI_BIN_DIR"; then
+    echo "Then run: ytme doctor"
+  else
+    echo "Then run: $CLI_PATH doctor"
+    echo "Add $CLI_BIN_DIR to PATH to run ytme directly."
+  fi
+}
+
+install_native_hosts() {
+  case "$HOST_OS" in
+    Darwin)
+      write_chromium_manifest \
+        "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+      write_chromium_manifest \
+        "$HOME/Library/Application Support/Chromium/NativeMessagingHosts"
+      write_chromium_manifest \
+        "$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
+      write_firefox_manifest \
+        "$HOME/Library/Application Support/Mozilla/NativeMessagingHosts"
+      ;;
+    Linux)
+      write_chromium_manifest \
+        "$XDG_CONFIG_HOME/google-chrome/NativeMessagingHosts"
+      write_chromium_manifest \
+        "$XDG_CONFIG_HOME/chromium/NativeMessagingHosts"
+      write_chromium_manifest \
+        "$XDG_CONFIG_HOME/microsoft-edge/NativeMessagingHosts"
+      write_chromium_manifest \
+        "$XDG_CONFIG_HOME/BraveSoftware/Brave-Browser/NativeMessagingHosts"
+      write_firefox_manifest \
+        "$HOME/.mozilla/native-messaging-hosts"
+      ;;
+    *)
+      echo "Unsupported OS for native host installation: $HOST_OS" >&2
+      exit 1
+      ;;
+  esac
+}
+
 "$UNINSTALL_SCRIPT"
 
+build_cli
+install_cli
+
 if [[ -z "${YTME_NATIVE_HOST_PATH:-}" ]]; then
-  build_binaries
-  install_cli
+  build_native_host
 fi
 
 if [[ ! -x "$NATIVE_HOST_PATH" ]]; then
@@ -103,14 +165,6 @@ if [[ ! -x "$NATIVE_HOST_PATH" ]]; then
   exit 1
 fi
 
-write_chromium_manifest \
-  "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
-write_chromium_manifest \
-  "$HOME/Library/Application Support/Chromium/NativeMessagingHosts"
-write_chromium_manifest \
-  "$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
-write_firefox_manifest \
-  "$HOME/Library/Application Support/Mozilla/NativeMessagingHosts"
+install_native_hosts
 
-echo "Enable Connected Apps in YTM Enhancer, then run: ytme doctor"
-
+print_next_steps

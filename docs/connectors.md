@@ -28,6 +28,8 @@ The first implementation exposes playback through `YtmRuntimeClient`:
   and toggle play.
 - `seekTo()` for timeline control.
 - `focusTab()` for bringing the active YouTube Music tab/window forward.
+- `listTabs()` for aggregate diagnostics about whether YouTube Music tabs are
+  currently known to the extension.
 
 Future connector API slices should follow the same rule: expose a narrow public
 surface through the host only after a centralized extension API exists.
@@ -58,6 +60,8 @@ The first permission set is intentionally small:
 - `track:read` allows track metadata such as title, artist, album, year,
   artwork, and upcoming next-track metadata.
 - `ytm:focus` allows a connector to focus the active YouTube Music tab/window.
+  It also allows aggregate YouTube Music tab diagnostics, such as whether a tab
+  is currently detected and whether a selected tab is known.
 
 The host rejects unknown permissions during `connector.hello`. If a connector
 has `playback:read` but not `track:read`, playback state is still available, but
@@ -197,6 +201,10 @@ two binaries:
 The CLI uses the same connector protocol as YTM Menu Bar. It does not read
 YouTube Music pages, authenticate with YouTube, or play audio directly. The
 browser extension remains the source of playback state and command routing.
+Because browsers own native messaging startup, `ytme daemon start` does not
+launch the native host directly. If `ytme daemon stop` was used, reconnect the
+CLI from the Connected Apps card so the extension can ask the browser to start
+the native host again.
 
 Initial local development commands are:
 
@@ -206,10 +214,18 @@ ytme doctor
 apps/cli/scripts/uninstall-native-hosts.sh
 ```
 
+The installer prints the exact `ytme doctor` command to run. It installs `ytme`
+to `~/.local/bin` by default, but prints the full path when that directory is
+not on `PATH`. The local installer supports macOS and Linux user-level native
+messaging manifests. On Linux it writes manifests for Google Chrome, Chromium,
+Microsoft Edge, Brave, and Firefox.
+
 The `ytme` command supports playback status, JSON status output, play/pause,
-previous/next, seek, shuffle, repeat, focus, watch mode, and diagnostics.
-Homebrew packaging and public CLI release automation are intentionally left for
-a later release slice.
+previous/next, seek, shuffle, repeat, focus, watch mode, and diagnostics. Watch
+mode renders a live terminal status with a progress bar by default, with
+line-oriented output, newline-delimited JSON, custom polling intervals, and
+bounded `--count` runs available for automation. Homebrew packaging and public
+CLI release automation are intentionally left for a later release slice.
 
 Remaining work before a public connector release:
 

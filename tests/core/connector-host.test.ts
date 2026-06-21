@@ -358,6 +358,43 @@ describe("ConnectorHost", () => {
     expect(ytm.focusTab).toHaveBeenCalledWith();
   });
 
+  it("routes YTM tab diagnostics through the centralized YTM runtime API", async () => {
+    const ytm = createMockYtmRuntimeClient({
+      listTabs: vi.fn().mockResolvedValue({
+        selectedTabId: 10,
+        tabs: [
+          {
+            id: 10,
+            title: "YouTube Music",
+            artworkUrl: null,
+            isSelected: true,
+          },
+        ],
+      }),
+    });
+    const host = createConnectorHost({ enabled: true, ytm });
+    await connect(host);
+
+    const result = await host.receive("connection-1", {
+      type: "ytm.getStatus",
+      requestId: "ytm-status-1",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      message: {
+        type: "ytm.status",
+        requestId: "ytm-status-1",
+        status: {
+          hasTabs: true,
+          tabCount: 1,
+          selectedTabKnown: true,
+        },
+      },
+    });
+    expect(ytm.listTabs).toHaveBeenCalledTimes(1);
+  });
+
   it("requires explicit permission before focusing YouTube Music", async () => {
     const ytm = createMockYtmRuntimeClient();
     const host = createConnectorHost({ enabled: true, ytm });
@@ -384,6 +421,34 @@ describe("ConnectorHost", () => {
       },
     });
     expect(ytm.focusTab).not.toHaveBeenCalled();
+  });
+
+  it("requires explicit permission before reading YTM tab diagnostics", async () => {
+    const ytm = createMockYtmRuntimeClient();
+    const host = createConnectorHost({ enabled: true, ytm });
+    const hello = await host.receive("connection-1", {
+      type: "connector.hello",
+      requestId: "hello-1",
+      manifest: {
+        ...validManifest,
+        permissions: ["playback:read", "playback:control", "track:read"],
+      },
+    });
+    expect(hello.ok).toBe(true);
+
+    const result = await host.receive("connection-1", {
+      type: "ytm.getStatus",
+      requestId: "ytm-status-1",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "permission_denied",
+        message: `Connector ${validManifest.id} is missing ytm:focus`,
+      },
+    });
+    expect(ytm.listTabs).not.toHaveBeenCalled();
   });
 
   it("can request uninstall from a connected connector session", async () => {

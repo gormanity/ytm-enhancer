@@ -8,6 +8,7 @@ import {
   type ConnectedAppsSettings,
 } from "./client";
 import {
+  FIRST_PARTY_CLI_CONNECTOR_ID,
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
   type ConnectedApp,
   type ConnectedAppAvailability,
@@ -46,6 +47,7 @@ interface ConnectedAppCardModel {
   connector?: ConnectedApp;
   installUrl?: string;
   installLabel?: string;
+  reconnectLabel?: string;
   showUninstallRequest?: boolean;
   showLifecycleControl?: boolean;
 }
@@ -167,6 +169,28 @@ function createConnectedAppCard(
     installLink.classList.remove("is-hidden");
   } else {
     installLink?.remove();
+  }
+
+  const reconnectButton = queryRole<HTMLButtonElement>(
+    card,
+    "connected-app-reconnect-button",
+  );
+  if (reconnectButton && app.reconnectLabel) {
+    reconnectButton.textContent = app.reconnectLabel;
+    reconnectButton.classList.remove("is-hidden");
+    reconnectButton.addEventListener("click", () => {
+      reconnectButton.disabled = true;
+      reconnectButton.textContent = "Reconnecting...";
+      void client
+        .reconnectFirstPartyApp(app.id)
+        .then(refresh)
+        .finally(() => {
+          reconnectButton.disabled = false;
+          reconnectButton.textContent = app.reconnectLabel ?? "Reconnect App";
+        });
+    });
+  } else {
+    reconnectButton?.remove();
   }
 
   const uninstallButton = queryRole<HTMLButtonElement>(
@@ -313,6 +337,9 @@ function firstPartyAppGuidance(
   }
   if (firstPartyApp.availability === "error") {
     if (isNativeHostExitError(firstPartyApp)) {
+      if (firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID) {
+        return "YTM Enhancer CLI was stopped. Reconnect it below, or reopen the extension popup after running ytme doctor.";
+      }
       return `${firstPartyApp.name} disconnected. Open it again if it is still installed, or download it again below.`;
     }
     return firstPartyApp.lastError
@@ -338,9 +365,15 @@ function firstPartyAppGuidance(
 }
 
 function firstPartyAppAction(
+  settings: ConnectedAppsSettings,
   firstPartyApp: FirstPartyConnectedApp,
   connector: ConnectedApp | undefined,
-): { url?: string; label?: string; showUninstallRequest?: boolean } {
+): {
+  url?: string;
+  label?: string;
+  reconnectLabel?: string;
+  showUninstallRequest?: boolean;
+} {
   if (connector?.status === "incompatible") {
     return {
       url: firstPartyApp.installUrl,
@@ -348,6 +381,21 @@ function firstPartyAppAction(
         firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID
           ? "Update YTM Menu Bar"
           : `Update ${firstPartyApp.name}`,
+    };
+  }
+
+  if (
+    settings.enabled &&
+    firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID &&
+    firstPartyApp.availability === "error" &&
+    isNativeHostExitError(firstPartyApp) &&
+    connector?.enabled !== false
+  ) {
+    return {
+      reconnectLabel:
+        firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID
+          ? "Reconnect CLI"
+          : "Reconnect App",
     };
   }
 
@@ -386,7 +434,7 @@ function createFirstPartyAppCardModel(
 ): ConnectedAppCardModel {
   const connector = connectorForFirstPartyApp(settings, firstPartyApp);
   const status = firstPartyAppStatus(settings, firstPartyApp, connector);
-  const action = firstPartyAppAction(firstPartyApp, connector);
+  const action = firstPartyAppAction(settings, firstPartyApp, connector);
   return {
     id: firstPartyApp.id,
     name: firstPartyApp.name,
@@ -398,6 +446,7 @@ function createFirstPartyAppCardModel(
     connector,
     installUrl: action.url,
     installLabel: action.label,
+    reconnectLabel: action.reconnectLabel,
     showUninstallRequest: action.showUninstallRequest,
     showLifecycleControl:
       firstPartyApp.availability === "available" && connector !== undefined,

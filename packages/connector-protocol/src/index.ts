@@ -51,6 +51,12 @@ export interface ConnectorPlaybackState extends ConnectorTrackMetadata {
   repeatMode: "off" | "all" | "one" | null;
 }
 
+export interface ConnectorYtmStatus {
+  hasTabs: boolean;
+  tabCount: number;
+  selectedTabKnown: boolean;
+}
+
 export interface ConnectorHelloMessage {
   type: "connector.hello";
   requestId: string;
@@ -90,6 +96,11 @@ export interface YtmFocusMessage {
   requestId: string;
 }
 
+export interface YtmGetStatusMessage {
+  type: "ytm.getStatus";
+  requestId: string;
+}
+
 export type ConnectorMessage =
   | ConnectorHelloMessage
   | ConnectorSubscribeMessage
@@ -97,7 +108,8 @@ export type ConnectorMessage =
   | PlaybackGetStateMessage
   | PlaybackActionMessage
   | PlaybackSeekMessage
-  | YtmFocusMessage;
+  | YtmFocusMessage
+  | YtmGetStatusMessage;
 
 export interface ConnectorReadyMessage {
   type: "connector.ready";
@@ -128,12 +140,19 @@ export interface ConnectorUninstallRequestedMessage {
   type: "connector.uninstallRequested";
 }
 
+export interface YtmStatusMessage {
+  type: "ytm.status";
+  requestId: string;
+  status: ConnectorYtmStatus;
+}
+
 export type ConnectorOutboundMessage =
   | ConnectorReadyMessage
   | ConnectorAckMessage
   | ConnectorErrorMessage
   | StateUpdateMessage
-  | ConnectorUninstallRequestedMessage;
+  | ConnectorUninstallRequestedMessage
+  | YtmStatusMessage;
 
 export type ConnectorValidationResult<T> =
   | { ok: true; value: T }
@@ -278,6 +297,7 @@ export function validateConnectorMessage(
     case "connector.disconnect":
     case "playback.getState":
     case "ytm.focus":
+    case "ytm.getStatus":
       return {
         ok: true,
         value: { type: value.type, requestId: requestId.value },

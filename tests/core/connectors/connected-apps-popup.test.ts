@@ -58,6 +58,7 @@ function createClient(
         ),
       };
     }),
+    reconnectFirstPartyApp: vi.fn(async () => undefined),
     requestMenuBarUninstall: vi.fn(async () => undefined),
     subscribeChanged: vi.fn(() => () => undefined),
   };
@@ -630,6 +631,71 @@ describe("Connected Apps popup view", () => {
     expect(installLink?.href).toBe(
       "https://github.com/gormanity/ytm-enhancer/tree/main/apps/cli",
     );
+  });
+
+  it("shows a reconnect action when the first-party CLI host has exited", async () => {
+    const cliDefinition = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.find(
+      (definition) => definition.id === "com.gormanity.ytm-enhancer.cli",
+    )!;
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        firstPartyApps: [
+          createMenuBarConnectedApp(),
+          createFirstPartyConnectedApp(cliDefinition, {
+            availability: "error",
+            lastError: "Native host has exited.",
+          }),
+        ],
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.cli",
+            name: "YTM Enhancer CLI",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const card = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLDetailsElement>(
+        '[data-app-id="com.gormanity.ytm-enhancer.cli"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(card.textContent).toContain("Disconnected");
+    expect(card.textContent).toContain("YTM Enhancer CLI was stopped.");
+    expect(card.textContent).toContain("Reconnect CLI");
+    expect(
+      card.querySelector<HTMLAnchorElement>(
+        '[data-role="connected-app-install-link"]',
+      ),
+    ).toBeNull();
+
+    const reconnectButton = card.querySelector<HTMLButtonElement>(
+      '[data-role="connected-app-reconnect-button"]',
+    );
+    reconnectButton!.click();
+
+    await vi.waitFor(() => {
+      expect(client.reconnectFirstPartyApp).toHaveBeenCalledWith(
+        "com.gormanity.ytm-enhancer.cli",
+      );
+    });
   });
 
   it("uses a shared action style for install and lifecycle actions", async () => {

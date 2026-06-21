@@ -33,4 +33,19 @@ describe("connector protocol fixtures", () => {
     expect(fixture.state?.title).toBe("A Walk");
     expect(fixture.state?.nextTrack?.title).toBe("Send And Receive");
   });
+
+  it("validates YTM status requests for external apps", () => {
+    const result = validateConnectorMessage({
+      type: "ytm.getStatus",
+      requestId: "ytm-status-1",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        type: "ytm.getStatus",
+        requestId: "ytm-status-1",
+      },
+    });
+  });
 });

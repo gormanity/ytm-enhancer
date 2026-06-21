@@ -7,6 +7,7 @@ import {
   type ConnectorOutboundMessage,
   type ConnectorPermission,
   type ConnectorPlaybackState,
+  type ConnectorYtmStatus,
   type StateUpdateMessage,
 } from "@ytm-enhancer/connector-protocol";
 import type { PlaybackAction, PlaybackState } from "../types";
@@ -71,7 +72,11 @@ export interface ConnectorHostOptions {
   enabled?: boolean;
   ytm: Pick<
     YtmRuntimeClient,
-    "executePlaybackAction" | "focusTab" | "getPlaybackState" | "seekTo"
+    | "executePlaybackAction"
+    | "focusTab"
+    | "getPlaybackState"
+    | "listTabs"
+    | "seekTo"
   >;
   supportedProtocolVersions?: readonly string[];
   transports?: readonly ConnectorTransport[];
@@ -126,6 +131,16 @@ function toConnectorPlaybackState(
     duration: state.duration,
     isShuffling: state.isShuffling ?? null,
     repeatMode: state.repeatMode ?? null,
+  };
+}
+
+function toConnectorYtmStatus(
+  state: Awaited<ReturnType<YtmRuntimeClient["listTabs"]>>,
+): ConnectorYtmStatus {
+  return {
+    hasTabs: state.tabs.length > 0,
+    tabCount: state.tabs.length,
+    selectedTabKnown: state.selectedTabId !== null,
   };
 }
 
@@ -363,6 +378,19 @@ export function createConnectorHost(
         if (missingPermission) return missingPermission;
         await options.ytm.focusTab();
         return ack(message.requestId);
+      }
+      case "ytm.getStatus": {
+        const missingPermission = requirePermission(session, "ytm:focus");
+        if (missingPermission) return missingPermission;
+        const state = await options.ytm.listTabs();
+        return {
+          ok: true,
+          message: {
+            type: "ytm.status",
+            requestId: message.requestId,
+            status: toConnectorYtmStatus(state),
+          },
+        };
       }
     }
   };

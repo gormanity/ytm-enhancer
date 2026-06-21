@@ -112,6 +112,18 @@ describe("connector host background gating", () => {
     );
   });
 
+  it("can explicitly reconnect a first-party connected app", () => {
+    expect(backgroundSource).toContain(
+      'handler.on("reconnect-first-party-connected-app"',
+    );
+    expect(functionBody("reconnectFirstPartyConnectedApp")).toContain(
+      "firstPartyConnectedAppDefinition(connectorId)",
+    );
+    expect(functionBody("reconnectFirstPartyConnectedApp")).toContain(
+      "await restartConnectorSupport();",
+    );
+  });
+
   it("can stop and discard the connector host when the popup disables support", () => {
     expect(backgroundSource).toContain(
       'handler.on("set-connected-apps-enabled"',

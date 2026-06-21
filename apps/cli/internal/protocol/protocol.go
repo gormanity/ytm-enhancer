@@ -37,6 +37,12 @@ type PlaybackState struct {
 	RepeatMode  *string        `json:"repeatMode"`
 }
 
+type YtmStatus struct {
+	HasTabs          bool `json:"hasTabs"`
+	TabCount         int  `json:"tabCount"`
+	SelectedTabKnown bool `json:"selectedTabKnown"`
+}
+
 type HostMessage struct {
 	Type            string         `json:"type"`
 	RequestID       string         `json:"requestId,omitempty"`
@@ -45,6 +51,7 @@ type HostMessage struct {
 	Code            string         `json:"code,omitempty"`
 	Message         string         `json:"message,omitempty"`
 	State           *PlaybackState `json:"state,omitempty"`
+	Status          *YtmStatus     `json:"status,omitempty"`
 }
 
 func Hello(requestID string) map[string]any {
@@ -95,6 +102,13 @@ func PlaybackSeek(time float64, requestID string) map[string]any {
 func FocusYouTubeMusic(requestID string) map[string]any {
 	return map[string]any{
 		"type":      "ytm.focus",
+		"requestId": requestID,
+	}
+}
+
+func YtmStatusRequest(requestID string) map[string]any {
+	return map[string]any{
+		"type":      "ytm.getStatus",
 		"requestId": requestID,
 	}
 }

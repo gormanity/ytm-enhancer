@@ -18,17 +18,20 @@ import (
 )
 
 const requestTimeout = 5 * time.Second
+const shutdownDelay = 50 * time.Millisecond
 
 type Daemon struct {
 	connection *native.Connection
 	log        io.Writer
+	shutdown   context.CancelFunc
 	nextID     atomic.Uint64
 
-	mu            sync.Mutex
-	ready         bool
-	lastError     string
-	playbackState *protocol.PlaybackState
-	pending       map[string]chan protocol.HostMessage
+	mu             sync.Mutex
+	ready          bool
+	lastError      string
+	activeProtocol string
+	playbackState  *protocol.PlaybackState
+	pending        map[string]chan protocol.HostMessage
 }
 
 func Run(ctx context.Context, input io.Reader, output io.Writer, log io.Writer) error {
@@ -38,6 +41,7 @@ func Run(ctx context.Context, input io.Reader, output io.Writer, log io.Writer) 
 	daemon := &Daemon{
 		connection: native.NewConnection(input, output),
 		log:        log,
+		shutdown:   cancel,
 		pending:    make(map[string]chan protocol.HostMessage),
 	}
 
@@ -50,7 +54,7 @@ func Run(ctx context.Context, input io.Reader, output io.Writer, log io.Writer) 
 	}()
 
 	daemon.logf("ytme native host starting")
-	daemon.sendHello()
+	_ = daemon.sendHello()
 
 	err := <-errc
 	cancel()
@@ -100,26 +104,63 @@ func (daemon *Daemon) HandleIPC(ctx context.Context, request ipc.Request) ipc.Re
 		}
 		return ipc.Response{OK: true, Message: "ok"}
 	case "doctor":
+		return daemon.daemonStatusResponse(ctx)
+	case "daemon.status":
+		return daemon.daemonStatusResponse(ctx)
+	case "daemon.stop":
+		daemon.scheduleShutdown()
 		return ipc.Response{
-			OK: true,
-			Data: map[string]any{
-				"connectorId": protocol.ConnectorID,
-				"hostName":    protocol.HostName,
-				"ready":       daemon.isReady(),
-				"lastError":   daemon.lastConnectorError(),
-				"hasState":    daemon.cachedPlaybackState() != nil,
-			},
+			OK:      true,
+			Message: "YTM Enhancer CLI daemon stopped.",
 		}
 	default:
 		return ipc.Response{OK: false, Error: "unsupported command"}
 	}
 }
 
-func (daemon *Daemon) sendHello() {
+func (daemon *Daemon) daemonStatusResponse(ctx context.Context) ipc.Response {
+	data := map[string]any{
+		"connectorId":           protocol.ConnectorID,
+		"connectorName":         protocol.ConnectorName,
+		"connectorVersion":      protocol.ConnectorVersion,
+		"hostName":              protocol.HostName,
+		"protocolVersion":       protocol.ProtocolVersion,
+		"activeProtocolVersion": daemon.activeProtocolVersion(),
+		"ready":                 daemon.isReady(),
+		"lastError":             daemon.lastConnectorError(),
+		"hasState":              daemon.cachedPlaybackState() != nil,
+	}
+
+	if status, err := daemon.currentYtmStatus(ctx); err == nil && status != nil {
+		data["ytmTabDetected"] = status.HasTabs
+		data["ytmTabCount"] = status.TabCount
+		data["selectedYtmTabKnown"] = status.SelectedTabKnown
+	} else if err != nil {
+		data["ytmTabStatusError"] = err.Error()
+	}
+
+	return ipc.Response{OK: true, Data: data}
+}
+
+func (daemon *Daemon) scheduleShutdown() {
+	daemon.logf("daemon stop requested")
+	if daemon.shutdown == nil {
+		return
+	}
+
+	go func() {
+		time.Sleep(shutdownDelay)
+		daemon.shutdown()
+	}()
+}
+
+func (daemon *Daemon) sendHello() error {
 	requestID := daemon.requestID("hello")
 	if err := daemon.send(protocol.Hello(requestID), requestID); err != nil {
 		daemon.recordError(err.Error())
+		return err
 	}
+	return nil
 }
 
 func (daemon *Daemon) readNativeMessages(ctx context.Context) error {
@@ -146,6 +187,7 @@ func (daemon *Daemon) handleNativeMessage(message protocol.HostMessage) {
 		daemon.mu.Lock()
 		daemon.ready = true
 		daemon.lastError = ""
+		daemon.activeProtocol = message.ProtocolVersion
 		daemon.mu.Unlock()
 		daemon.resolvePending(message)
 		daemon.sendSubscription()
@@ -161,6 +203,8 @@ func (daemon *Daemon) handleNativeMessage(message protocol.HostMessage) {
 			daemon.playbackState = message.State
 			daemon.mu.Unlock()
 		}
+		daemon.resolvePending(message)
+	case "ytm.status":
 		daemon.resolvePending(message)
 	case "connector.uninstallRequested":
 		daemon.logf("received uninstall request; CLI has no native uninstall flow yet")
@@ -195,6 +239,25 @@ func (daemon *Daemon) currentPlaybackState(ctx context.Context) (*protocol.Playb
 		return nil, errors.New("no playback state is available yet")
 	}
 	return message.State, nil
+}
+
+func (daemon *Daemon) currentYtmStatus(ctx context.Context) (*protocol.YtmStatus, error) {
+	if !daemon.isReady() {
+		return nil, nil
+	}
+	if daemon.connection == nil {
+		return nil, nil
+	}
+
+	requestID := daemon.requestID("ytm-status")
+	message, err := daemon.sendAndWaitForMessage(ctx, protocol.YtmStatusRequest(requestID), requestID)
+	if err != nil {
+		return nil, err
+	}
+	if message.Status == nil {
+		return nil, errors.New("no YouTube Music tab status is available yet")
+	}
+	return message.Status, nil
 }
 
 func (daemon *Daemon) seekTarget(ctx context.Context, args map[string]any) (float64, error) {
@@ -316,6 +379,12 @@ func (daemon *Daemon) lastConnectorError() string {
 	daemon.mu.Lock()
 	defer daemon.mu.Unlock()
 	return daemon.lastError
+}
+
+func (daemon *Daemon) activeProtocolVersion() string {
+	daemon.mu.Lock()
+	defer daemon.mu.Unlock()
+	return daemon.activeProtocol
 }
 
 func (daemon *Daemon) recordError(message string) {

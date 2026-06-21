@@ -40,12 +40,26 @@ describe("YTM Enhancer CLI app scaffold", () => {
     );
     expect(installScript).toContain('go -C "$APP_ROOT" build');
     expect(installScript).toContain('CLI_PATH="$CLI_BIN_DIR/ytme"');
+    expect(installScript).toContain("path_contains_dir");
+    expect(installScript).toContain("print_next_steps");
+    expect(installScript).toContain("build_cli");
+    expect(installScript).toContain('HOST_OS="${YTME_HOST_OS:-$(uname -s)}"');
     expect(installScript).toContain("allowed_origins");
     expect(installScript).toContain("allowed_extensions");
+    expect(installScript).toContain(
+      '"$XDG_CONFIG_HOME/google-chrome/NativeMessagingHosts"',
+    );
+    expect(installScript).toContain('"$HOME/.mozilla/native-messaging-hosts"');
     expect(uninstallScript).toContain(
       'HOST_NAME="com.gormanity.ytm_enhancer.cli"',
     );
     expect(uninstallScript).toContain('CLI_PATH="$CLI_BIN_DIR/ytme"');
+    expect(uninstallScript).toContain(
+      '"$XDG_CONFIG_HOME/google-chrome/NativeMessagingHosts/$HOST_NAME.json"',
+    );
+    expect(uninstallScript).toContain(
+      '"$HOME/.mozilla/native-messaging-hosts/$HOST_NAME.json"',
+    );
   });
 
   it("registers the CLI as a first-party Connected App", () => {

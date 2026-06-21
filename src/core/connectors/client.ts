@@ -7,6 +7,7 @@ export interface ConnectedAppsClient {
   getSettings(): Promise<ConnectedAppsSettings>;
   setGlobalEnabled(enabled: boolean): Promise<void>;
   setConnectorEnabled(id: string, enabled: boolean): Promise<void>;
+  reconnectFirstPartyApp(id: string): Promise<void>;
   requestMenuBarUninstall(): Promise<void>;
   subscribeChanged(listener: () => void): () => void;
 }
@@ -33,6 +34,13 @@ export function createConnectedAppsClient(
         type: "set-connector-enabled",
         connectorId: id,
         enabled,
+      });
+    },
+
+    reconnectFirstPartyApp(id) {
+      return runtime.command({
+        type: "reconnect-first-party-connected-app",
+        connectorId: id,
       });
     },
 
