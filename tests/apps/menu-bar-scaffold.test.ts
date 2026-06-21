@@ -1486,7 +1486,7 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(settingsSource).toContain("MENU_BAR_UNINSTALL_URL");
     expect(settingsSource).toContain("#uninstall");
-    expect(popupSource).toContain("settings.menuBarApp.installUrl");
+    expect(popupSource).toContain("firstPartyApp.installUrl");
     expect(popupTemplate).not.toContain(
       "Direct installs update from the app. Homebrew installs update with Homebrew.",
     );

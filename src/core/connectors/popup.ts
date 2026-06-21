@@ -9,10 +9,10 @@ import {
 } from "./client";
 import {
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
-  MENU_BAR_INSTALL_URL,
   type ConnectedApp,
   type ConnectedAppAvailability,
   type ConnectorStatus,
+  type FirstPartyConnectedApp,
 } from "./settings";
 import templateHtml from "./popup.html?raw";
 
@@ -27,13 +27,6 @@ const STATUS_LABELS: Record<ConnectorStatus, string> = {
 
 const MENU_BAR_UPDATE_GUIDANCE =
   "Update required. Open About YTM Menu Bar to download the update, or run brew upgrade --cask ytm-menu-bar.";
-
-const MENU_BAR_ACCESS: ConnectorPermission[] = [
-  "playback:read",
-  "track:read",
-  "playback:control",
-  "ytm:focus",
-];
 
 const CONNECTED_APP_ACCESS_LABELS: Record<ConnectorPermission, string> = {
   "playback:read": "Playback info and progress",
@@ -57,13 +50,15 @@ interface ConnectedAppCardModel {
   showLifecycleControl?: boolean;
 }
 
-function isMenuBarInstalled(availability: ConnectedAppAvailability): boolean {
+function isFirstPartyAppInstalled(
+  availability: ConnectedAppAvailability,
+): boolean {
   if (availability === "available") return true;
   return false;
 }
 
-function isNativeHostExitError(settings: ConnectedAppsSettings): boolean {
-  return /native host (has )?exited/i.test(settings.menuBarApp.lastError ?? "");
+function isNativeHostExitError(firstPartyApp: FirstPartyConnectedApp): boolean {
+  return /native host (has )?exited/i.test(firstPartyApp.lastError ?? "");
 }
 
 function setStatus(
@@ -238,22 +233,30 @@ function createConnectedAppCard(
   return card;
 }
 
-function firstPartyMenuBarConnector(
+function connectorForFirstPartyApp(
   settings: ConnectedAppsSettings,
+  firstPartyApp: FirstPartyConnectedApp,
 ): ConnectedApp | undefined {
   return settings.connectors.find(
-    (connector) => connector.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+    (connector) => connector.id === firstPartyApp.id,
   );
 }
 
-function menuBarStatus(
+function firstPartyAppStatus(
   settings: ConnectedAppsSettings,
+  firstPartyApp: FirstPartyConnectedApp,
   connector: ConnectedApp | undefined,
 ): { status: ConnectorStatus; label: string } {
   if (connector?.status === "incompatible") {
-    return { status: "incompatible", label: "Update Required" };
+    return {
+      status: "incompatible",
+      label:
+        firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID
+          ? "Update Required"
+          : "Incompatible",
+    };
   }
-  if (settings.menuBarApp.availability === "missing") {
+  if (firstPartyApp.availability === "missing") {
     return { status: "blocked", label: "Not Installed" };
   }
   if (!settings.enabled && connector !== undefined) {
@@ -261,12 +264,12 @@ function menuBarStatus(
   }
   if (
     connector?.status === "blocked" &&
-    settings.menuBarApp.availability === "available"
+    firstPartyApp.availability === "available"
   ) {
     return { status: "blocked", label: "Disabled" };
   }
-  if (settings.menuBarApp.availability === "error") {
-    if (isNativeHostExitError(settings)) {
+  if (firstPartyApp.availability === "error") {
+    if (isNativeHostExitError(firstPartyApp)) {
       return { status: "disconnected", label: "Disconnected" };
     }
     return { status: "incompatible", label: "Needs Attention" };
@@ -274,7 +277,7 @@ function menuBarStatus(
   if (connector?.status === "connected") {
     return { status: "connected", label: "Connected" };
   }
-  if (settings.menuBarApp.availability === "available") {
+  if (firstPartyApp.availability === "available") {
     return { status: "disconnected", label: "Installed" };
   }
   if (connector !== undefined) {
@@ -283,100 +286,121 @@ function menuBarStatus(
   return { status: "disconnected", label: "Available" };
 }
 
-function menuBarGuidance(
+function firstPartyAppGuidance(
   settings: ConnectedAppsSettings,
+  firstPartyApp: FirstPartyConnectedApp,
   connector: ConnectedApp | undefined,
 ): string {
   if (connector?.status === "incompatible") {
-    return MENU_BAR_UPDATE_GUIDANCE;
+    return firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID
+      ? MENU_BAR_UPDATE_GUIDANCE
+      : `${firstPartyApp.name} uses an unsupported connector protocol. Install an updated version before using it.`;
   }
-  if (settings.menuBarApp.availability === "missing") {
-    return "YTM Menu Bar or its native host was not detected. Reinstall it from the button below if you want to use it again.";
+  if (firstPartyApp.availability === "missing") {
+    return `${firstPartyApp.name} or its native host was not detected. Reinstall it from the button below if you want to use it again.`;
   }
   if (!settings.enabled && connector !== undefined) {
-    return "Connected Apps is off, so YTM Menu Bar cannot connect.";
+    return `Connected Apps is off, so ${firstPartyApp.name} cannot connect.`;
   }
   if (!settings.enabled) {
-    return "Install YTM Menu Bar, then enable Connected Apps to allow it to connect.";
+    return `Install ${firstPartyApp.name}, then enable Connected Apps to allow it to connect.`;
   }
   if (
     connector?.status === "blocked" &&
-    settings.menuBarApp.availability === "available"
+    firstPartyApp.availability === "available"
   ) {
-    return "YTM Menu Bar is disabled. Enable it below when you want it to reconnect.";
+    return `${firstPartyApp.name} is disabled. Enable it below when you want it to reconnect.`;
   }
-  if (settings.menuBarApp.availability === "error") {
-    if (isNativeHostExitError(settings)) {
-      return "YTM Menu Bar disconnected. Open it again if it is still installed, or download it again below.";
+  if (firstPartyApp.availability === "error") {
+    if (isNativeHostExitError(firstPartyApp)) {
+      return `${firstPartyApp.name} disconnected. Open it again if it is still installed, or download it again below.`;
     }
-    return settings.menuBarApp.lastError
-      ? `YTM Enhancer could not start YTM Menu Bar. Last error: ${settings.menuBarApp.lastError}`
-      : "YTM Enhancer could not start YTM Menu Bar. Open or reinstall the app if this keeps happening.";
+    return firstPartyApp.lastError
+      ? `YTM Enhancer could not start ${firstPartyApp.name}. Last error: ${firstPartyApp.lastError}`
+      : `YTM Enhancer could not start ${firstPartyApp.name}. Open or reinstall the app if this keeps happening.`;
   }
   if (connector?.status === "connected") {
-    return "YTM Menu Bar is connected and can control playback through YTM Enhancer.";
+    return `${firstPartyApp.name} is connected and can control playback through YTM Enhancer.`;
   }
-  if (settings.menuBarApp.availability === "available") {
-    return "Open YTM Menu Bar from Applications to connect.";
+  if (firstPartyApp.availability === "available") {
+    if (firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID) {
+      return "Open YTM Menu Bar from Applications to connect.";
+    }
+    return "Run ytme doctor from your terminal to check the CLI connection.";
   }
   if (connector !== undefined) {
-    return "YTM Menu Bar is not currently detected. Download it if you removed it, or open it from Applications if it is installed.";
+    return `${firstPartyApp.name} is not currently detected. Reinstall it if you removed it, or open it if it is installed.`;
   }
-  return "Add playback info and controls to the macOS menu bar with the first YTM Enhancer connected app.";
+  if (firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID) {
+    return "Add playback info and controls to the macOS menu bar with the first YTM Enhancer connected app.";
+  }
+  return "Control YouTube Music from your terminal with ytme.";
 }
 
-function menuBarAction(
-  settings: ConnectedAppsSettings,
+function firstPartyAppAction(
+  firstPartyApp: FirstPartyConnectedApp,
   connector: ConnectedApp | undefined,
 ): { url?: string; label?: string; showUninstallRequest?: boolean } {
   if (connector?.status === "incompatible") {
     return {
-      url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
-      label: "Update YTM Menu Bar",
+      url: firstPartyApp.installUrl,
+      label:
+        firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID
+          ? "Update YTM Menu Bar"
+          : `Update ${firstPartyApp.name}`,
     };
   }
 
   if (
-    settings.menuBarApp.availability === "missing" ||
-    settings.menuBarApp.availability === "error"
+    firstPartyApp.availability === "missing" ||
+    firstPartyApp.availability === "error"
   ) {
     return {
-      url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
-      label: "Download for macOS",
+      url: firstPartyApp.installUrl,
+      label: firstPartyApp.installLabel,
     };
   }
 
-  if (isMenuBarInstalled(settings.menuBarApp.availability)) {
+  if (
+    firstPartyApp.supportsUninstallRequest &&
+    isFirstPartyAppInstalled(firstPartyApp.availability)
+  ) {
     return {
       showUninstallRequest: true,
     };
   }
 
-  return {
-    url: settings.menuBarApp.installUrl || MENU_BAR_INSTALL_URL,
-    label: "Download for macOS",
-  };
+  if (!isFirstPartyAppInstalled(firstPartyApp.availability)) {
+    return {
+      url: firstPartyApp.installUrl,
+      label: firstPartyApp.installLabel,
+    };
+  }
+
+  return {};
 }
 
-function createMenuBarCardModel(
+function createFirstPartyAppCardModel(
   settings: ConnectedAppsSettings,
+  firstPartyApp: FirstPartyConnectedApp,
 ): ConnectedAppCardModel {
-  const connector = firstPartyMenuBarConnector(settings);
-  const status = menuBarStatus(settings, connector);
-  const action = menuBarAction(settings, connector);
+  const connector = connectorForFirstPartyApp(settings, firstPartyApp);
+  const status = firstPartyAppStatus(settings, firstPartyApp, connector);
+  const action = firstPartyAppAction(firstPartyApp, connector);
   return {
-    id: FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
-    name: settings.menuBarApp.name,
-    summary: settings.menuBarApp.description,
+    id: firstPartyApp.id,
+    name: firstPartyApp.name,
+    summary: firstPartyApp.description,
     status: status.status,
     statusLabel: status.label,
-    guidance: menuBarGuidance(settings, connector),
-    access: connector?.permissions ?? MENU_BAR_ACCESS,
+    guidance: firstPartyAppGuidance(settings, firstPartyApp, connector),
+    access: connector?.permissions ?? firstPartyApp.access,
     connector,
     installUrl: action.url,
     installLabel: action.label,
     showUninstallRequest: action.showUninstallRequest,
-    showLifecycleControl: settings.menuBarApp.availability === "available",
+    showLifecycleControl:
+      firstPartyApp.availability === "available" && connector !== undefined,
   };
 }
 
@@ -411,10 +435,13 @@ function createGenericConnectorCardModel(
 function createConnectedAppCardModels(
   settings: ConnectedAppsSettings,
 ): ConnectedAppCardModel[] {
+  const firstPartyIds = new Set(settings.firstPartyApps.map((app) => app.id));
   return [
-    createMenuBarCardModel(settings),
+    ...settings.firstPartyApps.map((app) =>
+      createFirstPartyAppCardModel(settings, app),
+    ),
     ...settings.connectors
-      .filter((connector) => connector.id !== FIRST_PARTY_MENU_BAR_CONNECTOR_ID)
+      .filter((connector) => !firstPartyIds.has(connector.id))
       .map(createGenericConnectorCardModel),
   ];
 }

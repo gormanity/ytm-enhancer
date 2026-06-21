@@ -22,6 +22,14 @@ YTM Menu Bar:
 - Distribution: direct `.pkg`, Sparkle appcast, and Homebrew cask.
 - GitHub Releases: component-scoped artifact pages only.
 
+YTM Enhancer CLI:
+
+- Tag format: `cli-vX.Y.Z` once public packaging exists.
+- Version source: `apps/cli/internal/protocol`.
+- Release workflow: not yet implemented.
+- Distribution: local development scripts now, Homebrew cask/formula later.
+- GitHub Releases: future component-scoped artifact pages only.
+
 ## Tag Policy
 
 Use component-scoped tags whenever a product can release independently:
@@ -29,6 +37,7 @@ Use component-scoped tags whenever a product can release independently:
 ```text
 vX.Y.Z              browser extension
 menu-bar-vX.Y.Z     YTM Menu Bar connector
+cli-vX.Y.Z          YTM Enhancer CLI connector
 future-app-vX.Y.Z   future independently shipped app
 ```
 
@@ -59,6 +68,7 @@ Human-facing discovery should be component-specific:
 - Extension users should use browser stores and extension release notes.
 - Menu bar users should use
   `https://gormanity.github.io/ytm-enhancer/menu-bar/install.html`.
+- CLI users should use `apps/cli/README.md` until public packaging exists.
 - Developers should use `docs/menu-bar-release.md` and component READMEs.
 
 Automated discovery should use native channel mechanisms:

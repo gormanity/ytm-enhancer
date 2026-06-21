@@ -91,15 +91,15 @@ lifecycle control surface.
 
 ## Transport
 
-The first transport is browser native messaging for the first-party macOS menu
-bar app. The extension-side adapter lives behind the `ConnectorTransport`
-interface, so protocol validation and playback routing still flow through the
-connector host.
+The first transport is browser native messaging for first-party native apps. The
+extension-side adapter lives behind the `ConnectorTransport` interface, so
+protocol validation and playback routing still flow through the connector host.
 
-The native messaging host name is:
+Current first-party native messaging host names are:
 
 ```text
 com.gormanity.ytm_enhancer.menu_bar
+com.gormanity.ytm_enhancer.cli
 ```
 
 The background service worker attaches the transport only when Connected Apps is
@@ -108,7 +108,7 @@ native messaging connection is not opened.
 
 Browsers do not expose a native-host installation query. The extension infers
 first-party install state from the native messaging startup path instead:
-successful `connectNative()` startup marks YTM Menu Bar as available, and
+successful `connectNative()` startup marks a first-party app as available, and
 browser-reported startup or disconnect failures mark it as missing or needing
 attention in the Connected Apps page. These diagnostics are intentionally
 transient and are not part of the connector protocol.
@@ -123,6 +123,7 @@ packages/
   connector-protocol/
 
 apps/
+  cli/
   menu-bar/
 
 src/
@@ -183,6 +184,32 @@ Connected Apps may request that a connected app begin its native uninstall flow.
 The browser extension must not run uninstall commands itself. The native app
 owns user confirmation, install-channel-specific behavior, elevated permissions,
 and shutdown.
+
+## CLI Connector
+
+The first-party command-line connector lives in `apps/cli`. It is a Go app with
+two binaries:
+
+- `ytme-native-host`, launched by the browser through native messaging.
+- `ytme`, a short-lived user-facing CLI that talks to the native host through a
+  private local Unix socket.
+
+The CLI uses the same connector protocol as YTM Menu Bar. It does not read
+YouTube Music pages, authenticate with YouTube, or play audio directly. The
+browser extension remains the source of playback state and command routing.
+
+Initial local development commands are:
+
+```sh
+apps/cli/scripts/install-native-hosts.sh
+ytme doctor
+apps/cli/scripts/uninstall-native-hosts.sh
+```
+
+The `ytme` command supports playback status, JSON status output, play/pause,
+previous/next, seek, shuffle, repeat, focus, watch mode, and diagnostics.
+Homebrew packaging and public CLI release automation are intentionally left for
+a later release slice.
 
 Remaining work before a public connector release:
 

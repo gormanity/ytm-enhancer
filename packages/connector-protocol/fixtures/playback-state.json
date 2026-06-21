@@ -1,0 +1,23 @@
+{
+  "type": "playback.state",
+  "requestId": "state-1",
+  "state": {
+    "title": "A Walk",
+    "artist": "Tycho",
+    "album": "Dive",
+    "year": 2011,
+    "artworkUrl": "https://lh3.googleusercontent.com/example",
+    "nextTrack": {
+      "title": "Send And Receive",
+      "artist": "Tycho",
+      "album": "Dive",
+      "year": 2011,
+      "artworkUrl": "https://lh3.googleusercontent.com/next"
+    },
+    "isPlaying": true,
+    "progress": 146,
+    "duration": 317,
+    "isShuffling": false,
+    "repeatMode": "off"
+  }
+}

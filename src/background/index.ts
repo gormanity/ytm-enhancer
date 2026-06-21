@@ -16,19 +16,19 @@ import {
   type PlaybackState,
 } from "@/core";
 import { createConnectorHost, type ConnectorHost } from "@/core/connectors";
-import {
-  createNativeMessagingTransport,
-  NATIVE_MESSAGING_CONNECTION_ID,
-} from "@/core/connectors/native-messaging-transport";
+import { createNativeMessagingTransport } from "@/core/connectors/native-messaging-transport";
 import {
   CONNECTORS_ENABLED_STATE_KEY,
   CONNECTORS_KNOWN_STATE_KEY,
   createConnectedAppsSettings,
+  FIRST_PARTY_CONNECTED_APP_DEFINITIONS,
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+  firstPartyConnectedAppDefinition,
   normalizeKnownConnectors,
   setKnownConnectorEnabled,
   upsertKnownConnector,
   type ConnectedAppAvailability,
+  type FirstPartyConnectedApp,
   type ConnectorStatus,
   type KnownConnector,
 } from "@/core/connectors/settings";
@@ -95,10 +95,14 @@ let selectedTabId: number | null = null;
 let connectorHost: ConnectorHost | null = null;
 let connectorSupportEnabled = false;
 let knownConnectors = new Map<string, KnownConnector>();
-let menuBarNativeHostAvailability: ConnectedAppAvailability = "unknown";
-let menuBarNativeHostLastError: string | null = null;
-let menuBarNativeHostLastCheckedAt: number | null = null;
-const MENU_BAR_NATIVE_HOST_RECHECK_COOLDOWN_MS = 1000;
+interface NativeHostDiagnostic {
+  availability: ConnectedAppAvailability;
+  lastError: string | null;
+  lastCheckedAt: number | null;
+}
+
+let firstPartyNativeHostDiagnostics = new Map<string, NativeHostDiagnostic>();
+const FIRST_PARTY_NATIVE_HOST_RECHECK_COOLDOWN_MS = 1000;
 const devBuildSuspendedTabIds = new Set<number>();
 const devBuildConflictState: DevBuildConflictState = {
   suspendedTabIds: devBuildSuspendedTabIds,
@@ -174,21 +178,70 @@ function isNativeHostExitError(message: string | null): boolean {
   return /native host (has )?exited/i.test(message ?? "");
 }
 
-function recordMenuBarNativeHostAvailable(shouldNotify = true): void {
-  menuBarNativeHostAvailability = "available";
-  menuBarNativeHostLastError = null;
-  menuBarNativeHostLastCheckedAt = Date.now();
+function nativeMessagingConnectionId(hostName: string): string {
+  return `native:${hostName}`;
+}
+
+function defaultNativeHostDiagnostic(): NativeHostDiagnostic {
+  return {
+    availability: "unknown",
+    lastError: null,
+    lastCheckedAt: null,
+  };
+}
+
+function nativeHostDiagnostic(connectorId: string): NativeHostDiagnostic {
+  return (
+    firstPartyNativeHostDiagnostics.get(connectorId) ??
+    defaultNativeHostDiagnostic()
+  );
+}
+
+function setNativeHostDiagnostic(
+  connectorId: string,
+  diagnostic: NativeHostDiagnostic,
+): void {
+  const next = new Map(firstPartyNativeHostDiagnostics);
+  next.set(connectorId, diagnostic);
+  firstPartyNativeHostDiagnostics = next;
+}
+
+function recordNativeHostAvailable(
+  connectorId: string,
+  shouldNotify = true,
+): void {
+  setNativeHostDiagnostic(connectorId, {
+    availability: "available",
+    lastError: null,
+    lastCheckedAt: Date.now(),
+  });
   if (shouldNotify) notifyConnectedAppsChanged();
 }
 
-function recordMenuBarNativeHostError(error: Error): void {
+function recordNativeHostError(connectorId: string, error: Error): void {
   const message = error.message || String(error);
-  menuBarNativeHostAvailability = isMissingNativeHostError(message)
-    ? "missing"
-    : "error";
-  menuBarNativeHostLastError = message;
-  menuBarNativeHostLastCheckedAt = Date.now();
+  setNativeHostDiagnostic(connectorId, {
+    availability: isMissingNativeHostError(message) ? "missing" : "error",
+    lastError: message,
+    lastCheckedAt: Date.now(),
+  });
   notifyConnectedAppsChanged();
+}
+
+function firstPartyNativeHostTransports() {
+  return FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map((definition) =>
+    createNativeMessagingTransport({
+      hostName: definition.nativeHostName,
+      connectionId: nativeMessagingConnectionId(definition.nativeHostName),
+      onConnect: () => recordNativeHostAvailable(definition.id),
+      onDisconnect: () => {
+        connectorHost?.disconnect(
+          nativeMessagingConnectionId(definition.nativeHostName),
+        );
+      },
+      onError: (err) => recordNativeHostError(definition.id, err),
+    }),
+  );
 }
 
 async function enableConnectorSupport(): Promise<void> {
@@ -202,15 +255,7 @@ async function enableConnectorSupport(): Promise<void> {
     },
     onConnectorSeen: rememberConnector,
     onPlaybackStateSubscriptionChanged: setConnectorPlaybackStateStreaming,
-    transports: [
-      createNativeMessagingTransport({
-        onConnect: recordMenuBarNativeHostAvailable,
-        onDisconnect: () => {
-          connectorHost?.disconnect(NATIVE_MESSAGING_CONNECTION_ID);
-        },
-        onError: recordMenuBarNativeHostError,
-      }),
-    ],
+    transports: firstPartyNativeHostTransports(),
   });
   connectorHost.start();
 }
@@ -224,7 +269,9 @@ async function startConnectorSupport(): Promise<void> {
         ? err
         : new Error(err == null ? "Unknown error" : String(err));
     error("Failed to start connector support:", startupError);
-    recordMenuBarNativeHostError(startupError);
+    for (const definition of FIRST_PARTY_CONNECTED_APP_DEFINITIONS) {
+      recordNativeHostError(definition.id, startupError);
+    }
     disableConnectorSupport();
   }
 }
@@ -266,32 +313,41 @@ async function restartConnectorSupport(): Promise<void> {
   await startConnectorSupportIfAvailable();
 }
 
-function shouldRecheckMenuBarNativeHostAvailability(): boolean {
+function shouldRecheckNativeHostAvailability(
+  firstPartyApp: Pick<FirstPartyConnectedApp, "id">,
+): boolean {
+  const diagnostic = nativeHostDiagnostic(firstPartyApp.id);
   if (!connectorSupportEnabled) return false;
-  if (menuBarNativeHostAvailability === "available") return false;
+  if (diagnostic.availability === "available") return false;
   if (
-    menuBarNativeHostAvailability === "error" &&
-    isNativeHostExitError(menuBarNativeHostLastError)
+    diagnostic.availability === "error" &&
+    isNativeHostExitError(diagnostic.lastError)
   ) {
     return false;
   }
   if (
-    menuBarNativeHostLastCheckedAt !== null &&
-    Date.now() - menuBarNativeHostLastCheckedAt <
-      MENU_BAR_NATIVE_HOST_RECHECK_COOLDOWN_MS
+    diagnostic.lastCheckedAt !== null &&
+    Date.now() - diagnostic.lastCheckedAt <
+      FIRST_PARTY_NATIVE_HOST_RECHECK_COOLDOWN_MS
   ) {
     return false;
   }
 
   return (
-    menuBarNativeHostAvailability === "unknown" ||
-    menuBarNativeHostAvailability === "missing" ||
-    menuBarNativeHostAvailability === "error"
+    diagnostic.availability === "unknown" ||
+    diagnostic.availability === "missing" ||
+    diagnostic.availability === "error"
   );
 }
 
-async function recheckMenuBarNativeHostAvailability(): Promise<void> {
-  if (!shouldRecheckMenuBarNativeHostAvailability()) return;
+async function recheckFirstPartyNativeHostAvailability(): Promise<void> {
+  if (
+    !FIRST_PARTY_CONNECTED_APP_DEFINITIONS.some(
+      shouldRecheckNativeHostAvailability,
+    )
+  ) {
+    return;
+  }
   await restartConnectorSupport();
 }
 
@@ -306,11 +362,12 @@ function connectedAppsSettings() {
     connectorSupportEnabled,
     knownConnectors,
     connectedConnectorIds(),
-    {
-      availability: menuBarNativeHostAvailability,
-      lastError: menuBarNativeHostLastError,
-      lastCheckedAt: menuBarNativeHostLastCheckedAt,
-    },
+    Object.fromEntries(
+      FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map((definition) => [
+        definition.id,
+        nativeHostDiagnostic(definition.id),
+      ]),
+    ),
   );
 }
 
@@ -342,7 +399,9 @@ function rememberConnector(
   status: ConnectorStatus,
 ): void {
   if (manifest.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID) {
-    recordMenuBarNativeHostAvailable(false);
+    recordNativeHostAvailable(manifest.id, false);
+  } else if (firstPartyConnectedAppDefinition(manifest.id)) {
+    recordNativeHostAvailable(manifest.id, false);
   }
   knownConnectors = upsertKnownConnector(knownConnectors, manifest, {
     now: Date.now(),
@@ -579,7 +638,7 @@ handler.on("get-dev-build-conflict-status", async () => {
 });
 
 handler.on("get-connected-apps-settings", async () => {
-  await recheckMenuBarNativeHostAvailability();
+  await recheckFirstPartyNativeHostAvailability();
   return { ok: true, data: connectedAppsSettings() };
 });
 

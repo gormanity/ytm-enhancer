@@ -55,17 +55,22 @@ describe("connector host background gating", () => {
       "createConnectorHost",
     );
     expect(functionBody("enableConnectorSupport")).toContain(
+      "firstPartyNativeHostTransports()",
+    );
+    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
       "createNativeMessagingTransport({",
     );
-    expect(functionBody("enableConnectorSupport")).toContain(
-      "onConnect: recordMenuBarNativeHostAvailable",
+    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
+      "hostName: definition.nativeHostName",
     );
-    expect(functionBody("enableConnectorSupport")).toContain(
-      "onError: recordMenuBarNativeHostError",
+    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
+      "onConnect: () => recordNativeHostAvailable(definition.id)",
     );
-    expect(functionBody("enableConnectorSupport")).toContain("onDisconnect:");
-    expect(functionBody("enableConnectorSupport")).toContain(
-      "NATIVE_MESSAGING_CONNECTION_ID",
+    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
+      "onError: (err) => recordNativeHostError(definition.id, err)",
+    );
+    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
+      "onDisconnect:",
     );
     expect(functionBody("enableConnectorSupport")).toContain(
       "connectorHost.start();",
@@ -73,38 +78,37 @@ describe("connector host background gating", () => {
   });
 
   it("reports native host diagnostics through Connected Apps settings", () => {
-    expect(backgroundSource).toContain("menuBarNativeHostAvailability");
-    expect(backgroundSource).toContain("recordMenuBarNativeHostError");
+    expect(backgroundSource).toContain("firstPartyNativeHostDiagnostics");
+    expect(backgroundSource).toContain("recordNativeHostError");
+    expect(backgroundSource).toContain("nativeHostDiagnostic");
     expect(backgroundSource).toContain("isMissingNativeHostError");
     expect(functionBody("isMissingNativeHostError", false)).toContain(
       "error when communicating with the native messaging host",
     );
     expect(functionBody("connectedAppsSettings", false)).toContain(
-      "availability: menuBarNativeHostAvailability",
+      "FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map",
     );
     expect(functionBody("connectedAppsSettings", false)).toContain(
-      "lastError: menuBarNativeHostLastError",
+      "nativeHostDiagnostic(definition.id)",
     );
   });
 
   it("rechecks native host availability when Connected Apps settings are opened", () => {
     expect(backgroundSource).toContain(
-      "MENU_BAR_NATIVE_HOST_RECHECK_COOLDOWN_MS",
+      "FIRST_PARTY_NATIVE_HOST_RECHECK_COOLDOWN_MS",
     );
-    expect(backgroundSource).toContain(
-      "shouldRecheckMenuBarNativeHostAvailability",
-    );
+    expect(backgroundSource).toContain("shouldRecheckNativeHostAvailability");
     expect(
-      functionBody("shouldRecheckMenuBarNativeHostAvailability", false),
-    ).toContain('menuBarNativeHostAvailability === "missing"');
+      functionBody("shouldRecheckNativeHostAvailability", false),
+    ).toContain('diagnostic.availability === "missing"');
     expect(
-      functionBody("shouldRecheckMenuBarNativeHostAvailability", false),
-    ).toContain("isNativeHostExitError(menuBarNativeHostLastError)");
-    expect(functionBody("recheckMenuBarNativeHostAvailability")).toContain(
+      functionBody("shouldRecheckNativeHostAvailability", false),
+    ).toContain("isNativeHostExitError(diagnostic.lastError)");
+    expect(functionBody("recheckFirstPartyNativeHostAvailability")).toContain(
       "await restartConnectorSupport();",
     );
     expect(handlerBody("get-connected-apps-settings")).toContain(
-      "await recheckMenuBarNativeHostAvailability();",
+      "await recheckFirstPartyNativeHostAvailability();",
     );
   });
 
@@ -129,7 +133,7 @@ describe("connector host background gating", () => {
       "await enableConnectorSupport();",
     );
     expect(functionBody("startConnectorSupport")).toContain(
-      "recordMenuBarNativeHostError(",
+      "recordNativeHostError(definition.id, startupError)",
     );
     expect(functionBody("startConnectorSupport")).toContain(
       "disableConnectorSupport();",

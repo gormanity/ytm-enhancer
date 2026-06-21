@@ -1,0 +1,16 @@
+{
+  "type": "connector.hello",
+  "requestId": "hello-1",
+  "manifest": {
+    "id": "com.gormanity.ytm-enhancer.cli",
+    "name": "YTM Enhancer CLI",
+    "version": "0.1.0",
+    "protocolVersion": "1.0.0",
+    "permissions": [
+      "playback:read",
+      "playback:control",
+      "track:read",
+      "ytm:focus"
+    ]
+  }
+}

@@ -9,11 +9,18 @@ export const CONNECTORS_ENABLED_STATE_KEY = "connectors.enabled";
 export const CONNECTORS_KNOWN_STATE_KEY = "connectors.known";
 export const FIRST_PARTY_MENU_BAR_CONNECTOR_ID =
   "com.gormanity.ytm-enhancer.menu-bar";
+export const FIRST_PARTY_CLI_CONNECTOR_ID = "com.gormanity.ytm-enhancer.cli";
+export const FIRST_PARTY_MENU_BAR_NATIVE_HOST_NAME =
+  "com.gormanity.ytm_enhancer.menu_bar";
+export const FIRST_PARTY_CLI_NATIVE_HOST_NAME =
+  "com.gormanity.ytm_enhancer.cli";
 export const MENU_BAR_INSTALL_URL =
   "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html";
 export const MENU_BAR_UNINSTALL_URL = `${MENU_BAR_INSTALL_URL}#uninstall`;
 export const MENU_BAR_HOMEBREW_COMMAND =
   "brew install --cask gormanity/tap/ytm-menu-bar";
+export const CLI_INSTALL_URL =
+  "https://github.com/gormanity/ytm-enhancer/tree/main/apps/cli";
 
 export type ConnectorStatus =
   | "connected"
@@ -51,19 +58,29 @@ export interface ConnectedApp {
   lastConnectedAt: number | null;
 }
 
-export interface MenuBarConnectedApp {
+export interface FirstPartyConnectedAppDefinition {
   id: string;
   name: string;
   description: string;
+  nativeHostName: string;
   installUrl: string;
-  homebrewCommand: string;
+  installLabel: string;
+  access: ConnectorPermission[];
+  supportsUninstallRequest: boolean;
+  homebrewCommand?: string;
+}
+
+export interface FirstPartyConnectedApp extends FirstPartyConnectedAppDefinition {
   availability: ConnectedAppAvailability;
   lastError: string | null;
   lastCheckedAt: number | null;
 }
 
+export type MenuBarConnectedApp = FirstPartyConnectedApp;
+
 export interface ConnectedAppsSettings {
   enabled: boolean;
+  firstPartyApps: FirstPartyConnectedApp[];
   menuBarApp: MenuBarConnectedApp;
   connectors: ConnectedApp[];
 }
@@ -77,6 +94,45 @@ export const CONNECTOR_PERMISSION_LABELS: Record<ConnectorPermission, string> =
   };
 
 const CONNECTOR_PERMISSION_SET = new Set<string>(CONNECTOR_PERMISSIONS);
+
+export const FIRST_PARTY_CONNECTED_APP_DEFINITIONS: FirstPartyConnectedAppDefinition[] =
+  [
+    {
+      id: FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+      name: "YTM Menu Bar",
+      description: "Native macOS menu bar controls for YouTube Music.",
+      nativeHostName: FIRST_PARTY_MENU_BAR_NATIVE_HOST_NAME,
+      installUrl: MENU_BAR_INSTALL_URL,
+      installLabel: "Download for macOS",
+      homebrewCommand: MENU_BAR_HOMEBREW_COMMAND,
+      access: ["playback:read", "track:read", "playback:control", "ytm:focus"],
+      supportsUninstallRequest: true,
+    },
+    {
+      id: FIRST_PARTY_CLI_CONNECTOR_ID,
+      name: "YTM Enhancer CLI",
+      description: "Command-line playback controls for YouTube Music.",
+      nativeHostName: FIRST_PARTY_CLI_NATIVE_HOST_NAME,
+      installUrl: CLI_INSTALL_URL,
+      installLabel: "Install CLI",
+      access: ["playback:read", "track:read", "playback:control", "ytm:focus"],
+      supportsUninstallRequest: false,
+    },
+  ];
+
+export function firstPartyConnectedAppDefinition(
+  connectorId: string,
+): FirstPartyConnectedAppDefinition | undefined {
+  return FIRST_PARTY_CONNECTED_APP_DEFINITIONS.find(
+    (definition) => definition.id === connectorId,
+  );
+}
+
+export function firstPartyConnectedAppNativeHostNames(): string[] {
+  return FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map(
+    (definition) => definition.nativeHostName,
+  );
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -182,12 +238,18 @@ export function setKnownConnectorEnabled(
 export function createMenuBarConnectedApp(
   overrides: Partial<MenuBarConnectedApp> = {},
 ): MenuBarConnectedApp {
+  return createFirstPartyConnectedApp(
+    FIRST_PARTY_CONNECTED_APP_DEFINITIONS[0]!,
+    overrides,
+  );
+}
+
+export function createFirstPartyConnectedApp(
+  definition: FirstPartyConnectedAppDefinition,
+  overrides: Partial<FirstPartyConnectedApp> = {},
+): FirstPartyConnectedApp {
   return {
-    id: FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
-    name: "YTM Menu Bar",
-    description: "Native macOS menu bar controls for YouTube Music.",
-    installUrl: MENU_BAR_INSTALL_URL,
-    homebrewCommand: MENU_BAR_HOMEBREW_COMMAND,
+    ...definition,
     availability: "unknown",
     lastError: null,
     lastCheckedAt: null,
@@ -199,11 +261,26 @@ export function createConnectedAppsSettings(
   enabled: boolean,
   connectors: Map<string, KnownConnector>,
   connectedConnectorIds: Set<string> = new Set(),
-  menuBarApp: Partial<MenuBarConnectedApp> = {},
+  firstPartyAppOverrides: Partial<
+    Record<string, Partial<FirstPartyConnectedApp>>
+  > = {},
 ): ConnectedAppsSettings {
+  const firstPartyApps = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map(
+    (definition) =>
+      createFirstPartyConnectedApp(
+        definition,
+        firstPartyAppOverrides[definition.id] ?? {},
+      ),
+  );
+  const menuBarApp =
+    firstPartyApps.find(
+      (app) => app.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+    ) ?? createMenuBarConnectedApp();
+
   return {
     enabled,
-    menuBarApp: createMenuBarConnectedApp(menuBarApp),
+    firstPartyApps,
+    menuBarApp,
     connectors: Array.from(connectors.values())
       .map((connector): ConnectedApp => {
         const status: ConnectorStatus = connector.incompatible

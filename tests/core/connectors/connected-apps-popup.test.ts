@@ -4,7 +4,11 @@ import {
   type ConnectedAppsClient,
   type ConnectedAppsSettings,
 } from "@/core/connectors/popup";
-import { createMenuBarConnectedApp } from "@/core/connectors/settings";
+import {
+  FIRST_PARTY_CONNECTED_APP_DEFINITIONS,
+  createFirstPartyConnectedApp,
+  createMenuBarConnectedApp,
+} from "@/core/connectors/settings";
 import { createTestModuleContext } from "../../helpers/module-context";
 
 type SettingsInput = Omit<Partial<ConnectedAppsSettings>, "menuBarApp"> & {
@@ -12,11 +16,21 @@ type SettingsInput = Omit<Partial<ConnectedAppsSettings>, "menuBarApp"> & {
 };
 
 function createSettings(input: SettingsInput = {}): ConnectedAppsSettings {
+  const menuBarApp = createMenuBarConnectedApp(input.menuBarApp);
+  const firstPartyApps =
+    input.firstPartyApps ??
+    FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map((definition) =>
+      definition.id === menuBarApp.id
+        ? menuBarApp
+        : createFirstPartyConnectedApp(definition),
+    );
+
   return {
     enabled: false,
+    firstPartyApps,
     connectors: [],
     ...input,
-    menuBarApp: createMenuBarConnectedApp(input.menuBarApp),
+    menuBarApp,
   };
 }
 
@@ -307,11 +321,14 @@ describe("Connected Apps popup view", () => {
       expect(element).not.toBeNull();
       return element!;
     });
-    const installLink = container.querySelector<HTMLAnchorElement>(
+    const menuBarCard = container.querySelector<HTMLDetailsElement>(
+      '[data-app-id="com.gormanity.ytm-enhancer.menu-bar"]',
+    );
+    const installLink = menuBarCard?.querySelector<HTMLAnchorElement>(
       '[data-role="connected-app-install-link"]',
     );
 
-    expect(installLink).toBeNull();
+    expect(installLink ?? null).toBeNull();
     expect(uninstallButton.textContent).toContain("Uninstall App");
     uninstallButton.click();
 
@@ -579,6 +596,39 @@ describe("Connected Apps popup view", () => {
 
     expect(directLink?.href).toBe(
       "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
+    );
+  });
+
+  it("shows the first-party CLI app before it is registered", async () => {
+    const client = createClient(createSettings({ enabled: true }));
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const card = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLDetailsElement>(
+        '[data-app-id="com.gormanity.ytm-enhancer.cli"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(card.open).toBe(false);
+    expect(card.textContent).toContain("YTM Enhancer CLI");
+    expect(card.textContent).toContain(
+      "Command-line playback controls for YouTube Music.",
+    );
+    expect(card.textContent).toContain("Available");
+    expect(card.textContent).toContain("Install CLI");
+
+    const installLink = card.querySelector<HTMLAnchorElement>(
+      '[data-role="connected-app-install-link"]',
+    );
+    expect(installLink?.href).toBe(
+      "https://github.com/gormanity/ytm-enhancer/tree/main/apps/cli",
     );
   });
 
