@@ -1229,8 +1229,11 @@ describe("menu bar connector app scaffold", () => {
     expect(metadataSource).toContain("Bundle.main.bundleURL.pathExtension");
     expect(metadataSource).toContain('"app"');
     expect(metadataSource).toContain("YTMMenuBarDisplayVersion");
+    expect(metadataSource).toContain("YTMMenuBarIsLocalBuild");
+    expect(metadataSource).toContain("if isLocalBuild");
     expect(metadataSource).toContain("CFBundleShortVersionString");
     expect(metadataSource).toContain("CFBundleVersion");
+    expect(metadataSource).toContain("bundledBool");
     expect(metadataSource).toContain('"yyyy.MM.dd.HHmm"');
     expect(metadataSource).toContain('"yyyyMMddHHmm"');
     expect(metadataSource).toContain("Bundle.main.executableURL");
@@ -1620,6 +1623,9 @@ describe("menu bar connector app scaffold", () => {
     expect(appScript).toContain("Info.plist.template");
     expect(appScript).toContain("BASE_VERSION: metadata.baseVersion");
     expect(appScript).toContain("DISPLAY_VERSION: metadata.displayVersion");
+    expect(appScript).toContain(
+      'IS_LOCAL_BUILD: metadata.isLocalBuild ? "true" : "false"',
+    );
     expect(appScript).toContain("Sparkle.framework");
     expect(appScript).toContain("verbatimSymlinks: true");
     expect(appScript).toContain(

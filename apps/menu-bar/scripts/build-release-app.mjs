@@ -295,6 +295,7 @@ export async function buildReleaseApp({
       BUILD_NUMBER: metadata.buildNumber,
       BUNDLE_IDENTIFIER: metadata.bundleIdentifier,
       DISPLAY_VERSION: metadata.displayVersion,
+      IS_LOCAL_BUILD: metadata.isLocalBuild ? "true" : "false",
       MINIMUM_MACOS_VERSION: metadata.minimumMacOSVersion,
       SPARKLE_ALLOWS_AUTOMATIC_UPDATES: "false",
       SPARKLE_AUTOMATIC_CHECKS: "false",

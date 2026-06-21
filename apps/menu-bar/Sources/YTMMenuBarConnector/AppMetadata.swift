@@ -42,6 +42,10 @@ enum AppMetadata {
   }
 
   static var versionText: String {
+    if isLocalBuild {
+      return "Version \(version)"
+    }
+
     if isBundledApp {
       return "Version \(version) (Build \(buildNumber))"
     }
@@ -51,6 +55,10 @@ enum AppMetadata {
 
   private static var isBundledApp: Bool {
     Bundle.main.bundleURL.pathExtension == "app"
+  }
+
+  private static var isLocalBuild: Bool {
+    bundledBool("YTMMenuBarIsLocalBuild") ?? false
   }
 
   private static var localBuildVersion: String {
@@ -67,6 +75,11 @@ enum AppMetadata {
     let value = Bundle.main.infoDictionary?[key] as? String
     let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed?.isEmpty == false ? trimmed : nil
+  }
+
+  private static func bundledBool(_ key: String) -> Bool? {
+    guard isBundledApp else { return nil }
+    return Bundle.main.infoDictionary?[key] as? Bool
   }
 
   private static func formatLocalBuildDate(_ format: String) -> String {

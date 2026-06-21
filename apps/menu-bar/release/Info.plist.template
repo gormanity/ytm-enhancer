@@ -31,6 +31,8 @@
   <string>{{DISPLAY_VERSION}}</string>
   <key>YTMMenuBarBaseVersion</key>
   <string>{{BASE_VERSION}}</string>
+  <key>YTMMenuBarIsLocalBuild</key>
+  <{{IS_LOCAL_BUILD}}/>
   <key>SUEnableAutomaticChecks</key>
   <{{SPARKLE_AUTOMATIC_CHECKS}}/>
   <key>SUAllowsAutomaticUpdates</key>
