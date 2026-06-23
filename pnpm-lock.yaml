@@ -48,6 +48,8 @@ importers:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@25.8.0)(jsdom@28.1.0)
 
+  packages/connector-protocol: {}
+
 packages:
 
   '@acemir/cssom@0.9.31':

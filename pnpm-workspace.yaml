@@ -2,4 +2,6 @@ packages:
   - "packages/*"
   - "apps/*"
 
-approveBuilds: esbuild
+allowBuilds:
+  esbuild: true
+  sharp: true
