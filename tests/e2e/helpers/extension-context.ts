@@ -16,6 +16,11 @@ export interface ExtensionTestContext {
   popup: Page;
 }
 
+export interface LaunchExtensionContextOptions {
+  env?: Record<string, string>;
+  mode?: "dev" | "prod-and-dev";
+}
+
 function devExtensionPathForProject(projectName: string): string {
   return resolve(
     process.cwd(),
@@ -31,8 +36,11 @@ function browserChannelForProject(projectName: string): string | undefined {
 
 export async function launchExtensionContext(
   testInfo: TestInfo,
-  mode: "dev" | "prod-and-dev" = "dev",
+  modeOrOptions: "dev" | "prod-and-dev" | LaunchExtensionContextOptions = "dev",
 ): Promise<ExtensionTestContext> {
+  const options =
+    typeof modeOrOptions === "string" ? { mode: modeOrOptions } : modeOrOptions;
+  const mode = options.mode ?? "dev";
   const devExtensionPath = devExtensionPathForProject(testInfo.project.name);
   const extensionPaths =
     mode === "prod-and-dev"
@@ -43,6 +51,7 @@ export async function launchExtensionContext(
 
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: browserChannelForProject(testInfo.project.name),
+    env: options.env,
     args: [
       `--disable-extensions-except=${extensionPaths.join(",")}`,
       `--load-extension=${extensionPaths.join(",")}`,

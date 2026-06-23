@@ -15,6 +15,23 @@ async function loadFixtureHtml(name: string): Promise<string> {
   );
 }
 
+export async function loadYtmFixtureThroughExtension(
+  page: Page,
+  name: string,
+): Promise<void> {
+  const fixtureUrl = "https://music.youtube.com/playlist?list=fixture";
+  await page.unroute(fixtureUrl).catch(() => undefined);
+  await page.route(fixtureUrl, async (route) => {
+    await route.fulfill({
+      contentType: "text/html",
+      body: await loadFixtureHtml(name),
+    });
+  });
+
+  await page.goto("/playlist?list=fixture");
+  await page.waitForLoadState("domcontentloaded");
+}
+
 export async function loadYtmFixture(
   page: Page,
   projectName: string,

@@ -1,6 +1,8 @@
 node_modules/
 .pnpm-store/
 .build/
+.crabbox/
+.remote-qa.env
 apps/*/.build/
 dist/
 dist-dev/
