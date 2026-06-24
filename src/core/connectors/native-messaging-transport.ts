@@ -68,19 +68,10 @@ function reportError(
   }
 }
 
-function reportConnect(onConnect: (() => void) | undefined): void {
-  if (!onConnect) return;
+function safeCallback(callback: (() => void) | undefined): void {
+  if (!callback) return;
   try {
-    onConnect();
-  } catch {
-    // Transport diagnostics must not affect connector host behavior.
-  }
-}
-
-function reportDisconnect(onDisconnect: (() => void) | undefined): void {
-  if (!onDisconnect) return;
-  try {
-    onDisconnect();
+    callback();
   } catch {
     // Transport diagnostics must not affect connector host behavior.
   }
@@ -126,7 +117,7 @@ export function createNativeMessagingTransport(
         port = null;
         return;
       }
-      reportConnect(options.onConnect);
+      safeCallback(options.onConnect);
 
       messageListener = (message: unknown) => {
         if (!handler) return;
@@ -152,7 +143,7 @@ export function createNativeMessagingTransport(
       disconnectListener = () => {
         const message = runtime.lastError?.message;
         if (message) reportError(options.onError, new Error(message));
-        reportDisconnect(options.onDisconnect);
+        safeCallback(options.onDisconnect);
         port = null;
       };
 

@@ -169,6 +169,17 @@ export function createConnectorHost(
     }
   };
 
+  const notifyConnectorSeen = (
+    manifest: ConnectorManifest,
+    status: "connected" | "blocked" | "incompatible",
+  ): void => {
+    try {
+      options.onConnectorSeen?.(manifest, status);
+    } catch (err) {
+      reportError({ code: "route_failed", message: errorMessage(err) });
+    }
+  };
+
   const requireSession = (
     connectionId: string,
   ): ConnectorSession | ConnectorHostResult => {
@@ -273,7 +284,7 @@ export function createConnectorHost(
     message: Extract<ConnectorMessage, { type: "connector.hello" }>,
   ): ConnectorHostResult => {
     if (!supportedProtocolVersions.has(message.manifest.protocolVersion)) {
-      options.onConnectorSeen?.(message.manifest, "incompatible");
+      notifyConnectorSeen(message.manifest, "incompatible");
       return errorResult(
         "unsupported_protocol",
         `Unsupported connector protocol version: ${message.manifest.protocolVersion}`,
@@ -281,7 +292,7 @@ export function createConnectorHost(
     }
 
     if (options.isConnectorAllowed?.(message.manifest) === false) {
-      options.onConnectorSeen?.(message.manifest, "blocked");
+      notifyConnectorSeen(message.manifest, "blocked");
       return errorResult(
         "connector_blocked",
         `Connector ${message.manifest.id} is disabled`,
@@ -295,7 +306,7 @@ export function createConnectorHost(
       subscribedEvents: new Set(),
       connectedAt: now(),
     });
-    options.onConnectorSeen?.(message.manifest, "connected");
+    notifyConnectorSeen(message.manifest, "connected");
     notifyPlaybackStateSubscriptionChanged();
 
     return {

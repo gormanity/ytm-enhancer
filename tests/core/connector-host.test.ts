@@ -191,6 +191,38 @@ describe("ConnectorHost", () => {
     expect(ytm.getPlaybackState).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps connector registration observer failures isolated from handshakes", async () => {
+    const onError = vi.fn();
+    const host = createConnectorHost({
+      enabled: true,
+      ytm: createMockYtmRuntimeClient(),
+      onConnectorSeen: vi.fn(() => {
+        throw new Error("storage unavailable");
+      }),
+      onError,
+    });
+
+    const result = await host.receive("connection-1", {
+      type: "connector.hello",
+      requestId: "hello-1",
+      manifest: validManifest,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      message: {
+        type: "connector.ready",
+        requestId: "hello-1",
+        connectorId: validManifest.id,
+        protocolVersion: CONNECTOR_PROTOCOL_VERSION,
+      },
+    });
+    expect(onError).toHaveBeenCalledWith({
+      code: "route_failed",
+      message: "storage unavailable",
+    });
+  });
+
   it("redacts next track metadata when track read permission is missing", async () => {
     const ytm = createMockYtmRuntimeClient({
       getPlaybackState: vi.fn().mockResolvedValue(playbackState),
