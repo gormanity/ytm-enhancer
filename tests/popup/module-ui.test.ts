@@ -14,6 +14,7 @@ describe("module popup UI kit", () => {
 
   beforeEach(() => {
     sendMessageMock = vi.fn();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.stubGlobal("chrome", {
       runtime: { sendMessage: sendMessageMock },
     });
@@ -174,6 +175,30 @@ describe("module popup UI kit", () => {
     expect(button.disabled).toBe(false);
   });
 
+  it("reports rejected action buttons and restores disabled state", async () => {
+    const failure = new Error("Preview failed");
+    const onClick = vi.fn(async () => {
+      throw failure;
+    });
+    const container = document.createElement("div");
+    container.innerHTML = `<button data-role="run-action">Run</button>`;
+    const button = container.querySelector("button")!;
+
+    bindModuleActionButton(container, "run-action", onClick);
+    button.click();
+    expect(button.disabled).toBe(true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(button.disabled).toBe(false);
+    expect(console.error).toHaveBeenCalledWith(
+      "[YTM Enhancer]",
+      "Popup action failed",
+      failure,
+    );
+  });
+
   it("creates status messages with tone and text", () => {
     const status = createStatusMessage({
       tone: "warning",
@@ -201,5 +226,31 @@ describe("module popup UI kit", () => {
 
     expect(onClick).toHaveBeenCalledOnce();
     expect(button.disabled).toBe(false);
+  });
+
+  it("reports rejected action rows and restores button state", async () => {
+    const failure = new Error("Preview failed");
+    const onClick = vi.fn(async () => {
+      throw failure;
+    });
+    const row = createActionRow({
+      label: "Preview",
+      buttonLabel: "Run",
+      onClick,
+    });
+    const button = row.querySelector("button")!;
+
+    button.click();
+    expect(button.disabled).toBe(true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(button.disabled).toBe(false);
+    expect(console.error).toHaveBeenCalledWith(
+      "[YTM Enhancer]",
+      "Popup action failed",
+      failure,
+    );
   });
 });
