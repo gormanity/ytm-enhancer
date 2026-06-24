@@ -240,7 +240,8 @@ Primary scripts:
 
 Remote QA is documented in `docs/remote-qa.md`. That runbook covers
 Crabbox-backed macOS validation, Linux CLI and browser smokes, Linux x64 CLI
-checks, and the privacy boundary for machine-specific configuration.
+checks, Windows validation through a bowfin-hosted VM, and the privacy boundary
+for machine-specific configuration.
 
 ## Testing Strategy
 

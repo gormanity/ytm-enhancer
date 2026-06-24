@@ -283,6 +283,107 @@ REMOTE_QA_LINUX_X64_ALLOW_EMULATED_BROWSER_E2E=1 \
 scripts/remote/linux-x64-qa/e2e-smoke.sh
 ```
 
+## Windows On Bowfin
+
+Use a persistent Windows 11 ARM VM on the remote Mac for Windows validation. The
+intended path is:
+
+```text
+local checkout
+  -> Crabbox static SSH
+  -> remote macOS QA account
+  -> Windows OpenSSH guest
+```
+
+Prefer Windows ARM as the VM architecture. Use Windows' own x64 app emulation
+only where a tool does not provide ARM binaries. Avoid full x86_64 Windows
+emulation on Apple silicon for browser QA; it is expected to be slow and
+brittle.
+
+Create the VM with a disposable non-admin QA account, bridged networking if
+available, and enough resources for browser builds:
+
+```text
+CPU: 4
+Memory: 8-12 GB
+Disk: 80+ GB
+```
+
+Enable OpenSSH in the Windows guest:
+
+```powershell
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+Start-Service sshd
+Set-Service -Name sshd -StartupType Automatic
+New-NetFirewallRule -Name sshd -DisplayName "OpenSSH Server" `
+  -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+```
+
+Install the Windows toolchain in the guest:
+
+- Git
+- Node.js matching this repo's supported development version
+- Corepack with `pnpm@11.9.0`
+- Go 1.24 or newer
+- Microsoft Edge
+
+Then prepare package-manager state:
+
+```powershell
+corepack enable
+corepack prepare pnpm@11.9.0 --activate
+git config --global core.autocrlf false
+```
+
+Configure the Windows target locally through `.remote-qa.env` or shell
+environment. `REMOTE_QA_WINDOWS_SSH_KEY` is optional; when set, it must be a
+path readable by the remote macOS QA account because the second SSH hop starts
+from that Mac.
+
+```sh
+REMOTE_QA_WINDOWS_HOST="<guest-ip-or-bowfin-forward-host>"
+REMOTE_QA_WINDOWS_USER="<windows-qa-user>"
+REMOTE_QA_WINDOWS_PORT="22"
+REMOTE_QA_WINDOWS_WORK_ROOT="C:/Users/<windows-qa-user>/work/ytm-enhancer"
+REMOTE_QA_WINDOWS_SSH_KEY="$HOME/.ssh/<windows-guest-key-on-remote-mac>"
+```
+
+`REMOTE_QA_WINDOWS_WORK_ROOT` is deleted and recreated on every run. Point it at
+a disposable repository checkout directory, not a broad parent directory.
+
+Run a minimal Windows smoke:
+
+```sh
+scripts/remote/windows-qa/crabbox-run.sh -- powershell.exe -NoProfile \
+  -Command '$PSVersionTable.PSVersion.ToString()'
+```
+
+Run the Windows build/unit check:
+
+```sh
+scripts/remote/windows-qa/check.sh
+```
+
+This uses Windows-native PowerShell instead of `pnpm run check` because some
+package scripts use POSIX environment syntax. It validates formatting, lint,
+dead CSS, data roles, TypeScript, Vitest, Go tests, Chrome/Firefox/Edge builds,
+Firefox add-on lint, and an Edge dev build.
+
+Run a Windows Edge browser smoke:
+
+```sh
+scripts/remote/windows-qa/e2e-edge-smoke.sh
+```
+
+This runs the Playwright `edge` project against the system Microsoft Edge app in
+the Windows guest. Treat Chrome and Firefox Windows browser coverage as a later
+extension after Edge is stable.
+
+Windows native messaging QA is not wired yet. The current CLI native-host
+install scripts and connector e2e smoke target macOS/Linux paths. Add Windows
+registry install/uninstall support before expecting a Windows CLI connector
+smoke to pass.
+
 ## Connector Smokes
 
 The CLI connector stack is not always present on `main`. Run the CLI smoke only
@@ -343,6 +444,11 @@ The remote QA scripts accept these variables:
 - `REMOTE_QA_LINUX_X64_ALLOW_EMULATED_BROWSER_E2E`
 - `REMOTE_QA_LINUX_X64_E2E_PLATFORM`
 - `REMOTE_QA_LINUX_X64_E2E_IMAGE`
+- `REMOTE_QA_WINDOWS_HOST`
+- `REMOTE_QA_WINDOWS_USER`
+- `REMOTE_QA_WINDOWS_PORT`
+- `REMOTE_QA_WINDOWS_WORK_ROOT`
+- `REMOTE_QA_WINDOWS_SSH_KEY`
 
 Keep real values local. If the remote address changes, update `.remote-qa.env`
 or your shell environment.

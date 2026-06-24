@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
 const repoRoot = resolve(appRoot, "../..");
@@ -549,7 +549,7 @@ export function generateAppcast({
   }
 
   const tag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
-  const archiveName = archivePath.split("/").at(-1);
+  const archiveName = basename(archivePath);
   const url = archiveUrl ?? `${releaseBaseUrl}/${tag}/${archiveName}`;
   const notesUrl = releaseNotesUrl ?? defaultReleaseNotesUrl(metadata);
   const length = statSync(archivePath).size;

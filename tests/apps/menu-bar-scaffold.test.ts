@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { NATIVE_MESSAGING_HOST_NAME } from "@/core/connectors/native-messaging-transport";
@@ -21,12 +21,16 @@ function readJson<T>(relativePath: string): T {
   return JSON.parse(read(relativePath)) as T;
 }
 
+function toPosixPath(path: string): string {
+  return path.replaceAll("\\", "/");
+}
+
 function listFiles(dir: string): string[] {
   const absolute = resolve(appRoot, dir);
   return readdirSync(absolute).flatMap((entry) => {
     if (entry === ".build") return [];
     const path = join(absolute, entry);
-    const relativePath = path.slice(appRoot.length + 1);
+    const relativePath = toPosixPath(relative(appRoot, path));
     return statSync(path).isDirectory()
       ? listFiles(relativePath)
       : relativePath;
