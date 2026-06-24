@@ -133,6 +133,16 @@ build. Keep debug output focused on decision points, browser/API differences,
 and selector or state detection. Remove or reduce temporary logging before
 considering the change complete unless it remains useful for future debugging.
 
+## Remote QA
+
+Use `docs/remote-qa.md` for Crabbox-backed remote validation. That document is
+the source of truth for macOS, Linux, Linux x64, browser e2e, CLI connector, and
+menu bar smoke commands.
+
+Do not commit personal hostnames, IP addresses, usernames, SSH key paths, or
+machine-specific credentials. Put real values in ignored `.remote-qa.env` or
+local environment variables only.
+
 ## Change Cycle Checklist
 
 - After every change cycle (even if small), run `pnpm run format`.

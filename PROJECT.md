@@ -238,6 +238,10 @@ Primary scripts:
 - `pnpm run validate`
 - `pnpm run package`
 
+Remote QA is documented in `docs/remote-qa.md`. That runbook covers
+Crabbox-backed macOS validation, Linux CLI and browser smokes, Linux x64 CLI
+checks, and the privacy boundary for machine-specific configuration.
+
 ## Testing Strategy
 
 The test suite mirrors `src/` layout and emphasizes:
