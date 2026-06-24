@@ -245,7 +245,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).not.toContain("MenuBarStyle.accentMuted");
   });
 
-  it("reuses Mini Player SVG playback control icons in the menu bar view", () => {
+  it("reuses shared SVG playback control icons in the menu bar view", () => {
     const manifest = read("Package.swift");
     const sourceFiles = listFiles("Sources/YTMMenuBarConnector");
     const sources = sourceFiles.map(read).join("\n");
@@ -263,6 +263,9 @@ describe("menu bar connector app scaffold", () => {
       expect(manifest).toContain(`.copy("Resources/${resource}")`);
       expect(sourceFiles).toContain(
         `Sources/YTMMenuBarConnector/Resources/${resource}`,
+      );
+      expect(read(`Sources/YTMMenuBarConnector/Resources/${resource}`)).toBe(
+        read(`../../packages/connector-ui-assets/playback/${resource}`),
       );
     }
 

@@ -13,10 +13,18 @@
       #play-pause-button,
       .next-button,
       .previous-button,
+      .repeat,
+      .shuffle,
       #page-play {
         display: block;
         width: 48px;
         height: 48px;
+        margin: 16px;
+      }
+
+      #progress-bar {
+        display: block;
+        width: 320px;
         margin: 16px;
       }
     </style>
@@ -33,9 +41,34 @@
       ></tp-yt-paper-icon-button>
       <button class="previous-button" type="button"></button>
       <button class="next-button" type="button"></button>
+      <button class="shuffle" type="button" aria-pressed="false">
+        <iron-icon
+          icon="yt-icons:shuffle"
+          style="color: rgb(132, 132, 138)"
+        ></iron-icon>
+      </button>
+      <button
+        class="repeat"
+        type="button"
+        aria-label="Repeat off"
+        aria-pressed="false"
+        title="Repeat off"
+      >
+        <iron-icon
+          icon="yt-icons:repeat"
+          style="color: rgb(132, 132, 138)"
+        ></iron-icon>
+      </button>
       <yt-formatted-string class="title style-scope ytmusic-player-bar">
         Loaded Track
       </yt-formatted-string>
+      <span class="subtitle style-scope ytmusic-player-bar">
+        <yt-formatted-string>
+          <a href="/channel/fixture">Fixture Artist</a>
+        </yt-formatted-string>
+      </span>
+      <span id="time-info">1:23 / 4:56</span>
+      <input id="progress-bar" max="296" min="0" type="range" value="83" />
     </section>
 
     <main>
@@ -46,11 +79,14 @@
 
     <script>
       window.__ytmTestEvents = [];
-      document
-        .querySelector("#play-pause-button")
-        .addEventListener("click", () => {
-          window.__ytmTestEvents.push("player-play-pause-clicked");
-        });
+      window.addEventListener("focus", () => {
+        window.__ytmTestEvents.push("window-focused");
+      });
+      const playPauseButton = document.querySelector("#play-pause-button");
+      playPauseButton.addEventListener("click", () => {
+        window.__ytmTestEvents.push("player-play-clicked");
+        window.__ytmTestEvents.push("player-play-pause-clicked");
+      });
       document
         .querySelector(".previous-button")
         .addEventListener("click", () => {
@@ -58,6 +94,64 @@
         });
       document.querySelector(".next-button").addEventListener("click", () => {
         window.__ytmTestEvents.push("next-clicked");
+      });
+      document.querySelector(".shuffle").addEventListener("click", (event) => {
+        const button = event.currentTarget;
+        const icon = button.querySelector("iron-icon");
+        const isPressed = button.getAttribute("aria-pressed") === "true";
+        button.setAttribute("aria-pressed", isPressed ? "false" : "true");
+        icon.style.color = isPressed
+          ? "rgb(132, 132, 138)"
+          : "rgb(255, 255, 255)";
+        window.__ytmTestEvents.push("shuffle-clicked");
+      });
+
+      const repeatModes = [
+        {
+          label: "Repeat off",
+          icon: "yt-icons:repeat",
+          pressed: "false",
+          color: "rgb(132, 132, 138)",
+        },
+        {
+          label: "Repeat all",
+          icon: "yt-icons:repeat",
+          pressed: "true",
+          color: "rgb(255, 255, 255)",
+        },
+        {
+          label: "Repeat one",
+          icon: "yt-icons:repeat-one",
+          pressed: "true",
+          color: "rgb(255, 255, 255)",
+        },
+      ];
+      let repeatModeIndex = 0;
+      function renderRepeatMode() {
+        const button = document.querySelector(".repeat");
+        const icon = button.querySelector("iron-icon");
+        const mode = repeatModes[repeatModeIndex];
+        button.setAttribute("aria-label", mode.label);
+        button.setAttribute("aria-pressed", mode.pressed);
+        button.setAttribute("title", mode.label);
+        icon.setAttribute("icon", mode.icon);
+        icon.style.color = mode.color;
+      }
+      document.querySelector(".repeat").addEventListener("click", () => {
+        repeatModeIndex = (repeatModeIndex + 1) % repeatModes.length;
+        renderRepeatMode();
+        window.__ytmTestEvents.push("repeat-clicked");
+      });
+
+      document.querySelector("#progress-bar").addEventListener("input", () => {
+        window.__ytmTestEvents.push(
+          `seek-input:${document.querySelector("#progress-bar").value}`,
+        );
+      });
+      document.querySelector("#progress-bar").addEventListener("change", () => {
+        window.__ytmTestEvents.push(
+          `seek-change:${document.querySelector("#progress-bar").value}`,
+        );
       });
       document.querySelector("#page-play").addEventListener("click", () => {
         window.__ytmTestEvents.push("page-play-clicked");

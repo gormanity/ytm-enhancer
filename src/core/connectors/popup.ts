@@ -10,6 +10,7 @@ import {
 import {
   FIRST_PARTY_CLI_CONNECTOR_ID,
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+  FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID,
   type ConnectedApp,
   type ConnectedAppAvailability,
   type ConnectorStatus,
@@ -340,6 +341,9 @@ function firstPartyAppGuidance(
       if (firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID) {
         return "YTM Enhancer CLI was stopped. Reconnect it below, or reopen the extension popup after running ytme doctor.";
       }
+      if (firstPartyApp.id === FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID) {
+        return "YTM Tray is installed but not running. Open YTM Tray from Windows, then reconnect it below.";
+      }
       return `${firstPartyApp.name} disconnected. Open it again if it is still installed, or download it again below.`;
     }
     return firstPartyApp.lastError
@@ -353,6 +357,9 @@ function firstPartyAppGuidance(
     if (firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID) {
       return "Open YTM Menu Bar from Applications to connect.";
     }
+    if (firstPartyApp.id === FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID) {
+      return "Open YTM Tray from Windows to connect.";
+    }
     return "Run ytme doctor from your terminal to check the CLI connection.";
   }
   if (connector !== undefined) {
@@ -360,6 +367,9 @@ function firstPartyAppGuidance(
   }
   if (firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID) {
     return "Add playback info and controls to the macOS menu bar with the first YTM Enhancer connected app.";
+  }
+  if (firstPartyApp.id === FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID) {
+    return "Add playback info and controls to the Windows tray with YTM Tray.";
   }
   return "Control YouTube Music from your terminal with ytme.";
 }
@@ -386,7 +396,8 @@ function firstPartyAppAction(
 
   if (
     settings.enabled &&
-    firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID &&
+    (firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID ||
+      firstPartyApp.id === FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID) &&
     firstPartyApp.availability === "error" &&
     isNativeHostExitError(firstPartyApp) &&
     connector?.enabled !== false
@@ -395,7 +406,7 @@ function firstPartyAppAction(
       reconnectLabel:
         firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID
           ? "Reconnect CLI"
-          : "Reconnect App",
+          : "Connect Tray",
     };
   }
 

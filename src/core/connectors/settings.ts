@@ -10,10 +10,14 @@ export const CONNECTORS_KNOWN_STATE_KEY = "connectors.known";
 export const FIRST_PARTY_MENU_BAR_CONNECTOR_ID =
   "com.gormanity.ytm-enhancer.menu-bar";
 export const FIRST_PARTY_CLI_CONNECTOR_ID = "com.gormanity.ytm-enhancer.cli";
+export const FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID =
+  "com.gormanity.ytm-enhancer.tray";
 export const FIRST_PARTY_MENU_BAR_NATIVE_HOST_NAME =
   "com.gormanity.ytm_enhancer.menu_bar";
 export const FIRST_PARTY_CLI_NATIVE_HOST_NAME =
   "com.gormanity.ytm_enhancer.cli";
+export const FIRST_PARTY_WINDOWS_TRAY_NATIVE_HOST_NAME =
+  "com.gormanity.ytm_enhancer.tray";
 export const MENU_BAR_INSTALL_URL =
   "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html";
 export const MENU_BAR_UNINSTALL_URL = `${MENU_BAR_INSTALL_URL}#uninstall`;
@@ -21,6 +25,8 @@ export const MENU_BAR_HOMEBREW_COMMAND =
   "brew install --cask gormanity/tap/ytm-menu-bar";
 export const CLI_INSTALL_URL =
   "https://github.com/gormanity/ytm-enhancer/tree/main/apps/cli";
+export const WINDOWS_TRAY_INSTALL_URL =
+  "https://github.com/gormanity/ytm-enhancer/tree/main/apps/windows-tray";
 
 export type ConnectorStatus =
   | "connected"
@@ -115,6 +121,16 @@ export const FIRST_PARTY_CONNECTED_APP_DEFINITIONS: FirstPartyConnectedAppDefini
       nativeHostName: FIRST_PARTY_CLI_NATIVE_HOST_NAME,
       installUrl: CLI_INSTALL_URL,
       installLabel: "Install CLI",
+      access: ["playback:read", "track:read", "playback:control", "ytm:focus"],
+      supportsUninstallRequest: false,
+    },
+    {
+      id: FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID,
+      name: "YTM Tray",
+      description: "Native Windows tray controls for YouTube Music.",
+      nativeHostName: FIRST_PARTY_WINDOWS_TRAY_NATIVE_HOST_NAME,
+      installUrl: WINDOWS_TRAY_INSTALL_URL,
+      installLabel: "Install for Windows",
       access: ["playback:read", "track:read", "playback:control", "ytm:focus"],
       supportsUninstallRequest: false,
     },

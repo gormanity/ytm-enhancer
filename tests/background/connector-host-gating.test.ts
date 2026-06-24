@@ -57,20 +57,23 @@ describe("connector host background gating", () => {
     expect(functionBody("enableConnectorSupport")).toContain(
       "firstPartyNativeHostTransports()",
     );
+    expect(
+      functionBody("createFirstPartyNativeHostTransport", false),
+    ).toContain("createNativeMessagingTransport({");
+    expect(
+      functionBody("createFirstPartyNativeHostTransport", false),
+    ).toContain("hostName: definition.nativeHostName");
+    expect(
+      functionBody("createFirstPartyNativeHostTransport", false),
+    ).toContain("onConnect: () => recordNativeHostAvailable(definition.id)");
+    expect(
+      functionBody("createFirstPartyNativeHostTransport", false),
+    ).toContain("onError: (err) => recordNativeHostError(definition.id, err)");
+    expect(
+      functionBody("createFirstPartyNativeHostTransport", false),
+    ).toContain("onDisconnect:");
     expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
-      "createNativeMessagingTransport({",
-    );
-    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
-      "hostName: definition.nativeHostName",
-    );
-    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
-      "onConnect: () => recordNativeHostAvailable(definition.id)",
-    );
-    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
-      "onError: (err) => recordNativeHostError(definition.id, err)",
-    );
-    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
-      "onDisconnect:",
+      "firstPartyNativeHostTransportsList",
     );
     expect(functionBody("enableConnectorSupport")).toContain(
       "connectorHost.start();",
@@ -104,11 +107,14 @@ describe("connector host background gating", () => {
     expect(
       functionBody("shouldRecheckNativeHostAvailability", false),
     ).toContain("isNativeHostExitError(diagnostic.lastError)");
-    expect(functionBody("recheckFirstPartyNativeHostAvailability")).toContain(
-      "await restartConnectorSupport();",
-    );
+    expect(
+      functionBody("recheckFirstPartyNativeHostAvailability", false),
+    ).toContain("restartFirstPartyNativeHostTransport(definition)");
+    expect(
+      functionBody("recheckFirstPartyNativeHostAvailability", false),
+    ).not.toContain("restartConnectorSupport");
     expect(handlerBody("get-connected-apps-settings")).toContain(
-      "await recheckFirstPartyNativeHostAvailability();",
+      "recheckFirstPartyNativeHostAvailability();",
     );
   });
 

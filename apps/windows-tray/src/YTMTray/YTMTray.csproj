@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>YTMTray</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource
+      Include="..\..\..\..\packages\connector-ui-assets\playback\playback-*.svg"
+      Link="Resources\%(Filename)%(Extension)"
+    />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\YTMTray.Core\YTMTray.Core.csproj" />
+  </ItemGroup>
+</Project>

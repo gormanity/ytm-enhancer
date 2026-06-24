@@ -72,6 +72,12 @@ Supporting embedded controls are provided by:
 - Stream Quality
 - Precision Volume
 
+First-party Connected Apps are provided by:
+
+- YTM Menu Bar for macOS menu bar playback controls
+- YTM Tray for Windows tray playback controls
+- YTM Enhancer CLI for command-line playback controls
+
 ## Runtime Architecture
 
 The runtime is split into three cooperating layers.

@@ -227,6 +227,31 @@ line-oriented output, newline-delimited JSON, custom polling intervals, and
 bounded `--count` runs available for automation. Homebrew packaging and public
 CLI release automation are intentionally left for a later release slice.
 
+## Windows Tray Connector
+
+The first-party Windows tray connector lives in `apps/windows-tray`. It is a
+modern .NET WinForms tray app that communicates with the extension through
+native messaging. It mirrors the macOS menu bar connector's user-facing role on
+Windows: current playback status, tray/menu controls, focus YouTube Music, and
+connection diagnostics.
+
+The Windows tray app is separate from the CLI. Windows users get a native tray
+surface; PowerShell or WSL CLI support is intentionally not part of the Windows
+Connected Apps scope.
+
+Initial local development commands are:
+
+```powershell
+dotnet run --project apps/windows-tray/tests/YTMTray.Tests/YTMTray.Tests.csproj
+apps/windows-tray/scripts/install-native-hosts.ps1
+apps/windows-tray/scripts/uninstall-native-hosts.ps1
+```
+
+The local installer publishes a self-contained `YTMTray.exe` plus
+`YTMTray.NativeHost.exe`, writes a native messaging manifest that points at the
+native-host relay under `%LOCALAPPDATA%\YTM Enhancer\Tray`, and registers
+user-level native messaging keys for Google Chrome and Microsoft Edge.
+
 Remaining work before a public connector release:
 
 1. Publish the `menu-bar-v*` GitHub Release workflow.

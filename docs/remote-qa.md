@@ -379,10 +379,46 @@ This runs the Playwright `edge` project against the system Microsoft Edge app in
 the Windows guest. Treat Chrome and Firefox Windows browser coverage as a later
 extension after Edge is stable.
 
-Windows native messaging QA is not wired yet. The current CLI native-host
-install scripts and connector e2e smoke target macOS/Linux paths. Add Windows
-registry install/uninstall support before expecting a Windows CLI connector
-smoke to pass.
+Windows CLI native messaging QA is not wired yet. The current CLI native-host
+install scripts and connector e2e smoke target macOS/Linux paths. Windows CLI
+support remains intentionally out of scope; the user-facing Windows Connected
+App is the tray connector.
+
+Run the Windows tray connector smoke:
+
+```sh
+scripts/remote/windows-qa/tray-smoke.sh
+```
+
+This requires the .NET 10 SDK or newer in the Windows guest. It runs the
+dependency-free tray tests, publishes the WinForms tray executable and native
+host relay for the guest architecture, installs user-level Edge and Chrome
+native messaging registry keys, validates the manifest, and removes the smoke
+install.
+
+Run the Windows tray visual smoke from an active Windows desktop session:
+
+```sh
+scripts/remote/windows-qa/tray-visual-smoke.sh
+```
+
+This requires the same .NET SDK as the tray smoke and a logged-in desktop for
+the QA user. It installs the tray app to a temporary directory, launches it
+through an interactive scheduled task, finds the tray icon through Windows UI
+Automation, opens the tray popup, captures desktop/overflow/popup screenshots
+under the Windows user's temp directory, and removes the smoke install.
+
+Run the Windows tray button smoke from an active Windows desktop session:
+
+```sh
+scripts/remote/windows-qa/tray-button-smoke.sh
+```
+
+This installs the tray native host, launches the tray through the active
+desktop, opens the Edge dev build with the YouTube Music fixture, enables
+Connected Apps, clicks the tray playback/seek/focus/about/quit controls through
+Windows UI Automation, and verifies the browser fixture receives the expected
+events.
 
 ## Connector Smokes
 

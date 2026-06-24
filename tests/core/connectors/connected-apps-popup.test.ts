@@ -633,6 +633,43 @@ describe("Connected Apps popup view", () => {
     );
   });
 
+  it("shows the first-party Windows tray app before it is registered", async () => {
+    const client = createClient(createSettings({ enabled: true }));
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const card = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLDetailsElement>(
+        '[data-app-id="com.gormanity.ytm-enhancer.tray"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+
+    expect(card.open).toBe(false);
+    expect(card.textContent).toContain("YTM Tray");
+    expect(card.textContent).toContain(
+      "Native Windows tray controls for YouTube Music.",
+    );
+    expect(card.textContent).toContain("Available");
+    expect(card.textContent).toContain("Install for Windows");
+    expect(card.textContent).toContain(
+      "Add playback info and controls to the Windows tray with YTM Tray.",
+    );
+
+    const installLink = card.querySelector<HTMLAnchorElement>(
+      '[data-role="connected-app-install-link"]',
+    );
+    expect(installLink?.href).toBe(
+      "https://github.com/gormanity/ytm-enhancer/tree/main/apps/windows-tray",
+    );
+  });
+
   it("shows a reconnect action when the first-party CLI host has exited", async () => {
     const cliDefinition = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.find(
       (definition) => definition.id === "com.gormanity.ytm-enhancer.cli",
@@ -694,6 +731,73 @@ describe("Connected Apps popup view", () => {
     await vi.waitFor(() => {
       expect(client.reconnectFirstPartyApp).toHaveBeenCalledWith(
         "com.gormanity.ytm-enhancer.cli",
+      );
+    });
+  });
+
+  it("shows a reconnect action when the Windows tray host has exited", async () => {
+    const trayDefinition = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.find(
+      (definition) => definition.id === "com.gormanity.ytm-enhancer.tray",
+    )!;
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        firstPartyApps: [
+          createMenuBarConnectedApp(),
+          createFirstPartyConnectedApp(trayDefinition, {
+            availability: "error",
+            lastError: "Native host has exited.",
+          }),
+        ],
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.tray",
+            name: "YTM Tray",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const card = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLDetailsElement>(
+        '[data-app-id="com.gormanity.ytm-enhancer.tray"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(card.textContent).toContain("Disconnected");
+    expect(card.textContent).toContain(
+      "YTM Tray is installed but not running.",
+    );
+    expect(card.textContent).toContain("Connect Tray");
+    expect(
+      card.querySelector<HTMLAnchorElement>(
+        '[data-role="connected-app-install-link"]',
+      ),
+    ).toBeNull();
+
+    const reconnectButton = card.querySelector<HTMLButtonElement>(
+      '[data-role="connected-app-reconnect-button"]',
+    );
+    reconnectButton!.click();
+
+    await vi.waitFor(() => {
+      expect(client.reconnectFirstPartyApp).toHaveBeenCalledWith(
+        "com.gormanity.ytm-enhancer.tray",
       );
     });
   });

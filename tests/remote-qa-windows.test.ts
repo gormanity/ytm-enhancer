@@ -14,7 +14,10 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("Windows 11 ARM VM");
     expect(docs).toContain("REMOTE_QA_WINDOWS_HOST");
     expect(docs).toContain("REMOTE_QA_WINDOWS_WORK_ROOT");
-    expect(docs).toContain("Windows native messaging QA is not wired yet");
+    expect(docs).toContain("Windows CLI native messaging QA is not wired yet");
+    expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
+    expect(docs).toContain("scripts/remote/windows-qa/tray-visual-smoke.sh");
+    expect(docs).toContain("scripts/remote/windows-qa/tray-button-smoke.sh");
   });
 
   it("bridges through the macOS Crabbox runner into Windows OpenSSH", () => {
@@ -45,5 +48,41 @@ describe("Windows remote QA scaffold", () => {
 
     expect(e2e).toContain("Invoke-Native pnpm run dev:build:edge");
     expect(e2e).toContain("playwright test tests/e2e --project=edge");
+  });
+
+  it("automates Windows tray visual smoke through the active desktop", () => {
+    const visualSmoke = read("scripts/remote/windows-qa/tray-visual-smoke.ps1");
+    const visualSmokeShell = read(
+      "scripts/remote/windows-qa/tray-visual-smoke.sh",
+    );
+
+    expect(visualSmoke).toContain("New-ScheduledTaskPrincipal");
+    expect(visualSmoke).toContain("-LogonType Interactive");
+    expect(visualSmoke).toContain("UIAutomationClient");
+    expect(visualSmoke).toContain("Show Hidden Icons");
+    expect(visualSmoke).toContain("YTM Enhancer");
+    expect(visualSmoke).toContain("YTM Tray");
+    expect(visualSmoke).toContain("tray-popup.png");
+    expect(visualSmokeShell).toContain("tray-visual-smoke.ps1");
+  });
+
+  it("automates Windows tray button smoke against the Edge fixture", () => {
+    const buttonSmoke = read("scripts/remote/windows-qa/tray-button-smoke.ps1");
+    const buttonSmokeShell = read(
+      "scripts/remote/windows-qa/tray-button-smoke.sh",
+    );
+    const trayE2e = read("tests/e2e/windows-tray-connector.spec.ts");
+
+    expect(buttonSmoke).toContain('$env:YTME_E2E_WINDOWS_TRAY = "1"');
+    expect(buttonSmoke).toContain("pnpm run dev:build:edge");
+    expect(buttonSmoke).toContain(
+      "playwright test tests/e2e/windows-tray-connector.spec.ts --project=edge",
+    );
+    expect(buttonSmokeShell).toContain("tray-button-smoke.ps1");
+    expect(trayE2e).toContain("UIAutomationClient");
+    expect(trayE2e).toContain("Playback progress");
+    expect(trayE2e).toContain("Focus YouTube Music");
+    expect(trayE2e).toContain("YTM_TRAY_LOG_PATH");
+    expect(trayE2e).toContain("requestId=focus-");
   });
 });

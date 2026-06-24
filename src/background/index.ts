@@ -15,7 +15,11 @@ import {
   type AutoPlayMode,
   type PlaybackState,
 } from "@/core";
-import { createConnectorHost, type ConnectorHost } from "@/core/connectors";
+import {
+  createConnectorHost,
+  type ConnectorHost,
+  type ConnectorTransport,
+} from "@/core/connectors";
 import { createNativeMessagingTransport } from "@/core/connectors/native-messaging-transport";
 import {
   CONNECTORS_ENABLED_STATE_KEY,
@@ -95,6 +99,11 @@ let selectedTabId: number | null = null;
 let connectorHost: ConnectorHost | null = null;
 let connectorSupportEnabled = false;
 let knownConnectors = new Map<string, KnownConnector>();
+let firstPartyNativeHostTransportsByConnectorId = new Map<
+  string,
+  ConnectorTransport
+>();
+let firstPartyNativeHostTransportsList: ConnectorTransport[] = [];
 interface NativeHostDiagnostic {
   availability: ConnectedAppAvailability;
   lastError: string | null;
@@ -228,20 +237,56 @@ function recordNativeHostError(connectorId: string, error: Error): void {
   notifyConnectedAppsChanged();
 }
 
+function createFirstPartyNativeHostTransport(
+  definition: (typeof FIRST_PARTY_CONNECTED_APP_DEFINITIONS)[number],
+): ConnectorTransport {
+  return createNativeMessagingTransport({
+    hostName: definition.nativeHostName,
+    connectionId: nativeMessagingConnectionId(definition.nativeHostName),
+    onConnect: () => recordNativeHostAvailable(definition.id),
+    onDisconnect: () => {
+      connectorHost?.disconnect(
+        nativeMessagingConnectionId(definition.nativeHostName),
+      );
+    },
+    onError: (err) => recordNativeHostError(definition.id, err),
+  });
+}
+
 function firstPartyNativeHostTransports() {
-  return FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map((definition) =>
-    createNativeMessagingTransport({
-      hostName: definition.nativeHostName,
-      connectionId: nativeMessagingConnectionId(definition.nativeHostName),
-      onConnect: () => recordNativeHostAvailable(definition.id),
-      onDisconnect: () => {
-        connectorHost?.disconnect(
-          nativeMessagingConnectionId(definition.nativeHostName),
-        );
-      },
-      onError: (err) => recordNativeHostError(definition.id, err),
-    }),
+  const entries = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map(
+    (definition) =>
+      [definition.id, createFirstPartyNativeHostTransport(definition)] as const,
   );
+  firstPartyNativeHostTransportsByConnectorId = new Map(entries);
+  firstPartyNativeHostTransportsList = entries.map(
+    ([, transport]) => transport,
+  );
+  return firstPartyNativeHostTransportsList;
+}
+
+function restartFirstPartyNativeHostTransport(
+  definition: (typeof FIRST_PARTY_CONNECTED_APP_DEFINITIONS)[number],
+): void {
+  if (!connectorHost?.isEnabled()) return;
+
+  const previousTransport = firstPartyNativeHostTransportsByConnectorId.get(
+    definition.id,
+  );
+  previousTransport?.stop();
+
+  const nextTransport = createFirstPartyNativeHostTransport(definition);
+  const transportIndex =
+    previousTransport === undefined
+      ? -1
+      : firstPartyNativeHostTransportsList.indexOf(previousTransport);
+  if (transportIndex >= 0) {
+    firstPartyNativeHostTransportsList[transportIndex] = nextTransport;
+  } else {
+    firstPartyNativeHostTransportsList.push(nextTransport);
+  }
+  firstPartyNativeHostTransportsByConnectorId.set(definition.id, nextTransport);
+  nextTransport.start(connectorHost.receive);
 }
 
 async function enableConnectorSupport(): Promise<void> {
@@ -361,15 +406,11 @@ function shouldRecheckNativeHostAvailability(
   );
 }
 
-async function recheckFirstPartyNativeHostAvailability(): Promise<void> {
-  if (
-    !FIRST_PARTY_CONNECTED_APP_DEFINITIONS.some(
-      shouldRecheckNativeHostAvailability,
-    )
-  ) {
-    return;
+function recheckFirstPartyNativeHostAvailability(): void {
+  for (const definition of FIRST_PARTY_CONNECTED_APP_DEFINITIONS) {
+    if (!shouldRecheckNativeHostAvailability(definition)) continue;
+    restartFirstPartyNativeHostTransport(definition);
   }
-  await restartConnectorSupport();
 }
 
 function connectedConnectorIds(): Set<string> {
@@ -659,7 +700,7 @@ handler.on("get-dev-build-conflict-status", async () => {
 });
 
 handler.on("get-connected-apps-settings", async () => {
-  await recheckFirstPartyNativeHostAvailability();
+  recheckFirstPartyNativeHostAvailability();
   return { ok: true, data: connectedAppsSettings() };
 });
 
