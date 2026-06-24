@@ -27,6 +27,26 @@ append_arg() {
   remote_command="$remote_command $(quote "$1")"
 }
 
+remote_qa_env_value() {
+  case "$1" in
+    REMOTE_QA_LINUX_NODE_VERSION)
+      printf "%s" "${REMOTE_QA_LINUX_NODE_VERSION:-}"
+      ;;
+    REMOTE_QA_LINUX_GO_VERSION)
+      printf "%s" "${REMOTE_QA_LINUX_GO_VERSION:-}"
+      ;;
+    REMOTE_QA_LINUX_PNPM_VERSION)
+      printf "%s" "${REMOTE_QA_LINUX_PNPM_VERSION:-}"
+      ;;
+    REMOTE_QA_LINUX_TOOL_ROOT)
+      printf "%s" "${REMOTE_QA_LINUX_TOOL_ROOT:-}"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 if [ ! -x "$macos_runner" ]; then
   echo "macOS QA runner is missing or not executable: $macos_runner" >&2
   exit 1
@@ -50,7 +70,7 @@ for env_name in \
   REMOTE_QA_LINUX_GO_VERSION \
   REMOTE_QA_LINUX_PNPM_VERSION \
   REMOTE_QA_LINUX_TOOL_ROOT; do
-  env_value="$(eval "printf '%s' \"\${$env_name:-}\"")"
+  env_value="$(remote_qa_env_value "$env_name")"
   if [ -n "$env_value" ]; then
     append_arg "$env_name=$env_value"
   fi
@@ -87,7 +107,7 @@ for env_name in \
   REMOTE_QA_LINUX_GO_VERSION \
   REMOTE_QA_LINUX_PNPM_VERSION \
   REMOTE_QA_LINUX_TOOL_ROOT; do
-  if [ -n "$(eval "printf '%s' \"\${$env_name:-}\"")" ]; then
+  if [ -n "$(remote_qa_env_value "$env_name")" ]; then
     append_arg --allow-env
     append_arg "$env_name"
   fi
