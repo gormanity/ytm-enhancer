@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import {
   cpSync,
   existsSync,
@@ -18,9 +18,7 @@ const browsers = ["chrome", "firefox", "edge"];
 
 if (!existsSync(releasesDir)) mkdirSync(releasesDir);
 
-const pkg = JSON.parse(
-  new TextDecoder().decode(execSync("cat package.json", { cwd: root })),
-);
+const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf-8"));
 const version = pkg.version;
 
 function stagePackage(browser, distDir) {
@@ -55,7 +53,7 @@ for (const browser of browsers) {
   try {
     if (existsSync(zipPath)) rmSync(zipPath);
     const files = readdirSync(stageDir);
-    execSync(`zip -j "${zipPath}" ${files.map((f) => `"${f}"`).join(" ")}`, {
+    execFileSync("zip", ["-j", zipPath, ...files], {
       cwd: stageDir,
       stdio: "inherit",
     });
