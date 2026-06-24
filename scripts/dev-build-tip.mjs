@@ -17,7 +17,7 @@ function buildWorkingCopy() {
 const headsOutput = jjGet([
   "log",
   "-r",
-  "heads(trunk()..)",
+  "heads(@:: & trunk()..)",
   "-T",
   'change_id ++ "\n"',
   "--no-graph",
@@ -35,7 +35,7 @@ if (heads.length === 0) {
 
 if (heads.length > 1) {
   console.error(
-    `Multiple local stack heads detected:\n  ${heads.join("\n  ")}\n` +
+    `Multiple current stack heads detected:\n  ${heads.join("\n  ")}\n` +
       `Cannot determine tip. Use 'pnpm run dev:build:wc' to build the working copy.`,
   );
   process.exit(1);
