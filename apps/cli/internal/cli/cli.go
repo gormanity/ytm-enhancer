@@ -476,6 +476,17 @@ func (app App) shouldUseColor() bool {
 		return true
 	}
 
+	return app.stdoutIsTerminal()
+}
+
+func (app App) shouldUseLiveOutput() bool {
+	if app.LiveOutput != nil {
+		return *app.LiveOutput
+	}
+	return app.stdoutIsTerminal() && os.Getenv("TERM") != "dumb"
+}
+
+func (app App) stdoutIsTerminal() bool {
 	file, ok := app.Stdout.(*os.File)
 	if !ok {
 		return false
@@ -485,21 +496,6 @@ func (app App) shouldUseColor() bool {
 		return false
 	}
 	return stat.Mode()&os.ModeCharDevice != 0
-}
-
-func (app App) shouldUseLiveOutput() bool {
-	if app.LiveOutput != nil {
-		return *app.LiveOutput
-	}
-	file, ok := app.Stdout.(*os.File)
-	if !ok {
-		return false
-	}
-	stat, err := file.Stat()
-	if err != nil {
-		return false
-	}
-	return stat.Mode()&os.ModeCharDevice != 0 && os.Getenv("TERM") != "dumb"
 }
 
 func stateFromResponse(response ipc.Response) (*protocol.PlaybackState, error) {
