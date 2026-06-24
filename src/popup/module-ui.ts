@@ -1,6 +1,7 @@
 import { bindRange } from "./bind-range";
 import { bindSelect } from "./bind-select";
 import { bindToggle } from "./bind-toggle";
+import { error } from "@/core/logger";
 import { createRangeSlider } from "@/ui/range-slider";
 
 export interface ModuleControlBinding<TValue> {
@@ -34,6 +35,20 @@ export interface ModuleRangeClientBinding extends ModuleClientBinding<number> {
 
 export interface ModuleSelectBinding extends ModuleControlBinding<string> {
   onLoaded?: (select: HTMLSelectElement) => void;
+}
+
+async function runButtonAction(
+  button: HTMLButtonElement,
+  onClick: () => void | Promise<void>,
+): Promise<void> {
+  button.disabled = true;
+  try {
+    await onClick();
+  } catch (err) {
+    error("Popup action failed", err);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 export function bindModuleToggle(
@@ -142,10 +157,7 @@ export function bindModuleActionButton(
   );
   if (!button) return;
   button.addEventListener("click", () => {
-    button.disabled = true;
-    Promise.resolve(onClick()).finally(() => {
-      button.disabled = false;
-    });
+    void runButtonAction(button, onClick);
   });
 }
 
@@ -215,10 +227,7 @@ export function createActionRow(options: {
   button.textContent = options.buttonLabel;
 
   button.addEventListener("click", () => {
-    button.disabled = true;
-    Promise.resolve(options.onClick()).finally(() => {
-      button.disabled = false;
-    });
+    void runButtonAction(button, options.onClick);
   });
 
   row.append(label, button);
