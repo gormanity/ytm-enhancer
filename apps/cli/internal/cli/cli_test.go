@@ -165,7 +165,7 @@ func TestDoctorPrintsLocalDiagnosticsWhenDaemonIsUnavailable(t *testing.T) {
 		"YTM Enhancer CLI Doctor",
 		"WARN  Connector: not connected to YTM Enhancer",
 		"OK    Versions: CLI 0.1.0",
-		"INFO  Next: Enable Connected Apps in YTM Enhancer, then reopen the extension popup",
+		"INFO  Next: Open YTM Enhancer > Connected Apps and make sure the CLI is enabled",
 	} {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("stdout = %q, missing %q", stdout.String(), expected)
@@ -463,10 +463,13 @@ func TestDaemonStartExplainsBrowserOwnedStartup(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("exit code = %d, want 1", code)
 	}
-	if !strings.Contains(stdout.String(), "started by the YTM Enhancer browser extension") {
+	if !strings.Contains(stdout.String(), "browser extension starts the daemon") {
 		t.Fatalf("stdout = %q", stdout.String())
 	}
-	if !strings.Contains(stdout.String(), "Use Reconnect CLI in Connected Apps") {
+	if !strings.Contains(stdout.String(), "Open YTM Enhancer > Connected Apps") {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "use Reconnect CLI if it appears") {
 		t.Fatalf("stdout = %q", stdout.String())
 	}
 }

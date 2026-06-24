@@ -41,8 +41,8 @@ ytme daemon stop
 native host to exit cleanly.
 
 `ytme daemon start` verifies whether the native host is already running. If it
-is not running, the command explains how to reconnect it from YTM Enhancer
-because the browser extension owns native messaging startup.
+is not running, the command explains how to reconnect it from the Connected Apps
+card because the browser extension owns native messaging startup.
 
 `ytme doctor` reports a compact health summary using `OK`, `WARN`, and `INFO`
 lines for the connector, YouTube Music tab detection, playback cache state, and
@@ -101,5 +101,6 @@ ytme command
 
 `ytme-native-host` is started by the browser when Connected Apps is enabled.
 Short-lived CLI commands fail clearly if the native host is not running. If the
-native host was stopped manually while Connected Apps remains enabled, use
-Reconnect CLI from the CLI card in Connected Apps.
+native host was stopped manually while Connected Apps remains enabled, open YTM
+Enhancer > Connected Apps and use Reconnect CLI from the CLI card if the action
+appears.

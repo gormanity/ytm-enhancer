@@ -268,7 +268,7 @@ func (app App) doctor(verbose bool) int {
 		app.printf("YTM Enhancer CLI Doctor\n")
 		app.printDoctorLine("WARN  Connector: not connected to YTM Enhancer")
 		app.printDoctorLine(fmt.Sprintf("OK    Versions: CLI %s", protocol.ConnectorVersion))
-		app.printDoctorLine("INFO  Next: Enable Connected Apps in YTM Enhancer, then reopen the extension popup")
+		app.printDoctorLine("INFO  Next: Open YTM Enhancer > Connected Apps and make sure the CLI is enabled")
 		if verbose {
 			app.printf("Detail: %s\n", err)
 		}
@@ -337,8 +337,8 @@ func (app App) daemonStart() int {
 	response, err := app.request(ipc.Request{Command: "daemon.status"})
 	if err != nil {
 		app.printf("YTM Enhancer CLI daemon is not running.\n")
-		app.printf("The daemon is started by the YTM Enhancer browser extension.\n")
-		app.printf("Use Reconnect CLI in Connected Apps, or enable Connected Apps and reopen the popup.\n")
+		app.printf("The browser extension starts the daemon through native messaging.\n")
+		app.printf("Open YTM Enhancer > Connected Apps, make sure Connected Apps and YTM Enhancer CLI are enabled, then use Reconnect CLI if it appears.\n")
 		return 1
 	}
 	if !response.OK {
