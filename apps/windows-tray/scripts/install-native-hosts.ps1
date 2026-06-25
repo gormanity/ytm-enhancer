@@ -33,6 +33,13 @@ $ExecutablePath = Join-Path $InstallRoot "YTMTray.exe"
 $NativeHostExecutablePath = Join-Path $InstallRoot "YTMTray.NativeHost.exe"
 $ReleaseMetadataPath = Join-Path $InstallRoot "release.json"
 $ManifestPath = Join-Path $InstallRoot "$HostName.json"
+$BackupRoot = Join-Path ([System.IO.Path]::GetTempPath()) "ytm-tray-install-backup-$([Guid]::NewGuid().ToString("N"))"
+$InstalledFiles = @(
+  "YTMTray.exe",
+  "YTMTray.NativeHost.exe",
+  "release.json",
+  "$HostName.json"
+)
 $DefaultAllowedOrigins = @(
   "chrome-extension://pggblbpjleekkobiinobaeeefnimgljh/",
   "chrome-extension://akkbieodbakphpfdibailajdknnmmoca/",
@@ -43,6 +50,7 @@ $RegistryKeys = @(
   "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$HostName",
   "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName"
 )
+$RegistryBackup = @{}
 
 function Invoke-Native {
   param(
@@ -125,40 +133,108 @@ function Install-PackagedBinaries {
   }
 }
 
+function Save-InstallBackup {
+  if (-not (Test-Path -LiteralPath $InstallRoot)) {
+    return
+  }
+
+  New-Item -ItemType Directory -Force -Path $BackupRoot | Out-Null
+  foreach ($InstalledFile in $InstalledFiles) {
+    $SourcePath = Join-Path $InstallRoot $InstalledFile
+    if (Test-Path -LiteralPath $SourcePath) {
+      Copy-Item -LiteralPath $SourcePath -Destination (Join-Path $BackupRoot $InstalledFile) -Force
+    }
+  }
+}
+
+function Save-RegistryBackup {
+  foreach ($RegistryKey in $RegistryKeys) {
+    if (Test-Path -LiteralPath $RegistryKey) {
+      $RegistryBackup[$RegistryKey] = @{
+        exists = $true
+        value = (Get-Item -LiteralPath $RegistryKey).GetValue("")
+      }
+    } else {
+      $RegistryBackup[$RegistryKey] = @{ exists = $false }
+    }
+  }
+}
+
+function Restore-InstallBackup {
+  foreach ($InstalledFile in $InstalledFiles) {
+    $InstallPath = Join-Path $InstallRoot $InstalledFile
+    $BackupPath = Join-Path $BackupRoot $InstalledFile
+
+    if (Test-Path -LiteralPath $BackupPath) {
+      Copy-Item -LiteralPath $BackupPath -Destination $InstallPath -Force
+    } elseif (Test-Path -LiteralPath $InstallPath) {
+      Remove-Item -LiteralPath $InstallPath -Force
+    }
+  }
+}
+
+function Restore-RegistryBackup {
+  foreach ($RegistryKey in $RegistryKeys) {
+    $Previous = $RegistryBackup[$RegistryKey]
+    if ($Previous -and $Previous.exists) {
+      New-Item -Path $RegistryKey -Force | Out-Null
+      Set-Item -Path $RegistryKey -Value $Previous.value
+    } elseif (Test-Path -LiteralPath $RegistryKey) {
+      Remove-Item -LiteralPath $RegistryKey -Recurse -Force
+    }
+  }
+}
+
+function Remove-InstallBackup {
+  if (Test-Path -LiteralPath $BackupRoot) {
+    Remove-Item -LiteralPath $BackupRoot -Recurse -Force
+  }
+}
+
+Save-InstallBackup
+Save-RegistryBackup
 New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
 
 Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
   Stop-Process -Force -ErrorAction SilentlyContinue
 
-if (Test-PackagedBinaries) {
-  Install-PackagedBinaries
-} else {
-  Publish-FromSource
+try {
+  if (Test-PackagedBinaries) {
+    Install-PackagedBinaries
+  } else {
+    Publish-FromSource
+  }
+
+  $AllowedOrigins = @(
+    $DefaultAllowedOrigins
+    $AdditionalAllowedOrigins | ForEach-Object { Normalize-AllowedOrigin $_ }
+  ) | Select-Object -Unique
+
+  $Manifest = @{
+    name = $HostName
+    description = $Description
+    path = $NativeHostExecutablePath
+    type = "stdio"
+    allowed_origins = $AllowedOrigins
+  }
+
+  $Manifest |
+    ConvertTo-Json -Depth 5 |
+    Set-Content -LiteralPath $ManifestPath -Encoding utf8
+
+  foreach ($RegistryKey in $RegistryKeys) {
+    New-Item -Path $RegistryKey -Force | Out-Null
+    Set-Item -Path $RegistryKey -Value $ManifestPath
+    Write-Output "Installed $RegistryKey -> $ManifestPath"
+  }
+
+  Write-Output "Installed $ExecutablePath"
+  Write-Output "Installed $NativeHostExecutablePath"
+  Write-Output "Open YTM Tray, then enable Connected Apps in YTM Enhancer."
+} catch {
+  Restore-InstallBackup
+  Restore-RegistryBackup
+  throw
+} finally {
+  Remove-InstallBackup
 }
-
-$AllowedOrigins = @(
-  $DefaultAllowedOrigins
-  $AdditionalAllowedOrigins | ForEach-Object { Normalize-AllowedOrigin $_ }
-) | Select-Object -Unique
-
-$Manifest = @{
-  name = $HostName
-  description = $Description
-  path = $NativeHostExecutablePath
-  type = "stdio"
-  allowed_origins = $AllowedOrigins
-}
-
-$Manifest |
-  ConvertTo-Json -Depth 5 |
-  Set-Content -LiteralPath $ManifestPath -Encoding utf8
-
-foreach ($RegistryKey in $RegistryKeys) {
-  New-Item -Path $RegistryKey -Force | Out-Null
-  Set-Item -Path $RegistryKey -Value $ManifestPath
-  Write-Output "Installed $RegistryKey -> $ManifestPath"
-}
-
-Write-Output "Installed $ExecutablePath"
-Write-Output "Installed $NativeHostExecutablePath"
-Write-Output "Open YTM Tray, then enable Connected Apps in YTM Enhancer."

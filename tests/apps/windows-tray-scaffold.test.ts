@@ -271,6 +271,10 @@ describe("Windows tray connector scaffold", () => {
     expect(installScript).toContain(
       "Copy-Item -LiteralPath $PackagedReleaseMetadataPath",
     );
+    expect(installScript).toContain("Save-InstallBackup");
+    expect(installScript).toContain("Restore-InstallBackup");
+    expect(installScript).toContain("Save-RegistryBackup");
+    expect(installScript).toContain("Restore-RegistryBackup");
     expect(installScript).toContain("Get-Process YTMTray, YTMTray.NativeHost");
 
     expect(signingScript).toContain("signtool.exe");

@@ -58,6 +58,11 @@ The updater is intentionally not silent-installing. The user confirms the
 download/install handoff, and the installer continues to use user-level
 registration under `%LOCALAPPDATA%` and `HKCU`.
 
+Before replacing files or registry keys, the installer snapshots the current
+tray executables, package metadata, native messaging manifest, and Chrome/Edge
+native messaging registrations. If install or registration fails, it restores
+the previous install state before returning the error.
+
 ## Local Package Smoke
 
 Run these commands from a Windows environment with the .NET 10 SDK:
@@ -80,7 +85,8 @@ The installer should copy prebuilt binaries from the release package. It should
 not require `dotnet` unless it is being run from the source checkout.
 
 The remote package smoke performs the same build, manifest, extraction, and
-prebuilt installer path on the Windows QA VM:
+prebuilt installer path on the Windows QA VM. It also forces a failed reinstall
+and verifies that the previous installed executable is restored:
 
 ```sh
 scripts/remote/windows-qa/tray-package-smoke.sh

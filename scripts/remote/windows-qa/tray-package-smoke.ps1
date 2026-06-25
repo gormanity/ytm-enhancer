@@ -32,6 +32,23 @@ function Assert-Equal {
   }
 }
 
+function Assert-Throws {
+  param(
+    [Parameter(Mandatory = $true)]
+    [scriptblock] $Script,
+    [Parameter(Mandatory = $true)]
+    [string] $Label
+  )
+
+  try {
+    & $Script
+  } catch {
+    return
+  }
+
+  throw "Expected failure: $Label"
+}
+
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
   throw ".NET 10 SDK is required for Windows tray package QA."
 }
@@ -94,6 +111,19 @@ try {
   Assert-Equal $Metadata.version $PackageMetadata.version "package version"
   Assert-Equal $Metadata.githubReleaseListUrl $PackageMetadata.releaseListUrl "package release list URL"
   Assert-Equal "YTM-Tray-update.json" $PackageMetadata.updateManifestAssetName "package update manifest asset"
+
+  $ExistingTrayBytes = Get-Content -LiteralPath (Join-Path $InstallRoot "YTMTray.exe") -Encoding Byte -TotalCount 16
+  Set-Content -LiteralPath (Join-Path $ExtractRoot "YTMTray.exe") -Value "broken update payload"
+  Push-Location $ExtractRoot
+  Assert-Throws {
+    & .\install-native-hosts.ps1 -InstallRoot $InstallRoot `
+      -AdditionalAllowedOrigins "not-a-valid-origin"
+  } "invalid package reinstall"
+  Pop-Location
+  Assert-PathExists (Join-Path $InstallRoot "YTMTray.exe")
+  Assert-PathExists (Join-Path $InstallRoot "YTMTray.NativeHost.exe")
+  $RestoredTrayBytes = Get-Content -LiteralPath (Join-Path $InstallRoot "YTMTray.exe") -Encoding Byte -TotalCount 16
+  Assert-Equal ($ExistingTrayBytes -join ",") ($RestoredTrayBytes -join ",") "restored tray executable"
 } finally {
   if ((Get-Location).Path -eq $ExtractRoot) {
     Pop-Location
