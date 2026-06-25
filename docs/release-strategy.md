@@ -30,6 +30,15 @@ YTM Enhancer CLI:
 - Distribution: local development scripts now, Homebrew cask/formula later.
 - GitHub Releases: future component-scoped artifact pages only.
 
+YTM Tray:
+
+- Tag format: `windows-tray-vX.Y.Z`.
+- Version source: `apps/windows-tray/release/metadata.json`.
+- Release workflow: `.github/workflows/windows-tray-release.yml`.
+- Distribution: direct `win-x64` and `win-arm64` release zips plus update
+  manifest.
+- GitHub Releases: component-scoped artifact pages only.
+
 ## Tag Policy
 
 Use component-scoped tags whenever a product can release independently:
@@ -38,6 +47,7 @@ Use component-scoped tags whenever a product can release independently:
 vX.Y.Z              browser extension
 menu-bar-vX.Y.Z     YTM Menu Bar connector
 cli-vX.Y.Z          YTM Enhancer CLI connector
+windows-tray-vX.Y.Z YTM Tray connector
 future-app-vX.Y.Z   future independently shipped app
 ```
 
@@ -68,6 +78,7 @@ Human-facing discovery should be component-specific:
 - Extension users should use browser stores and extension release notes.
 - Menu bar users should use
   `https://gormanity.github.io/ytm-enhancer/menu-bar/install.html`.
+- Windows tray users should use the `windows-tray-v*` component release list.
 - CLI users should use `apps/cli/README.md` until public packaging exists.
 - Developers should use `docs/menu-bar-release.md` and component READMEs.
 
@@ -75,6 +86,8 @@ Automated discovery should use native channel mechanisms:
 
 - Sparkle uses `menu-bar/appcast.xml`.
 - Homebrew uses the generated cask in `gormanity/homebrew-tap`.
+- YTM Tray uses component-scoped GitHub Releases plus a per-release checksum
+  update manifest.
 - Browser stores own browser extension updates.
 - Component-aware tooling can read
   `https://gormanity.github.io/ytm-enhancer/releases.json`.

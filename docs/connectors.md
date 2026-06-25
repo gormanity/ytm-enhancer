@@ -104,6 +104,7 @@ Current first-party native messaging host names are:
 ```text
 com.gormanity.ytm_enhancer.menu_bar
 com.gormanity.ytm_enhancer.cli
+com.gormanity.ytm_enhancer.tray
 ```
 
 The background service worker attaches the transport only when Connected Apps is
@@ -129,6 +130,7 @@ packages/
 apps/
   cli/
   menu-bar/
+  windows-tray/
 
 src/
   core/
@@ -254,8 +256,8 @@ user-level native messaging keys for Google Chrome and Microsoft Edge.
 
 Remaining work before a public connector release:
 
-1. Publish the `menu-bar-v*` GitHub Release workflow.
-2. Publish the `gormanity/homebrew-tap` cask repository.
+1. Publish the `gormanity/homebrew-tap` cask repository.
+2. Add the Windows tray in-app updater that consumes release manifests.
 3. Add a clearer approval flow for newly seen connectors.
 4. Add connector-facing diagnostics for protocol mismatches and permission
    denials.

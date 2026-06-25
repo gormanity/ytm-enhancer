@@ -396,6 +396,17 @@ host relay for the guest architecture, installs user-level Edge and Chrome
 native messaging registry keys, validates the manifest, and removes the smoke
 install.
 
+Run the Windows tray release package smoke:
+
+```sh
+scripts/remote/windows-qa/tray-package-smoke.sh
+```
+
+This builds the release zip for the guest architecture, generates
+`YTM-Tray-update.json`, extracts the package, installs from the prebuilt
+executables, validates the package metadata and manifest, and removes the smoke
+install.
+
 Run the Windows tray visual smoke from an active Windows desktop session:
 
 ```sh

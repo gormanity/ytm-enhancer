@@ -1,11 +1,17 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const appRoot = resolve(process.cwd(), "apps/windows-tray");
 
 function read(relativePath: string): string {
   return readFileSync(resolve(appRoot, relativePath), "utf-8");
+}
+
+function readRepo(relativePath: string): string {
+  return readFileSync(resolve(process.cwd(), relativePath), "utf-8");
 }
 
 function toPosixPath(path: string): string {
@@ -187,5 +193,191 @@ describe("Windows tray connector scaffold", () => {
     expect(testProject).not.toContain("PackageReference");
     expect(testRunner).toContain("NativeMessagingCodecRoundTrip");
     expect(testRunner).toContain("ConnectorAppHandshake");
+  });
+
+  it("keeps release metadata separate from the browser extension version", () => {
+    const metadata = JSON.parse(read("release/metadata.json")) as {
+      appName: string;
+      assetPrefix: string;
+      githubReleaseTagPrefix: string;
+      githubReleaseListUrl: string;
+      installUrl: string;
+      nativeHostName: string;
+      runtimes: string[];
+      version: string;
+    };
+
+    expect(metadata.appName).toBe("YTM Tray");
+    expect(metadata.nativeHostName).toBe("com.gormanity.ytm_enhancer.tray");
+    expect(metadata.version).toBe("0.1.0");
+    expect(metadata.githubReleaseTagPrefix).toBe("windows-tray-v");
+    expect(metadata.githubReleaseListUrl).toBe(
+      "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
+    );
+    expect(metadata.installUrl).toBe(
+      "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true",
+    );
+    expect(metadata.assetPrefix).toBe("YTM-Tray");
+    expect(metadata.runtimes).toEqual(["win-x64", "win-arm64"]);
+  });
+
+  it("packages prebuilt release zips without requiring the .NET SDK at install time", () => {
+    const packageScript = read("scripts/package-release.mjs");
+    const manifestScript = read("scripts/generate-update-manifest.mjs");
+    const installScript = read("scripts/install-native-hosts.ps1");
+
+    expect(packageScript).toContain("dotnet");
+    expect(packageScript).toContain("/p:Version=${metadata.version}");
+    expect(packageScript).toContain("/p:AssemblyVersion=");
+    expect(packageScript).toContain("install-native-hosts.ps1");
+    expect(packageScript).toContain("uninstall-native-hosts.ps1");
+    expect(packageScript).toContain("release.json");
+    expect(packageScript).toContain("tar");
+    expect(packageScript).toContain("-a");
+    expect(packageScript).toContain("pathToFileURL(process.argv[1]).href");
+    expect(packageScript).toContain(
+      "${metadata.assetPrefix}-${metadata.version}-${runtime}.zip",
+    );
+
+    expect(manifestScript).toContain("createHash");
+    expect(manifestScript).toContain("sha256");
+    expect(manifestScript).toContain("metadata.githubReleaseTagPrefix");
+    expect(manifestScript).toContain("releaseListUrl");
+    expect(manifestScript).toContain("minimumWindowsVersion");
+    expect(manifestScript).toContain("pathToFileURL(process.argv[1]).href");
+
+    expect(installScript).toContain("Test-PackagedBinaries");
+    expect(installScript).toContain("Install-PackagedBinaries");
+    expect(installScript).toContain(
+      ".NET 10 SDK is required when installing from source.",
+    );
+    expect(installScript).toContain("use a release package");
+    expect(installScript).toContain(
+      "Copy-Item -LiteralPath $PackagedExecutablePath",
+    );
+    expect(installScript).toContain("Get-Process YTMTray, YTMTray.NativeHost");
+  });
+
+  it("generates a checksum update manifest for packaged Windows runtimes", async () => {
+    const outputRoot = mkdtempSync(
+      join(tmpdir(), "ytm-windows-tray-manifest-test-"),
+    );
+    const x64Package = join(outputRoot, "YTM-Tray-0.1.0-win-x64.zip");
+    const armPackage = join(outputRoot, "YTM-Tray-0.1.0-win-arm64.zip");
+    const outputPath = join(outputRoot, "YTM-Tray-update.json");
+    const { writeFileSync } = await import("node:fs");
+    const manifestModulePath = resolve(
+      process.cwd(),
+      "apps/windows-tray/scripts/generate-update-manifest.mjs",
+    );
+    const { generateUpdateManifest } = (await import(
+      pathToFileURL(manifestModulePath).href
+    )) as {
+      generateUpdateManifest: (options: {
+        outputPath: string;
+        packagePaths: string[];
+        releaseBaseUrl: string;
+      }) => string;
+    };
+
+    writeFileSync(x64Package, "x64 package");
+    writeFileSync(armPackage, "arm package");
+
+    generateUpdateManifest({
+      outputPath,
+      packagePaths: [x64Package, armPackage],
+      releaseBaseUrl: "https://example.test/download",
+    });
+
+    const manifest = JSON.parse(readFileSync(outputPath, "utf-8")) as {
+      assets: Record<string, { name: string; sha256: string; url: string }>;
+      installUrl: string;
+      releaseListUrl: string;
+      tag: string;
+      version: string;
+    };
+
+    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.tag).toBe("windows-tray-v0.1.0");
+    expect(manifest.releaseListUrl).toBe(
+      "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
+    );
+    expect(manifest.installUrl).toBe(
+      "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true",
+    );
+    expect(manifest.assets["win-x64"]?.name).toBe("YTM-Tray-0.1.0-win-x64.zip");
+    expect(manifest.assets["win-arm64"]?.name).toBe(
+      "YTM-Tray-0.1.0-win-arm64.zip",
+    );
+    expect(manifest.assets["win-x64"]?.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(manifest.assets["win-x64"]?.url).toBe(
+      "https://example.test/download/windows-tray-v0.1.0/YTM-Tray-0.1.0-win-x64.zip",
+    );
+  });
+
+  it("wires package scripts for Windows tray releases", () => {
+    const packageJson = JSON.parse(readRepo("package.json")) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(packageJson.scripts["windows-tray:package:win-x64"]).toBe(
+      "node apps/windows-tray/scripts/package-release.mjs --runtime=win-x64",
+    );
+    expect(packageJson.scripts["windows-tray:package:win-arm64"]).toBe(
+      "node apps/windows-tray/scripts/package-release.mjs --runtime=win-arm64",
+    );
+    expect(packageJson.scripts["windows-tray:update-manifest"]).toBe(
+      "node apps/windows-tray/scripts/generate-update-manifest.mjs",
+    );
+  });
+
+  it("reports the packaged assembly version through connector hello", () => {
+    const protocol = read("src/YTMTray.Core/ConnectorProtocol.cs");
+    const coreProject = read("src/YTMTray.Core/YTMTray.Core.csproj");
+
+    expect(protocol).toContain("AssemblyInformationalVersionAttribute");
+    expect(protocol).not.toContain('ConnectorVersion = "0.1.0"');
+    expect(coreProject).toContain("<Version>0.1.0</Version>");
+    expect(coreProject).toContain(
+      "<InformationalVersion>0.1.0</InformationalVersion>",
+    );
+  });
+
+  it("publishes component-scoped Windows tray releases", () => {
+    const workflow = readRepo(".github/workflows/windows-tray-release.yml");
+    const releaseDocs = readRepo("docs/windows-tray-release.md");
+    const releaseStrategy = readRepo("docs/release-strategy.md");
+    const connectorsDocs = readRepo("docs/connectors.md");
+
+    expect(workflow).toContain("Windows Tray Release");
+    expect(workflow).toContain("windows-tray-v*");
+    expect(workflow).toContain("actions/setup-dotnet@v5");
+    expect(workflow).toContain("dotnet-version: 10.0.x");
+    expect(workflow).toContain("windows-tray:package:win-x64");
+    expect(workflow).toContain("windows-tray:package:win-arm64");
+    expect(workflow).toContain("windows-tray:update-manifest");
+    expect(workflow).toContain("make_latest: false");
+    expect(workflow).toContain("apps/windows-tray/.build/packages/*.zip");
+    expect(workflow).toContain(
+      "apps/windows-tray/.build/update-manifest/*.json",
+    );
+
+    expect(releaseDocs).toContain("windows-tray-vX.Y.Z");
+    expect(releaseDocs).toContain("YTM-Tray-<version>-win-x64.zip");
+    expect(releaseDocs).toContain("YTM-Tray-update.json");
+    expect(releaseDocs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
+    expect(releaseDocs).toContain(
+      "scripts/remote/windows-qa/tray-button-smoke.sh",
+    );
+    expect(releaseDocs).toContain("component release that does not replace");
+    expect(releaseDocs).toContain("in-app updater should be implemented");
+
+    expect(releaseStrategy).toContain("YTM Tray:");
+    expect(releaseStrategy).toContain("windows-tray-vX.Y.Z");
+    expect(releaseStrategy).toContain(
+      ".github/workflows/windows-tray-release.yml",
+    );
+    expect(connectorsDocs).toContain("com.gormanity.ytm_enhancer.tray");
+    expect(connectorsDocs).toContain("Windows tray in-app updater");
   });
 });

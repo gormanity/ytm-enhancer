@@ -1,0 +1,82 @@
+name: Windows Tray Release
+
+on:
+  push:
+    tags:
+      - "windows-tray-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve Windows tray release version
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace "^windows-tray-v", ""
+          if ($version -notmatch "^[0-9]+\.[0-9]+\.[0-9]+$") {
+            Write-Error "Windows tray releases must use windows-tray-vX.Y.Z tags."
+            exit 1
+          }
+
+          $parts = $version.Split(".")
+          $buildNumber = ([int] $parts[0] * 1000000) +
+            ([int] $parts[1] * 1000) +
+            [int] $parts[2]
+          $previousTag = git tag -l "windows-tray-v[0-9]*" --sort=-v:refname |
+            Where-Object { $_ -ne $env:GITHUB_REF_NAME } |
+            Select-Object -First 1
+
+          "YTM_WINDOWS_TRAY_VERSION=$version" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+          "YTM_WINDOWS_TRAY_BUILD_NUMBER=$buildNumber" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+          "PREVIOUS_WINDOWS_TRAY_TAG=$previousTag" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Run Windows tray tests
+        run: |
+          pnpm exec vitest run tests/apps/windows-tray-scaffold.test.ts
+          pnpm run windows-tray:test
+
+      - name: Build release packages
+        shell: pwsh
+        run: |
+          pnpm run windows-tray:package:win-x64
+          pnpm run windows-tray:package:win-arm64
+          $version = $env:YTM_WINDOWS_TRAY_VERSION
+          pnpm run windows-tray:update-manifest -- `
+            "--package=apps/windows-tray/.build/packages/YTM-Tray-$version-win-x64.zip" `
+            "--package=apps/windows-tray/.build/packages/YTM-Tray-$version-win-arm64.zip"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: YTM Tray ${{ env.YTM_WINDOWS_TRAY_VERSION }}
+          generate_release_notes: true
+          previous_tag: ${{ env.PREVIOUS_WINDOWS_TRAY_TAG }}
+          make_latest: false
+          files: |
+            apps/windows-tray/.build/packages/*.zip
+            apps/windows-tray/.build/update-manifest/*.json

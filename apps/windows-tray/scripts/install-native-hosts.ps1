@@ -13,6 +13,8 @@ $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AppRoot = Resolve-Path (Join-Path $ScriptRoot "..")
 $TrayProjectPath = Join-Path $AppRoot "src\YTMTray\YTMTray.csproj"
 $NativeHostProjectPath = Join-Path $AppRoot "src\YTMTray.NativeHost\YTMTray.NativeHost.csproj"
+$PackagedExecutablePath = Join-Path $ScriptRoot "YTMTray.exe"
+$PackagedNativeHostExecutablePath = Join-Path $ScriptRoot "YTMTray.NativeHost.exe"
 
 if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) {
   $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
@@ -39,10 +41,6 @@ $RegistryKeys = @(
   "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$HostName",
   "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName"
 )
-
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-  throw ".NET 10 SDK is required. Install it before running this script."
-}
 
 function Invoke-Native {
   param(
@@ -72,39 +70,66 @@ function Normalize-AllowedOrigin {
   return $TrimmedOrigin
 }
 
+function Test-PackagedBinaries {
+  return (
+    (Test-Path -LiteralPath $PackagedExecutablePath) -and
+    (Test-Path -LiteralPath $PackagedNativeHostExecutablePath)
+  )
+}
+
+function Publish-FromSource {
+  if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+    throw ".NET 10 SDK is required when installing from source. Install it before running this script, or use a release package."
+  }
+
+  Invoke-Native -FilePath dotnet -Arguments @(
+    "publish",
+    $TrayProjectPath,
+    "-c",
+    "Release",
+    "-r",
+    $RuntimeIdentifier,
+    "--self-contained",
+    "true",
+    "/p:PublishSingleFile=true",
+    "/p:IncludeNativeLibrariesForSelfExtract=true",
+    "/p:EnableCompressionInSingleFile=true",
+    "-o",
+    $InstallRoot
+  )
+
+  Invoke-Native -FilePath dotnet -Arguments @(
+    "publish",
+    $NativeHostProjectPath,
+    "-c",
+    "Release",
+    "-r",
+    $RuntimeIdentifier,
+    "--self-contained",
+    "true",
+    "/p:PublishSingleFile=true",
+    "/p:IncludeNativeLibrariesForSelfExtract=true",
+    "/p:EnableCompressionInSingleFile=true",
+    "-o",
+    $InstallRoot
+  )
+}
+
+function Install-PackagedBinaries {
+  Copy-Item -LiteralPath $PackagedExecutablePath -Destination $ExecutablePath -Force
+  Copy-Item -LiteralPath $PackagedNativeHostExecutablePath -Destination $NativeHostExecutablePath -Force
+}
+
 New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
 
-Invoke-Native -FilePath dotnet -Arguments @(
-  "publish",
-  $TrayProjectPath,
-  "-c",
-  "Release",
-  "-r",
-  $RuntimeIdentifier,
-  "--self-contained",
-  "true",
-  "/p:PublishSingleFile=true",
-  "/p:IncludeNativeLibrariesForSelfExtract=true",
-  "/p:EnableCompressionInSingleFile=true",
-  "-o",
-  $InstallRoot
-)
+Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
+  Stop-Process -Force -ErrorAction SilentlyContinue
 
-Invoke-Native -FilePath dotnet -Arguments @(
-  "publish",
-  $NativeHostProjectPath,
-  "-c",
-  "Release",
-  "-r",
-  $RuntimeIdentifier,
-  "--self-contained",
-  "true",
-  "/p:PublishSingleFile=true",
-  "/p:IncludeNativeLibrariesForSelfExtract=true",
-  "/p:EnableCompressionInSingleFile=true",
-  "-o",
-  $InstallRoot
-)
+if (Test-PackagedBinaries) {
+  Install-PackagedBinaries
+} else {
+  Publish-FromSource
+}
 
 $AllowedOrigins = @(
   $DefaultAllowedOrigins

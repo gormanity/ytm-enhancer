@@ -16,6 +16,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("REMOTE_QA_WINDOWS_WORK_ROOT");
     expect(docs).toContain("Windows CLI native messaging QA is not wired yet");
     expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
+    expect(docs).toContain("scripts/remote/windows-qa/tray-package-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-visual-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-button-smoke.sh");
   });
@@ -64,6 +65,24 @@ describe("Windows remote QA scaffold", () => {
     expect(visualSmoke).toContain("YTM Tray");
     expect(visualSmoke).toContain("tray-popup.png");
     expect(visualSmokeShell).toContain("tray-visual-smoke.ps1");
+  });
+
+  it("automates Windows tray release package smoke", () => {
+    const packageSmoke = read(
+      "scripts/remote/windows-qa/tray-package-smoke.ps1",
+    );
+    const packageSmokeShell = read(
+      "scripts/remote/windows-qa/tray-package-smoke.sh",
+    );
+
+    expect(packageSmoke).toContain("windows-tray:package:$RuntimeIdentifier");
+    expect(packageSmoke).toContain("windows-tray:update-manifest");
+    expect(packageSmoke).toContain("--package=$ArchivePath");
+    expect(packageSmoke).toContain("YTM-Tray-update.json");
+    expect(packageSmoke).toContain("Expand-Archive");
+    expect(packageSmoke).toContain("install-native-hosts.ps1");
+    expect(packageSmoke).toContain("release.json");
+    expect(packageSmokeShell).toContain("tray-package-smoke.ps1");
   });
 
   it("automates Windows tray button smoke against the Edge fixture", () => {

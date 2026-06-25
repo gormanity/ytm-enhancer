@@ -1,0 +1,13 @@
+{
+  "appName": "YTM Tray",
+  "connectorId": "com.gormanity.ytm-enhancer.tray",
+  "nativeHostName": "com.gormanity.ytm_enhancer.tray",
+  "version": "0.1.0",
+  "buildNumber": "1000",
+  "minimumWindowsVersion": "Windows 11",
+  "githubReleaseTagPrefix": "windows-tray-v",
+  "githubReleaseListUrl": "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
+  "installUrl": "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true",
+  "assetPrefix": "YTM-Tray",
+  "runtimes": ["win-x64", "win-arm64"]
+}

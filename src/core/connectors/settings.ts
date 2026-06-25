@@ -26,7 +26,7 @@ export const MENU_BAR_HOMEBREW_COMMAND =
 export const CLI_INSTALL_URL =
   "https://github.com/gormanity/ytm-enhancer/tree/main/apps/cli";
 export const WINDOWS_TRAY_INSTALL_URL =
-  "https://github.com/gormanity/ytm-enhancer/tree/main/apps/windows-tray";
+  "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true";
 
 export type ConnectorStatus =
   | "connected"

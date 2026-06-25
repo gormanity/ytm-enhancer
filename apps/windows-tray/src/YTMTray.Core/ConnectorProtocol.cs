@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace YTMTray.Core;
 
 public static class ConnectorProtocol
@@ -5,7 +7,11 @@ public static class ConnectorProtocol
     public const string HostName = "com.gormanity.ytm_enhancer.tray";
     public const string ConnectorId = "com.gormanity.ytm-enhancer.tray";
     public const string ConnectorName = "YTM Tray";
-    public const string ConnectorVersion = "0.1.0";
+    public static string ConnectorVersion =>
+        typeof(ConnectorProtocol)
+            .Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion ?? "0.1.0";
     public const string ProtocolVersion = "1.0.0";
     public const string UninstallRequestedType = "connector.uninstallRequested";
 
