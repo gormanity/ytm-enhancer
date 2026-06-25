@@ -26,10 +26,27 @@ do not need the .NET SDK when installing from a release zip.
 
 The update manifest is published as a release asset with SHA-256 checksums,
 download URLs, runtime identifiers, the component tag, and the minimum Windows
-version. The tray app's future in-app updater should use the GitHub release list
-to find the newest `windows-tray-v*` release, download the matching update
-manifest, verify the package checksum, and then hand off installation to the
-packaged installer script.
+version.
+
+## Checksum-Verified In-App Updates
+
+The tray app checks the GitHub release list in the background and marks the tray
+menu and flyout when a newer `windows-tray-v*` release is available. Users can
+also choose `Check for Updates` manually.
+
+When the user accepts an update, the tray app:
+
+1. Downloads the release's `YTM-Tray-update.json`.
+2. Selects the package for the current Windows runtime.
+3. Downloads the release zip.
+4. Verifies the zip against the manifest SHA-256 checksum.
+5. Extracts the zip with path traversal protection.
+6. Starts the packaged `install-native-hosts.ps1`.
+7. Quits so the installer can replace the running tray executable.
+
+The updater is intentionally not silent-installing. The user confirms the
+download/install handoff, and the installer continues to use user-level
+registration under `%LOCALAPPDATA%` and `HKCU`.
 
 ## Local Package Smoke
 
@@ -117,8 +134,7 @@ Manual validation is optional:
 
 ## Follow-Up
 
-The first release plumbing slice intentionally publishes a signed-checksum
-manifest and release packages without adding a self-replacing updater to the
-running tray process. The in-app updater should be implemented as a separate
-task so shutdown, download verification, installer handoff, rollback behavior,
-and Windows code-signing decisions can be reviewed together.
+The current updater validates package checksums and safely hands off to the
+packaged installer. Windows Authenticode signing, SmartScreen reputation,
+rollback, and a future package-manager channel remain separate release hardening
+tasks.

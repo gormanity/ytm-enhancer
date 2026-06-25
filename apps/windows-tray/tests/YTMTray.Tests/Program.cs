@@ -1,3 +1,7 @@
+using System.IO.Compression;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using YTMTray.Core;
 
@@ -6,7 +10,11 @@ var tests = new (string Name, Func<Task> Run)[]
     ("protocol manifest uses tray connector identity", ProtocolManifest),
     ("native messaging codec round trips JSON frames", NativeMessagingCodecRoundTrip),
     ("connector app handshakes and subscribes after ready", ConnectorAppHandshake),
-    ("connector app updates tray playback state", ConnectorAppPlaybackState)
+    ("connector app updates tray playback state", ConnectorAppPlaybackState),
+    ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
+    ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
+    ("update service prepares verified package", UpdateServicePreparesVerifiedPackage),
+    ("update service rejects unsafe package entries", UpdateServiceRejectsUnsafePackageEntries)
 };
 
 var failures = new List<string>();
@@ -111,6 +119,260 @@ static Task ConnectorAppPlaybackState()
     return Task.CompletedTask;
 }
 
+static async Task UpdateServiceFindsNewestTrayRelease()
+{
+    const string releaseListUrl = "https://example.test/releases";
+    const string manifestUrl =
+        "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-update.json";
+    using var http = new HttpClient(new FakeHttpHandler(request =>
+        request.RequestUri?.AbsoluteUri == releaseListUrl
+            ? JsonResponse(
+                """
+                [
+                  {
+                    "tag_name": "windows-tray-v0.1.1",
+                    "html_url": "https://example.test/releases/windows-tray-v0.1.1",
+                    "draft": false,
+                    "prerelease": false,
+                    "assets": [
+                      {
+                        "name": "YTM-Tray-update.json",
+                        "browser_download_url": "https://example.test/download/windows-tray-v0.1.1/YTM-Tray-update.json"
+                      }
+                    ]
+                  },
+                  {
+                    "tag_name": "v9.9.9",
+                    "html_url": "https://example.test/releases/v9.9.9",
+                    "draft": false,
+                    "prerelease": false,
+                    "assets": []
+                  },
+                  {
+                    "tag_name": "windows-tray-v0.2.0",
+                    "html_url": "https://example.test/releases/windows-tray-v0.2.0",
+                    "draft": false,
+                    "prerelease": false,
+                    "assets": [
+                      {
+                        "name": "YTM-Tray-update.json",
+                        "browser_download_url": "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-update.json"
+                      }
+                    ]
+                  }
+                ]
+                """
+            )
+            : new HttpResponseMessage(HttpStatusCode.NotFound)
+    ));
+    var service = new WindowsTrayUpdateService(
+        http,
+        new WindowsTrayUpdateOptions(
+            new Uri(releaseListUrl),
+            "windows-tray-v",
+            "0.1.0",
+            "win-x64"
+        )
+    );
+
+    var update = await service.CheckForUpdateAsync();
+
+    AssertEqual(true, update.IsUpdateAvailable);
+    AssertEqual("0.2.0", update.LatestVersion);
+    AssertEqual(manifestUrl, update.ManifestUrl?.AbsoluteUri);
+}
+
+static async Task UpdateServiceIgnoresCurrentTrayRelease()
+{
+    const string releaseListUrl = "https://example.test/releases";
+    using var http = new HttpClient(new FakeHttpHandler(request =>
+        request.RequestUri?.AbsoluteUri == releaseListUrl
+            ? JsonResponse(
+                """
+                [
+                  {
+                    "tag_name": "windows-tray-v0.1.0",
+                    "html_url": "https://example.test/releases/windows-tray-v0.1.0",
+                    "draft": false,
+                    "prerelease": false,
+                    "assets": [
+                      {
+                        "name": "YTM-Tray-update.json",
+                        "browser_download_url": "https://example.test/download/windows-tray-v0.1.0/YTM-Tray-update.json"
+                      }
+                    ]
+                  }
+                ]
+                """
+            )
+            : new HttpResponseMessage(HttpStatusCode.NotFound)
+    ));
+    var service = new WindowsTrayUpdateService(
+        http,
+        new WindowsTrayUpdateOptions(
+            new Uri(releaseListUrl),
+            "windows-tray-v",
+            "0.1.0",
+            "win-x64"
+        )
+    );
+
+    var update = await service.CheckForUpdateAsync();
+
+    AssertEqual(false, update.IsUpdateAvailable);
+    AssertEqual("0.1.0", update.LatestVersion);
+}
+
+static async Task UpdateServicePreparesVerifiedPackage()
+{
+    using var temp = new TempDirectory();
+    var packageBytes = CreatePackageBytes(
+        ("install-native-hosts.ps1", "Write-Output installed"),
+        ("YTMTray.exe", "tray"),
+        ("YTMTray.NativeHost.exe", "native-host")
+    );
+    var checksum = Sha256(packageBytes);
+    var manifest = UpdateManifestJson(checksum);
+    using var http = new HttpClient(new FakeHttpHandler(request =>
+        request.RequestUri?.AbsoluteUri switch
+        {
+            "https://example.test/releases" => ReleasesResponse(),
+            "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-update.json" =>
+                JsonResponse(manifest),
+            "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-0.2.0-win-x64.zip" =>
+                BytesResponse(packageBytes),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        }
+    ));
+    var service = new WindowsTrayUpdateService(
+        http,
+        new WindowsTrayUpdateOptions(
+            new Uri("https://example.test/releases"),
+            "windows-tray-v",
+            "0.1.0",
+            "win-x64"
+        )
+    );
+
+    var update = await service.CheckForUpdateAsync();
+    var prepared = await service.DownloadAndPrepareUpdateAsync(update, temp.Path);
+
+    AssertEqual("0.2.0", prepared.Version);
+    AssertEqual(true, File.Exists(prepared.PackagePath));
+    AssertEqual(true, File.Exists(prepared.InstallerScriptPath));
+}
+
+static async Task UpdateServiceRejectsUnsafePackageEntries()
+{
+    using var temp = new TempDirectory();
+    var packageBytes = CreatePackageBytes(
+        ("install-native-hosts.ps1", "Write-Output installed"),
+        ("../escape.txt", "unsafe")
+    );
+    var checksum = Sha256(packageBytes);
+    using var http = new HttpClient(new FakeHttpHandler(request =>
+        request.RequestUri?.AbsoluteUri switch
+        {
+            "https://example.test/releases" => ReleasesResponse(),
+            "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-update.json" =>
+                JsonResponse(UpdateManifestJson(checksum)),
+            "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-0.2.0-win-x64.zip" =>
+                BytesResponse(packageBytes),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        }
+    ));
+    var service = new WindowsTrayUpdateService(
+        http,
+        new WindowsTrayUpdateOptions(
+            new Uri("https://example.test/releases"),
+            "windows-tray-v",
+            "0.1.0",
+            "win-x64"
+        )
+    );
+
+    var update = await service.CheckForUpdateAsync();
+    await AssertThrowsAsync<InvalidDataException>(
+        () => service.DownloadAndPrepareUpdateAsync(update, temp.Path),
+        "unsafe package path"
+    );
+}
+
+static HttpResponseMessage ReleasesResponse() =>
+    JsonResponse(
+        """
+        [
+          {
+            "tag_name": "windows-tray-v0.2.0",
+            "html_url": "https://example.test/releases/windows-tray-v0.2.0",
+            "draft": false,
+            "prerelease": false,
+            "assets": [
+              {
+                "name": "YTM-Tray-update.json",
+                "browser_download_url": "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-update.json"
+              }
+            ]
+          }
+        ]
+        """
+    );
+
+static string UpdateManifestJson(string checksum) =>
+    $$"""
+    {
+      "schemaVersion": 1,
+      "product": "windows-tray",
+      "name": "YTM Tray",
+      "version": "0.2.0",
+      "buildNumber": 2000,
+      "tag": "windows-tray-v0.2.0",
+      "releaseUrl": "https://example.test/releases/windows-tray-v0.2.0",
+      "installUrl": "https://example.test/releases?q=windows-tray-v&expanded=true",
+      "releaseListUrl": "https://example.test/releases",
+      "minimumWindowsVersion": "Windows 11",
+      "assets": {
+        "win-x64": {
+          "name": "YTM-Tray-0.2.0-win-x64.zip",
+          "sha256": "{{checksum}}",
+          "size": 0,
+          "url": "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-0.2.0-win-x64.zip"
+        }
+      }
+    }
+    """;
+
+static byte[] CreatePackageBytes(params (string Name, string Content)[] entries)
+{
+    using var stream = new MemoryStream();
+    using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, true))
+    {
+        foreach (var entry in entries)
+        {
+            var archiveEntry = archive.CreateEntry(entry.Name);
+            using var writer = new StreamWriter(archiveEntry.Open(), Encoding.UTF8);
+            writer.Write(entry.Content);
+        }
+    }
+
+    return stream.ToArray();
+}
+
+static string Sha256(byte[] bytes) =>
+    Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
+static HttpResponseMessage JsonResponse(string json) =>
+    new(HttpStatusCode.OK)
+    {
+        Content = new StringContent(json, Encoding.UTF8, "application/json")
+    };
+
+static HttpResponseMessage BytesResponse(byte[] bytes) =>
+    new(HttpStatusCode.OK)
+    {
+        Content = new ByteArrayContent(bytes)
+    };
+
 static void AssertEqual<T>(T expected, T actual)
 {
     if (!EqualityComparer<T>.Default.Equals(expected, actual))
@@ -133,6 +395,21 @@ static void AssertNotNull(object? value, string label)
     {
         throw new InvalidOperationException($"{label} was null");
     }
+}
+
+static async Task AssertThrowsAsync<T>(Func<Task> action, string expectedMessage)
+    where T : Exception
+{
+    try
+    {
+        await action();
+    }
+    catch (T error) when (error.Message.Contains(expectedMessage, StringComparison.OrdinalIgnoreCase))
+    {
+        return;
+    }
+
+    throw new InvalidOperationException($"expected {typeof(T).Name} containing {expectedMessage}");
 }
 
 sealed class FakeConnection : IConnectorConnection
@@ -181,4 +458,30 @@ sealed class FakeTrayController : ITrayController
     public void UpdateConnectionStatus(string status) => Status = status;
     public void SetStalePlaybackState() => Status = "Waiting for playback updates...";
     public void UpdatePlayback(PlaybackState state) => State = state;
+}
+
+sealed class FakeHttpHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken
+    ) => Task.FromResult(respond(request));
+}
+
+sealed class TempDirectory : IDisposable
+{
+    public string Path { get; } = System.IO.Path.Combine(
+        System.IO.Path.GetTempPath(),
+        $"ytm-tray-test-{Guid.NewGuid():N}"
+    );
+
+    public TempDirectory()
+    {
+        Directory.CreateDirectory(Path);
+    }
+
+    public void Dispose()
+    {
+        Directory.Delete(Path, recursive: true);
+    }
 }

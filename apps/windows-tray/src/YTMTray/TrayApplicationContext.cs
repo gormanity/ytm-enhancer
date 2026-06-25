@@ -16,10 +16,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
     )
     {
         this.connection = connection;
-        trayController = new TrayController(initialStatus);
+        trayController = new TrayController(initialStatus, logger: logger);
         trayController.OnQuit = ExitThread;
         connectorApp = new ConnectorApp(connection, trayController, logger);
         connectorApp.Start();
+        trayController.StartBackgroundUpdateCheck();
     }
 
     protected override void Dispose(bool disposing)

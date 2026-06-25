@@ -112,6 +112,8 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("UserSeekRequested");
     expect(popupForm).toContain('nextSectionLabel.Text = "Up Next"');
     expect(popupForm).toContain('"Focus YouTube Music"');
+    expect(popupForm).toContain('"Check for Updates"');
+    expect(popupForm).toContain("Install Update {version}");
     expect(popupForm).toContain('"About YTM Tray"');
     expect(popupForm).toContain("ToolTip controlTips");
     expect(popupForm).not.toContain("DrawShuffleIcon");
@@ -232,6 +234,12 @@ describe("Windows tray connector scaffold", () => {
     expect(packageScript).toContain("install-native-hosts.ps1");
     expect(packageScript).toContain("uninstall-native-hosts.ps1");
     expect(packageScript).toContain("release.json");
+    expect(packageScript).toContain(
+      "releaseListUrl: metadata.githubReleaseListUrl",
+    );
+    expect(packageScript).toContain(
+      "updateManifestAssetName: `${metadata.assetPrefix}-update.json`",
+    );
     expect(packageScript).toContain("tar");
     expect(packageScript).toContain("-a");
     expect(packageScript).toContain("pathToFileURL(process.argv[1]).href");
@@ -254,6 +262,9 @@ describe("Windows tray connector scaffold", () => {
     expect(installScript).toContain("use a release package");
     expect(installScript).toContain(
       "Copy-Item -LiteralPath $PackagedExecutablePath",
+    );
+    expect(installScript).toContain(
+      "Copy-Item -LiteralPath $PackagedReleaseMetadataPath",
     );
     expect(installScript).toContain("Get-Process YTMTray, YTMTray.NativeHost");
   });
@@ -343,6 +354,32 @@ describe("Windows tray connector scaffold", () => {
     );
   });
 
+  it("provides a checksum-verified Windows tray updater", () => {
+    const updater = read("src/YTMTray.Core/WindowsTrayUpdateService.cs");
+    const trayController = read("src/YTMTray/TrayController.cs");
+    const popupForm = read("src/YTMTray/PlaybackPopupForm.cs");
+    const appContext = read("src/YTMTray/TrayApplicationContext.cs");
+
+    expect(updater).toContain("WindowsTrayUpdateService");
+    expect(updater).toContain("ReleaseListUrl");
+    expect(updater).toContain("YTM-Tray-update.json");
+    expect(updater).toContain("RequireHttps");
+    expect(updater).toContain("VerifyChecksum");
+    expect(updater).toContain("ExtractZipSafely");
+    expect(updater).toContain("unsafe package path");
+    expect(updater).toContain('ProcessStartInfo("powershell.exe")');
+    expect(updater).toContain("ArgumentList.Add");
+    expect(updater).toContain("FromReleaseMetadataFile");
+
+    expect(trayController).toContain("StartBackgroundUpdateCheck");
+    expect(trayController).toContain("CheckForUpdatesAsync");
+    expect(trayController).toContain("ShowBalloonTip");
+    expect(trayController).toContain("DownloadAndPrepareUpdateAsync");
+    expect(trayController).toContain("StartInstaller");
+    expect(popupForm).toContain("OnCheckForUpdates");
+    expect(appContext).toContain("trayController.StartBackgroundUpdateCheck()");
+  });
+
   it("publishes component-scoped Windows tray releases", () => {
     const workflow = readRepo(".github/workflows/windows-tray-release.yml");
     const releaseDocs = readRepo("docs/windows-tray-release.md");
@@ -370,7 +407,8 @@ describe("Windows tray connector scaffold", () => {
       "scripts/remote/windows-qa/tray-button-smoke.sh",
     );
     expect(releaseDocs).toContain("component release that does not replace");
-    expect(releaseDocs).toContain("in-app updater should be implemented");
+    expect(releaseDocs).toContain("Checksum-Verified In-App Updates");
+    expect(releaseDocs).toContain("Check for Updates");
 
     expect(releaseStrategy).toContain("YTM Tray:");
     expect(releaseStrategy).toContain("windows-tray-vX.Y.Z");
@@ -378,6 +416,6 @@ describe("Windows tray connector scaffold", () => {
       ".github/workflows/windows-tray-release.yml",
     );
     expect(connectorsDocs).toContain("com.gormanity.ytm_enhancer.tray");
-    expect(connectorsDocs).toContain("Windows tray in-app updater");
+    expect(connectorsDocs).toContain("verify the runtime package checksum");
   });
 });

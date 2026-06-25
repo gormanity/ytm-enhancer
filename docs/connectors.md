@@ -235,7 +235,9 @@ The first-party Windows tray connector lives in `apps/windows-tray`. It is a
 modern .NET WinForms tray app that communicates with the extension through
 native messaging. It mirrors the macOS menu bar connector's user-facing role on
 Windows: current playback status, tray/menu controls, focus YouTube Music, and
-connection diagnostics.
+connection diagnostics. Direct release installs can check GitHub component
+releases in the background, verify the runtime package checksum, and hand off to
+the packaged installer after user confirmation.
 
 The Windows tray app is separate from the CLI. Windows users get a native tray
 surface; PowerShell or WSL CLI support is intentionally not part of the Windows
@@ -257,7 +259,6 @@ user-level native messaging keys for Google Chrome and Microsoft Edge.
 Remaining work before a public connector release:
 
 1. Publish the `gormanity/homebrew-tap` cask repository.
-2. Add the Windows tray in-app updater that consumes release manifests.
-3. Add a clearer approval flow for newly seen connectors.
-4. Add connector-facing diagnostics for protocol mismatches and permission
+2. Add a clearer approval flow for newly seen connectors.
+3. Add connector-facing diagnostics for protocol mismatches and permission
    denials.

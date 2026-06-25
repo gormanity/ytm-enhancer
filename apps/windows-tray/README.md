@@ -19,6 +19,12 @@ and `YTMTray.NativeHost.exe` for browser native messaging. It writes a native
 messaging manifest under `%LOCALAPPDATA%\YTM Enhancer\Tray` and registers
 user-level native messaging keys for Edge and Chrome.
 
+Release zips include prebuilt executables plus `release.json`. Direct release
+installs check for newer `windows-tray-v*` GitHub Releases in the background.
+When an update is available, the tray menu and flyout expose an install action
+that downloads the update manifest, verifies the release zip checksum, and runs
+the packaged installer after confirmation.
+
 For local QA against a temporary unpacked Chromium-family extension ID, pass an
 extra native messaging origin:
 

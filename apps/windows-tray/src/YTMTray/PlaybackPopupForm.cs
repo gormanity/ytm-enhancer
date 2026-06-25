@@ -44,6 +44,10 @@ internal sealed class PlaybackPopupForm : Form
         PopupActionIcon.Focus,
         "Focus YouTube Music"
     );
+    private readonly PopupActionRowControl updateRow = new(
+        PopupActionIcon.Update,
+        "Check for Updates"
+    );
     private readonly PopupActionRowControl aboutRow = new(PopupActionIcon.Info, "About YTM Tray");
     private readonly PopupActionRowControl quitRow = new(PopupActionIcon.Quit, "Quit");
     private double currentDuration;
@@ -70,6 +74,9 @@ internal sealed class PlaybackPopupForm : Form
     public Action? OnFocusYouTubeMusic { get; set; }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Action? OnCheckForUpdates { get; set; }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? OnAbout { get; set; }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -87,7 +94,7 @@ internal sealed class PlaybackPopupForm : Form
         BackColor = SurfaceColor;
         ForeColor = PrimaryTextColor;
         Font = new Font("Segoe UI", 9f, FontStyle.Regular);
-        ClientSize = new Size(440, 540);
+        ClientSize = new Size(440, 570);
         DoubleBuffered = true;
 
         ConfigureCurrentTrack();
@@ -145,6 +152,15 @@ internal sealed class PlaybackPopupForm : Form
         UpdateProgress(state.Progress, state.Duration);
         UpdateNextTrack(state.NextTrack);
         SetControlsEnabled(hasTrack);
+    }
+
+    public void SetUpdateAvailable(string? version)
+    {
+        updateRow.Text = string.IsNullOrWhiteSpace(version)
+            ? "Check for Updates"
+            : $"Install Update {version}";
+        updateRow.AccessibleName = updateRow.Text;
+        updateRow.Invalidate();
     }
 
     protected override void OnResize(EventArgs e)
@@ -311,8 +327,9 @@ internal sealed class PlaybackPopupForm : Form
     private void ConfigureActionRows()
     {
         ConfigureActionRow(focusRow, 446, () => OnFocusYouTubeMusic?.Invoke());
-        ConfigureActionRow(aboutRow, 476, () => OnAbout?.Invoke());
-        ConfigureActionRow(quitRow, 506, () => OnQuit?.Invoke());
+        ConfigureActionRow(updateRow, 476, () => OnCheckForUpdates?.Invoke());
+        ConfigureActionRow(aboutRow, 506, () => OnAbout?.Invoke());
+        ConfigureActionRow(quitRow, 536, () => OnQuit?.Invoke());
     }
 
     private void ConfigureActionRow(PopupActionRowControl row, int y, Action action)
@@ -920,6 +937,7 @@ internal sealed class PlaybackButtonControl : Control
 internal enum PopupActionIcon
 {
     Focus,
+    Update,
     Info,
     Quit
 }
@@ -1037,6 +1055,11 @@ internal sealed class PopupActionRowControl : Control
                 graphics.DrawLine(pen, bounds.Left + 8, bounds.Top + 4, bounds.Right - 2, bounds.Top + 4);
                 graphics.DrawLine(pen, bounds.Right - 2, bounds.Top + 4, bounds.Right - 2, bounds.Bottom - 6);
                 graphics.DrawLine(pen, bounds.Right - 2, bounds.Top + 4, bounds.Left + 9, bounds.Bottom - 7);
+                break;
+            case PopupActionIcon.Update:
+                graphics.DrawArc(pen, bounds.Left + 3, bounds.Top + 3, 12, 12, 35, 280);
+                graphics.DrawLine(pen, bounds.Right - 4, bounds.Top + 4, bounds.Right - 2, bounds.Top + 9);
+                graphics.DrawLine(pen, bounds.Right - 4, bounds.Top + 4, bounds.Right - 9, bounds.Top + 5);
                 break;
             case PopupActionIcon.Info:
                 graphics.DrawEllipse(pen, bounds.Left + 2, bounds.Top + 2, 14, 14);

@@ -15,6 +15,7 @@ $TrayProjectPath = Join-Path $AppRoot "src\YTMTray\YTMTray.csproj"
 $NativeHostProjectPath = Join-Path $AppRoot "src\YTMTray.NativeHost\YTMTray.NativeHost.csproj"
 $PackagedExecutablePath = Join-Path $ScriptRoot "YTMTray.exe"
 $PackagedNativeHostExecutablePath = Join-Path $ScriptRoot "YTMTray.NativeHost.exe"
+$PackagedReleaseMetadataPath = Join-Path $ScriptRoot "release.json"
 
 if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) {
   $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
@@ -30,6 +31,7 @@ if ([string]::IsNullOrWhiteSpace($InstallRoot)) {
 
 $ExecutablePath = Join-Path $InstallRoot "YTMTray.exe"
 $NativeHostExecutablePath = Join-Path $InstallRoot "YTMTray.NativeHost.exe"
+$ReleaseMetadataPath = Join-Path $InstallRoot "release.json"
 $ManifestPath = Join-Path $InstallRoot "$HostName.json"
 $DefaultAllowedOrigins = @(
   "chrome-extension://pggblbpjleekkobiinobaeeefnimgljh/",
@@ -118,6 +120,9 @@ function Publish-FromSource {
 function Install-PackagedBinaries {
   Copy-Item -LiteralPath $PackagedExecutablePath -Destination $ExecutablePath -Force
   Copy-Item -LiteralPath $PackagedNativeHostExecutablePath -Destination $NativeHostExecutablePath -Force
+  if (Test-Path -LiteralPath $PackagedReleaseMetadataPath) {
+    Copy-Item -LiteralPath $PackagedReleaseMetadataPath -Destination $ReleaseMetadataPath -Force
+  }
 }
 
 New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
