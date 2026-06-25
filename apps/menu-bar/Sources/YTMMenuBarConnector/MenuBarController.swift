@@ -104,6 +104,7 @@ final class MenuBarController: NSObject {
     barItem.button?.imagePosition = .imageOnly
     barItem.button?.imageScaling = .scaleProportionallyDown
     barItem.button?.toolTip = "YTM Enhancer"
+    barItem.button?.setAccessibilityLabel("YTM Enhancer")
   }
 
   private static func menuItemIcon(

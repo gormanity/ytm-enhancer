@@ -21,6 +21,18 @@ export interface LaunchExtensionContextOptions {
   mode?: "dev" | "prod-and-dev";
 }
 
+function mergedBrowserEnv(
+  overrides: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!overrides) return undefined;
+
+  return Object.fromEntries(
+    Object.entries({ ...process.env, ...overrides }).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
+  );
+}
+
 function devExtensionPathForProject(projectName: string): string {
   return resolve(
     process.cwd(),
@@ -32,6 +44,10 @@ function devExtensionPathForProject(projectName: string): string {
 function browserChannelForProject(projectName: string): string | undefined {
   if (projectName === "edge") return "msedge";
   return "chromium";
+}
+
+export function extensionUserDataDir(testInfo: TestInfo): string {
+  return testInfo.outputPath("extension-user-data");
 }
 
 export async function launchExtensionContext(
@@ -46,12 +62,12 @@ export async function launchExtensionContext(
     mode === "prod-and-dev"
       ? [resolve(process.cwd(), "dist", "chrome"), devExtensionPath]
       : [devExtensionPath];
-  const userDataDir = testInfo.outputPath("extension-user-data");
+  const userDataDir = extensionUserDataDir(testInfo);
   await mkdir(userDataDir, { recursive: true });
 
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: browserChannelForProject(testInfo.project.name),
-    env: options.env,
+    env: mergedBrowserEnv(options.env),
     args: [
       `--disable-extensions-except=${extensionPaths.join(",")}`,
       `--load-extension=${extensionPaths.join(",")}`,

@@ -78,6 +78,14 @@ YTM_ENHANCER_EXTENSION_ORIGINS="chrome-extension://<extension-id>/" \
   apps/menu-bar/scripts/install-native-hosts.sh
 ```
 
+For automated QA with a Chromium profile outside the standard user Library
+folder, add colon-separated manifest directories:
+
+```sh
+YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS="/path/to/profile/NativeMessagingHosts" \
+  apps/menu-bar/scripts/install-native-hosts.sh
+```
+
 To test an installed release package against the local dev extension, point the
 developer manifests at the installed app:
 

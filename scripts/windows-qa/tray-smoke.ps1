@@ -45,6 +45,17 @@ if (-not ($SdkMajorVersions | Where-Object { $_ -ge 10 })) {
   throw ".NET 10 SDK or newer is required for Windows tray QA."
 }
 
+$RuntimeMajorVersions = dotnet --list-runtimes |
+  ForEach-Object {
+    if ($_ -match "^Microsoft\.NETCore\.App\s+(\d+)\.") {
+      [int] $Matches[1]
+    }
+  }
+
+if (-not ($RuntimeMajorVersions | Where-Object { $_ -eq 10 })) {
+  throw ".NET 10 runtime is required for Windows tray QA because the tray tests target net10.0."
+}
+
 $HostName = "com.gormanity.ytm_enhancer.tray"
 $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
   "win-arm64"

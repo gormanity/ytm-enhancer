@@ -48,6 +48,12 @@ ssh <remote-qa-alias> '
 This proves the persistent remote checkout can refresh from `main`, install with
 the pinned package manager, and build the development extension targets.
 
+## macOS On Bowfin
+
+Bowfin is the default remote macOS QA host for this project. Keep its concrete
+hostname, username, SSH key path, and work root in `.remote-qa.env` or shell
+environment only; do not commit them.
+
 ## Crabbox Smoke
 
 Crabbox is useful when an agent or developer wants to sync the current local
@@ -80,6 +86,77 @@ scripts/remote/macos-qa/check.sh
 This mirrors the GitHub Actions CI validation and adds a dev build. It does not
 run Playwright e2e because those tests need browser runtime setup and can be
 more sensitive to the remote session.
+
+Run a menu bar release package smoke:
+
+```sh
+scripts/remote/macos-qa/menu-bar-package-smoke.sh
+```
+
+This builds the direct install package with a non-secret throwaway Sparkle
+public key, expands the generated `.pkg`, and verifies that the app bundle,
+direct uninstaller, and browser native messaging manifests are present in the
+package payload. It does not install the package or require Apple signing,
+notarization, or release secrets.
+
+Run the menu bar button smoke from any active macOS desktop session:
+
+```sh
+scripts/macos-qa/menu-bar-button-smoke.sh
+```
+
+This installs a temporary local menu bar app and native messaging manifests,
+loads the Chromium dev extension, writes a manifest into Playwright's temporary
+Chromium profile, enables Connected Apps, clicks the menu bar
+playback/focus/quit controls through macOS Accessibility automation, and
+verifies the browser fixture receives the expected playback events. The macOS
+account must be logged into an active desktop session, and the shell running the
+script must be allowed to control the computer in System Settings > Privacy &
+Security > Accessibility. If that macOS Accessibility path is unavailable, the
+test still validates the browser native messaging connection and then reports
+the menu-item click portion as skipped with the System Events error.
+
+Run the same smoke on bowfin through Crabbox:
+
+```sh
+scripts/remote/macos-qa/menu-bar-button-smoke.sh
+```
+
+The remote wrapper only syncs the checkout to bowfin and runs the local smoke
+script there. Keep machine-specific endpoint details in ignored environment
+configuration.
+
+Require the actual menu bar button clicks to run:
+
+```sh
+YTME_MENU_BAR_REQUIRE_BUTTONS=1 \
+  scripts/macos-qa/menu-bar-button-smoke.sh
+```
+
+Use that strict mode for manual QA after granting Accessibility/Automation to
+the GUI-launched shell or automation app.
+
+The Crabbox wrapper accepts the equivalent remote variable:
+
+```sh
+REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS=1 \
+  scripts/remote/macos-qa/menu-bar-button-smoke.sh
+```
+
+By default the button smoke uses Playwright's managed Chromium project. To use
+the system Microsoft Edge app instead:
+
+```sh
+YTME_MENU_BAR_E2E_PROJECT=edge \
+  scripts/macos-qa/menu-bar-button-smoke.sh
+```
+
+Use `REMOTE_QA_MENU_BAR_E2E_PROJECT=edge` with the Crabbox wrapper.
+
+Peekaboo can be useful for manual visual inspection from an active GUI terminal,
+but the automated smoke does not depend on it. The smoke uses System Events and
+CoreGraphics because those APIs work from the same endpoint shell the runner
+uses.
 
 Run managed-browser e2e smoke tests:
 
@@ -351,6 +428,16 @@ REMOTE_QA_WINDOWS_SSH_KEY="$HOME/.ssh/<windows-guest-key-on-remote-mac>"
 `REMOTE_QA_WINDOWS_WORK_ROOT` is deleted and recreated on every run. Point it at
 a disposable repository checkout directory, not a broad parent directory.
 
+Run the Windows SSH preflight before a full Windows QA sync:
+
+```sh
+scripts/remote/windows-qa/probe.sh
+```
+
+The probe verifies that the remote Mac can reach the UTM forwarded port and that
+the Windows guest returns an OpenSSH banner before PowerShell runs. It does not
+copy the repository into Windows.
+
 Run a minimal Windows smoke:
 
 ```sh
@@ -358,7 +445,43 @@ scripts/remote/windows-qa/crabbox-run.sh -- powershell.exe -NoProfile \
   -Command '$PSVersionTable.PSVersion.ToString()'
 ```
 
+If `nc` can connect to the forwarded port from the remote Mac, but SSH fails
+before authentication with `Connection timed out during banner exchange` or
+`kex_exchange_identification`, the repo wrapper has reached UTM and the failure
+is inside the Windows guest. In an elevated Windows PowerShell session, make the
+OpenSSH server and firewall rule idempotently active:
+
+```powershell
+Set-Service sshd -StartupType Automatic
+Start-Service sshd
+
+$ruleName = "OpenSSH-Server-In-TCP"
+if (Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue) {
+  Enable-NetFirewallRule -Name $ruleName
+  Set-NetFirewallRule -Name $ruleName -Profile Any -Action Allow
+} else {
+  New-NetFirewallRule `
+    -Name $ruleName `
+    -DisplayName "OpenSSH Server (sshd)" `
+    -Enabled True `
+    -Direction Inbound `
+    -Protocol TCP `
+    -Action Allow `
+    -LocalPort 22 `
+    -Profile Any
+}
+
+Get-Service sshd
+Get-NetTCPConnection -LocalPort 22 -State Listen
+```
+
 Run the Windows build/unit check:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/windows-qa/check.ps1
+```
+
+Run the same check through bowfin and the Windows guest:
 
 ```sh
 scripts/remote/windows-qa/check.sh
@@ -370,6 +493,13 @@ dead CSS, data roles, TypeScript, Vitest, Go tests, Chrome/Firefox/Edge builds,
 Firefox add-on lint, and an Edge dev build.
 
 Run a Windows Edge browser smoke:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/e2e-edge-smoke.ps1
+```
+
+Run the same smoke through bowfin and the Windows guest:
 
 ```sh
 scripts/remote/windows-qa/e2e-edge-smoke.sh
@@ -386,17 +516,31 @@ App is the tray connector.
 
 Run the Windows tray connector smoke:
 
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/windows-qa/tray-smoke.ps1
+```
+
+Run the same smoke through bowfin and the Windows guest:
+
 ```sh
 scripts/remote/windows-qa/tray-smoke.sh
 ```
 
-This requires the .NET 10 SDK or newer in the Windows guest. It runs the
-dependency-free tray tests, publishes the WinForms tray executable and native
-host relay for the guest architecture, installs user-level Edge and Chrome
-native messaging registry keys, validates the manifest, and removes the smoke
-install.
+This requires a .NET SDK that can build .NET 10 projects plus the .NET 10
+runtime in the Windows guest. The `Microsoft.DotNet.SDK.10` winget package
+provides both. It runs the dependency-free tray tests, publishes the WinForms
+tray executable and native host relay for the guest architecture, installs
+user-level Edge and Chrome native messaging registry keys, validates the
+manifest, and removes the smoke install.
 
 Run the Windows tray release package smoke:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-package-smoke.ps1
+```
+
+Run the same smoke through bowfin and the Windows guest:
 
 ```sh
 scripts/remote/windows-qa/tray-package-smoke.sh
@@ -409,6 +553,13 @@ install.
 
 Run the Windows tray visual smoke from an active Windows desktop session:
 
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-visual-smoke.ps1
+```
+
+Run the same smoke through bowfin and the Windows guest:
+
 ```sh
 scripts/remote/windows-qa/tray-visual-smoke.sh
 ```
@@ -420,6 +571,13 @@ Automation, opens the tray popup, captures desktop/overflow/popup screenshots
 under the Windows user's temp directory, and removes the smoke install.
 
 Run the Windows tray button smoke from an active Windows desktop session:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-button-smoke.ps1
+```
+
+Run the same smoke through bowfin and the Windows guest:
 
 ```sh
 scripts/remote/windows-qa/tray-button-smoke.sh
@@ -446,7 +604,8 @@ Run a menu bar packaging smoke:
 scripts/remote/macos-qa/menu-bar-smoke.sh
 ```
 
-The menu bar smoke uses a non-secret throwaway Sparkle public key so the remote
+`menu-bar-smoke.sh` is a compatibility alias for `menu-bar-package-smoke.sh`.
+The package smoke uses a non-secret throwaway Sparkle public key so the remote
 host can validate direct package construction without storing signing
 certificates, notarization credentials, or Sparkle private keys.
 
@@ -461,6 +620,10 @@ The remote QA scripts accept these variables:
 - `REMOTE_QA_WORK_ROOT`
 - `REMOTE_QA_SSH_KEY`
 - `REMOTE_QA_E2E_PROJECTS`
+- `REMOTE_QA_MENU_BAR_E2E_PROJECT`
+- `REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS`
+- `YTME_MENU_BAR_E2E_PROJECT`
+- `YTME_MENU_BAR_REQUIRE_BUTTONS`
 - `REMOTE_QA_LINUX_PROVIDER`
 - `REMOTE_QA_LINUX_TARGET`
 - `REMOTE_QA_LINUX_TTL`

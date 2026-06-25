@@ -3,4 +3,4 @@ set -eu
 
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
-"$script_dir/crabbox-run.sh" --shell '& .\scripts\remote\windows-qa\tray-package-smoke.ps1'
+"$script_dir/crabbox-run.sh" --shell '& .\scripts\windows-qa\tray-package-smoke.ps1'

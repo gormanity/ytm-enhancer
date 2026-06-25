@@ -138,9 +138,7 @@ describe("Windows tray connector scaffold", () => {
 
   it("has a populated visual QA fixture for tray screenshots", () => {
     const program = read("src/YTMTray/Program.cs");
-    const visualSmoke = read(
-      "../../scripts/remote/windows-qa/tray-visual-smoke.ps1",
-    );
+    const visualSmoke = read("../../scripts/windows-qa/tray-visual-smoke.ps1");
 
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain("DemoConnectorConnection : IConnectorConnection");

@@ -120,6 +120,14 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain('"repeat=\\(state.repeatMode ?? "nil")"');
   });
 
+  it("can add Chromium manifest directories for browser-profile QA", () => {
+    const installer = read("scripts/install-native-hosts.sh");
+
+    expect(installer).toContain("YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS");
+    expect(installer).toContain("EXTRA_CHROMIUM_MANIFEST_DIRS");
+    expect(installer).toContain('write_chromium_manifest "$manifest_dir"');
+  });
+
   it("retries transient startup playback state errors", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)

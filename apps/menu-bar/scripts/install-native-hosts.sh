@@ -29,6 +29,11 @@ if [[ -n "${YTM_ENHANCER_EXTENSION_ORIGINS:-}" ]]; then
   IFS="," read -r -a CHROMIUM_ORIGINS <<<"$YTM_ENHANCER_EXTENSION_ORIGINS"
 fi
 
+EXTRA_CHROMIUM_MANIFEST_DIRS=()
+if [[ -n "${YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS:-}" ]]; then
+  IFS=":" read -r -a EXTRA_CHROMIUM_MANIFEST_DIRS <<<"$YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS"
+fi
+
 json_escape() {
   local value="$1"
   value="${value//\\/\\\\}"
@@ -121,5 +126,12 @@ write_chromium_manifest \
   "$HOME/Library/Application Support/Chromium/NativeMessagingHosts"
 write_chromium_manifest \
   "$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
+if ((${#EXTRA_CHROMIUM_MANIFEST_DIRS[@]} > 0)); then
+  for manifest_dir in "${EXTRA_CHROMIUM_MANIFEST_DIRS[@]}"; do
+    if [[ -n "$manifest_dir" ]]; then
+      write_chromium_manifest "$manifest_dir"
+    fi
+  done
+fi
 write_firefox_manifest \
   "$HOME/Library/Application Support/Mozilla/NativeMessagingHosts"

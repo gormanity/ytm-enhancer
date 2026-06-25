@@ -217,6 +217,8 @@ final class MenuBarNowPlayingView: NSView {
   }
 
   private func configure() {
+    setAccessibilityElement(false)
+
     titleTextView.configure(
       font: .systemFont(ofSize: 15, weight: .semibold),
       textColor: MenuBarStyle.primaryText
@@ -1045,6 +1047,15 @@ final class MenuBarControlsView: NSView {
   }
 
   private func configure() {
+    setAccessibilityElement(false)
+    setAccessibilityChildren([
+      shuffleButton,
+      previousButton,
+      playPauseButton,
+      nextButton,
+      repeatButton,
+    ])
+
     wantsLayer = true
     layer?.backgroundColor = NSColor.clear.cgColor
 
@@ -1346,6 +1357,8 @@ private final class MenuBarIconButton: NSButton {
     self.prominent = isProminent
     super.init(frame: .zero)
 
+    setAccessibilityElement(true)
+    setAccessibilityRole(.button)
     setAccessibilityLabel(label)
     setIcon(icon)
     target = self

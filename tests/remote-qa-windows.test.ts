@@ -15,10 +15,30 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("REMOTE_QA_WINDOWS_HOST");
     expect(docs).toContain("REMOTE_QA_WINDOWS_WORK_ROOT");
     expect(docs).toContain("Windows CLI native messaging QA is not wired yet");
+    expect(docs).toContain("scripts/windows-qa/check.ps1");
+    expect(docs).toContain("scripts/windows-qa/e2e-edge-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-package-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-button-smoke.ps1");
+    expect(docs).toContain("scripts/remote/windows-qa/probe.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-package-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-visual-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-button-smoke.sh");
+    expect(docs).toContain("Connection timed out during banner exchange");
+    expect(docs).toContain("OpenSSH-Server-In-TCP");
+    expect(docs).toContain("Microsoft.DotNet.SDK.10");
+  });
+
+  it("provides a no-sync Windows SSH preflight", () => {
+    const probe = read("scripts/remote/windows-qa/probe.sh");
+
+    expect(probe).toContain("REMOTE_QA_WINDOWS_HOST");
+    expect(probe).toContain("REMOTE_QA_WINDOWS_USER");
+    expect(probe).toContain("nc -vz");
+    expect(probe).toContain("powershell.exe -NoProfile -Command");
+    expect(probe).not.toContain("tar -czf");
   });
 
   it("bridges through the macOS Crabbox runner into Windows OpenSSH", () => {
@@ -35,24 +55,28 @@ describe("Windows remote QA scaffold", () => {
   });
 
   it("uses Windows-native checks instead of the POSIX check script", () => {
-    const check = read("scripts/remote/windows-qa/check.ps1");
+    const check = read("scripts/windows-qa/check.ps1");
+    const checkShell = read("scripts/remote/windows-qa/check.sh");
 
     expect(check).toContain("Invoke-Native pnpm run format:check");
     expect(check).toContain("Invoke-Native pnpm run lint");
     expect(check).toContain("Invoke-Native go -C apps/cli test ./...");
     expect(check).toContain("Invoke-Native pnpm run dev:build:edge");
     expect(check).not.toContain("pnpm run check");
+    expect(checkShell).toContain("scripts\\windows-qa\\check.ps1");
   });
 
   it("keeps Windows browser e2e scoped to Edge", () => {
-    const e2e = read("scripts/remote/windows-qa/e2e-edge-smoke.ps1");
+    const e2e = read("scripts/windows-qa/e2e-edge-smoke.ps1");
+    const e2eShell = read("scripts/remote/windows-qa/e2e-edge-smoke.sh");
 
     expect(e2e).toContain("Invoke-Native pnpm run dev:build:edge");
     expect(e2e).toContain("playwright test tests/e2e --project=edge");
+    expect(e2eShell).toContain("scripts\\windows-qa\\e2e-edge-smoke.ps1");
   });
 
   it("automates Windows tray visual smoke through the active desktop", () => {
-    const visualSmoke = read("scripts/remote/windows-qa/tray-visual-smoke.ps1");
+    const visualSmoke = read("scripts/windows-qa/tray-visual-smoke.ps1");
     const visualSmokeShell = read(
       "scripts/remote/windows-qa/tray-visual-smoke.sh",
     );
@@ -64,13 +88,21 @@ describe("Windows remote QA scaffold", () => {
     expect(visualSmoke).toContain("YTM Enhancer");
     expect(visualSmoke).toContain("YTM Tray");
     expect(visualSmoke).toContain("tray-popup.png");
-    expect(visualSmokeShell).toContain("tray-visual-smoke.ps1");
+    expect(visualSmokeShell).toContain(
+      "scripts\\windows-qa\\tray-visual-smoke.ps1",
+    );
+  });
+
+  it("preflights the .NET 10 runtime needed by tray unit smoke", () => {
+    const traySmoke = read("scripts/windows-qa/tray-smoke.ps1");
+
+    expect(traySmoke).toContain("dotnet --list-runtimes");
+    expect(traySmoke).toContain("Microsoft\\.NETCore\\.App");
+    expect(traySmoke).toContain("net10.0");
   });
 
   it("automates Windows tray release package smoke", () => {
-    const packageSmoke = read(
-      "scripts/remote/windows-qa/tray-package-smoke.ps1",
-    );
+    const packageSmoke = read("scripts/windows-qa/tray-package-smoke.ps1");
     const packageSmokeShell = read(
       "scripts/remote/windows-qa/tray-package-smoke.sh",
     );
@@ -82,11 +114,13 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).toContain("Expand-Archive");
     expect(packageSmoke).toContain("install-native-hosts.ps1");
     expect(packageSmoke).toContain("release.json");
-    expect(packageSmokeShell).toContain("tray-package-smoke.ps1");
+    expect(packageSmokeShell).toContain(
+      "scripts\\windows-qa\\tray-package-smoke.ps1",
+    );
   });
 
   it("automates Windows tray button smoke against the Edge fixture", () => {
-    const buttonSmoke = read("scripts/remote/windows-qa/tray-button-smoke.ps1");
+    const buttonSmoke = read("scripts/windows-qa/tray-button-smoke.ps1");
     const buttonSmokeShell = read(
       "scripts/remote/windows-qa/tray-button-smoke.sh",
     );
@@ -97,7 +131,9 @@ describe("Windows remote QA scaffold", () => {
     expect(buttonSmoke).toContain(
       "playwright test tests/e2e/windows-tray-connector.spec.ts --project=edge",
     );
-    expect(buttonSmokeShell).toContain("tray-button-smoke.ps1");
+    expect(buttonSmokeShell).toContain(
+      "scripts\\windows-qa\\tray-button-smoke.ps1",
+    );
     expect(trayE2e).toContain("UIAutomationClient");
     expect(trayE2e).toContain("Playback progress");
     expect(trayE2e).toContain("Focus YouTube Music");
