@@ -43,6 +43,27 @@ function publishProject({ project, outputDirectory, runtime, metadata }) {
   ]);
 }
 
+function maybeSignPayload(payloadRoot) {
+  const certificatePath =
+    process.env.YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH?.trim();
+  if (!certificatePath) {
+    return;
+  }
+
+  run("pwsh", [
+    "-NoLogo",
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    resolve(appRoot, "scripts/sign-release-payload.ps1"),
+    "-PayloadRoot",
+    payloadRoot,
+    "-CertificatePath",
+    certificatePath,
+  ]);
+}
+
 function packageRelease({
   runtime = "win-x64",
   outputRoot = resolve(appRoot, ".build/packages"),
@@ -106,6 +127,8 @@ function packageRelease({
       2,
     )}\n`,
   );
+
+  maybeSignPayload(payloadRoot);
 
   rmSync(archivePath, { force: true });
   run("tar", ["-a", "-c", "-f", archivePath, "-C", payloadRoot, "."]);

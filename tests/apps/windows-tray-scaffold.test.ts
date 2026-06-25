@@ -227,10 +227,15 @@ describe("Windows tray connector scaffold", () => {
     const packageScript = read("scripts/package-release.mjs");
     const manifestScript = read("scripts/generate-update-manifest.mjs");
     const installScript = read("scripts/install-native-hosts.ps1");
+    const signingScript = read("scripts/sign-release-payload.ps1");
 
     expect(packageScript).toContain("dotnet");
     expect(packageScript).toContain("/p:Version=${metadata.version}");
     expect(packageScript).toContain("/p:AssemblyVersion=");
+    expect(packageScript).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH",
+    );
+    expect(packageScript).toContain("sign-release-payload.ps1");
     expect(packageScript).toContain("install-native-hosts.ps1");
     expect(packageScript).toContain("uninstall-native-hosts.ps1");
     expect(packageScript).toContain("release.json");
@@ -267,6 +272,15 @@ describe("Windows tray connector scaffold", () => {
       "Copy-Item -LiteralPath $PackagedReleaseMetadataPath",
     );
     expect(installScript).toContain("Get-Process YTMTray, YTMTray.NativeHost");
+
+    expect(signingScript).toContain("signtool.exe");
+    expect(signingScript).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PASSWORD",
+    );
+    expect(signingScript).toContain("YTM_WINDOWS_TRAY_CODESIGN_TIMESTAMP_URL");
+    expect(signingScript).toContain("YTMTray.exe");
+    expect(signingScript).toContain("YTMTray.NativeHost.exe");
+    expect(signingScript).toContain('"verify"');
   });
 
   it("generates a checksum update manifest for packaged Windows runtimes", async () => {
@@ -393,6 +407,9 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:package:win-x64");
     expect(workflow).toContain("windows-tray:package:win-arm64");
     expect(workflow).toContain("windows-tray:update-manifest");
+    expect(workflow).toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
+    expect(workflow).toContain("WINDOWS_TRAY_CODESIGN_PASSWORD");
+    expect(workflow).toContain("YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH");
     expect(workflow).toContain("make_latest: false");
     expect(workflow).toContain("apps/windows-tray/.build/packages/*.zip");
     expect(workflow).toContain(
@@ -409,6 +426,8 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("component release that does not replace");
     expect(releaseDocs).toContain("Checksum-Verified In-App Updates");
     expect(releaseDocs).toContain("Check for Updates");
+    expect(releaseDocs).toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
+    expect(releaseDocs).toContain("signed `YTMTray.exe`");
 
     expect(releaseStrategy).toContain("YTM Tray:");
     expect(releaseStrategy).toContain("windows-tray-vX.Y.Z");

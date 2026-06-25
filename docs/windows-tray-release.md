@@ -24,6 +24,16 @@ Release packages include prebuilt self-contained executables, the native host
 relay, the installer script, the uninstaller script, and package metadata. Users
 do not need the .NET SDK when installing from a release zip.
 
+The release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe` when these
+repository secrets are configured:
+
+- `WINDOWS_TRAY_CODESIGN_PFX_BASE64` - base64-encoded Authenticode PFX.
+- `WINDOWS_TRAY_CODESIGN_PASSWORD` - password for the PFX, if required.
+
+When those secrets are missing, package generation is intentionally unsigned so
+test and dry-run releases can still be built. Public Windows tray releases
+should use signed executables before broad distribution.
+
 The update manifest is published as a release asset with SHA-256 checksums,
 download URLs, runtime identifiers, the component tag, and the minimum Windows
 version.
@@ -103,6 +113,8 @@ scripts/remote/windows-qa/tray-button-smoke.sh
    - a component release that does not replace GitHub's repo-wide latest release
    - `win-x64` and `win-arm64` release zips
    - `YTM-Tray-update.json` with package checksums and release URLs
+   - signed `YTMTray.exe` and `YTMTray.NativeHost.exe` when signing secrets are
+     configured
 8. On a clean Windows account, install from the release zip and confirm:
    - `YTMTray.exe` and `YTMTray.NativeHost.exe` are installed under
      `%LOCALAPPDATA%\YTM Enhancer\Tray`
