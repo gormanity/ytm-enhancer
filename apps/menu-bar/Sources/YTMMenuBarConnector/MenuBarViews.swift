@@ -13,6 +13,7 @@ private enum MenuBarStyle {
   static let primaryText = NSColor.white
   static let secondaryText = NSColor(calibratedWhite: 0.68, alpha: 1)
   static let tertiaryText = NSColor(calibratedWhite: 0.45, alpha: 1)
+  static let warningText = NSColor(calibratedRed: 1, green: 0.72, blue: 0.22, alpha: 1)
   static let staleText = NSColor(calibratedRed: 1, green: 0.62, blue: 0.24, alpha: 1)
   static let accent = NSColor(calibratedRed: 1, green: 0, blue: 0, alpha: 1)
   static let controlInactiveTint = NSColor(calibratedWhite: 0.46, alpha: 1)
@@ -49,6 +50,8 @@ final class MenuBarNowPlayingView: NSView {
   private let elapsedLabel = NSTextField(labelWithString: "")
   private let durationLabel = NSTextField(labelWithString: "")
   private let controlsView = MenuBarControlsView()
+  private let controlStatusIconView = NSImageView()
+  private let controlStatusLabel = NSTextField(wrappingLabelWithString: "")
   private let nextTrackDivider = NSView()
   private let nextTrackLabel = NSTextField(labelWithString: "")
   private let nextTrackArtworkView = MenuBarNextTrackArtworkView()
@@ -104,7 +107,7 @@ final class MenuBarNowPlayingView: NSView {
     restoreMetadataStatusStyle()
     titleTextView.stringValue = "YTM Enhancer"
     albumTextView.stringValue = ""
-    artistYearTextView.stringValue = status
+    artistYearTextView.stringValue = ""
     currentDuration = 0
     clearPendingSeek()
     seekBarView.setProgress(0)
@@ -115,8 +118,11 @@ final class MenuBarNowPlayingView: NSView {
     elapsedLabel.stringValue = ""
     durationLabel.stringValue = ""
     artworkView.showPlaceholder()
-    controlsView.setPlaybackControlsEnabled(false)
-    controlsView.setPlaybackControlsDimmed(true)
+    showControlStatus(
+      status,
+      textColor: controlStatusTextColor(for: status),
+      iconName: controlStatusIconName(for: status)
+    )
     updateNextTrack(nil)
     needsLayout = true
   }
@@ -124,9 +130,13 @@ final class MenuBarNowPlayingView: NSView {
   func setStalePlaybackState() {
     setCurrentPlaybackDimmed(true)
     emphasizeStaleStatusStyle()
-    artistYearTextView.stringValue = "Waiting for playback updates..."
+    artistYearTextView.stringValue = ""
     seekBarView.setDimmed(true)
-    controlsView.setPlaybackControlsDimmed(true)
+    showControlStatus(
+      "Waiting for playback updates...",
+      textColor: MenuBarStyle.staleText,
+      iconName: "exclamationmark.triangle.fill"
+    )
     clearHoverSurfaces()
   }
 
@@ -153,8 +163,10 @@ final class MenuBarNowPlayingView: NSView {
         isShuffling: state.isShuffling,
         repeatMode: state.repeatMode
       )
-      controlsView.setPlaybackControlsEnabled(false)
-      controlsView.setPlaybackControlsDimmed(true)
+      showControlStatus(
+        "No track loaded",
+        textColor: MenuBarStyle.secondaryText
+      )
       updateNextTrack(state.nextTrack)
       needsLayout = true
       return
@@ -177,6 +189,7 @@ final class MenuBarNowPlayingView: NSView {
       repeatMode: state.repeatMode
     )
     updateNextTrack(state.nextTrack)
+    hideControlStatus()
     controlsView.setPlaybackControlsEnabled(true)
     controlsView.setPlaybackControlsDimmed(false)
     needsLayout = true
@@ -210,6 +223,7 @@ final class MenuBarNowPlayingView: NSView {
     durationLabel.frame = NSRect(x: MenuBarStyle.width - MenuBarStyle.contentInset - 90, y: 93, width: 90, height: 16)
     controlsView.frame = NSRect(x: 0, y: 111, width: bounds.width, height: 52)
     nextTrackDivider.frame = NSRect(x: MenuBarStyle.contentInset, y: 169, width: MenuBarStyle.fullWidthContentWidth, height: 1)
+    layoutControlStatus()
     nextTrackLabel.frame = NSRect(x: MenuBarStyle.contentInset, y: 179, width: MenuBarStyle.fullWidthContentWidth, height: 14)
     nextTrackArtworkView.frame = NSRect(x: MenuBarStyle.contentInset, y: 205, width: MenuBarStyle.nextTrackArtworkSize, height: MenuBarStyle.nextTrackArtworkSize)
     nextTrackTitleTextView.frame = NSRect(x: MenuBarStyle.nextTrackTextX, y: 206, width: MenuBarStyle.nextTrackTextWidth, height: 18)
@@ -254,6 +268,8 @@ final class MenuBarNowPlayingView: NSView {
     durationLabel.alignment = .right
     nextTrackLabel.textColor = MenuBarStyle.tertiaryText
     nextTrackLabel.stringValue = "Up Next"
+    configureControlStatusIconView()
+    configureControlStatusLabel()
 
     seekBarView.onSeek = { [weak self] fraction in
       guard let self, self.currentDuration > 0 else { return }
@@ -273,6 +289,8 @@ final class MenuBarNowPlayingView: NSView {
     addSubview(elapsedLabel)
     addSubview(durationLabel)
     addSubview(controlsView)
+    addSubview(controlStatusIconView)
+    addSubview(controlStatusLabel)
     addSubview(nextTrackDivider)
     addSubview(nextTrackLabel)
     addSubview(nextTrackArtworkView)
@@ -285,6 +303,128 @@ final class MenuBarNowPlayingView: NSView {
     label.lineBreakMode = .byTruncatingTail
     label.isSelectable = false
     label.allowsDefaultTighteningForTruncation = true
+  }
+
+  private func configureControlStatusIconView() {
+    controlStatusIconView.imageScaling = .scaleProportionallyDown
+    controlStatusIconView.isHidden = true
+    controlStatusIconView.setAccessibilityElement(false)
+  }
+
+  private func configureControlStatusLabel() {
+    let centeredCell = MenuBarCenteredTextFieldCell(textCell: "")
+    centeredCell.lineBreakMode = .byWordWrapping
+    centeredCell.wraps = true
+    centeredCell.isScrollable = false
+    controlStatusLabel.cell = centeredCell
+    controlStatusLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+    controlStatusLabel.textColor = MenuBarStyle.secondaryText
+    controlStatusLabel.alignment = .center
+    controlStatusLabel.lineBreakMode = .byWordWrapping
+    controlStatusLabel.maximumNumberOfLines = 2
+    controlStatusLabel.isSelectable = false
+    controlStatusLabel.isHidden = true
+  }
+
+  private func showControlStatus(
+    _ status: String,
+    textColor: NSColor,
+    iconName: String? = nil
+  ) {
+    controlsView.clearHoverState()
+    controlsView.setPlaybackControlsEnabled(false)
+    controlsView.setPlaybackControlsDimmed(true)
+    controlsView.isHidden = true
+    if let iconName,
+      let image = NSImage(
+        systemSymbolName: iconName,
+        accessibilityDescription: status
+      )
+    {
+      image.isTemplate = true
+      controlStatusIconView.image = image
+      controlStatusIconView.contentTintColor = textColor
+      controlStatusIconView.isHidden = false
+    } else {
+      controlStatusIconView.image = nil
+      controlStatusIconView.isHidden = true
+    }
+    controlStatusLabel.stringValue = status
+    controlStatusLabel.textColor = textColor
+    controlStatusLabel.toolTip = status.isEmpty ? nil : status
+    controlStatusLabel.isHidden = status.isEmpty
+    needsLayout = true
+  }
+
+  private func hideControlStatus() {
+    controlStatusIconView.image = nil
+    controlStatusIconView.isHidden = true
+    controlStatusLabel.stringValue = ""
+    controlStatusLabel.toolTip = nil
+    controlStatusLabel.isHidden = true
+    controlsView.isHidden = false
+  }
+
+  private func layoutControlStatus() {
+    let statusCenterY = (seekBarView.frame.maxY + nextTrackDivider.frame.minY) / 2
+    let statusFrame = NSRect(
+      x: MenuBarStyle.contentInset,
+      y: statusCenterY - 26,
+      width: MenuBarStyle.fullWidthContentWidth,
+      height: 52
+    )
+    let iconSize: CGFloat = 15
+    let iconGap: CGFloat = 7
+    let showsIcon = !controlStatusIconView.isHidden
+
+    if !showsIcon {
+      controlStatusIconView.frame = .zero
+      controlStatusLabel.alignment = .center
+      controlStatusLabel.frame = statusFrame
+      return
+    }
+
+    let labelFont = controlStatusLabel.font ?? .systemFont(ofSize: 13, weight: .semibold)
+    let maximumLabelWidth = statusFrame.width - iconSize - iconGap
+    let measuredLabelWidth = ceil(
+      (controlStatusLabel.stringValue as NSString)
+        .size(withAttributes: [.font: labelFont])
+        .width
+    )
+    let visibleLabelWidth = min(maximumLabelWidth, measuredLabelWidth)
+    let labelWidth = min(maximumLabelWidth, measuredLabelWidth + 12)
+    let totalWidth = iconSize + iconGap + visibleLabelWidth
+    let startX = statusFrame.midX - totalWidth / 2
+
+    controlStatusIconView.frame = NSRect(
+      x: startX,
+      y: statusFrame.midY - iconSize / 2,
+      width: iconSize,
+      height: iconSize
+    )
+    controlStatusLabel.alignment = .left
+    controlStatusLabel.frame = NSRect(
+      x: startX + iconSize + iconGap,
+      y: statusFrame.origin.y,
+      width: labelWidth,
+      height: statusFrame.height
+    )
+  }
+
+  private func controlStatusTextColor(for status: String) -> NSColor {
+    isNeutralConnectionStatus(status)
+      ? MenuBarStyle.secondaryText
+      : MenuBarStyle.warningText
+  }
+
+  private func controlStatusIconName(for status: String) -> String? {
+    isNeutralConnectionStatus(status)
+      ? nil
+      : "exclamationmark.triangle.fill"
+  }
+
+  private func isNeutralConnectionStatus(_ status: String) -> Bool {
+    status == "Connecting" || status == "Connected"
   }
 
   private func updateProgressDisplay(progress: Double, duration: Double) {
@@ -459,6 +599,20 @@ final class MenuBarNowPlayingView: NSView {
       font: .systemFont(ofSize: 12, weight: .regular),
       textColor: MenuBarStyle.tertiaryText
     )
+  }
+}
+
+private final class MenuBarCenteredTextFieldCell: NSTextFieldCell {
+  override func drawingRect(forBounds rect: NSRect) -> NSRect {
+    var drawingRect = super.drawingRect(forBounds: rect)
+    let textSize = cellSize(forBounds: rect)
+
+    if textSize.height < rect.height {
+      drawingRect.origin.y = rect.origin.y + (rect.height - textSize.height) / 2
+      drawingRect.size.height = textSize.height
+    }
+
+    return drawingRect
   }
 }
 

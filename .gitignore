@@ -4,6 +4,7 @@ node_modules/
 .crabbox/
 .remote-qa.env
 apps/*/.build/
+apps/cli/build/
 dist/
 dist-dev/
 playwright-report/

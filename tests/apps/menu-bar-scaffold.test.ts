@@ -224,10 +224,31 @@ describe("menu bar connector app scaffold", () => {
     expect(appSource).toContain('"Reconnecting..."');
     expect(appSource).toContain('case "connector_not_registered":');
     expect(appSource).toContain('"Update required"');
+    expect(appSource).toContain("isMissingYouTubeMusicTabError");
+    expect(appSource).toContain('"No YTM tab"');
     expect(appSource).toContain('"No YouTube Music tab"');
     expect(viewSource).toContain("isUnavailablePlaybackState");
     expect(viewSource).toContain('"No track loaded"');
     expect(viewSource).toContain("controlsView.setPlaybackControlsDimmed");
+    expect(viewSource).toContain("private let controlStatusIconView");
+    expect(viewSource).toContain("private let controlStatusLabel");
+    expect(viewSource).toContain("MenuBarCenteredTextFieldCell");
+    expect(viewSource).toContain("showControlStatus(");
+    expect(viewSource).toContain("controlStatusIconName(for: status)");
+    expect(viewSource).toContain('"exclamationmark.triangle.fill"');
+    expect(viewSource).toContain("isNeutralConnectionStatus");
+    expect(viewSource).toContain(
+      "let statusCenterY = (seekBarView.frame.maxY + nextTrackDivider.frame.minY) / 2",
+    );
+    expect(viewSource).toContain(
+      "let visibleLabelWidth = min(maximumLabelWidth, measuredLabelWidth)",
+    );
+    expect(viewSource).toContain(
+      "let labelWidth = min(maximumLabelWidth, measuredLabelWidth + 12)",
+    );
+    expect(viewSource).toContain('artistYearTextView.stringValue = ""');
+    expect(viewSource).toContain("controlsView.isHidden = true");
+    expect(viewSource).toContain("hideControlStatus()");
   });
 
   it("matches Mini Player playback controls in the menu bar view", () => {

@@ -7,6 +7,7 @@ internal static class Program
 {
     private const string MutexName = "Local\\YTMEnhancerTray";
     private const string VisualDemoEnvironmentVariable = "YTM_TRAY_VISUAL_DEMO";
+    private const string VisualDemoStatusEnvironmentVariable = "YTM_TRAY_VISUAL_STATUS";
 
     [STAThread]
     private static void Main()
@@ -24,8 +25,11 @@ internal static class Program
         var useVisualDemo = Environment.GetEnvironmentVariable(
             VisualDemoEnvironmentVariable
         ) == "1";
+        var visualDemoStatus = Environment.GetEnvironmentVariable(
+            VisualDemoStatusEnvironmentVariable
+        );
         IConnectorConnection connection = useVisualDemo
-            ? new DemoConnectorConnection()
+            ? new DemoConnectorConnection(visualDemoStatus)
             : new BridgeUiConnection(logger: logger);
         RunTray(connection, logger, useVisualDemo ? "Connected" : "Waiting for YTM Enhancer");
     }
@@ -46,7 +50,15 @@ internal static class Program
 
 internal sealed class DemoConnectorConnection : IConnectorConnection
 {
+    private readonly string? visualStatus;
     private Action<HostMessage>? onMessage;
+
+    public DemoConnectorConnection(string? visualStatus = null)
+    {
+        this.visualStatus = string.IsNullOrWhiteSpace(visualStatus)
+            ? null
+            : visualStatus;
+    }
 
     public void Start(Action<HostMessage> onMessage, Action onDisconnect)
     {
@@ -60,8 +72,21 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
             case ConnectorHelloMessage:
                 Emit(new HostMessage { Type = "connector.ready" });
                 break;
-            case PlaybackGetStateMessage:
-                Emit(new HostMessage { Type = "playback.state", State = DemoPlaybackState() });
+            case PlaybackGetStateMessage playbackStateMessage:
+                Emit(
+                    visualStatus is null
+                        ? new HostMessage
+                        {
+                            Type = "playback.state",
+                            State = DemoPlaybackState()
+                        }
+                        : new HostMessage
+                        {
+                            Type = "connector.error",
+                            RequestId = playbackStateMessage.RequestId,
+                            Message = visualStatus
+                        }
+                );
                 break;
         }
 

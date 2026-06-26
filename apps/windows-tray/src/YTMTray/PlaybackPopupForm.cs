@@ -28,6 +28,7 @@ internal sealed class PlaybackPopupForm : Form
     private readonly Label durationLabel = new();
     private readonly SeekBarControl progressBar = new();
     private readonly ToolTip controlTips = new();
+    private readonly StatusMessageControl controlStatus = new();
     private readonly CloseButtonControl closeButton = new();
     private readonly PlaybackButtonControl shuffleButton = new(PlaybackButtonIcon.Shuffle, "Shuffle");
     private readonly PlaybackButtonControl previousButton = new(
@@ -114,25 +115,28 @@ internal sealed class PlaybackPopupForm : Form
 
     public void UpdateConnectionStatus(string status)
     {
-        statusLabel.Text = CompactStatus(status);
+        var isNeutral = IsNeutralConnectionStatus(status);
+        statusLabel.Text = isNeutral ? CompactStatus(status) : "";
         statusLabel.ForeColor = TertiaryTextColor;
         titleLabel.Text = "YTM Enhancer";
         albumLabel.Text = "";
-        artistYearLabel.Text = status;
+        artistYearLabel.Text = "";
         artistYearLabel.ForeColor = TertiaryTextColor;
         currentArtwork.SetArtworkUrl(null);
         currentDuration = 0;
         UpdateProgress(0, 0);
         UpdateNextTrack(null);
+        ShowControlStatus(status, ControlStatusTextColor(status), !isNeutral);
         SetControlsEnabled(false);
     }
 
     public void SetStalePlaybackState()
     {
-        statusLabel.Text = "Waiting";
+        statusLabel.Text = "";
         statusLabel.ForeColor = WarningColor;
-        artistYearLabel.Text = "Waiting for playback updates...";
-        artistYearLabel.ForeColor = WarningColor;
+        artistYearLabel.Text = "";
+        artistYearLabel.ForeColor = TertiaryTextColor;
+        ShowControlStatus("Waiting for playback updates...", WarningColor, true);
         SetControlsEnabled(false);
     }
 
@@ -158,6 +162,14 @@ internal sealed class PlaybackPopupForm : Form
         currentDuration = Math.Max(0, state.Duration);
         UpdateProgress(state.Progress, state.Duration);
         UpdateNextTrack(state.NextTrack);
+        if (hasTrack)
+        {
+            HideControlStatus();
+        }
+        else
+        {
+            ShowControlStatus("No track loaded", SecondaryTextColor);
+        }
         SetControlsEnabled(hasTrack);
     }
 
@@ -283,6 +295,13 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureButtons()
     {
+        controlStatus.SetBounds(32, 200, 376, 94);
+        controlStatus.Font = new Font(Font.FontFamily, 11.5f, FontStyle.Bold);
+        controlStatus.MessageColor = SecondaryTextColor;
+        controlStatus.BackColor = Color.Transparent;
+        controlStatus.Visible = false;
+        Controls.Add(controlStatus);
+
         ConfigureButton(shuffleButton, 78, 220, 44, () => OnShuffle?.Invoke());
         ConfigureButton(previousButton, 145, 216, 50, () => OnPrevious?.Invoke(), true);
         ConfigureButton(toggleButton, 207, 209, 64, () => OnTogglePlay?.Invoke(), true);
@@ -392,6 +411,41 @@ internal sealed class PlaybackPopupForm : Form
         }
     }
 
+    private void ShowControlStatus(
+        string message,
+        Color textColor,
+        bool showWarningIcon = false
+    )
+    {
+        controlStatus.Message = message;
+        controlStatus.MessageColor = textColor;
+        controlStatus.ShowWarningIcon = showWarningIcon;
+        controlStatus.Visible = !string.IsNullOrWhiteSpace(message);
+        SetPlaybackButtonsVisible(false);
+    }
+
+    private void HideControlStatus()
+    {
+        controlStatus.Message = "";
+        controlStatus.Visible = false;
+        SetPlaybackButtonsVisible(true);
+    }
+
+    private void SetPlaybackButtonsVisible(bool visible)
+    {
+        foreach (var button in new Control[]
+                 {
+                     shuffleButton,
+                     previousButton,
+                     toggleButton,
+                     nextButton,
+                     repeatButton
+                 })
+        {
+            button.Visible = visible;
+        }
+    }
+
     private void UpdateProgress(double progress, double duration)
     {
         var value = duration <= 0 ? 0 : (int)Math.Round(progress / duration * progressBar.Maximum);
@@ -439,6 +493,12 @@ internal sealed class PlaybackPopupForm : Form
 
     private static PlaybackButtonIcon RepeatButtonIcon(string? repeatMode) =>
         repeatMode == "one" ? PlaybackButtonIcon.RepeatOne : PlaybackButtonIcon.Repeat;
+
+    private static Color ControlStatusTextColor(string status) =>
+        IsNeutralConnectionStatus(status) ? SecondaryTextColor : WarningColor;
+
+    private static bool IsNeutralConnectionStatus(string status) =>
+        status == "Connecting" || status == "Connected";
 
     private static string CompactStatus(string status)
     {
@@ -559,6 +619,154 @@ internal sealed class CloseButtonControl : Control
         };
         e.Graphics.DrawLine(pen, 8, 8, Width - 8, Height - 8);
         e.Graphics.DrawLine(pen, Width - 8, 8, 8, Height - 8);
+    }
+}
+
+internal sealed class StatusMessageControl : Control
+{
+    private static readonly Color IconInteriorColor = Color.FromArgb(8, 8, 9);
+    private string message = "";
+    private Color messageColor = Color.FromArgb(202, 202, 208);
+    private bool showWarningIcon;
+
+    public StatusMessageControl()
+    {
+        AccessibleRole = AccessibleRole.StaticText;
+        TabStop = false;
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint
+                | ControlStyles.OptimizedDoubleBuffer
+                | ControlStyles.ResizeRedraw
+                | ControlStyles.SupportsTransparentBackColor
+                | ControlStyles.UserPaint,
+            true
+        );
+        BackColor = Color.Transparent;
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string Message
+    {
+        get => message;
+        set
+        {
+            var nextMessage = value ?? "";
+            if (message == nextMessage) return;
+            message = nextMessage;
+            AccessibleName = nextMessage;
+            Invalidate();
+        }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color MessageColor
+    {
+        get => messageColor;
+        set
+        {
+            if (messageColor == value) return;
+            messageColor = value;
+            Invalidate();
+        }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool ShowWarningIcon
+    {
+        get => showWarningIcon;
+        set
+        {
+            if (showWarningIcon == value) return;
+            showWarningIcon = value;
+            Invalidate();
+        }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+
+        if (string.IsNullOrWhiteSpace(message)) return;
+
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+        const int iconSize = 14;
+        const int iconGap = 8;
+        var iconWidth = showWarningIcon ? iconSize + iconGap : 0;
+        var maxTextWidth = Math.Max(0, Width - iconWidth);
+        var textFlags =
+            TextFormatFlags.NoPadding
+            | TextFormatFlags.NoPrefix
+            | TextFormatFlags.WordBreak
+            | TextFormatFlags.VerticalCenter;
+        var measuredTextSize = TextRenderer.MeasureText(
+            e.Graphics,
+            message,
+            Font,
+            new Size(maxTextWidth, Height),
+            textFlags
+        );
+        var visibleTextWidth = Math.Min(maxTextWidth, measuredTextSize.Width);
+        var textWidth = Math.Min(maxTextWidth, visibleTextWidth + 12);
+        var textHeight = Math.Min(Height, measuredTextSize.Height);
+        var visibleGroupWidth = iconWidth + visibleTextWidth;
+        var startX = (Width - visibleGroupWidth) / 2;
+        var textX = showWarningIcon ? startX + iconSize + iconGap : startX;
+        var textBounds = new Rectangle(
+            textX,
+            (Height - textHeight) / 2,
+            textWidth,
+            textHeight
+        );
+
+        if (showWarningIcon)
+        {
+            var iconBounds = new Rectangle(startX, (Height - iconSize) / 2, iconSize, iconSize);
+            DrawWarningIcon(e.Graphics, iconBounds);
+        }
+
+        TextRenderer.DrawText(
+            e.Graphics,
+            message,
+            Font,
+            textBounds,
+            messageColor,
+            textFlags | (showWarningIcon ? TextFormatFlags.Left : TextFormatFlags.HorizontalCenter)
+        );
+    }
+
+    private void DrawWarningIcon(Graphics graphics, Rectangle bounds)
+    {
+        var points = new[]
+        {
+            new PointF(bounds.Left + bounds.Width / 2f, bounds.Top + 1),
+            new PointF(bounds.Right - 1, bounds.Bottom - 1),
+            new PointF(bounds.Left + 1, bounds.Bottom - 1)
+        };
+
+        using var fillBrush = new SolidBrush(messageColor);
+        using var interiorPen = new Pen(IconInteriorColor, 1.6f)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        };
+        using var interiorBrush = new SolidBrush(IconInteriorColor);
+
+        graphics.FillPolygon(fillBrush, points);
+        graphics.DrawLine(
+            interiorPen,
+            bounds.Left + bounds.Width / 2f,
+            bounds.Top + 5,
+            bounds.Left + bounds.Width / 2f,
+            bounds.Bottom - 5
+        );
+        graphics.FillEllipse(
+            interiorBrush,
+            bounds.Left + bounds.Width / 2f - 1,
+            bounds.Bottom - 3,
+            2,
+            2
+        );
     }
 }
 

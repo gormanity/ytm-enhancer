@@ -216,9 +216,7 @@ final class ConnectorApp {
       return false
     }
 
-    return message.message?.contains("Receiving end does not exist") == true
-      || message.message?.contains("No active YouTube Music tab") == true
-      || message.message?.contains("No YouTube Music tab") == true
+    return isMissingYouTubeMusicTabError(message.message)
   }
 
   private func schedulePlaybackStateRetry(reason: String) {
@@ -330,14 +328,18 @@ final class ConnectorApp {
       break
     }
 
-    if message?.contains("Receiving end does not exist") == true
-      || message?.contains("No active YouTube Music tab") == true
-      || message?.contains("No YouTube Music tab") == true
-    {
+    if isMissingYouTubeMusicTabError(message) {
       return "No YouTube Music tab"
     }
 
     return message ?? code ?? "Connector error"
+  }
+
+  private func isMissingYouTubeMusicTabError(_ message: String?) -> Bool {
+    message?.contains("Receiving end does not exist") == true
+      || message?.contains("No active YouTube Music tab") == true
+      || message?.contains("No YouTube Music tab") == true
+      || message?.contains("No YTM tab") == true
   }
 
   private func logValue(_ value: String?) -> String {

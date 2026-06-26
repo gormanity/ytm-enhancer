@@ -101,6 +101,7 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain('AccessibleName = "YTM Tray"');
     expect(popupForm).toContain("ArtworkBoxControl : Control");
     expect(popupForm).toContain("ScrollingLabelControl : Control");
+    expect(popupForm).toContain("StatusMessageControl : Control");
     expect(popupForm).toContain("CloseButtonControl : Control");
     expect(popupForm).toContain("SeekBarControl : Control");
     expect(popupForm).toContain("PlaybackButtonControl : Control");
@@ -118,6 +119,15 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("Install Update {version}");
     expect(popupForm).toContain('"About YTM Tray"');
     expect(popupForm).toContain("ToolTip controlTips");
+    expect(popupForm).toContain(
+      "ShowControlStatus(status, ControlStatusTextColor(status), !isNeutral)",
+    );
+    expect(popupForm).toContain('artistYearLabel.Text = ""');
+    expect(popupForm).toContain("SetPlaybackButtonsVisible(false)");
+    expect(popupForm).toContain(
+      "visibleGroupWidth = iconWidth + visibleTextWidth",
+    );
+    expect(popupForm).toContain("DrawWarningIcon");
     expect(popupForm).not.toContain("DrawShuffleIcon");
     expect(popupForm).not.toContain("DrawRepeatIcon");
     expect(popupForm).not.toContain("TrackBar progressBar");
@@ -143,7 +153,10 @@ describe("Windows tray connector scaffold", () => {
     const visualSmoke = read("../../scripts/windows-qa/tray-visual-smoke.ps1");
 
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
+    expect(program).toContain('"YTM_TRAY_VISUAL_STATUS"');
     expect(program).toContain("DemoConnectorConnection : IConnectorConnection");
+    expect(program).toContain("DemoConnectorConnection(visualDemoStatus)");
+    expect(program).toContain('Type = "connector.error"');
     expect(program).toContain(
       '"A Walk Through the Longest Possible YouTube Music Title Fixture"',
     );
@@ -151,6 +164,9 @@ describe("Windows tray connector scaffold", () => {
       '"Send And Receive (Chachi Jones Remix) With Extra Words"',
     );
     expect(visualSmoke).toContain('$env:YTM_TRAY_VISUAL_DEMO = "1"');
+    expect(visualSmoke).toContain("[string] $VisualStatus =");
+    expect(visualSmoke).toContain("$env:YTM_TRAY_VISUAL_STATUS");
+    expect(visualSmoke).toContain("$RequiresScrollQa =");
     expect(visualSmoke).toContain('$env:YTM_TRAY_SCROLL_QA = "1"');
     expect(visualSmoke).toContain("metadata scroll advanced");
     expect(visualSmoke).toContain("Save-RectangleScreenshot");

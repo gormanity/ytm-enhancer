@@ -1,7 +1,8 @@
 param(
   [string] $InstallRoot = (Join-Path $env:TEMP "ytm-enhancer-tray-visual-install"),
   [string] $ArtifactRoot = (Join-Path $env:TEMP "ytm-enhancer-tray-visual-artifacts"),
-  [int] $TimeoutSeconds = 30
+  [int] $TimeoutSeconds = 30,
+  [string] $VisualStatus = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -159,6 +160,13 @@ $ScrollLogPath = Join-Path $ArtifactRoot "tray-scroll.log"
 $LaunchResultPath = Join-Path $ArtifactRoot "launch.json"
 $VisualResultPath = Join-Path $ArtifactRoot "visual.json"
 $ActiveSessionId = Get-ActiveDesktopSessionId
+$HasVisualStatus = -not [string]::IsNullOrWhiteSpace($VisualStatus)
+$VisualStatusLine = if ($HasVisualStatus) {
+  "`$env:YTM_TRAY_VISUAL_STATUS = $(ConvertTo-PowerShellLiteral $VisualStatus)"
+} else {
+  '$env:YTM_TRAY_VISUAL_STATUS = $null'
+}
+$RequiresScrollQaLiteral = if ($HasVisualStatus) { '$false' } else { '$true' }
 
 New-Item -ItemType Directory -Force -Path $ArtifactRoot | Out-Null
 Remove-Item -Path (Join-Path $ArtifactRoot "*") `
@@ -186,6 +194,7 @@ try {
       "`$ExecutablePath = $(ConvertTo-PowerShellLiteral $ExecutablePath)",
       '$env:YTM_TRAY_VISUAL_DEMO = "1"',
       '$env:YTM_TRAY_SCROLL_QA = "1"',
+      $VisualStatusLine,
       "`$env:YTM_TRAY_LOG_PATH = $(ConvertTo-PowerShellLiteral $ScrollLogPath)",
       '$Process = Start-Process -FilePath $ExecutablePath -PassThru',
       'Start-Sleep -Milliseconds 1500',
@@ -226,6 +235,7 @@ try {
       "`$OverflowScreenshotPath = $(ConvertTo-PowerShellLiteral $OverflowScreenshotPath)",
       "`$PopupScreenshotPath = $(ConvertTo-PowerShellLiteral $PopupScreenshotPath)",
       "`$ScrollLogPath = $(ConvertTo-PowerShellLiteral $ScrollLogPath)",
+      "`$RequiresScrollQa = $RequiresScrollQaLiteral",
       'function Save-Screenshot {',
       '  param([Parameter(Mandatory = $true)][string] $Path)',
       '  $Bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds',
@@ -345,17 +355,19 @@ try {
       '  throw "YTM Tray popup window was not found after clicking tray icon."',
       '}',
       'Save-RectangleScreenshot -Path $PopupScreenshotPath -Rect $PopupWindow.Current.BoundingRectangle -Padding 2',
-      '$ScrollDeadline = (Get-Date).AddSeconds(12)',
       '$ScrollLog = ""',
-      'do {',
-      '  if (Test-Path -LiteralPath $ScrollLogPath) {',
-      '    $ScrollLog = Get-Content -LiteralPath $ScrollLogPath -Raw',
-      '    if ($ScrollLog -like "*metadata scroll advanced*") { break }',
+      'if ($RequiresScrollQa) {',
+      '  $ScrollDeadline = (Get-Date).AddSeconds(12)',
+      '  do {',
+      '    if (Test-Path -LiteralPath $ScrollLogPath) {',
+      '      $ScrollLog = Get-Content -LiteralPath $ScrollLogPath -Raw',
+      '      if ($ScrollLog -like "*metadata scroll advanced*") { break }',
+      '    }',
+      '    Start-Sleep -Milliseconds 250',
+      '  } while ((Get-Date) -lt $ScrollDeadline)',
+      '  if ($ScrollLog -notlike "*metadata scroll advanced*") {',
+      '    throw "Metadata scroll did not advance. Log: $ScrollLog"',
       '  }',
-      '  Start-Sleep -Milliseconds 250',
-      '} while ((Get-Date) -lt $ScrollDeadline)',
-      'if ($ScrollLog -notlike "*metadata scroll advanced*") {',
-      '  throw "Metadata scroll did not advance. Log: $ScrollLog"',
       '}',
       '$Payload = @{',
       '  ok = $true',
