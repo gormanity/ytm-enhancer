@@ -516,8 +516,30 @@ h3 {
 }
 
 /* Connected Apps */
+.connected-apps-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connected-apps-heading h2 {
+  margin: 0;
+}
+
+.connected-apps-beta-badge {
+  border: 1px solid rgba(255, 190, 90, 0.45);
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: rgba(255, 190, 90, 0.12);
+  color: #ffd18a;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
 .connected-apps-intro {
-  margin: -4px 0 14px;
+  margin: 8px 0 14px;
 }
 
 .connected-app-card {

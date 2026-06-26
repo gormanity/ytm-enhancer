@@ -84,6 +84,25 @@ describe("Connected Apps popup view", () => {
     expect(view.label).toBe("Connected Apps");
   });
 
+  it("labels Connected Apps as beta on initial launch", () => {
+    const client = createClient(createSettings());
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    expect(
+      container.querySelector(".connected-apps-beta-badge")?.textContent,
+    ).toBe("Beta");
+    expect(container.textContent).toContain("Connected Apps is in beta.");
+    expect(container.textContent).toContain(
+      "Allow approved beta apps to connect to YTM Enhancer.",
+    );
+  });
+
   it("loads and persists the global Connected Apps toggle", async () => {
     const client = createClient(createSettings({ enabled: false }));
     const view = createConnectedAppsPopupView(
