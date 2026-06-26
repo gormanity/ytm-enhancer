@@ -9,7 +9,8 @@
     "nativeMessaging",
     "notifications",
     "scripting",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://music.youtube.com/*",

@@ -18,4 +18,8 @@ describe("native messaging manifest permissions", () => {
       expect(readManifest(browser).permissions).toContain("nativeMessaging");
     },
   );
+
+  it("declares Firefox tab access for native connector tab discovery", () => {
+    expect(readManifest("firefox").permissions).toContain("tabs");
+  });
 });

@@ -4,7 +4,10 @@ import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { expect, test, type Page, type TestInfo } from "playwright/test";
 import { CHROMIUM_LOCAL_DEV_EXTENSION_ID } from "../../src/runtime-messages";
-import { launchExtensionContext } from "./helpers/extension-context";
+import {
+  launchExtensionContext,
+  type ExtensionTestContext,
+} from "./helpers/extension-context";
 import {
   loadYtmFixtureThroughExtension,
   readFixtureEvents,
@@ -117,6 +120,26 @@ async function runYtme(
   await runCommand(cliPath, args, env);
 }
 
+async function enableConnectedApps(
+  extension: ExtensionTestContext,
+): Promise<void> {
+  if (extension.firefox) {
+    const response = await extension.firefox.sendRuntimeMessage<
+      { ok: true } | { ok: false; error: string }
+    >({
+      type: "set-connected-apps-enabled",
+      enabled: true,
+    });
+    if (!response.ok) throw new Error(response.error);
+    return;
+  }
+
+  await extension.popup
+    .locator(".nav-item", { hasText: "Connected Apps" })
+    .click();
+  await extension.popup.getByLabel("Enable Connected Apps").check();
+}
+
 async function expectFixtureEvent(
   page: Page,
   eventName: string,
@@ -126,18 +149,18 @@ async function expectFixtureEvent(
 
 // Playwright requires the first callback parameter to be a destructured fixture object.
 // eslint-disable-next-line no-empty-pattern
-test("routes Linux CLI commands through the browser native messaging host", async ({}, testInfo) => {
+test("routes CLI commands through the browser native messaging host", async ({}, testInfo) => {
   test.skip(
     !connectorSmokeEnabled(),
-    "Set YTME_E2E_CLI_CONNECTOR=1 to run the Linux CLI connector smoke.",
+    "Set YTME_E2E_CLI_CONNECTOR=1 to run the CLI connector smoke.",
   );
   test.skip(
-    process.platform !== "linux",
-    "The CLI connector native-host smoke installs Linux manifests.",
+    !["darwin", "linux"].includes(process.platform),
+    "The CLI connector native-host smoke installs macOS or Linux manifests.",
   );
   test.skip(
-    testInfo.project.name !== "chromium",
-    "The CLI connector smoke is currently scoped to Chromium.",
+    !["chromium", "firefox"].includes(testInfo.project.name),
+    "The CLI connector smoke is scoped to Chromium and Firefox.",
   );
 
   const homeDir = testInfo.outputPath("home");
@@ -153,14 +176,13 @@ test("routes Linux CLI commands through the browser native messaging host", asyn
     YTME_LOG_PATH: logPath,
   });
   const cliPath = await installCliNativeHost(testInfo, env);
-  await mirrorCliManifestIntoChromiumProfile(testInfo, xdgConfigHome);
+  if (testInfo.project.name === "chromium") {
+    await mirrorCliManifestIntoChromiumProfile(testInfo, xdgConfigHome);
+  }
 
   const extension = await launchExtensionContext(testInfo, { env });
   try {
-    await extension.popup
-      .locator(".nav-item", { hasText: "Connected Apps" })
-      .click();
-    await extension.popup.getByLabel("Enable Connected Apps").check();
+    await enableConnectedApps(extension);
 
     const ytmPage = await extension.context.newPage();
     await loadYtmFixtureThroughExtension(ytmPage, "player-loaded-paused");

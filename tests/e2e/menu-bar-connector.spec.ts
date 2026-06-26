@@ -6,6 +6,7 @@ import type { ConnectedAppsSettings } from "../../src/core/connectors/client";
 import {
   extensionUserDataDir,
   launchExtensionContext,
+  type ExtensionTestContext,
 } from "./helpers/extension-context";
 import {
   loadYtmFixtureThroughExtension,
@@ -590,16 +591,23 @@ my closeOpenMenu()
 }
 
 async function readConnectedAppsSettings(
-  popup: Page,
+  extension: ExtensionTestContext,
 ): Promise<ConnectedAppsSettings> {
-  const response = await popup.evaluate(
-    () =>
-      chrome.runtime.sendMessage({
-        type: "get-connected-apps-settings",
-      }) as Promise<
+  const response = extension.firefox
+    ? await extension.firefox.sendRuntimeMessage<
         { ok: true; data: ConnectedAppsSettings } | { ok: false; error: string }
-      >,
-  );
+      >({
+        type: "get-connected-apps-settings",
+      })
+    : await extension.popup.evaluate(
+        () =>
+          chrome.runtime.sendMessage({
+            type: "get-connected-apps-settings",
+          }) as Promise<
+            | { ok: true; data: ConnectedAppsSettings }
+            | { ok: false; error: string }
+          >,
+      );
 
   if (!response.ok) {
     throw new Error(response.error);
@@ -607,14 +615,43 @@ async function readConnectedAppsSettings(
   return response.data;
 }
 
-async function menuBarConnectionDiagnostic(popup: Page): Promise<string> {
-  const label =
-    (await popup
-      .locator(
-        `[data-app-id="${FIRST_PARTY_MENU_BAR_CONNECTOR_ID}"] [data-role="connected-app-status"]`,
-      )
-      .textContent()) ?? "";
-  const settings = await readConnectedAppsSettings(popup);
+async function setConnectedAppsEnabled(
+  extension: ExtensionTestContext,
+  enabled: boolean,
+): Promise<void> {
+  if (extension.firefox) {
+    const response = await extension.firefox.sendRuntimeMessage<
+      { ok: true } | { ok: false; error: string }
+    >({
+      type: "set-connected-apps-enabled",
+      enabled,
+    });
+    if (!response.ok) throw new Error(response.error);
+    return;
+  }
+
+  await extension.popup
+    .locator(".nav-item", { hasText: "Connected Apps" })
+    .click();
+  const toggle = extension.popup.getByLabel("Enable Connected Apps");
+  if (enabled) {
+    await toggle.check();
+  } else {
+    await toggle.uncheck();
+  }
+}
+
+async function menuBarConnectionDiagnostic(
+  extension: ExtensionTestContext,
+): Promise<string> {
+  const label = extension.firefox
+    ? ""
+    : ((await extension.popup
+        .locator(
+          `[data-app-id="${FIRST_PARTY_MENU_BAR_CONNECTOR_ID}"] [data-role="connected-app-status"]`,
+        )
+        .textContent()) ?? "");
+  const settings = await readConnectedAppsSettings(extension);
   const firstPartyApp = settings.firstPartyApps.find(
     (app) => app.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
   );
@@ -630,10 +667,12 @@ async function menuBarConnectionDiagnostic(popup: Page): Promise<string> {
   });
 }
 
-async function expectMenuBarConnected(popup: Page): Promise<void> {
+async function expectMenuBarConnected(
+  extension: ExtensionTestContext,
+): Promise<void> {
   await expect
-    .poll(() => menuBarConnectionDiagnostic(popup), { timeout: 20_000 })
-    .toContain('"label":"Connected"');
+    .poll(() => menuBarConnectionDiagnostic(extension), { timeout: 20_000 })
+    .toContain('"connectorStatus":"connected"');
 }
 
 async function menuBarAutomationUnavailableReason(): Promise<string | null> {
@@ -650,9 +689,13 @@ async function menuBarAutomationUnavailableReason(): Promise<string | null> {
   }
 }
 
+function shouldDriveMenuBarButtons(projectName: string): boolean {
+  return projectName !== "firefox" || menuBarAutomationRequired();
+}
+
 // Playwright requires the first callback parameter to be a destructured fixture object.
 // eslint-disable-next-line no-empty-pattern
-test("routes macOS menu bar buttons through the browser native messaging host", async ({}, testInfo) => {
+test("connects the macOS menu bar app through the browser native messaging host", async ({}, testInfo) => {
   test.setTimeout(420_000);
   test.skip(
     !menuBarSmokeEnabled(),
@@ -663,8 +706,8 @@ test("routes macOS menu bar buttons through the browser native messaging host", 
     "The macOS menu bar connector smoke installs macOS native messaging hosts.",
   );
   test.skip(
-    !["chromium", "edge"].includes(testInfo.project.name),
-    "The macOS menu bar connector smoke is scoped to Chromium-family browsers.",
+    !["chromium", "edge", "firefox"].includes(testInfo.project.name),
+    "The macOS menu bar connector smoke is scoped to Chromium, Edge, and Firefox.",
   );
 
   const localAppPath = testInfo.outputPath("YTM Menu Bar.app");
@@ -693,11 +736,12 @@ test("routes macOS menu bar buttons through the browser native messaging host", 
       "player-loaded-long-metadata",
     );
 
-    await extension.popup
-      .locator(".nav-item", { hasText: "Connected Apps" })
-      .click();
-    await extension.popup.getByLabel("Enable Connected Apps").check();
-    await expectMenuBarConnected(extension.popup);
+    await setConnectedAppsEnabled(extension, true);
+    await expectMenuBarConnected(extension);
+
+    if (!shouldDriveMenuBarButtons(testInfo.project.name)) {
+      return;
+    }
 
     const automationUnavailableReason =
       await menuBarAutomationUnavailableReason();

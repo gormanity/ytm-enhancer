@@ -1526,7 +1526,7 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(appcastScript).toMatch(/Firefox\s+on Windows is not supported yet/);
     expect(appcastScript).toContain(
-      "Firefox connector smoke should be treated",
+      "Automated connector smoke covers Chromium-family and Firefox",
     );
     expect(appcastScript).toContain("copyFileSync");
     expect(appcastScript).toContain("screenshot-frame");
@@ -1572,7 +1572,10 @@ describe("menu bar connector app scaffold", () => {
     expect(connectorDocs).toContain("YTM Menu Bar");
     expect(connectorDocs).toContain("YTM Enhancer CLI");
     expect(connectorDocs).toContain("YTM Tray");
-    expect(connectorDocs).toContain("Firefox manual");
+    expect(connectorDocs).toContain(
+      "Chromium/Edge buttons; Firefox connection",
+    );
+    expect(connectorDocs).toContain("Chromium and Firefox");
     expect(connectorDocs).toMatch(
       /Firefox\s+on Windows is not supported by YTM Tray/,
     );
@@ -1752,7 +1755,7 @@ describe("menu bar connector app scaffold", () => {
     expect(windowsTrayPage).toContain("windows-tray-v&amp;expanded=true");
     expect(cliPage).toContain("YTM Enhancer CLI");
     expect(cliPage).toContain("Chrome, Chromium, Microsoft Edge, Brave, and");
-    expect(cliPage).toMatch(/Firefox connector\s+automation is added/);
+    expect(cliPage).toMatch(/Chromium and Firefox\s+on supported/);
     expect(cliPage).toContain("apps/cli/scripts/install-native-hosts.sh");
     expect([...copiedWindowsTrayScreenshot.subarray(0, 8)]).toEqual([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,

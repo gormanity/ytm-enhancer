@@ -146,19 +146,23 @@ REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS=1 \
 ```
 
 By default the button smoke uses Playwright's managed Chromium project. To use
-the system Microsoft Edge app instead:
+Firefox or the system Microsoft Edge app instead:
 
 ```sh
+YTME_MENU_BAR_E2E_PROJECT=firefox \
+  scripts/macos-qa/menu-bar-button-smoke.sh
+
 YTME_MENU_BAR_E2E_PROJECT=edge \
   scripts/macos-qa/menu-bar-button-smoke.sh
 ```
 
-Use `REMOTE_QA_MENU_BAR_E2E_PROJECT=edge` with the Crabbox wrapper.
+Use `REMOTE_QA_MENU_BAR_E2E_PROJECT=firefox` or
+`REMOTE_QA_MENU_BAR_E2E_PROJECT=edge` with the Crabbox wrapper.
 
-The menu bar connector smoke is currently scoped to Chromium-family browsers.
-The menu bar installer writes a Firefox native messaging manifest, but Firefox
-connector behavior should be treated as manual QA until a Firefox native
-messaging smoke is added.
+The menu bar connector smoke supports Chromium, Edge, and Firefox. Chromium and
+Edge drive the visible menu bar buttons. Firefox uses a Marionette sidecar to
+install the temporary dev add-on and verifies the real native-host connection
+because Playwright does not expose Firefox WebExtension loading directly.
 
 Peekaboo can be useful for manual visual inspection from an active GUI terminal,
 but the automated smoke does not depend on it. The smoke uses System Events and
@@ -251,13 +255,16 @@ scripts/remote/linux-qa/cli-connector-smoke.sh
 ```
 
 This runs inside the official Playwright Linux container on the remote Mac,
-installs `ytme` as a Linux native messaging host into a throwaway XDG config
-directory, loads the dev extension in Chromium, enables Connected Apps through
-the popup, and verifies `ytme play`, `ytme pause`, `ytme next`, and
-`ytme previous` route through the extension into a YouTube Music fixture. The
-CLI installer writes Firefox native messaging manifests on macOS and Linux, but
-the connector smoke currently runs Chromium. Treat Firefox CLI connector
-coverage as manual QA until a Firefox smoke is added.
+installs `ytme` as a Linux native messaging host into throwaway browser config
+directories, loads the dev extension in Chromium and Firefox, enables Connected
+Apps, and verifies `ytme play`, `ytme pause`, `ytme next`, and `ytme previous`
+route through the extension into a YouTube Music fixture. Override the browser
+list when a narrower smoke is useful:
+
+```sh
+REMOTE_QA_LINUX_CLI_CONNECTOR_PROJECTS=firefox \
+  scripts/remote/linux-qa/cli-connector-smoke.sh
+```
 
 The Linux VM image is intentionally minimal. The Linux scripts bootstrap Node,
 pnpm, and Go inside the VM as needed. This keeps the remote macOS account clean,
@@ -657,6 +664,7 @@ The remote QA scripts accept these variables:
 - `REMOTE_QA_LINUX_E2E_PLATFORM`
 - `REMOTE_QA_LINUX_E2E_IMAGE`
 - `REMOTE_QA_LINUX_E2E_PNPM_VERSION`
+- `REMOTE_QA_LINUX_CLI_CONNECTOR_PROJECTS`
 - `REMOTE_QA_LINUX_X64_PROVIDER`
 - `REMOTE_QA_LINUX_X64_ARCH`
 - `REMOTE_QA_LINUX_X64_IMAGE`

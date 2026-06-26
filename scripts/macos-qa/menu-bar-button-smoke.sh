@@ -9,15 +9,19 @@ require_buttons="${YTME_MENU_BAR_REQUIRE_BUTTONS:-${REMOTE_QA_MENU_BAR_REQUIRE_B
 case "$project" in
   chromium)
     build_command="dev:build:chrome"
-    install_browser="1"
+    install_browser="chromium"
     ;;
   edge)
     build_command="dev:build:edge"
-    install_browser="0"
+    install_browser=""
+    ;;
+  firefox)
+    build_command="dev:build:firefox"
+    install_browser="firefox"
     ;;
   *)
     echo "Unsupported YTME_MENU_BAR_E2E_PROJECT: $project" >&2
-    echo "Supported projects: chromium, edge" >&2
+    echo "Supported projects: chromium, edge, firefox" >&2
     exit 2
     ;;
 esac
@@ -35,8 +39,8 @@ cd "$repo_root"
 
 env CI=true pnpm install --frozen-lockfile
 
-if [ "$install_browser" = "1" ]; then
-  env CI=true pnpm exec playwright install chromium
+if [ -n "$install_browser" ]; then
+  env CI=true pnpm exec playwright install "$install_browser"
 fi
 
 env CI=true pnpm run "$build_command"

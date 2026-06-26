@@ -22,10 +22,10 @@ describe("macOS remote QA scaffold", () => {
     expect(docs).toContain(
       "Peekaboo can be useful for manual visual inspection",
     );
-    expect(docs).toMatch(
-      /Firefox\s+connector behavior should be treated as manual QA/,
+    expect(docs).toContain(
+      "The menu bar connector smoke supports Chromium, Edge, and Firefox",
     );
-    expect(docs).toMatch(/Firefox CLI connector\s+coverage as manual QA/);
+    expect(docs).toContain("REMOTE_QA_LINUX_CLI_CONNECTOR_PROJECTS");
   });
 
   it("automates macOS menu bar release package smoke", () => {
@@ -55,7 +55,11 @@ describe("macOS remote QA scaffold", () => {
     expect(localButtonSmoke).toContain("REMOTE_QA_MENU_BAR_E2E_PROJECT");
     expect(localButtonSmoke).toContain("REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS");
     expect(localButtonSmoke).toContain("pnpm install --frozen-lockfile");
-    expect(localButtonSmoke).toContain("playwright install chromium");
+    expect(localButtonSmoke).toContain('playwright install "$install_browser"');
+    expect(localButtonSmoke).toContain("dev:build:firefox");
+    expect(localButtonSmoke).toContain(
+      "Supported projects: chromium, edge, firefox",
+    );
     expect(localButtonSmoke).toContain('pnpm run "$build_command"');
     expect(localButtonSmoke).toContain(
       'playwright test tests/e2e/menu-bar-connector.spec.ts --project="$project"',
@@ -75,10 +79,24 @@ describe("macOS remote QA scaffold", () => {
     expect(menuBarE2e).toContain("extensionUserDataDir");
     expect(menuBarE2e).toContain("YTM_MENU_BAR_LOG_PATH");
     expect(menuBarE2e).toContain("menuBarAutomationRequired");
-    expect(menuBarE2e).toContain("Chromium-family browsers");
+    expect(menuBarE2e).toContain("Chromium, Edge, and Firefox");
     expect(menuBarE2e).toContain("UI elements enabled");
     expect(menuBarE2e).toContain("System Events");
     expect(menuBarE2e).toContain("Focus YouTube Music");
     expect(menuBarE2e).toContain("Quit");
+  });
+
+  it("runs Linux CLI connector smoke against Chromium and Firefox", () => {
+    const cliConnectorSmoke = read(
+      "scripts/remote/linux-qa/cli-connector-smoke.sh",
+    );
+
+    expect(cliConnectorSmoke).toContain(
+      "REMOTE_QA_LINUX_CLI_CONNECTOR_PROJECTS:-chromium firefox",
+    );
+    expect(cliConnectorSmoke).toContain("dev:build:chrome");
+    expect(cliConnectorSmoke).toContain("dev:build:firefox");
+    expect(cliConnectorSmoke).toContain("YTME_E2E_CLI_CONNECTOR=1");
+    expect(cliConnectorSmoke).toContain("--project=$project");
   });
 });

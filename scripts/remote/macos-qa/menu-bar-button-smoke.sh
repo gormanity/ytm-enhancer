@@ -6,10 +6,10 @@ project="${REMOTE_QA_MENU_BAR_E2E_PROJECT:-chromium}"
 require_buttons="${REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS:-0}"
 
 case "$project" in
-  chromium | edge) ;;
+  chromium | edge | firefox) ;;
   *)
     echo "Unsupported REMOTE_QA_MENU_BAR_E2E_PROJECT: $project" >&2
-    echo "Supported projects: chromium, edge" >&2
+    echo "Supported projects: chromium, edge, firefox" >&2
     exit 2
     ;;
 esac

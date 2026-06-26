@@ -126,16 +126,18 @@ a constrained browser-local bridge, must preserve the same host validation path.
 Connected Apps support depends on the browser extension, the browser's native
 messaging implementation, and the first-party app installer.
 
-| App              | Platform    | Supported Browsers                               | Automated Connector Smoke                |
-| ---------------- | ----------- | ------------------------------------------------ | ---------------------------------------- |
-| YTM Menu Bar     | macOS       | Chrome, Chromium, Microsoft Edge, Firefox        | Chromium-family browsers; Firefox manual |
-| YTM Enhancer CLI | macOS/Linux | Chrome, Chromium, Microsoft Edge, Firefox, Brave | Linux Chromium; Firefox manual           |
-| YTM Tray         | Windows     | Chrome, Microsoft Edge                           | Microsoft Edge                           |
+| App              | Platform    | Supported Browsers                               | Automated Connector Smoke                 |
+| ---------------- | ----------- | ------------------------------------------------ | ----------------------------------------- |
+| YTM Menu Bar     | macOS       | Chrome, Chromium, Microsoft Edge, Firefox        | Chromium/Edge buttons; Firefox connection |
+| YTM Enhancer CLI | macOS/Linux | Chrome, Chromium, Microsoft Edge, Firefox, Brave | Chromium and Firefox                      |
+| YTM Tray         | Windows     | Chrome, Microsoft Edge                           | Microsoft Edge                            |
 
 Firefox native messaging support is implemented for macOS and Linux installers
-through `allowed_extensions` manifests for `ytm-enhancer@gormanity`. The Windows
-tray installer does not register a Firefox native messaging host yet, so Firefox
-on Windows is not supported by YTM Tray.
+through `allowed_extensions` manifests for `ytm-enhancer@gormanity`, with
+automated smoke coverage for the YTM Menu Bar native-host connection on macOS
+and the CLI connector on macOS/Linux. The Windows tray installer does not
+register a Firefox native messaging host yet, so Firefox on Windows is not
+supported by YTM Tray.
 
 ## Repository Layout
 

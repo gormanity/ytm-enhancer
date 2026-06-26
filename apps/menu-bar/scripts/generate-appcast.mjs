@@ -868,10 +868,11 @@ function writeSitePages({ metadata, outputPath }) {
             </article>
           </div>
           <p class="beta-note">
-            Automated connector smoke currently covers Chromium-family browser
-            paths. Firefox native messaging support is implemented for macOS
-            and Linux installers, but Firefox connector smoke should be treated
-            as manual release QA until automation is added.
+            Automated connector smoke covers Chromium-family and Firefox native
+            messaging paths for the macOS menu bar app and CLI. Firefox menu
+            bar coverage verifies the native-host connection; Chromium and Edge
+            also drive the visible menu bar buttons. Windows Firefox support is
+            not available yet.
           </p>
         </section>
       </main>`,
@@ -1007,9 +1008,8 @@ apps/cli/scripts/install-native-hosts.sh</code>
               <p>
                 The macOS and Linux CLI installer writes native messaging
                 manifests for Chrome, Chromium, Microsoft Edge, Brave, and
-                Firefox. Automated connector smoke currently runs Chromium;
-                treat Firefox as manual release QA until Firefox connector
-                automation is added.
+                Firefox. Automated connector smoke covers Chromium and Firefox
+                on supported desktop platforms.
               </p>
             </article>
           </div>
