@@ -869,10 +869,9 @@ function writeSitePages({ metadata, outputPath }) {
           </div>
           <p class="beta-note">
             Automated connector smoke covers Chromium-family and Firefox native
-            messaging paths for the macOS menu bar app and CLI. Firefox menu
-            bar coverage verifies the native-host connection; Chromium and Edge
-            also drive the visible menu bar buttons. Windows Firefox support is
-            not available yet.
+            messaging paths for the macOS menu bar app and CLI. Menu bar button
+            automation runs on Chromium, Edge, and Firefox. Windows Firefox
+            support is not available yet.
           </p>
         </section>
       </main>`,

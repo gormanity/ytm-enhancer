@@ -159,10 +159,9 @@ YTME_MENU_BAR_E2E_PROJECT=edge \
 Use `REMOTE_QA_MENU_BAR_E2E_PROJECT=firefox` or
 `REMOTE_QA_MENU_BAR_E2E_PROJECT=edge` with the Crabbox wrapper.
 
-The menu bar connector smoke supports Chromium, Edge, and Firefox. Chromium and
-Edge drive the visible menu bar buttons. Firefox uses a Marionette sidecar to
-install the temporary dev add-on and verifies the real native-host connection
-because Playwright does not expose Firefox WebExtension loading directly.
+The menu bar connector smoke supports Chromium, Edge, and Firefox. Firefox uses
+a Marionette sidecar to install the temporary dev add-on because Playwright does
+not expose Firefox WebExtension loading directly.
 
 Peekaboo can be useful for manual visual inspection from an active GUI terminal,
 but the automated smoke does not depend on it. The smoke uses System Events and

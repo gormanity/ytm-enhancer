@@ -216,6 +216,36 @@ on clickExactDescendant(containerRef, targetLabel, remainingDepth)
   return false
 end clickExactDescendant
 
+on descendantPointContaining(containerRef, targetLabel, remainingDepth)
+  if remainingDepth is less than 1 then
+    return missing value
+  end if
+
+  set childElements to {}
+  try
+    tell application "System Events"
+      set childElements to UI elements of containerRef
+    end tell
+  end try
+
+  repeat with childRef in childElements
+    set labelText to my elementText(childRef)
+    if labelText is targetLabel or labelText contains targetLabel then
+      try
+        return position of childRef
+      end try
+    end if
+
+    set nextDepth to remainingDepth - 1
+    set descendantPoint to my descendantPointContaining(childRef, targetLabel, nextDepth)
+    if descendantPoint is not missing value then
+      return descendantPoint
+    end if
+  end repeat
+
+  return missing value
+end descendantPointContaining
+
 on playbackControlXOffset(targetLabel)
   if targetLabel is "Shuffle" then
     return -106
@@ -234,6 +264,29 @@ on playbackControlXOffset(targetLabel)
   end if
   return missing value
 end playbackControlXOffset
+
+on anchorPlaybackControlPoint(targetLabel)
+  set controlXOffset to my playbackControlXOffset(targetLabel)
+  if controlXOffset is missing value then
+    error "Unsupported playback control: " & targetLabel
+  end if
+
+  set processName to my findMenuBarProcessName()
+  tell application "System Events"
+    tell application process processName
+      set upNextPoint to my descendantPointContaining(it, "Up Next", 8)
+      if upNextPoint is not missing value then
+        set anchorX to item 1 of upNextPoint
+        set anchorY to item 2 of upNextPoint
+        set clickX to anchorX + 146 + controlXOffset
+        set clickY to anchorY - 42
+        return (clickX as text) & "," & (clickY as text)
+      end if
+    end tell
+  end tell
+
+  return missing value
+end anchorPlaybackControlPoint
 
 on playbackControlPoint(targetLabel)
   set controlXOffset to my playbackControlXOffset(targetLabel)
@@ -272,6 +325,11 @@ on playbackControlPoint(targetLabel)
       end repeat
     end tell
   end tell
+
+  set anchorPoint to my anchorPlaybackControlPoint(targetLabel)
+  if anchorPoint is not missing value then
+    return anchorPoint
+  end if
 
   error "Playback controls view was not found"
 end playbackControlPoint
@@ -386,6 +444,69 @@ print("coordinate ${x},${y}")
 `;
 }
 
+function playbackControlXOffset(label: string): number {
+  if (label === "Shuffle") return -106;
+  if (label === "Previous") return -56;
+  if (label === "Play" || label === "Pause") return 0;
+  if (label === "Next") return 56;
+  if (label === "Repeat") return 106;
+  throw new Error(`Unsupported playback control: ${label}`);
+}
+
+function playbackControlPointFromWindowScript(label: string): string {
+  const controlXOffset = playbackControlXOffset(label);
+  return `
+import CoreGraphics
+import Foundation
+
+func numberValue(_ value: Any?) -> Double? {
+  if let number = value as? NSNumber {
+    return number.doubleValue
+  }
+  if let double = value as? Double {
+    return double
+  }
+  if let int = value as? Int {
+    return Double(int)
+  }
+  return nil
+}
+
+let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+let windows = (
+  CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
+) ?? []
+let ownerNeedles = ["YTM Menu Bar", "YTMMenuBarConnector"]
+var diagnostics: [String] = []
+
+for window in windows {
+  guard
+    let ownerName = window[kCGWindowOwnerName as String] as? String,
+    ownerNeedles.contains(where: { ownerName.contains($0) }),
+    let bounds = window[kCGWindowBounds as String] as? [String: Any],
+    let x = numberValue(bounds["X"]),
+    let y = numberValue(bounds["Y"]),
+    let width = numberValue(bounds["Width"]),
+    let height = numberValue(bounds["Height"])
+  else {
+    continue
+  }
+
+  diagnostics.append("\\(ownerName) \\(Int(width))x\\(Int(height))@\\(Int(x)),\\(Int(y))")
+
+  if width > 300 && height > 180 {
+    let clickX = x + (width / 2) + ${controlXOffset}
+    let clickY = y + 137
+    print("\\(clickX),\\(clickY)")
+    exit(0)
+  }
+}
+
+fputs("YTM Menu Bar menu window was not found for ${label}. Windows: \\(diagnostics.joined(separator: "; "))\\n", stderr)
+exit(1)
+`;
+}
+
 async function installMenuBarApp(
   localAppPath: string,
   extensionId: string,
@@ -494,33 +615,44 @@ return clickResult
 
 async function clickPlaybackControl(label: string): Promise<string> {
   try {
-    return await runAppleScript(`
+    return await clickPlaybackControlByCoordinate(label);
+  } catch (coordinateError) {
+    const coordinateMessage =
+      coordinateError instanceof Error
+        ? coordinateError.message
+        : String(coordinateError);
+
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my closeOpenMenu()
+`).catch(() => undefined);
+
+    try {
+      const accessibilityDiagnostic = await runAppleScript(`
 ${MENU_BAR_APPLESCRIPT_HELPERS}
 my openYtmMenu()
 set clickResult to my clickVisibleElement(${appleScriptString(label)})
 my closeOpenMenu()
 return clickResult
 `);
-  } catch (error) {
-    await runAppleScript(`
-${MENU_BAR_APPLESCRIPT_HELPERS}
-my closeOpenMenu()
-`).catch(() => undefined);
-    const coordinateDiagnostic = await clickPlaybackControlByCoordinate(label);
-    const accessibilityError =
-      error instanceof Error ? error.message : String(error);
-    return `${coordinateDiagnostic}; accessibility fallback after ${accessibilityError}`;
+      return `${accessibilityDiagnostic}; coordinate fallback failed before accessibility click: ${coordinateMessage}`;
+    } catch (accessibilityError) {
+      const accessibilityMessage =
+        accessibilityError instanceof Error
+          ? accessibilityError.message
+          : String(accessibilityError);
+      throw new Error(
+        `Unable to click ${label} playback control.\nCoordinate: ${coordinateMessage}\nAccessibility: ${accessibilityMessage}`,
+        { cause: accessibilityError },
+      );
+    }
   }
 }
 
 async function clickPlaybackControlByCoordinate(
   label: string,
 ): Promise<string> {
-  const pointText = await runAppleScript(`
-${MENU_BAR_APPLESCRIPT_HELPERS}
-my openYtmMenu()
-return my playbackControlPoint(${appleScriptString(label)})
-`);
+  const pointText = await playbackControlPointText(label);
   const [x, y] = pointText
     .trim()
     .split(",")
@@ -536,6 +668,36 @@ return my playbackControlPoint(${appleScriptString(label)})
 ${MENU_BAR_APPLESCRIPT_HELPERS}
 my closeOpenMenu()
 `).catch(() => undefined);
+  }
+}
+
+async function playbackControlPointText(label: string): Promise<string> {
+  try {
+    return await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my openYtmMenu()
+return my playbackControlPoint(${appleScriptString(label)})
+`);
+  } catch (error) {
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my closeOpenMenu()
+my openYtmMenu()
+`).catch(() => undefined);
+
+    try {
+      return await runSwift(playbackControlPointFromWindowScript(label));
+    } catch (fallbackError) {
+      const pointError = error instanceof Error ? error.message : String(error);
+      const windowError =
+        fallbackError instanceof Error
+          ? fallbackError.message
+          : String(fallbackError);
+      throw new Error(
+        `Unable to resolve ${label} playback control point. AppleScript: ${pointError}\nCoreGraphics: ${windowError}`,
+        { cause: fallbackError },
+      );
+    }
   }
 }
 
@@ -695,7 +857,7 @@ function shouldDriveMenuBarButtons(projectName: string): boolean {
 
 // Playwright requires the first callback parameter to be a destructured fixture object.
 // eslint-disable-next-line no-empty-pattern
-test("connects the macOS menu bar app through the browser native messaging host", async ({}, testInfo) => {
+test("routes macOS menu bar buttons through the browser native messaging host", async ({}, testInfo) => {
   test.setTimeout(420_000);
   test.skip(
     !menuBarSmokeEnabled(),

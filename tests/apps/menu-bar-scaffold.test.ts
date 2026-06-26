@@ -1572,9 +1572,7 @@ describe("menu bar connector app scaffold", () => {
     expect(connectorDocs).toContain("YTM Menu Bar");
     expect(connectorDocs).toContain("YTM Enhancer CLI");
     expect(connectorDocs).toContain("YTM Tray");
-    expect(connectorDocs).toContain(
-      "Chromium/Edge buttons; Firefox connection",
-    );
+    expect(connectorDocs).toContain("Chromium, Edge, and Firefox buttons");
     expect(connectorDocs).toContain("Chromium and Firefox");
     expect(connectorDocs).toMatch(
       /Firefox\s+on Windows is not supported by YTM Tray/,
