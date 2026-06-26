@@ -49,6 +49,31 @@ function Assert-Throws {
   throw "Expected failure: $Label"
 }
 
+function Read-FilePrefixBytes {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $Path,
+    [Parameter(Mandatory = $true)]
+    [int] $Count
+  )
+
+  $ResolvedPath = (Resolve-Path -LiteralPath $Path).ProviderPath
+  $Stream = [System.IO.File]::OpenRead($ResolvedPath)
+  try {
+    $Buffer = New-Object byte[] $Count
+    $BytesRead = $Stream.Read($Buffer, 0, $Count)
+    if ($BytesRead -eq $Count) {
+      return $Buffer
+    }
+    if ($BytesRead -le 0) {
+      return @()
+    }
+    return $Buffer[0..($BytesRead - 1)]
+  } finally {
+    $Stream.Dispose()
+  }
+}
+
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
   throw ".NET 10 SDK is required for Windows tray package QA."
 }
@@ -113,7 +138,7 @@ try {
   Assert-Equal $Metadata.githubReleaseListUrl $PackageMetadata.releaseListUrl "package release list URL"
   Assert-Equal "YTM-Tray-update.json" $PackageMetadata.updateManifestAssetName "package update manifest asset"
 
-  $ExistingTrayBytes = Get-Content -LiteralPath (Join-Path $InstallRoot "YTMTray.exe") -Encoding Byte -TotalCount 16
+  $ExistingTrayBytes = Read-FilePrefixBytes (Join-Path $InstallRoot "YTMTray.exe") 16
   Set-Content -LiteralPath (Join-Path $ExtractRoot "YTMTray.exe") -Value "broken update payload"
   Push-Location $ExtractRoot
   Assert-Throws {
@@ -123,7 +148,7 @@ try {
   Pop-Location
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.exe")
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.NativeHost.exe")
-  $RestoredTrayBytes = Get-Content -LiteralPath (Join-Path $InstallRoot "YTMTray.exe") -Encoding Byte -TotalCount 16
+  $RestoredTrayBytes = Read-FilePrefixBytes (Join-Path $InstallRoot "YTMTray.exe") 16
   Assert-Equal ($ExistingTrayBytes -join ",") ($RestoredTrayBytes -join ",") "restored tray executable"
 } finally {
   if ((Get-Location).Path -eq $ExtractRoot) {

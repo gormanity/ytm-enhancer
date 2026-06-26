@@ -122,6 +122,9 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).toContain("Expand-Archive");
     expect(packageSmoke).toContain("install-native-hosts.ps1");
     expect(packageSmoke).toContain("release.json");
+    expect(packageSmoke).toContain("Read-FilePrefixBytes");
+    expect(packageSmoke).toContain("[System.IO.File]::OpenRead");
+    expect(packageSmoke).not.toContain("-Encoding Byte");
     expect(packageSmokeShell).toContain(
       "scripts\\windows-qa\\tray-package-smoke.ps1",
     );
