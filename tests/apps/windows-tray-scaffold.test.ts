@@ -1,7 +1,7 @@
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const appRoot = resolve(process.cwd(), "apps/windows-tray");
@@ -328,24 +328,21 @@ describe("Windows tray connector scaffold", () => {
       process.cwd(),
       "apps/windows-tray/scripts/generate-update-manifest.mjs",
     );
-    const { generateUpdateManifest } = (await import(
-      pathToFileURL(manifestModulePath).href
-    )) as {
-      generateUpdateManifest: (options: {
-        outputPath: string;
-        packagePaths: string[];
-        releaseBaseUrl: string;
-      }) => string;
-    };
 
     writeFileSync(x64Package, "x64 package");
     writeFileSync(armPackage, "arm package");
 
-    generateUpdateManifest({
-      outputPath,
-      packagePaths: [x64Package, armPackage],
-      releaseBaseUrl: "https://example.test/download",
-    });
+    execFileSync(
+      process.execPath,
+      [
+        manifestModulePath,
+        `--output=${outputPath}`,
+        `--package=${x64Package}`,
+        `--package=${armPackage}`,
+        "--release-base-url=https://example.test/download",
+      ],
+      { stdio: "pipe" },
+    );
 
     const manifest = JSON.parse(readFileSync(outputPath, "utf-8")) as {
       assets: Record<string, { name: string; sha256: string; url: string }>;
