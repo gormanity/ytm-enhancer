@@ -294,11 +294,16 @@ swift build --package-path apps/menu-bar -c release
    - `appcast.xml`
    - standalone release notes at `menu-bar/release-notes/X.Y.Z.html`
    - install landing page at `menu-bar/install.html`
+   - product hub at `index.html`
+   - Connected Apps beta page at `connected-apps/index.html`
+   - Windows tray install page at `windows-tray/install.html`
+   - CLI install page at `cli/index.html`
    - machine-readable release index at `releases.json`
 7. Confirm GitHub Pages serves the updated install page, appcast, and release
    notes. The appcast must link to the standalone release notes, not a full
-   GitHub release page. The release index must list the browser extension and
-   menu bar app as separate products.
+   GitHub release page. The release index must list the browser extension,
+   Connected Apps beta, menu bar app, Windows tray app, and CLI as separate
+   products.
 8. Confirm the Homebrew tap cask was updated.
 
 The release workflow derives package, appcast, and cask versions from the
@@ -311,6 +316,15 @@ The workflow also publishes a stable install landing page at:
 
 ```text
 https://gormanity.github.io/ytm-enhancer/menu-bar/install.html
+```
+
+It also refreshes the product hub and companion install pages at:
+
+```text
+https://gormanity.github.io/ytm-enhancer/
+https://gormanity.github.io/ytm-enhancer/connected-apps/
+https://gormanity.github.io/ytm-enhancer/windows-tray/install.html
+https://gormanity.github.io/ytm-enhancer/cli/
 ```
 
 The Connected Apps popup links to this page rather than the generic GitHub

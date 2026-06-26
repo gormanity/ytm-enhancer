@@ -7,7 +7,7 @@
   "minimumWindowsVersion": "Windows 11",
   "githubReleaseTagPrefix": "windows-tray-v",
   "githubReleaseListUrl": "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
-  "installUrl": "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true",
+  "installUrl": "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
   "assetPrefix": "YTM-Tray",
   "runtimes": ["win-x64", "win-arm64"]
 }

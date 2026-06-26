@@ -17,8 +17,15 @@ Direct install:
   - `YTM-Tray-<version>-win-arm64.zip`
   - `YTM-Tray-update.json`
 - Install page:
-  `https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true`.
+  `https://gormanity.github.io/ytm-enhancer/windows-tray/install.html`.
 - Update source: `https://api.github.com/repos/gormanity/ytm-enhancer/releases`.
+
+The install page links to the component-scoped `windows-tray-v*` GitHub Releases
+list for release zip downloads.
+
+YTM Tray currently supports Chrome and Microsoft Edge native messaging on
+Windows. Firefox on Windows is not supported until the installer registers a
+Firefox native messaging host and QA coverage is added.
 
 Release packages include prebuilt self-contained executables, the native host
 relay, the installer script, the uninstaller script, and package metadata. Users

@@ -23,10 +23,9 @@ export const MENU_BAR_INSTALL_URL =
 export const MENU_BAR_UNINSTALL_URL = `${MENU_BAR_INSTALL_URL}#uninstall`;
 export const MENU_BAR_HOMEBREW_COMMAND =
   "brew install --cask gormanity/tap/ytm-menu-bar";
-export const CLI_INSTALL_URL =
-  "https://github.com/gormanity/ytm-enhancer/tree/main/apps/cli";
+export const CLI_INSTALL_URL = "https://gormanity.github.io/ytm-enhancer/cli/";
 export const WINDOWS_TRAY_INSTALL_URL =
-  "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true";
+  "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html";
 
 export type ConnectorStatus =
   | "connected"

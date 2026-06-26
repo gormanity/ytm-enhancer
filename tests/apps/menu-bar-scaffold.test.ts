@@ -1463,6 +1463,12 @@ describe("menu bar connector app scaffold", () => {
     const screenshot = readFileSync(
       resolve(appRoot, "release/menu-bar-screenshot.png"),
     );
+    const windowsTrayScreenshot = readFileSync(
+      resolve(
+        process.cwd(),
+        "apps/windows-tray/release/windows-tray-screenshot.png",
+      ),
+    );
     const popupSource = readFileSync(
       resolve(process.cwd(), "src/core/connectors/popup.ts"),
       "utf-8",
@@ -1479,13 +1485,25 @@ describe("menu bar connector app scaffold", () => {
       resolve(process.cwd(), "docs/menu-bar-release.md"),
       "utf-8",
     );
+    const connectorDocs = readFileSync(
+      resolve(process.cwd(), "docs/connectors.md"),
+      "utf-8",
+    );
 
     expect(sourceFiles).toContain("release/menu-bar-screenshot.png");
     expect([...screenshot.subarray(0, 8)]).toEqual([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
     ]);
+    expect([...windowsTrayScreenshot.subarray(0, 8)]).toEqual([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
     expect(appcastScript).toContain("function writeInstallPage");
+    expect(appcastScript).toContain("function writeSitePages");
     expect(appcastScript).toContain("function writeReleaseIndex");
+    expect(appcastScript).toContain('"index.html"');
+    expect(appcastScript).toContain('"connected-apps/index.html"');
+    expect(appcastScript).toContain('"windows-tray/install.html"');
+    expect(appcastScript).toContain('"cli/index.html"');
     expect(appcastScript).toContain('"install.html"');
     expect(appcastScript).toContain('"releases.json"');
     expect(appcastScript).toContain("extension-icon.svg");
@@ -1496,6 +1514,20 @@ describe("menu bar connector app scaffold", () => {
       "writeFileSync(resolve(dirname(installPath), faviconFileName), iconSvg)",
     );
     expect(appcastScript).toContain("menu-bar-screenshot.png");
+    expect(appcastScript).toContain("windows-tray-screenshot.png");
+    expect(appcastScript).toContain("playback-controls.png");
+    expect(appcastScript).toContain("mini-player.png");
+    expect(appcastScript).toContain("Connected Apps Beta");
+    expect(appcastScript).toContain("YTM Tray");
+    expect(appcastScript).toContain("YTM Enhancer CLI");
+    expect(appcastScript).toContain("Browser Support");
+    expect(appcastScript).toMatch(
+      /Chrome, Chromium, Microsoft Edge, and\s+Firefox on macOS/,
+    );
+    expect(appcastScript).toMatch(/Firefox\s+on Windows is not supported yet/);
+    expect(appcastScript).toContain(
+      "Firefox connector smoke should be treated",
+    );
     expect(appcastScript).toContain("copyFileSync");
     expect(appcastScript).toContain("screenshot-frame");
     expect(appcastScript).toContain("Download for macOS");
@@ -1532,7 +1564,18 @@ describe("menu bar connector app scaffold", () => {
       "brew install --cask gormanity/tap/ytm-menu-bar",
     );
     expect(releaseDocs).toContain("menu-bar/install.html");
+    expect(releaseDocs).toContain("connected-apps/index.html");
+    expect(releaseDocs).toContain("windows-tray/install.html");
+    expect(releaseDocs).toContain("cli/index.html");
     expect(releaseDocs).toContain("releases.json");
+    expect(connectorDocs).toContain("## Browser Support");
+    expect(connectorDocs).toContain("YTM Menu Bar");
+    expect(connectorDocs).toContain("YTM Enhancer CLI");
+    expect(connectorDocs).toContain("YTM Tray");
+    expect(connectorDocs).toContain("Firefox manual");
+    expect(connectorDocs).toMatch(
+      /Firefox\s+on Windows is not supported by YTM Tray/,
+    );
   });
 
   it("writes a component-aware release index for GitHub Pages", async () => {
@@ -1574,7 +1617,18 @@ describe("menu bar connector app scaffold", () => {
     ) as {
       schemaVersion: number;
       products: {
-        extension: { latestVersion: string; tag: string; releaseUrl: string };
+        extension: {
+          latestVersion: string;
+          tag: string;
+          releaseUrl: string;
+          installPage: string;
+          stores: Record<string, string>;
+        };
+        connectedApps: {
+          installPage: string;
+          status: string;
+          products: string[];
+        };
         menuBar: {
           latestVersion: string;
           tag: string;
@@ -1585,8 +1639,38 @@ describe("menu bar connector app scaffold", () => {
             homebrew: { installCommand: string; updateCommand: string };
           };
         };
+        windowsTray: {
+          latestVersion: string;
+          tag: string;
+          installPage: string;
+          minimumWindowsVersion: string;
+        };
+        cli: {
+          protocolVersion: string;
+          installPage: string;
+          distribution: string;
+        };
       };
     };
+    const siteHome = readFileSync(
+      resolve(outputRoot, "site/index.html"),
+      "utf-8",
+    );
+    const connectedAppsPage = readFileSync(
+      resolve(outputRoot, "site/connected-apps/index.html"),
+      "utf-8",
+    );
+    const windowsTrayPage = readFileSync(
+      resolve(outputRoot, "site/windows-tray/install.html"),
+      "utf-8",
+    );
+    const cliPage = readFileSync(
+      resolve(outputRoot, "site/cli/index.html"),
+      "utf-8",
+    );
+    const copiedWindowsTrayScreenshot = readFileSync(
+      resolve(outputRoot, "site/assets/windows-tray-screenshot.png"),
+    );
 
     expect(releaseIndex.schemaVersion).toBe(1);
     expect(releaseIndex.products.extension.latestVersion).toBe(
@@ -1596,6 +1680,21 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.extension.releaseUrl).toContain(
       `/releases/tag/v${packageJson.version}`,
     );
+    expect(releaseIndex.products.extension.installPage).toBe(
+      "https://gormanity.github.io/ytm-enhancer/",
+    );
+    expect(releaseIndex.products.extension.stores.chrome).toContain(
+      "chromewebstore.google.com",
+    );
+    expect(releaseIndex.products.connectedApps.installPage).toBe(
+      "https://gormanity.github.io/ytm-enhancer/connected-apps/",
+    );
+    expect(releaseIndex.products.connectedApps.status).toBe("beta");
+    expect(releaseIndex.products.connectedApps.products).toEqual([
+      "menu-bar",
+      "windows-tray",
+      "cli",
+    ]);
     expect(releaseIndex.products.menuBar.latestVersion).toBe(menuBarVersion);
     expect(releaseIndex.products.menuBar.tag).toBe(menuBarTag);
     expect(releaseIndex.products.menuBar.installPage).toBe(
@@ -1620,6 +1719,44 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.menuBar.channels.homebrew.updateCommand).toBe(
       "brew update && brew upgrade --cask ytm-menu-bar",
     );
+    expect(releaseIndex.products.windowsTray.latestVersion).toBe("0.1.0");
+    expect(releaseIndex.products.windowsTray.tag).toBe("windows-tray-v0.1.0");
+    expect(releaseIndex.products.windowsTray.installPage).toBe(
+      "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
+    );
+    expect(releaseIndex.products.windowsTray.minimumWindowsVersion).toBe(
+      "Windows 11",
+    );
+    expect(releaseIndex.products.cli.protocolVersion).toBe("1.0.0");
+    expect(releaseIndex.products.cli.installPage).toBe(
+      "https://gormanity.github.io/ytm-enhancer/cli/",
+    );
+    expect(releaseIndex.products.cli.distribution).toBe("source");
+    expect(siteHome).toContain("YTM Enhancer");
+    expect(siteHome).toContain("Connected Apps Beta");
+    expect(siteHome).toContain("assets/playback-controls.png");
+    expect(connectedAppsPage).toContain("Connected Apps Beta");
+    expect(connectedAppsPage).toContain("../assets/menu-bar-screenshot.png");
+    expect(connectedAppsPage).toContain(
+      "../assets/windows-tray-screenshot.png",
+    );
+    expect(connectedAppsPage).toContain("Browser Support");
+    expect(connectedAppsPage).toMatch(
+      /Firefox\s+on Windows is not supported yet/,
+    );
+    expect(windowsTrayPage).toContain("YTM Tray");
+    expect(windowsTrayPage).toMatch(
+      /Browser support: Chrome and Microsoft Edge/,
+    );
+    expect(windowsTrayPage).toContain("Firefox on Windows: not supported yet");
+    expect(windowsTrayPage).toContain("windows-tray-v&amp;expanded=true");
+    expect(cliPage).toContain("YTM Enhancer CLI");
+    expect(cliPage).toContain("Chrome, Chromium, Microsoft Edge, Brave, and");
+    expect(cliPage).toMatch(/Firefox connector\s+automation is added/);
+    expect(cliPage).toContain("apps/cli/scripts/install-native-hosts.sh");
+    expect([...copiedWindowsTrayScreenshot.subarray(0, 8)]).toEqual([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
   });
 
   it("generates production native host manifests for app bundle installs", () => {
@@ -1908,6 +2045,9 @@ describe("menu bar connector app scaffold", () => {
       "previous_tag: ${{ env.PREVIOUS_EXTENSION_TAG }}",
     );
     expect(releaseStrategy).toContain("menu-bar/install.html");
+    expect(releaseStrategy).toContain("connected-apps/");
+    expect(releaseStrategy).toContain("windows-tray/install.html");
+    expect(releaseStrategy).toContain("ytm-enhancer/cli/");
     expect(releaseStrategy).toContain("menu-bar/appcast.xml");
     expect(releaseStrategy).toContain("releases.json");
     expect(extensionWorkflow).toContain(

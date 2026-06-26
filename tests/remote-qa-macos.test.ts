@@ -22,6 +22,10 @@ describe("macOS remote QA scaffold", () => {
     expect(docs).toContain(
       "Peekaboo can be useful for manual visual inspection",
     );
+    expect(docs).toMatch(
+      /Firefox\s+connector behavior should be treated as manual QA/,
+    );
+    expect(docs).toMatch(/Firefox CLI connector\s+coverage as manual QA/);
   });
 
   it("automates macOS menu bar release package smoke", () => {
@@ -71,6 +75,7 @@ describe("macOS remote QA scaffold", () => {
     expect(menuBarE2e).toContain("extensionUserDataDir");
     expect(menuBarE2e).toContain("YTM_MENU_BAR_LOG_PATH");
     expect(menuBarE2e).toContain("menuBarAutomationRequired");
+    expect(menuBarE2e).toContain("Chromium-family browsers");
     expect(menuBarE2e).toContain("UI elements enabled");
     expect(menuBarE2e).toContain("System Events");
     expect(menuBarE2e).toContain("Focus YouTube Music");

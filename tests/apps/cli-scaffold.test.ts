@@ -71,6 +71,9 @@ describe("YTM Enhancer CLI app scaffold", () => {
     expect(settingsSource).toContain(
       'FIRST_PARTY_CLI_NATIVE_HOST_NAME =\n  "com.gormanity.ytm_enhancer.cli"',
     );
+    expect(settingsSource).toContain(
+      '"https://gormanity.github.io/ytm-enhancer/cli/"',
+    );
     expect(settingsSource).toContain('name: "YTM Enhancer CLI"');
     expect(settingsSource).toContain('installLabel: "Install CLI"');
   });

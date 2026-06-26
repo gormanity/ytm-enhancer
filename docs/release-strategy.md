@@ -75,11 +75,16 @@ extension while preserving independent connector releases.
 
 Human-facing discovery should be component-specific:
 
-- Extension users should use browser stores and extension release notes.
+- Extension users should use browser stores, extension release notes, or
+  `https://gormanity.github.io/ytm-enhancer/`.
 - Menu bar users should use
   `https://gormanity.github.io/ytm-enhancer/menu-bar/install.html`.
-- Windows tray users should use the `windows-tray-v*` component release list.
-- CLI users should use `apps/cli/README.md` until public packaging exists.
+- Connected Apps beta users should use
+  `https://gormanity.github.io/ytm-enhancer/connected-apps/`.
+- Windows tray users should use
+  `https://gormanity.github.io/ytm-enhancer/windows-tray/install.html`.
+- CLI users should use `https://gormanity.github.io/ytm-enhancer/cli/` until
+  public packaging exists.
 - Developers should use `docs/menu-bar-release.md` and component READMEs.
 
 Automated discovery should use native channel mechanisms:
@@ -95,15 +100,18 @@ Automated discovery should use native channel mechanisms:
 GitHub Releases host artifacts and release notes. They are not the source of
 truth for every product's latest version.
 
-## Release Index
+## GitHub Pages
 
-The menu bar release workflow publishes a machine-readable release index on
-GitHub Pages:
+The menu bar release workflow publishes the GitHub Pages product hub, companion
+app install pages, and a machine-readable release index:
 
 ```text
+https://gormanity.github.io/ytm-enhancer/
 https://gormanity.github.io/ytm-enhancer/releases.json
 ```
 
-The index lists products independently so consumers do not need to infer product
-identity from GitHub's repository-wide latest release. It is informational and
-does not replace Sparkle, Homebrew, or browser store update mechanisms.
+The generated pages cover the browser extension, Connected Apps beta, YTM Menu
+Bar, YTM Tray, and the source-installed CLI. The index lists products
+independently so consumers do not need to infer product identity from GitHub's
+repository-wide latest release. It is informational and does not replace
+Sparkle, Homebrew, Windows update manifests, or browser store update mechanisms.

@@ -29,6 +29,9 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("Connection timed out during banner exchange");
     expect(docs).toContain("OpenSSH-Server-In-TCP");
     expect(docs).toContain("Microsoft.DotNet.SDK.10");
+    expect(docs).toMatch(
+      /Treat Chrome and Firefox Windows browser coverage as a later\s+extension/,
+    );
   });
 
   it("provides a no-sync Windows SSH preflight", () => {

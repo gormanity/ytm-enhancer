@@ -155,6 +155,11 @@ YTME_MENU_BAR_E2E_PROJECT=edge \
 
 Use `REMOTE_QA_MENU_BAR_E2E_PROJECT=edge` with the Crabbox wrapper.
 
+The menu bar connector smoke is currently scoped to Chromium-family browsers.
+The menu bar installer writes a Firefox native messaging manifest, but Firefox
+connector behavior should be treated as manual QA until a Firefox native
+messaging smoke is added.
+
 Peekaboo can be useful for manual visual inspection from an active GUI terminal,
 but the automated smoke does not depend on it. The smoke uses System Events and
 CoreGraphics because those APIs work from the same endpoint shell the runner
@@ -249,7 +254,10 @@ This runs inside the official Playwright Linux container on the remote Mac,
 installs `ytme` as a Linux native messaging host into a throwaway XDG config
 directory, loads the dev extension in Chromium, enables Connected Apps through
 the popup, and verifies `ytme play`, `ytme pause`, `ytme next`, and
-`ytme previous` route through the extension into a YouTube Music fixture.
+`ytme previous` route through the extension into a YouTube Music fixture. The
+CLI installer writes Firefox native messaging manifests on macOS and Linux, but
+the connector smoke currently runs Chromium. Treat Firefox CLI connector
+coverage as manual QA until a Firefox smoke is added.
 
 The Linux VM image is intentionally minimal. The Linux scripts bootstrap Node,
 pnpm, and Go inside the VM as needed. This keeps the remote macOS account clean,

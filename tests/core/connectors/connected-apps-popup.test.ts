@@ -648,7 +648,7 @@ describe("Connected Apps popup view", () => {
       '[data-role="connected-app-install-link"]',
     );
     expect(installLink?.href).toBe(
-      "https://github.com/gormanity/ytm-enhancer/tree/main/apps/cli",
+      "https://gormanity.github.io/ytm-enhancer/cli/",
     );
   });
 
@@ -685,7 +685,7 @@ describe("Connected Apps popup view", () => {
       '[data-role="connected-app-install-link"]',
     );
     expect(installLink?.href).toBe(
-      "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true",
+      "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
     );
   });
 

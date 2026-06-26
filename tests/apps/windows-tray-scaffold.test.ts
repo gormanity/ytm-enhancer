@@ -239,7 +239,7 @@ describe("Windows tray connector scaffold", () => {
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
     );
     expect(metadata.installUrl).toBe(
-      "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true",
+      "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
     );
     expect(metadata.assetPrefix).toBe("YTM-Tray");
     expect(metadata.runtimes).toEqual(["win-x64", "win-arm64"]);
@@ -354,7 +354,7 @@ describe("Windows tray connector scaffold", () => {
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
     );
     expect(manifest.installUrl).toBe(
-      "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true",
+      "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
     );
     expect(manifest.assets["win-x64"]?.name).toBe("YTM-Tray-0.1.0-win-x64.zip");
     expect(manifest.assets["win-arm64"]?.name).toBe(
@@ -454,6 +454,7 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("Check for Updates");
     expect(releaseDocs).toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
     expect(releaseDocs).toContain("signed `YTMTray.exe`");
+    expect(releaseDocs).toContain("Firefox on Windows is not supported");
 
     expect(releaseStrategy).toContain("YTM Tray:");
     expect(releaseStrategy).toContain("windows-tray-vX.Y.Z");
@@ -462,5 +463,6 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(connectorsDocs).toContain("com.gormanity.ytm_enhancer.tray");
     expect(connectorsDocs).toContain("verify the runtime package checksum");
+    expect(connectorsDocs).toContain("Chrome, Microsoft Edge");
   });
 });

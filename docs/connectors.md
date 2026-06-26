@@ -121,6 +121,22 @@ transient and are not part of the connector protocol.
 Future transports, such as extension runtime messaging for another extension or
 a constrained browser-local bridge, must preserve the same host validation path.
 
+## Browser Support
+
+Connected Apps support depends on the browser extension, the browser's native
+messaging implementation, and the first-party app installer.
+
+| App              | Platform    | Supported Browsers                               | Automated Connector Smoke                |
+| ---------------- | ----------- | ------------------------------------------------ | ---------------------------------------- |
+| YTM Menu Bar     | macOS       | Chrome, Chromium, Microsoft Edge, Firefox        | Chromium-family browsers; Firefox manual |
+| YTM Enhancer CLI | macOS/Linux | Chrome, Chromium, Microsoft Edge, Firefox, Brave | Linux Chromium; Firefox manual           |
+| YTM Tray         | Windows     | Chrome, Microsoft Edge                           | Microsoft Edge                           |
+
+Firefox native messaging support is implemented for macOS and Linux installers
+through `allowed_extensions` manifests for `ytm-enhancer@gormanity`. The Windows
+tray installer does not register a Firefox native messaging host yet, so Firefox
+on Windows is not supported by YTM Tray.
+
 ## Repository Layout
 
 ```text
@@ -216,6 +232,12 @@ ytme doctor
 apps/cli/scripts/uninstall-native-hosts.sh
 ```
 
+The Connected Apps popup links users to the stable CLI install page:
+
+```text
+https://gormanity.github.io/ytm-enhancer/cli/
+```
+
 The installer prints the exact `ytme doctor` command to run. It installs `ytme`
 to `~/.local/bin` by default, but prints the full path when that directory is
 not on `PATH`. The local installer supports macOS and Linux user-level native
@@ -243,6 +265,12 @@ The Windows tray app is separate from the CLI. Windows users get a native tray
 surface; PowerShell or WSL CLI support is intentionally not part of the Windows
 Connected Apps scope.
 
+The Connected Apps popup links users to the stable Windows install page:
+
+```text
+https://gormanity.github.io/ytm-enhancer/windows-tray/install.html
+```
+
 Initial local development commands are:
 
 ```powershell
@@ -254,7 +282,8 @@ apps/windows-tray/scripts/uninstall-native-hosts.ps1
 The local installer publishes a self-contained `YTMTray.exe` plus
 `YTMTray.NativeHost.exe`, writes a native messaging manifest that points at the
 native-host relay under `%LOCALAPPDATA%\YTM Enhancer\Tray`, and registers
-user-level native messaging keys for Google Chrome and Microsoft Edge.
+user-level native messaging keys for Google Chrome and Microsoft Edge. Firefox
+on Windows is not supported by YTM Tray yet.
 
 Remaining work before a public connector release:
 
