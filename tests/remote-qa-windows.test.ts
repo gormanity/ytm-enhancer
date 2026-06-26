@@ -30,7 +30,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("OpenSSH-Server-In-TCP");
     expect(docs).toContain("Microsoft.DotNet.SDK.10");
     expect(docs).toMatch(
-      /Treat Chrome and Firefox Windows browser coverage as a later\s+extension/,
+      /the tray\s+connector button smoke covers Edge and Firefox/,
     );
   });
 
@@ -53,6 +53,9 @@ describe("Windows remote QA scaffold", () => {
     expect(runner).toContain("REMOTE_QA_WINDOWS_HOST");
     expect(runner).toContain("powershell.exe");
     expect(runner).toContain("-EncodedCommand");
+    expect(runner).toContain("function Remove-QaTree");
+    expect(runner).toContain("Get-Process msedge, firefox, YTMTray");
+    expect(runner).toContain("[System.IO.Directory]::Delete");
     expect(runner).toContain("COPYFILE_DISABLE=1 tar -czf -");
     expect(runner).toContain("tar -xzf - -C \\$target");
   });
@@ -124,7 +127,7 @@ describe("Windows remote QA scaffold", () => {
     );
   });
 
-  it("automates Windows tray button smoke against the Edge fixture", () => {
+  it("automates Windows tray button smoke against Edge and Firefox fixtures", () => {
     const buttonSmoke = read("scripts/windows-qa/tray-button-smoke.ps1");
     const buttonSmokeShell = read(
       "scripts/remote/windows-qa/tray-button-smoke.sh",
@@ -132,9 +135,11 @@ describe("Windows remote QA scaffold", () => {
     const trayE2e = read("tests/e2e/windows-tray-connector.spec.ts");
 
     expect(buttonSmoke).toContain('$env:YTME_E2E_WINDOWS_TRAY = "1"');
+    expect(buttonSmoke).toContain("playwright install firefox");
     expect(buttonSmoke).toContain("pnpm run dev:build:edge");
+    expect(buttonSmoke).toContain("pnpm run dev:build:firefox");
     expect(buttonSmoke).toContain(
-      "playwright test tests/e2e/windows-tray-connector.spec.ts --project=edge",
+      "playwright test tests/e2e/windows-tray-connector.spec.ts --project=edge --project=firefox --workers=1",
     );
     expect(buttonSmokeShell).toContain(
       "scripts\\windows-qa\\tray-button-smoke.ps1",
@@ -144,5 +149,6 @@ describe("Windows remote QA scaffold", () => {
     expect(trayE2e).toContain("Focus YouTube Music");
     expect(trayE2e).toContain("YTM_TRAY_LOG_PATH");
     expect(trayE2e).toContain("requestId=focus-");
+    expect(trayE2e).toContain("Microsoft Edge and Firefox");
   });
 });

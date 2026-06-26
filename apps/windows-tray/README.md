@@ -17,7 +17,7 @@ dotnet run --project .\tests\YTMTray.Tests\YTMTray.Tests.csproj
 The installer publishes a self-contained `YTMTray.exe` for the visible tray app
 and `YTMTray.NativeHost.exe` for browser native messaging. It writes a native
 messaging manifest under `%LOCALAPPDATA%\YTM Enhancer\Tray` and registers
-user-level native messaging keys for Edge and Chrome.
+user-level native messaging keys for Edge, Chrome, and Firefox.
 
 Release zips include prebuilt executables plus `release.json`. Direct release
 installs check for newer `windows-tray-v*` GitHub Releases in the background.

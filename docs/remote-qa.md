@@ -522,8 +522,8 @@ scripts/remote/windows-qa/e2e-edge-smoke.sh
 ```
 
 This runs the Playwright `edge` project against the system Microsoft Edge app in
-the Windows guest. Treat Chrome and Firefox Windows browser coverage as a later
-extension after Edge is stable.
+the Windows guest. General Windows browser E2E remains scoped to Edge; the tray
+connector button smoke covers Edge and Firefox.
 
 Windows CLI native messaging QA is not wired yet. The current CLI native-host
 install scripts and connector e2e smoke target macOS/Linux paths. Windows CLI
@@ -546,8 +546,8 @@ This requires a .NET SDK that can build .NET 10 projects plus the .NET 10
 runtime in the Windows guest. The `Microsoft.DotNet.SDK.10` winget package
 provides both. It runs the dependency-free tray tests, publishes the WinForms
 tray executable and native host relay for the guest architecture, installs
-user-level Edge and Chrome native messaging registry keys, validates the
-manifest, and removes the smoke install.
+user-level Edge, Chrome, and Firefox native messaging registry keys, validates
+the Chromium and Firefox manifests, and removes the smoke install.
 
 Run the Windows tray release package smoke:
 
@@ -600,11 +600,13 @@ Run the same smoke through bowfin and the Windows guest:
 scripts/remote/windows-qa/tray-button-smoke.sh
 ```
 
-This installs the tray native host, launches the tray through the active
-desktop, opens the Edge dev build with the YouTube Music fixture, enables
-Connected Apps, clicks the tray playback/seek/focus/about/quit controls through
-Windows UI Automation, and verifies the browser fixture receives the expected
-events.
+This installs Playwright's Firefox browser, installs the tray native host,
+launches the tray through the active desktop, opens the Edge and Firefox dev
+builds with the YouTube Music fixture, enables Connected Apps, clicks the tray
+playback/seek/focus/about/quit controls through Windows UI Automation, and
+verifies the browser fixture receives the expected events. The browser projects
+run serially because the Windows tray process and native messaging registry
+entries are user-global resources.
 
 ## Connector Smokes
 

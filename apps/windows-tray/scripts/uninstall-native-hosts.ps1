@@ -8,7 +8,8 @@ $ErrorActionPreference = "Stop"
 $HostName = "com.gormanity.ytm_enhancer.tray"
 $RegistryKeys = @(
   "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$HostName",
-  "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName"
+  "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName",
+  "HKCU:\Software\Mozilla\NativeMessagingHosts\$HostName"
 )
 
 if ([string]::IsNullOrWhiteSpace($InstallRoot)) {

@@ -114,9 +114,40 @@ target_literal="$(ps_quote "$windows_work_root")"
 sync_script="
 \$ErrorActionPreference = '"'"'Stop'"'"'
 \$target = $target_literal
-if (Test-Path -LiteralPath \$target) {
-  Remove-Item -LiteralPath \$target -Recurse -Force
+
+function Remove-QaTree {
+  param([Parameter(Mandatory = \$true)][string] \$Path)
+
+  if (-not (Test-Path -LiteralPath \$Path)) {
+    return
+  }
+
+  Get-Process msedge, firefox, YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Milliseconds 500
+
+  try {
+    Remove-Item -LiteralPath \$Path -Recurse -Force -ErrorAction Stop
+    return
+  } catch {
+    Write-Warning \"PowerShell cleanup failed for Windows QA work root; retrying with .NET delete.\"
+  }
+
+  try {
+    [System.IO.Directory]::Delete(\$Path, \$true)
+    return
+  } catch {
+    Write-Warning \".NET cleanup failed for Windows QA work root; retrying with cmd rmdir.\"
+  }
+
+  \$Quote = [char]34
+  \$RmdirCommand = '"'"'rmdir /s /q '"'"' + \$Quote + \$Path + \$Quote
+  \$Process = Start-Process -FilePath cmd.exe -ArgumentList @('"'"'/d'"'"', '"'"'/c'"'"', \$RmdirCommand) -Wait -PassThru -WindowStyle Hidden
+  if ((Test-Path -LiteralPath \$Path) -or \$Process.ExitCode -ne 0) {
+    throw \"Unable to remove Windows QA work root: \$Path\"
+  }
 }
+Remove-QaTree -Path \$target
 New-Item -ItemType Directory -Force -Path \$target | Out-Null
 tar -xzf - -C \$target
 "

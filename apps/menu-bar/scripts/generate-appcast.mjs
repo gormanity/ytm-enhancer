@@ -862,16 +862,15 @@ function writeSitePages({ metadata, outputPath }) {
             <article class="card">
               <h3>Windows</h3>
               <p>
-                YTM Tray currently supports Chrome and Microsoft Edge. Firefox
-                on Windows is not supported yet.
+                YTM Tray currently supports Chrome, Microsoft Edge, and Firefox.
               </p>
             </article>
           </div>
           <p class="beta-note">
             Automated connector smoke covers Chromium-family and Firefox native
             messaging paths for the macOS menu bar app and CLI. Menu bar button
-            automation runs on Chromium, Edge, and Firefox. Windows Firefox
-            support is not available yet.
+            automation runs on Chromium, Edge, and Firefox. Windows tray button
+            automation runs on Edge and Firefox.
           </p>
         </section>
       </main>`,
@@ -927,8 +926,7 @@ function writeSitePages({ metadata, outputPath }) {
             <ul class="meta-list" aria-label="YTM Tray details">
               <li>Latest version: ${escapeHtml(windowsTrayMetadata.version)}</li>
               <li>Minimum Windows version: ${escapeHtml(windowsTrayMetadata.minimumWindowsVersion)}</li>
-              <li>Browser support: Chrome and Microsoft Edge</li>
-              <li>Firefox on Windows: not supported yet</li>
+              <li>Browser support: Chrome, Microsoft Edge, and Firefox</li>
               <li>Runtimes: ${windowsTrayMetadata.runtimes.map(escapeHtml).join(", ")}</li>
               <li>Update channel: component-scoped GitHub Releases</li>
             </ul>

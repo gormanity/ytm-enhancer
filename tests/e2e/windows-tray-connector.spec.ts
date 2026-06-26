@@ -1,8 +1,12 @@
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 import { expect, test, type Page } from "playwright/test";
+import type { ConnectedAppsSettings } from "../../src/core/connectors/client";
 import { FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID } from "../../src/core/connectors/settings";
-import { launchExtensionContext } from "./helpers/extension-context";
+import {
+  launchExtensionContext,
+  type ExtensionTestContext,
+} from "./helpers/extension-context";
 import {
   loadYtmFixtureThroughExtension,
   readFixtureEvents,
@@ -47,8 +51,18 @@ async function runPowerShell(
   }
 }
 
-function trayInstallScript(installRoot: string, extensionId: string): string {
+function trayInstallScript(
+  installRoot: string,
+  extensionId: string,
+  projectName: string,
+): string {
   const extensionOrigin = `chrome-extension://${extensionId}/`;
+  const additionalOriginArgument =
+    projectName === "firefox"
+      ? ""
+      : ` \`
+  -AdditionalAllowedOrigins ${psLiteral(extensionOrigin)}
+`;
   return `
 $ErrorActionPreference = "Stop"
 $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "win-arm64" } else { "win-x64" }
@@ -56,8 +70,7 @@ Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
   Stop-Process -Force
 & .\\apps\\windows-tray\\scripts\\install-native-hosts.ps1 \`
   -RuntimeIdentifier $RuntimeIdentifier \`
-  -InstallRoot ${psLiteral(installRoot)} \`
-  -AdditionalAllowedOrigins ${psLiteral(extensionOrigin)}
+  -InstallRoot ${psLiteral(installRoot)}${additionalOriginArgument}
 `;
 }
 
@@ -455,6 +468,77 @@ async function expectTrayLogContains(
     .toContain(text);
 }
 
+async function readConnectedAppsSettings(
+  extension: ExtensionTestContext,
+): Promise<ConnectedAppsSettings> {
+  const response = extension.firefox
+    ? await extension.firefox.sendRuntimeMessage<
+        { ok: true; data: ConnectedAppsSettings } | { ok: false; error: string }
+      >({
+        type: "get-connected-apps-settings",
+      })
+    : await extension.popup.evaluate(
+        () =>
+          chrome.runtime.sendMessage({
+            type: "get-connected-apps-settings",
+          }) as Promise<
+            | { ok: true; data: ConnectedAppsSettings }
+            | { ok: false; error: string }
+          >,
+      );
+
+  if (!response.ok) {
+    throw new Error(response.error);
+  }
+  return response.data;
+}
+
+async function enableConnectedApps(
+  extension: ExtensionTestContext,
+): Promise<void> {
+  if (extension.firefox) {
+    const response = await extension.firefox.sendRuntimeMessage<
+      { ok: true } | { ok: false; error: string }
+    >({
+      type: "set-connected-apps-enabled",
+      enabled: true,
+    });
+    if (!response.ok) throw new Error(response.error);
+    return;
+  }
+
+  await extension.popup
+    .locator(".nav-item", { hasText: "Connected Apps" })
+    .click();
+  await extension.popup.getByLabel("Enable Connected Apps").check();
+}
+
+async function expectWindowsTrayConnected(
+  extension: ExtensionTestContext,
+): Promise<void> {
+  if (extension.firefox) {
+    await expect
+      .poll(
+        async () => {
+          const settings = await readConnectedAppsSettings(extension);
+          return settings.connectors.find(
+            (connector) =>
+              connector.id === FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID,
+          )?.status;
+        },
+        { timeout: 20_000 },
+      )
+      .toBe("connected");
+    return;
+  }
+
+  await expect(
+    extension.popup.locator(
+      `[data-app-id="${FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID}"] [data-role="connected-app-status"]`,
+    ),
+  ).toHaveText("Connected", { timeout: 20_000 });
+}
+
 // Playwright requires the first callback parameter to be a destructured fixture object.
 // eslint-disable-next-line no-empty-pattern
 test("routes Windows tray buttons through the browser native messaging host", async ({}, testInfo) => {
@@ -468,8 +552,8 @@ test("routes Windows tray buttons through the browser native messaging host", as
     "The Windows tray connector smoke installs Windows native messaging hosts.",
   );
   test.skip(
-    testInfo.project.name !== "edge",
-    "The Windows tray connector smoke is scoped to Microsoft Edge.",
+    testInfo.project.name !== "edge" && testInfo.project.name !== "firefox",
+    "The Windows tray connector smoke is scoped to Microsoft Edge and Firefox.",
   );
 
   const installRoot = testInfo.outputPath("tray-install");
@@ -480,7 +564,11 @@ test("routes Windows tray buttons through the browser native messaging host", as
   try {
     extension = await launchExtensionContext(testInfo);
     await runPowerShell(
-      trayInstallScript(installRoot, extension.extensionId),
+      trayInstallScript(
+        installRoot,
+        extension.extensionId,
+        testInfo.project.name,
+      ),
       300_000,
     );
     await launchTrayApp(
@@ -492,15 +580,8 @@ test("routes Windows tray buttons through the browser native messaging host", as
     const ytmPage = await extension.context.newPage();
     await loadYtmFixtureThroughExtension(ytmPage, "player-loaded-paused");
 
-    await extension.popup
-      .locator(".nav-item", { hasText: "Connected Apps" })
-      .click();
-    await extension.popup.getByLabel("Enable Connected Apps").check();
-    await expect(
-      extension.popup.locator(
-        `[data-app-id="${FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID}"] [data-role="connected-app-status"]`,
-      ),
-    ).toHaveText("Connected", { timeout: 20_000 });
+    await enableConnectedApps(extension);
+    await expectWindowsTrayConnected(extension);
     await ytmPage.bringToFront();
     await ytmPage.waitForTimeout(2500);
 

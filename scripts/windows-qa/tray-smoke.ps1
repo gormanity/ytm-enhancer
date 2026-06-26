@@ -64,11 +64,15 @@ $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
 }
 $InstallRoot = Join-Path $env:TEMP "ytm-enhancer-tray-smoke"
 $ManifestPath = Join-Path $InstallRoot "$HostName.json"
+$FirefoxManifestPath = Join-Path $InstallRoot "$HostName.firefox.json"
 $ExecutablePath = Join-Path $InstallRoot "YTMTray.exe"
 $NativeHostExecutablePath = Join-Path $InstallRoot "YTMTray.NativeHost.exe"
 $RegistryKeys = @(
   "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$HostName",
   "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName"
+)
+$FirefoxRegistryKeys = @(
+  "HKCU:\Software\Mozilla\NativeMessagingHosts\$HostName"
 )
 
 $env:CI = "true"
@@ -83,16 +87,30 @@ try {
   Assert-PathExists $ExecutablePath
   Assert-PathExists $NativeHostExecutablePath
   Assert-PathExists $ManifestPath
+  Assert-PathExists $FirefoxManifestPath
 
   $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
   Assert-Equal $HostName $Manifest.name "manifest name"
   Assert-Equal $NativeHostExecutablePath $Manifest.path "manifest path"
   Assert-Equal "stdio" $Manifest.type "manifest type"
+  Assert-Equal $true ($Manifest.allowed_origins -contains "chrome-extension://bilcedjabgiedoamakekncokccabdccp/") "chromium manifest store origin"
+
+  $FirefoxManifest = Get-Content -LiteralPath $FirefoxManifestPath -Raw | ConvertFrom-Json
+  Assert-Equal $HostName $FirefoxManifest.name "firefox manifest name"
+  Assert-Equal $NativeHostExecutablePath $FirefoxManifest.path "firefox manifest path"
+  Assert-Equal "stdio" $FirefoxManifest.type "firefox manifest type"
+  Assert-Equal $true ($FirefoxManifest.allowed_extensions -contains "ytm-enhancer@gormanity") "firefox manifest extension"
 
   foreach ($RegistryKey in $RegistryKeys) {
     Assert-PathExists $RegistryKey
     $Value = (Get-Item -LiteralPath $RegistryKey).GetValue("")
     Assert-Equal $ManifestPath $Value "$RegistryKey default value"
+  }
+
+  foreach ($RegistryKey in $FirefoxRegistryKeys) {
+    Assert-PathExists $RegistryKey
+    $Value = (Get-Item -LiteralPath $RegistryKey).GetValue("")
+    Assert-Equal $FirefoxManifestPath $Value "$RegistryKey default value"
   }
 } finally {
   & .\apps\windows-tray\scripts\uninstall-native-hosts.ps1 `

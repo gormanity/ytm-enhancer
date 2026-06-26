@@ -130,13 +130,14 @@ messaging implementation, and the first-party app installer.
 | ---------------- | ----------- | ------------------------------------------------ | ----------------------------------- |
 | YTM Menu Bar     | macOS       | Chrome, Chromium, Microsoft Edge, Firefox        | Chromium, Edge, and Firefox buttons |
 | YTM Enhancer CLI | macOS/Linux | Chrome, Chromium, Microsoft Edge, Firefox, Brave | Chromium and Firefox                |
-| YTM Tray         | Windows     | Chrome, Microsoft Edge                           | Microsoft Edge                      |
+| YTM Tray         | Windows     | Chrome, Microsoft Edge, Firefox                  | Microsoft Edge and Firefox          |
 
 Firefox native messaging support is implemented for macOS and Linux installers
 through `allowed_extensions` manifests for `ytm-enhancer@gormanity`, with
 automated smoke coverage for YTM Menu Bar buttons on macOS and the CLI connector
-on macOS/Linux. The Windows tray installer does not register a Firefox native
-messaging host yet, so Firefox on Windows is not supported by YTM Tray.
+on macOS/Linux. The Windows tray installer also registers a Firefox native
+messaging host for YTM Tray, with automated tray button smoke coverage on
+Windows.
 
 ## Repository Layout
 
@@ -283,8 +284,7 @@ apps/windows-tray/scripts/uninstall-native-hosts.ps1
 The local installer publishes a self-contained `YTMTray.exe` plus
 `YTMTray.NativeHost.exe`, writes a native messaging manifest that points at the
 native-host relay under `%LOCALAPPDATA%\YTM Enhancer\Tray`, and registers
-user-level native messaging keys for Google Chrome and Microsoft Edge. Firefox
-on Windows is not supported by YTM Tray yet.
+user-level native messaging keys for Google Chrome, Microsoft Edge, and Firefox.
 
 Remaining work before a public connector release:
 

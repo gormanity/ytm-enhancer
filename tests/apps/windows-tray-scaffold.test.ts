@@ -183,12 +183,13 @@ describe("Windows tray connector scaffold", () => {
     );
   });
 
-  it("installs Edge and Chrome native messaging registration under HKCU", () => {
+  it("installs Edge, Chrome, and Firefox native messaging registration under HKCU", () => {
     const installScript = read("scripts/install-native-hosts.ps1");
     const uninstallScript = read("scripts/uninstall-native-hosts.ps1");
 
     expect(installScript).toContain("HKCU:\\Software\\Google\\Chrome");
     expect(installScript).toContain("HKCU:\\Software\\Microsoft\\Edge");
+    expect(installScript).toContain("HKCU:\\Software\\Mozilla");
     expect(installScript).toContain("function Invoke-Native");
     expect(installScript).toContain("AdditionalAllowedOrigins");
     expect(installScript).toContain("Normalize-AllowedOrigin");
@@ -201,10 +202,16 @@ describe("Windows tray connector scaffold", () => {
     expect(installScript).toContain(
       '$ManifestPath = Join-Path $InstallRoot "$HostName.json"',
     );
+    expect(installScript).toContain(
+      '$FirefoxManifestPath = Join-Path $InstallRoot "$HostName.firefox.json"',
+    );
     expect(installScript).toContain("allowed_origins");
+    expect(installScript).toContain("allowed_extensions");
     expect(installScript).toContain("bilcedjabgiedoamakekncokccabdccp");
     expect(installScript).toContain("gamefnibdabclmkngggcjghpbhjmajkm");
+    expect(installScript).toContain("ytm-enhancer@gormanity");
     expect(uninstallScript).toContain("Remove-Item");
+    expect(uninstallScript).toContain("HKCU:\\Software\\Mozilla");
     expect(uninstallScript).toContain("YTMTray");
     expect(uninstallScript).toContain("YTMTray.NativeHost");
   });
@@ -454,7 +461,9 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("Check for Updates");
     expect(releaseDocs).toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
     expect(releaseDocs).toContain("signed `YTMTray.exe`");
-    expect(releaseDocs).toContain("Firefox on Windows is not supported");
+    expect(releaseDocs).toContain(
+      "Chrome, Microsoft Edge, and Firefox native messaging",
+    );
 
     expect(releaseStrategy).toContain("YTM Tray:");
     expect(releaseStrategy).toContain("windows-tray-vX.Y.Z");
@@ -463,6 +472,6 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(connectorsDocs).toContain("com.gormanity.ytm_enhancer.tray");
     expect(connectorsDocs).toContain("verify the runtime package checksum");
-    expect(connectorsDocs).toContain("Chrome, Microsoft Edge");
+    expect(connectorsDocs).toContain("Chrome, Microsoft Edge, Firefox");
   });
 });

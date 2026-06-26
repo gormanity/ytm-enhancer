@@ -33,12 +33,14 @@ $ExecutablePath = Join-Path $InstallRoot "YTMTray.exe"
 $NativeHostExecutablePath = Join-Path $InstallRoot "YTMTray.NativeHost.exe"
 $ReleaseMetadataPath = Join-Path $InstallRoot "release.json"
 $ManifestPath = Join-Path $InstallRoot "$HostName.json"
+$FirefoxManifestPath = Join-Path $InstallRoot "$HostName.firefox.json"
 $BackupRoot = Join-Path ([System.IO.Path]::GetTempPath()) "ytm-tray-install-backup-$([Guid]::NewGuid().ToString("N"))"
 $InstalledFiles = @(
   "YTMTray.exe",
   "YTMTray.NativeHost.exe",
   "release.json",
-  "$HostName.json"
+  "$HostName.json",
+  "$HostName.firefox.json"
 )
 $DefaultAllowedOrigins = @(
   "chrome-extension://pggblbpjleekkobiinobaeeefnimgljh/",
@@ -46,9 +48,13 @@ $DefaultAllowedOrigins = @(
   "chrome-extension://bilcedjabgiedoamakekncokccabdccp/",
   "chrome-extension://gamefnibdabclmkngggcjghpbhjmajkm/"
 )
+$DefaultAllowedFirefoxExtensions = @(
+  "ytm-enhancer@gormanity"
+)
 $RegistryKeys = @(
   "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$HostName",
-  "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName"
+  "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName",
+  "HKCU:\Software\Mozilla\NativeMessagingHosts\$HostName"
 )
 $RegistryBackup = @{}
 
@@ -218,14 +224,31 @@ try {
     allowed_origins = $AllowedOrigins
   }
 
+  $FirefoxManifest = @{
+    name = $HostName
+    description = $Description
+    path = $NativeHostExecutablePath
+    type = "stdio"
+    allowed_extensions = $DefaultAllowedFirefoxExtensions
+  }
+
   $Manifest |
     ConvertTo-Json -Depth 5 |
     Set-Content -LiteralPath $ManifestPath -Encoding utf8
 
+  $FirefoxManifest |
+    ConvertTo-Json -Depth 5 |
+    Set-Content -LiteralPath $FirefoxManifestPath -Encoding utf8
+
   foreach ($RegistryKey in $RegistryKeys) {
     New-Item -Path $RegistryKey -Force | Out-Null
-    Set-Item -Path $RegistryKey -Value $ManifestPath
-    Write-Output "Installed $RegistryKey -> $ManifestPath"
+    $RegistryValue = if ($RegistryKey -like "HKCU:\Software\Mozilla\*") {
+      $FirefoxManifestPath
+    } else {
+      $ManifestPath
+    }
+    Set-Item -Path $RegistryKey -Value $RegistryValue
+    Write-Output "Installed $RegistryKey -> $RegistryValue"
   }
 
   Write-Output "Installed $ExecutablePath"

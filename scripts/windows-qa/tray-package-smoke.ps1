@@ -102,6 +102,7 @@ try {
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.exe")
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.NativeHost.exe")
   Assert-PathExists (Join-Path $InstallRoot "com.gormanity.ytm_enhancer.tray.json")
+  Assert-PathExists (Join-Path $InstallRoot "com.gormanity.ytm_enhancer.tray.firefox.json")
   Assert-PathExists (Join-Path $InstallRoot "release.json")
   Assert-PathExists (Join-Path $ExtractRoot "release.json")
 

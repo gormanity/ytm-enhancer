@@ -23,9 +23,8 @@ Direct install:
 The install page links to the component-scoped `windows-tray-v*` GitHub Releases
 list for release zip downloads.
 
-YTM Tray currently supports Chrome and Microsoft Edge native messaging on
-Windows. Firefox on Windows is not supported until the installer registers a
-Firefox native messaging host and QA coverage is added.
+YTM Tray currently supports Chrome, Microsoft Edge, and Firefox native messaging
+on Windows.
 
 Release packages include prebuilt self-contained executables, the native host
 relay, the installer script, the uninstaller script, and package metadata. Users
@@ -66,9 +65,9 @@ download/install handoff, and the installer continues to use user-level
 registration under `%LOCALAPPDATA%` and `HKCU`.
 
 Before replacing files or registry keys, the installer snapshots the current
-tray executables, package metadata, native messaging manifest, and Chrome/Edge
-native messaging registrations. If install or registration fails, it restores
-the previous install state before returning the error.
+tray executables, package metadata, native messaging manifests, and Chrome,
+Edge, and Firefox native messaging registrations. If install or registration
+fails, it restores the previous install state before returning the error.
 
 ## Local Package Smoke
 
@@ -131,7 +130,8 @@ scripts/remote/windows-qa/tray-button-smoke.sh
 8. On a clean Windows account, install from the release zip and confirm:
    - `YTMTray.exe` and `YTMTray.NativeHost.exe` are installed under
      `%LOCALAPPDATA%\YTM Enhancer\Tray`
-   - Edge and Chrome native messaging registry keys point at the manifest
+   - Edge, Chrome, and Firefox native messaging registry keys point at their
+     manifests
    - the tray app connects after Connected Apps is enabled
    - playback controls, seeking, focus, About, and Quit still work
    - uninstall removes registry keys and app files

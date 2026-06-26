@@ -1524,7 +1524,9 @@ describe("menu bar connector app scaffold", () => {
     expect(appcastScript).toMatch(
       /Chrome, Chromium, Microsoft Edge, and\s+Firefox on macOS/,
     );
-    expect(appcastScript).toMatch(/Firefox\s+on Windows is not supported yet/);
+    expect(appcastScript).toContain(
+      "YTM Tray currently supports Chrome, Microsoft Edge, and Firefox.",
+    );
     expect(appcastScript).toContain(
       "Automated connector smoke covers Chromium-family and Firefox",
     );
@@ -1574,9 +1576,7 @@ describe("menu bar connector app scaffold", () => {
     expect(connectorDocs).toContain("YTM Tray");
     expect(connectorDocs).toContain("Chromium, Edge, and Firefox buttons");
     expect(connectorDocs).toContain("Chromium and Firefox");
-    expect(connectorDocs).toMatch(
-      /Firefox\s+on Windows is not supported by YTM Tray/,
-    );
+    expect(connectorDocs).toContain("Microsoft Edge and Firefox");
   });
 
   it("writes a component-aware release index for GitHub Pages", async () => {
@@ -1742,14 +1742,13 @@ describe("menu bar connector app scaffold", () => {
       "../assets/windows-tray-screenshot.png",
     );
     expect(connectedAppsPage).toContain("Browser Support");
-    expect(connectedAppsPage).toMatch(
-      /Firefox\s+on Windows is not supported yet/,
+    expect(connectedAppsPage).toContain(
+      "YTM Tray currently supports Chrome, Microsoft Edge, and Firefox.",
     );
     expect(windowsTrayPage).toContain("YTM Tray");
     expect(windowsTrayPage).toMatch(
-      /Browser support: Chrome and Microsoft Edge/,
+      /Browser support: Chrome, Microsoft Edge, and Firefox/,
     );
-    expect(windowsTrayPage).toContain("Firefox on Windows: not supported yet");
     expect(windowsTrayPage).toContain("windows-tray-v&amp;expanded=true");
     expect(cliPage).toContain("YTM Enhancer CLI");
     expect(cliPage).toContain("Chrome, Chromium, Microsoft Edge, Brave, and");
