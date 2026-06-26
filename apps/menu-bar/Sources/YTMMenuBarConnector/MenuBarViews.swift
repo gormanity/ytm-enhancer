@@ -707,7 +707,7 @@ private final class MenuBarScrollingTextView: NSView {
       toolTip = newValue.isEmpty ? nil : newValue
       setAccessibilityLabel(newValue)
       lastTextWidth = -1
-      setScrollProgress(0)
+      updateScrollMetrics()
       needsLayout = true
       needsDisplay = true
     }
@@ -726,7 +726,7 @@ private final class MenuBarScrollingTextView: NSView {
     self.font = font
     self.textColor = textColor
     lastTextWidth = -1
-    setScrollProgress(0)
+    updateScrollMetrics()
     needsLayout = true
     needsDisplay = true
   }
@@ -738,6 +738,11 @@ private final class MenuBarScrollingTextView: NSView {
   override func layout() {
     super.layout()
 
+    updateScrollMetrics()
+    needsDisplay = true
+  }
+
+  private func updateScrollMetrics() {
     let textWidth = measuredTextWidth()
     let visibleWidth = bounds.width
     let changed =
@@ -751,8 +756,6 @@ private final class MenuBarScrollingTextView: NSView {
       setScrollProgress(0)
       onScrollMetricsChanged?()
     }
-
-    needsDisplay = true
   }
 
   override func draw(_ dirtyRect: NSRect) {
@@ -825,8 +828,12 @@ private final class MenuBarMetadataScroller {
 
   private static let frameInterval: TimeInterval = 1.0 / 60.0
 
+  private let logger = NativeAppLogger()
+  private let scrollDiagnosticsEnabled =
+    ProcessInfo.processInfo.environment["YTM_MENU_BAR_SCROLL_QA"] == "1"
   private var scrollingTextViews: [MenuBarScrollingTextView] = []
   private var scrollGeneration = 0
+  private var reportedScrollGeneration: Int?
   private var pendingScroll: DispatchWorkItem?
   private var scrollTimer: Timer?
 
@@ -851,6 +858,7 @@ private final class MenuBarMetadataScroller {
 
   private func restartScrollingIfNeeded() {
     scrollGeneration += 1
+    reportedScrollGeneration = nil
     cancelScrolling()
     setScrollProgress(0)
 
@@ -890,6 +898,16 @@ private final class MenuBarMetadataScroller {
       let elapsed = Date().timeIntervalSince(startDate)
       let progress = min(1, elapsed / duration)
       self.setScrollProgress(progress)
+
+      if self.scrollDiagnosticsEnabled,
+        self.reportedScrollGeneration != generation,
+        progress >= 0.08
+      {
+        self.reportedScrollGeneration = generation
+        self.logger.log(
+          "metadata scroll advanced progress=\(String(format: "%.2f", progress)) distance=\(Int(self.maximumScrollDistance.rounded()))"
+        )
+      }
 
       if progress >= 1 {
         self.completeScrollLoop()

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -20,9 +21,9 @@ internal sealed class PlaybackPopupForm : Form
 
     private readonly ArtworkBoxControl currentArtwork = new(10);
     private readonly Label statusLabel = new();
-    private readonly Label titleLabel = new();
-    private readonly Label albumLabel = new();
-    private readonly Label artistYearLabel = new();
+    private readonly ScrollingLabelControl titleLabel = new();
+    private readonly ScrollingLabelControl albumLabel = new();
+    private readonly ScrollingLabelControl artistYearLabel = new();
     private readonly Label elapsedLabel = new();
     private readonly Label durationLabel = new();
     private readonly SeekBarControl progressBar = new();
@@ -38,8 +39,8 @@ internal sealed class PlaybackPopupForm : Form
     private readonly PlaybackButtonControl repeatButton = new(PlaybackButtonIcon.Repeat, "Repeat");
     private readonly Label nextSectionLabel = new();
     private readonly ArtworkBoxControl nextArtwork = new(8);
-    private readonly Label nextTitleLabel = new();
-    private readonly Label nextDetailLabel = new();
+    private readonly ScrollingLabelControl nextTitleLabel = new();
+    private readonly ScrollingLabelControl nextDetailLabel = new();
     private readonly PopupActionRowControl focusRow = new(
         PopupActionIcon.Focus,
         "Focus YouTube Music"
@@ -50,6 +51,8 @@ internal sealed class PlaybackPopupForm : Form
     );
     private readonly PopupActionRowControl aboutRow = new(PopupActionIcon.Info, "About YTM Tray");
     private readonly PopupActionRowControl quitRow = new(PopupActionIcon.Quit, "Quit");
+    private readonly NativeAppLogger? logger;
+    private readonly bool scrollDiagnosticsEnabled;
     private double currentDuration;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -82,8 +85,12 @@ internal sealed class PlaybackPopupForm : Form
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? OnQuit { get; set; }
 
-    public PlaybackPopupForm()
+    public PlaybackPopupForm(NativeAppLogger? logger = null)
     {
+        this.logger = logger;
+        scrollDiagnosticsEnabled =
+            Environment.GetEnvironmentVariable("YTM_TRAY_SCROLL_QA") == "1";
+
         FormBorderStyle = FormBorderStyle.None;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -135,7 +142,7 @@ internal sealed class PlaybackPopupForm : Form
 
         statusLabel.Text = state.IsPlaying ? "Playing" : "Paused";
         statusLabel.ForeColor = TertiaryTextColor;
-        titleLabel.Text = hasTrack ? state.Title : "No track loaded";
+        titleLabel.Text = hasTrack ? state.Title! : "No track loaded";
         albumLabel.Text = state.Album ?? "";
         artistYearLabel.Text = FormatArtistYearLine(state);
         artistYearLabel.ForeColor = TertiaryTextColor;
@@ -221,22 +228,23 @@ internal sealed class PlaybackPopupForm : Form
         titleLabel.Font = new Font(Font.FontFamily, 16.5f, FontStyle.Bold);
         titleLabel.ForeColor = PrimaryTextColor;
         titleLabel.BackColor = Color.Transparent;
-        titleLabel.AutoEllipsis = true;
+        titleLabel.ScrollDiagnosticName = "title";
 
         albumLabel.SetBounds(148, 74, 244, 24);
         albumLabel.Font = new Font(Font.FontFamily, 11.5f, FontStyle.Bold);
         albumLabel.ForeColor = SecondaryTextColor;
         albumLabel.BackColor = Color.Transparent;
-        albumLabel.AutoEllipsis = true;
+        albumLabel.ScrollDiagnosticName = "album";
 
         artistYearLabel.SetBounds(148, 102, 244, 22);
         artistYearLabel.Font = new Font(Font.FontFamily, 10.25f, FontStyle.Bold);
         artistYearLabel.ForeColor = TertiaryTextColor;
         artistYearLabel.BackColor = Color.Transparent;
-        artistYearLabel.AutoEllipsis = true;
+        artistYearLabel.ScrollDiagnosticName = "artist-year";
 
         closeButton.SetBounds(402, 16, 24, 24);
         closeButton.Pressed += (_, _) => Hide();
+        RegisterScrollDiagnostics(titleLabel, albumLabel, artistYearLabel);
 
         Controls.AddRange([
             currentArtwork,
@@ -313,15 +321,29 @@ internal sealed class PlaybackPopupForm : Form
         nextTitleLabel.Font = new Font(Font.FontFamily, 11.5f, FontStyle.Bold);
         nextTitleLabel.ForeColor = SecondaryTextColor;
         nextTitleLabel.BackColor = Color.Transparent;
-        nextTitleLabel.AutoEllipsis = true;
+        nextTitleLabel.ScrollDiagnosticName = "next-title";
 
         nextDetailLabel.SetBounds(104, 381, 304, 22);
         nextDetailLabel.Font = new Font(Font.FontFamily, 10f, FontStyle.Regular);
         nextDetailLabel.ForeColor = TertiaryTextColor;
         nextDetailLabel.BackColor = Color.Transparent;
-        nextDetailLabel.AutoEllipsis = true;
+        nextDetailLabel.ScrollDiagnosticName = "next-detail";
+        RegisterScrollDiagnostics(nextTitleLabel, nextDetailLabel);
 
         Controls.AddRange([nextSectionLabel, nextArtwork, nextTitleLabel, nextDetailLabel]);
+    }
+
+    private void RegisterScrollDiagnostics(params ScrollingLabelControl[] labels)
+    {
+        if (!scrollDiagnosticsEnabled) return;
+
+        foreach (var label in labels)
+        {
+            label.ScrollAdvanced += (_, _) =>
+                logger?.Log(
+                    $"metadata scroll advanced label={label.ScrollDiagnosticName} distance={label.ScrollDistance:0.0}"
+                );
+        }
     }
 
     private void ConfigureActionRows()
@@ -537,6 +559,240 @@ internal sealed class CloseButtonControl : Control
         };
         e.Graphics.DrawLine(pen, 8, 8, Width - 8, Height - 8);
         e.Graphics.DrawLine(pen, Width - 8, 8, 8, Height - 8);
+    }
+}
+
+internal sealed class ScrollingLabelControl : Control
+{
+    private const int ScrollLoopGap = 32;
+    private const int ScrollPauseMilliseconds = 1250;
+    private const int FrameMilliseconds = 16;
+
+    private readonly System.Windows.Forms.Timer pauseTimer = new()
+    {
+        Interval = ScrollPauseMilliseconds
+    };
+    private readonly System.Windows.Forms.Timer scrollTimer = new()
+    {
+        Interval = FrameMilliseconds
+    };
+    private DateTime scrollStartTime;
+    private float scrollOffset;
+    private int measuredTextWidth = -1;
+    private bool reportedScrollAdvance;
+
+    public ScrollingLabelControl()
+    {
+        AccessibleRole = AccessibleRole.StaticText;
+        TabStop = false;
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint
+                | ControlStyles.OptimizedDoubleBuffer
+                | ControlStyles.ResizeRedraw
+                | ControlStyles.SupportsTransparentBackColor
+                | ControlStyles.UserPaint,
+            true
+        );
+
+        pauseTimer.Tick += (_, _) =>
+        {
+            pauseTimer.Stop();
+            StartScrollLoop();
+        };
+        scrollTimer.Tick += (_, _) => AdvanceScroll();
+    }
+
+    public event EventHandler? ScrollAdvanced;
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string ScrollDiagnosticName { get; set; } = "metadata";
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float ScrollDistance => NeedsScroll ? TextWidth + ScrollLoopGap : 0;
+
+    [AllowNull]
+    public override string Text
+    {
+        get => base.Text;
+        set
+        {
+            var nextText = value ?? "";
+            if (base.Text == nextText) return;
+            base.Text = nextText;
+            AccessibleName = nextText;
+            ResetScroll();
+        }
+    }
+
+    protected override void OnFontChanged(EventArgs e)
+    {
+        base.OnFontChanged(e);
+        ResetScroll();
+    }
+
+    protected override void OnForeColorChanged(EventArgs e)
+    {
+        base.OnForeColorChanged(e);
+        Invalidate();
+    }
+
+    protected override void OnSizeChanged(EventArgs e)
+    {
+        base.OnSizeChanged(e);
+        ResetScroll();
+    }
+
+    protected override void OnVisibleChanged(EventArgs e)
+    {
+        base.OnVisibleChanged(e);
+        ResetScroll();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+
+        if (string.IsNullOrEmpty(Text)) return;
+
+        ScheduleScrollIfNeeded();
+
+        var flags =
+            TextFormatFlags.NoPadding
+            | TextFormatFlags.SingleLine
+            | TextFormatFlags.VerticalCenter
+            | TextFormatFlags.NoPrefix;
+
+        if (!NeedsScroll)
+        {
+            TextRenderer.DrawText(
+                e.Graphics,
+                Text,
+                Font,
+                ClientRectangle,
+                ForeColor,
+                flags | TextFormatFlags.EndEllipsis
+            );
+            return;
+        }
+
+        var textHeight = TextRenderer.MeasureText(Text, Font, Size.Empty, flags).Height;
+        var y = Math.Max(0, (Height - textHeight) / 2);
+        var firstBounds = new Rectangle(
+            (int)Math.Round(-scrollOffset),
+            y,
+            TextWidth + 2,
+            Height
+        );
+        var secondBounds = new Rectangle(
+            (int)Math.Round(-scrollOffset + TextWidth + ScrollLoopGap),
+            y,
+            TextWidth + 2,
+            Height
+        );
+        using var previousClip = e.Graphics.Clip.Clone();
+        e.Graphics.SetClip(ClientRectangle);
+        try
+        {
+            TextRenderer.DrawText(e.Graphics, Text, Font, firstBounds, ForeColor, flags);
+            TextRenderer.DrawText(e.Graphics, Text, Font, secondBounds, ForeColor, flags);
+        }
+        finally
+        {
+            e.Graphics.SetClip(previousClip, CombineMode.Replace);
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            pauseTimer.Dispose();
+            scrollTimer.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private bool NeedsScroll => Width > 0 && TextWidth > Width + 4;
+
+    private int TextWidth
+    {
+        get
+        {
+            if (measuredTextWidth >= 0) return measuredTextWidth;
+
+            var flags =
+                TextFormatFlags.NoPadding
+                | TextFormatFlags.SingleLine
+                | TextFormatFlags.NoPrefix;
+            measuredTextWidth = TextRenderer.MeasureText(Text, Font, Size.Empty, flags).Width;
+            return measuredTextWidth;
+        }
+    }
+
+    private void ResetScroll()
+    {
+        pauseTimer.Stop();
+        scrollTimer.Stop();
+        scrollOffset = 0;
+        measuredTextWidth = -1;
+        reportedScrollAdvance = false;
+        Invalidate();
+
+        ScheduleScrollIfNeeded();
+    }
+
+    private void ScheduleScrollIfNeeded()
+    {
+        if (
+            !IsHandleCreated
+            || !Visible
+            || !NeedsScroll
+            || pauseTimer.Enabled
+            || scrollTimer.Enabled
+        )
+        {
+            return;
+        }
+
+        pauseTimer.Start();
+    }
+
+    private void StartScrollLoop()
+    {
+        if (!Visible || !NeedsScroll) return;
+
+        scrollOffset = 0;
+        reportedScrollAdvance = false;
+        scrollStartTime = DateTime.UtcNow;
+        scrollTimer.Start();
+    }
+
+    private void AdvanceScroll()
+    {
+        if (!Visible || !NeedsScroll)
+        {
+            scrollTimer.Stop();
+            return;
+        }
+
+        var durationSeconds = Math.Min(8, Math.Max(1.4, ScrollDistance / 32.0));
+        var elapsedSeconds = (DateTime.UtcNow - scrollStartTime).TotalSeconds;
+        var progress = Math.Min(1, elapsedSeconds / durationSeconds);
+        scrollOffset = ScrollDistance * (float)progress;
+
+        if (!reportedScrollAdvance && progress >= 0.08)
+        {
+            reportedScrollAdvance = true;
+            ScrollAdvanced?.Invoke(this, EventArgs.Empty);
+        }
+
+        Invalidate();
+
+        if (progress < 1) return;
+
+        scrollTimer.Stop();
+        pauseTimer.Start();
     }
 }
 

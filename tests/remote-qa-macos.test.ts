@@ -56,6 +56,9 @@ describe("macOS remote QA scaffold", () => {
     expect(localButtonSmoke).toContain(
       'playwright test tests/e2e/menu-bar-connector.spec.ts --project="$project"',
     );
+    expect(menuBarE2e).toContain("player-loaded-long-metadata");
+    expect(menuBarE2e).toContain("YTM_MENU_BAR_SCROLL_QA");
+    expect(menuBarE2e).toContain("metadata scroll advanced");
     expect(buttonSmoke).toContain("scripts/macos-qa/menu-bar-button-smoke.sh");
     expect(buttonSmoke).toContain("YTME_MENU_BAR_E2E_PROJECT=$project");
     expect(buttonSmoke).toContain(

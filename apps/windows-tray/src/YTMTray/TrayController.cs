@@ -10,7 +10,7 @@ internal sealed class TrayController : ITrayController, IDisposable
     private const int TaskbarFlyoutClearance = 112;
 
     private readonly NotifyIcon notifyIcon;
-    private readonly PlaybackPopupForm popup = new();
+    private readonly PlaybackPopupForm popup;
     private readonly Icon idleIcon;
     private readonly Icon playingIcon;
     private readonly WindowsTrayUpdateService updateService;
@@ -37,6 +37,7 @@ internal sealed class TrayController : ITrayController, IDisposable
     {
         this.updateService = updateService ?? WindowsTrayUpdateService.CreateDefault();
         this.logger = logger;
+        popup = new PlaybackPopupForm(logger);
         idleIcon = TrayIconFactory.Create(isPlaying: false);
         playingIcon = TrayIconFactory.Create(isPlaying: true);
 

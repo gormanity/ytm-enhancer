@@ -109,12 +109,14 @@ This installs a temporary local menu bar app and native messaging manifests,
 loads the Chromium dev extension, writes a manifest into Playwright's temporary
 Chromium profile, enables Connected Apps, clicks the menu bar
 playback/focus/quit controls through macOS Accessibility automation, and
-verifies the browser fixture receives the expected playback events. The macOS
-account must be logged into an active desktop session, and the shell running the
-script must be allowed to control the computer in System Settings > Privacy &
-Security > Accessibility. If that macOS Accessibility path is unavailable, the
-test still validates the browser native messaging connection and then reports
-the menu-item click portion as skipped with the System Events error.
+verifies the browser fixture receives the expected playback events. It also
+loads deliberately long metadata and waits for the menu bar scroller to report
+that overflowing text advanced. The macOS account must be logged into an active
+desktop session, and the shell running the script must be allowed to control the
+computer in System Settings > Privacy & Security > Accessibility. If that macOS
+Accessibility path is unavailable, the test still validates the browser native
+messaging connection and then reports the menu-item click portion as skipped
+with the System Events error.
 
 Run the same smoke on bowfin through Crabbox:
 
@@ -568,7 +570,8 @@ This requires the same .NET SDK as the tray smoke and a logged-in desktop for
 the QA user. It installs the tray app to a temporary directory, launches it
 through an interactive scheduled task, finds the tray icon through Windows UI
 Automation, opens the tray popup, captures desktop/overflow/popup screenshots
-under the Windows user's temp directory, and removes the smoke install.
+under the Windows user's temp directory, verifies long metadata scrolls, and
+removes the smoke install.
 
 Run the Windows tray button smoke from an active Windows desktop session:
 

@@ -155,6 +155,7 @@ $NativeHostExecutablePath = Join-Path $InstallRoot "YTMTray.NativeHost.exe"
 $DesktopScreenshotPath = Join-Path $ArtifactRoot "tray-desktop.png"
 $OverflowScreenshotPath = Join-Path $ArtifactRoot "tray-overflow.png"
 $PopupScreenshotPath = Join-Path $ArtifactRoot "tray-popup.png"
+$ScrollLogPath = Join-Path $ArtifactRoot "tray-scroll.log"
 $LaunchResultPath = Join-Path $ArtifactRoot "launch.json"
 $VisualResultPath = Join-Path $ArtifactRoot "visual.json"
 $ActiveSessionId = Get-ActiveDesktopSessionId
@@ -184,6 +185,8 @@ try {
     -BodyLines @(
       "`$ExecutablePath = $(ConvertTo-PowerShellLiteral $ExecutablePath)",
       '$env:YTM_TRAY_VISUAL_DEMO = "1"',
+      '$env:YTM_TRAY_SCROLL_QA = "1"',
+      "`$env:YTM_TRAY_LOG_PATH = $(ConvertTo-PowerShellLiteral $ScrollLogPath)",
       '$Process = Start-Process -FilePath $ExecutablePath -PassThru',
       'Start-Sleep -Milliseconds 1500',
       '$StartedProcess = Get-Process -Id $Process.Id -ErrorAction Stop',
@@ -222,6 +225,7 @@ try {
       "`$DesktopScreenshotPath = $(ConvertTo-PowerShellLiteral $DesktopScreenshotPath)",
       "`$OverflowScreenshotPath = $(ConvertTo-PowerShellLiteral $OverflowScreenshotPath)",
       "`$PopupScreenshotPath = $(ConvertTo-PowerShellLiteral $PopupScreenshotPath)",
+      "`$ScrollLogPath = $(ConvertTo-PowerShellLiteral $ScrollLogPath)",
       'function Save-Screenshot {',
       '  param([Parameter(Mandatory = $true)][string] $Path)',
       '  $Bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds',
@@ -341,11 +345,24 @@ try {
       '  throw "YTM Tray popup window was not found after clicking tray icon."',
       '}',
       'Save-RectangleScreenshot -Path $PopupScreenshotPath -Rect $PopupWindow.Current.BoundingRectangle -Padding 2',
+      '$ScrollDeadline = (Get-Date).AddSeconds(12)',
+      '$ScrollLog = ""',
+      'do {',
+      '  if (Test-Path -LiteralPath $ScrollLogPath) {',
+      '    $ScrollLog = Get-Content -LiteralPath $ScrollLogPath -Raw',
+      '    if ($ScrollLog -like "*metadata scroll advanced*") { break }',
+      '  }',
+      '  Start-Sleep -Milliseconds 250',
+      '} while ((Get-Date) -lt $ScrollDeadline)',
+      'if ($ScrollLog -notlike "*metadata scroll advanced*") {',
+      '  throw "Metadata scroll did not advance. Log: $ScrollLog"',
+      '}',
       '$Payload = @{',
       '  ok = $true',
       '  openedOverflow = $OpenedOverflow',
       '  trayName = $TrayButton.Current.Name',
       '  popupName = $PopupWindow.Current.Name',
+      '  scrollLog = $ScrollLogPath',
       '  screenshots = @{',
       '    desktop = $DesktopScreenshotPath',
       '    overflow = $(if (Test-Path -LiteralPath $OverflowScreenshotPath) { $OverflowScreenshotPath } else { $null })',
@@ -363,6 +380,7 @@ try {
   Write-Output "tray process session: $($Launch.sessionId)"
   Write-Output "tray icon: $($Visual.trayName)"
   Write-Output "popup: $($Visual.popupName)"
+  Write-Output "scroll log: $($Visual.scrollLog)"
   Write-Output "screenshots:"
   Write-Output "  desktop: $DesktopScreenshotPath"
   if ($Visual.screenshots.overflow) {

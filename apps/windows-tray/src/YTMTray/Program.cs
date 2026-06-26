@@ -77,14 +77,14 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
 
     private static PlaybackState DemoPlaybackState() =>
         new(
-            "A Walk",
-            "Tycho",
-            "Dive",
+            "A Walk Through the Longest Possible YouTube Music Title Fixture",
+            "Tycho and the Extended QA Ensemble",
+            "Dive Into a Very Wide Album Name for Tray Scrolling",
             2011,
             null,
             new TrackMetadata(
-                "Send And Receive (Chachi Jones Remix)",
-                "Tycho",
+                "Send And Receive (Chachi Jones Remix) With Extra Words",
+                "Tycho and the Extended QA Ensemble",
                 null,
                 null,
                 null

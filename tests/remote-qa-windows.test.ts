@@ -87,6 +87,8 @@ describe("Windows remote QA scaffold", () => {
     expect(visualSmoke).toContain("Show Hidden Icons");
     expect(visualSmoke).toContain("YTM Enhancer");
     expect(visualSmoke).toContain("YTM Tray");
+    expect(visualSmoke).toContain("YTM_TRAY_SCROLL_QA");
+    expect(visualSmoke).toContain("metadata scroll advanced");
     expect(visualSmoke).toContain("tray-popup.png");
     expect(visualSmokeShell).toContain(
       "scripts\\windows-qa\\tray-visual-smoke.ps1",

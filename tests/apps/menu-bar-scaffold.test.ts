@@ -773,6 +773,8 @@ describe("menu bar connector app scaffold", () => {
     expect(metadataScrollerSource).toContain("scrollingTextViews");
     expect(metadataScrollerSource).toContain("maximumScrollDistance");
     expect(metadataScrollerSource).toContain("setScrollProgress(progress)");
+    expect(metadataScrollerSource).toContain("YTM_MENU_BAR_SCROLL_QA");
+    expect(metadataScrollerSource).toContain("metadata scroll advanced");
     expect(metadataScrollerSource).toContain(
       "RunLoop.main.add(timer, forMode: .common)",
     );

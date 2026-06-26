@@ -100,6 +100,7 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("FormBorderStyle = FormBorderStyle.None");
     expect(popupForm).toContain('AccessibleName = "YTM Tray"');
     expect(popupForm).toContain("ArtworkBoxControl : Control");
+    expect(popupForm).toContain("ScrollingLabelControl : Control");
     expect(popupForm).toContain("CloseButtonControl : Control");
     expect(popupForm).toContain("SeekBarControl : Control");
     expect(popupForm).toContain("PlaybackButtonControl : Control");
@@ -110,6 +111,7 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("ControlStyles.OptimizedDoubleBuffer");
     expect(popupForm).toContain("LinearGradientBrush");
     expect(popupForm).toContain("UserSeekRequested");
+    expect(popupForm).toContain("metadata scroll advanced");
     expect(popupForm).toContain('nextSectionLabel.Text = "Up Next"');
     expect(popupForm).toContain('"Focus YouTube Music"');
     expect(popupForm).toContain('"Check for Updates"');
@@ -142,9 +144,15 @@ describe("Windows tray connector scaffold", () => {
 
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain("DemoConnectorConnection : IConnectorConnection");
-    expect(program).toContain('"A Walk"');
-    expect(program).toContain('"Send And Receive (Chachi Jones Remix)"');
+    expect(program).toContain(
+      '"A Walk Through the Longest Possible YouTube Music Title Fixture"',
+    );
+    expect(program).toContain(
+      '"Send And Receive (Chachi Jones Remix) With Extra Words"',
+    );
     expect(visualSmoke).toContain('$env:YTM_TRAY_VISUAL_DEMO = "1"');
+    expect(visualSmoke).toContain('$env:YTM_TRAY_SCROLL_QA = "1"');
+    expect(visualSmoke).toContain("metadata scroll advanced");
     expect(visualSmoke).toContain("Save-RectangleScreenshot");
     expect(visualSmoke).toContain("$PopupWindow.Current.BoundingRectangle");
   });

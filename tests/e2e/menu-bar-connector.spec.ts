@@ -413,8 +413,10 @@ set -euo pipefail
 user_id="$(id -u)"
 if launchctl print "gui/$user_id" >/dev/null 2>&1; then
   launchctl asuser "$user_id" launchctl unsetenv YTM_MENU_BAR_LOG_PATH >/dev/null 2>&1 || true
+  launchctl asuser "$user_id" launchctl unsetenv YTM_MENU_BAR_SCROLL_QA >/dev/null 2>&1 || true
 else
   launchctl unsetenv YTM_MENU_BAR_LOG_PATH >/dev/null 2>&1 || true
+  launchctl unsetenv YTM_MENU_BAR_SCROLL_QA >/dev/null 2>&1 || true
 fi
 YTM_ENHANCER_LOCAL_APP_PATH=${shLiteral(localAppPath)} \
   apps/menu-bar/scripts/uninstall-native-hosts.sh
@@ -443,19 +445,20 @@ set -euo pipefail
 user_id="$(id -u)"
 pkill -f ${shLiteral(executablePath)} >/dev/null 2>&1 || true
 if launchctl print "gui/$user_id" >/dev/null 2>&1; then
-  launchctl asuser "$user_id" launchctl setenv YTM_MENU_BAR_LOG_PATH ${shLiteral(
-    logPath,
-  )} >/dev/null 2>&1 || launchctl setenv YTM_MENU_BAR_LOG_PATH ${shLiteral(
-    logPath,
-  )} >/dev/null 2>&1 || true
-  if ! launchctl asuser "$user_id" open -n ${shLiteral(localAppPath)}; then
-    if ! open -n ${shLiteral(localAppPath)}; then
-      YTM_MENU_BAR_LOG_PATH=${shLiteral(logPath)} ${shLiteral(executablePath)} \
+  if ! launchctl asuser "$user_id" open -n \
+    --env ${shLiteral(`YTM_MENU_BAR_LOG_PATH=${logPath}`)} \
+    --env YTM_MENU_BAR_SCROLL_QA=1 \
+    ${shLiteral(localAppPath)}; then
+    if ! open -n \
+      --env ${shLiteral(`YTM_MENU_BAR_LOG_PATH=${logPath}`)} \
+      --env YTM_MENU_BAR_SCROLL_QA=1 \
+      ${shLiteral(localAppPath)}; then
+      YTM_MENU_BAR_LOG_PATH=${shLiteral(logPath)} YTM_MENU_BAR_SCROLL_QA=1 ${shLiteral(executablePath)} \
         >/tmp/ytm-menu-bar-smoke.out 2>/tmp/ytm-menu-bar-smoke.err &
     fi
   fi
 else
-  YTM_MENU_BAR_LOG_PATH=${shLiteral(logPath)} ${shLiteral(executablePath)} \
+  YTM_MENU_BAR_LOG_PATH=${shLiteral(logPath)} YTM_MENU_BAR_SCROLL_QA=1 ${shLiteral(executablePath)} \
     >/tmp/ytm-menu-bar-smoke.out 2>/tmp/ytm-menu-bar-smoke.err &
 fi
 deadline=$((SECONDS + 20))
@@ -571,6 +574,21 @@ fi
     .toContain(text);
 }
 
+async function expectMenuBarScrollAdvanced(logPath: string): Promise<void> {
+  await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my openYtmMenu()
+`);
+  try {
+    await expectMenuBarLogContains(logPath, "metadata scroll advanced");
+  } finally {
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my closeOpenMenu()
+`).catch(() => undefined);
+  }
+}
+
 async function readConnectedAppsSettings(
   popup: Page,
 ): Promise<ConnectedAppsSettings> {
@@ -662,12 +680,18 @@ test("routes macOS menu bar buttons through the browser native messaging host", 
       chromiumProfileManifestDir,
     );
     extension = await launchExtensionContext(testInfo, {
-      env: { YTM_MENU_BAR_LOG_PATH: menuBarLogPath },
+      env: {
+        YTM_MENU_BAR_LOG_PATH: menuBarLogPath,
+        YTM_MENU_BAR_SCROLL_QA: "1",
+      },
     });
     await launchMenuBarApp(localAppPath, menuBarLogPath);
 
     const ytmPage = await extension.context.newPage();
-    await loadYtmFixtureThroughExtension(ytmPage, "player-loaded-paused");
+    await loadYtmFixtureThroughExtension(
+      ytmPage,
+      "player-loaded-long-metadata",
+    );
 
     await extension.popup
       .locator(".nav-item", { hasText: "Connected Apps" })
@@ -694,6 +718,7 @@ test("routes macOS menu bar buttons through the browser native messaging host", 
 
     await ytmPage.bringToFront();
     await ytmPage.waitForTimeout(2500);
+    await expectMenuBarScrollAdvanced(menuBarLogPath);
 
     await clickMenuBarElement("Play");
     await expectFixtureEvent(ytmPage, "player-play-clicked");
