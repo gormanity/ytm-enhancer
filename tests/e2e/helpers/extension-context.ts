@@ -31,6 +31,7 @@ export interface LaunchExtensionContextOptions {
 
 export interface FirefoxExtensionController {
   extensionUuid: string;
+  evaluatePopup<T = unknown>(script: string, args?: unknown[]): Promise<T>;
   sendRuntimeMessage<T = unknown>(message: unknown): Promise<T>;
 }
 
@@ -319,6 +320,11 @@ async function launchFirefoxExtensionContext(
 
     const firefoxController: FirefoxExtensionController = {
       extensionUuid,
+      evaluatePopup<T = unknown>(script: string, args: unknown[] = []) {
+        return marionette!
+          .command<{ value: T }>("WebDriver:ExecuteScript", { script, args })
+          .then((result) => result.value);
+      },
       sendRuntimeMessage<T = unknown>(message: unknown) {
         return marionette!
           .command<{ value: T }>("WebDriver:ExecuteAsyncScript", {
