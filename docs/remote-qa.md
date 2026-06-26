@@ -15,6 +15,24 @@ The remote QA user should be non-admin. Do not install Apple Developer
 certificates, App Store Connect keys, or release-signing secrets into this
 account. Release signing remains a separate workflow.
 
+## Hosted CI Boundary
+
+Hosted GitHub Actions uses only standard GitHub-hosted runners for this public
+repository. Do not add larger runners, custom paid runner classes, or default
+artifact uploads to PR QA workflows.
+
+Hosted CI covers deterministic checks that do not need a logged-in desktop:
+
+- `Browser E2E` runs Chromium and Firefox extension E2E on `ubuntu-latest`.
+- `Windows QA` runs non-GUI Windows tray scaffold, manifest, registry, package,
+  and update-manifest smokes on `windows-latest`.
+- `Menu Bar Update Path Tests` runs package and update-path checks on
+  `macos-latest`.
+
+Bowfin, UTM, macOS Accessibility automation, and Windows UI Automation remain
+local-development QA paths. Keep menu bar button smoke, Windows tray visual
+smoke, and Windows tray button smoke out of hosted PR CI.
+
 ## Local Configuration
 
 Create `.remote-qa.env` in the repository root:

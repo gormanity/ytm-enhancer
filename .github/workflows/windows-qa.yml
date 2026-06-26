@@ -1,0 +1,76 @@
+name: Windows QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/windows-qa.yml"
+      - "apps/windows-tray/**"
+      - "docs/remote-qa.md"
+      - "docs/windows-tray-release.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "scripts/windows-qa/**"
+      - "tests/apps/windows-tray-scaffold.test.ts"
+      - "tests/remote-qa-windows.test.ts"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/windows-qa.yml"
+      - "apps/windows-tray/**"
+      - "docs/remote-qa.md"
+      - "docs/windows-tray-release.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "scripts/windows-qa/**"
+      - "tests/apps/windows-tray-scaffold.test.ts"
+      - "tests/remote-qa-windows.test.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-qa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tray-package:
+    name: Tray package and manifest smoke
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Windows tray scaffold tests
+        run: >
+          pnpm exec vitest run
+          tests/apps/windows-tray-scaffold.test.ts
+          tests/remote-qa-windows.test.ts
+
+      - name: Run Windows tray smoke
+        shell: pwsh
+        run: >
+          pwsh -NoProfile -ExecutionPolicy Bypass -File
+          scripts/windows-qa/tray-smoke.ps1
+
+      - name: Run Windows tray package smoke
+        shell: pwsh
+        run: >
+          pwsh -NoProfile -ExecutionPolicy Bypass -File
+          scripts/windows-qa/tray-package-smoke.ps1

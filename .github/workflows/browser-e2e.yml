@@ -1,0 +1,52 @@
+name: Browser E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromium-firefox:
+    name: Chromium and Firefox
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox
+
+      - name: Build Chrome production extension
+        run: pnpm run build:chrome
+
+      - name: Build Chromium dev extension
+        run: pnpm run dev:build:chrome
+
+      - name: Build Firefox dev extension
+        run: pnpm run dev:build:firefox
+
+      - name: Run browser E2E
+        run: >
+          pnpm exec playwright test tests/e2e
+          --project=chromium
+          --project=firefox
