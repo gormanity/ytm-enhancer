@@ -21,6 +21,7 @@
     "build:edge": "vite build --config vite.config.edge.ts",
     "build:store": "node scripts/build-store.mjs",
     "build": "pnpm run build:chrome && pnpm run build:firefox && pnpm run build:edge",
+    "site:build": "node apps/menu-bar/scripts/generate-appcast.mjs --site-only",
     "menu-bar:build:app": "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/build-release-app.mjs",
     "menu-bar:package:direct": "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/package-release.mjs --channel=direct",
     "menu-bar:package:homebrew": "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/package-release.mjs --channel=homebrew",

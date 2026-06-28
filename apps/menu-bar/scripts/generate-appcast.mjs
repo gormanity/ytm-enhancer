@@ -655,6 +655,7 @@ function writeSitePages({ metadata, outputPath }) {
     ),
     fileName: "windows-tray-screenshot.png",
   });
+  writeFileSync(resolve(siteRoot, ".nojekyll"), "");
   writeFileSync(resolve(siteRoot, "favicon.svg"), iconSvg);
 
   writeSitePage(
@@ -1074,6 +1075,31 @@ function writeDefaultReleaseNotes({ metadata, outputPath }) {
   return notesPath;
 }
 
+function releaseNotesPath({ metadata, outputPath }) {
+  return resolve(
+    dirname(outputPath),
+    "release-notes",
+    `${metadata.version}.html`,
+  );
+}
+
+function fileHasContent(path) {
+  try {
+    return statSync(path).size > 0;
+  } catch {
+    return false;
+  }
+}
+
+function writeDefaultReleaseNotesIfMissing({ metadata, outputPath }) {
+  const notesPath = releaseNotesPath({ metadata, outputPath });
+  if (fileHasContent(notesPath)) {
+    return notesPath;
+  }
+
+  return writeDefaultReleaseNotes({ metadata, outputPath });
+}
+
 function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
   const installPath = resolve(dirname(outputPath), "install.html");
   const iconSvg = readExtensionIconSvg();
@@ -1404,6 +1430,20 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
   return installPath;
 }
 
+export function generateLandingPages({
+  outputPath = resolve(appRoot, ".build/appcast/menu-bar/appcast.xml"),
+  releaseBaseUrl = "https://github.com/gormanity/ytm-enhancer/releases/download",
+} = {}) {
+  const metadata = readReleaseMetadata();
+
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeDefaultReleaseNotesIfMissing({ metadata, outputPath });
+  writeInstallPage({ metadata, outputPath, releaseBaseUrl });
+  writeSitePages({ metadata, outputPath });
+  writeReleaseIndex({ metadata, outputPath, releaseBaseUrl });
+  return resolve(dirname(outputPath), "..");
+}
+
 export function generateAppcast({
   archivePath,
   archiveUrl,
@@ -1467,24 +1507,32 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const archive = argValue("archive", "");
   const archiveUrl = argValue("archive-url", "");
   const releaseNotesUrl = argValue("release-notes-url", "");
-  const outputPath = generateAppcast({
-    archivePath: archive ? resolve(archive) : "",
-    archiveUrl: archiveUrl || undefined,
-    edSignature: argValue(
-      "ed-signature",
-      process.env.SPARKLE_ED_SIGNATURE ?? "",
-    ),
-    outputPath: resolve(
-      argValue(
-        "output",
-        resolve(appRoot, ".build/appcast/menu-bar/appcast.xml"),
+  const outputPath = resolve(
+    argValue("output", resolve(appRoot, ".build/appcast/menu-bar/appcast.xml")),
+  );
+  const releaseBaseUrl = argValue(
+    "release-base-url",
+    "https://github.com/gormanity/ytm-enhancer/releases/download",
+  );
+
+  if (process.argv.includes("--site-only")) {
+    const siteRoot = generateLandingPages({
+      outputPath,
+      releaseBaseUrl,
+    });
+    console.log(`Wrote product pages to ${siteRoot}`);
+  } else {
+    const appcastPath = generateAppcast({
+      archivePath: archive ? resolve(archive) : "",
+      archiveUrl: archiveUrl || undefined,
+      edSignature: argValue(
+        "ed-signature",
+        process.env.SPARKLE_ED_SIGNATURE ?? "",
       ),
-    ),
-    releaseBaseUrl: argValue(
-      "release-base-url",
-      "https://github.com/gormanity/ytm-enhancer/releases/download",
-    ),
-    releaseNotesUrl: releaseNotesUrl || undefined,
-  });
-  console.log(`Wrote appcast to ${outputPath}`);
+      outputPath,
+      releaseBaseUrl,
+      releaseNotesUrl: releaseNotesUrl || undefined,
+    });
+    console.log(`Wrote appcast to ${appcastPath}`);
+  }
 }

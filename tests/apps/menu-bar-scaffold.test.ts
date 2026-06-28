@@ -1,4 +1,5 @@
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -1489,6 +1490,9 @@ describe("menu bar connector app scaffold", () => {
       resolve(process.cwd(), "docs/connectors.md"),
       "utf-8",
     );
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
+    ) as { scripts: Record<string, string> };
 
     expect(sourceFiles).toContain("release/menu-bar-screenshot.png");
     expect([...screenshot.subarray(0, 8)]).toEqual([
@@ -1500,12 +1504,15 @@ describe("menu bar connector app scaffold", () => {
     expect(appcastScript).toContain("function writeInstallPage");
     expect(appcastScript).toContain("function writeSitePages");
     expect(appcastScript).toContain("function writeReleaseIndex");
+    expect(appcastScript).toContain("export function generateLandingPages");
+    expect(appcastScript).toContain("--site-only");
     expect(appcastScript).toContain('"index.html"');
     expect(appcastScript).toContain('"connected-apps/index.html"');
     expect(appcastScript).toContain('"windows-tray/install.html"');
     expect(appcastScript).toContain('"cli/index.html"');
     expect(appcastScript).toContain('"install.html"');
     expect(appcastScript).toContain('"releases.json"');
+    expect(appcastScript).toContain('".nojekyll"');
     expect(appcastScript).toContain("extension-icon.svg");
     expect(appcastScript).toContain('const faviconFileName = "favicon.svg"');
     expect(appcastScript).toContain('rel="icon"');
@@ -1577,6 +1584,9 @@ describe("menu bar connector app scaffold", () => {
     expect(connectorDocs).toContain("Chromium, Edge, and Firefox buttons");
     expect(connectorDocs).toContain("Chromium and Firefox");
     expect(connectorDocs).toContain("Microsoft Edge and Firefox");
+    expect(packageJson.scripts["site:build"]).toBe(
+      "node apps/menu-bar/scripts/generate-appcast.mjs --site-only",
+    );
   });
 
   it("writes a component-aware release index for GitHub Pages", async () => {
@@ -1757,6 +1767,55 @@ describe("menu bar connector app scaffold", () => {
     expect([...copiedWindowsTrayScreenshot.subarray(0, 8)]).toEqual([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
     ]);
+  });
+
+  it("generates product pages without rewriting release-owned feed files", async () => {
+    const { generateLandingPages } = (await import(
+      pathToFileURL(resolve(appRoot, "scripts/generate-appcast.mjs")).href
+    )) as {
+      generateLandingPages: (options: {
+        outputPath: string;
+        releaseBaseUrl: string;
+      }) => string;
+    };
+    const menuBarMetadata = readJson<{ version: string }>(
+      "release/metadata.json",
+    );
+    const menuBarVersion =
+      process.env.YTM_MENU_BAR_VERSION ?? menuBarMetadata.version;
+    const outputRoot = mkdtempSync(join(tmpdir(), "ytm-product-pages-"));
+    const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
+    const releaseNotesPath = resolve(
+      outputRoot,
+      "site/menu-bar/release-notes",
+      `${menuBarVersion}.html`,
+    );
+    const existingAppcast = "<rss>existing appcast</rss>\n";
+    const existingReleaseNotes = "<p>existing release notes</p>\n";
+
+    mkdirSync(resolve(outputRoot, "site/menu-bar/release-notes"), {
+      recursive: true,
+    });
+    writeFileSync(outputPath, existingAppcast);
+    writeFileSync(releaseNotesPath, existingReleaseNotes);
+
+    const siteRoot = generateLandingPages({
+      outputPath,
+      releaseBaseUrl: "https://example.test/releases/download",
+    });
+
+    expect(siteRoot).toBe(resolve(outputRoot, "site"));
+    expect(readFileSync(outputPath, "utf-8")).toBe(existingAppcast);
+    expect(readFileSync(releaseNotesPath, "utf-8")).toBe(existingReleaseNotes);
+    expect(
+      readFileSync(resolve(outputRoot, "site/index.html"), "utf-8"),
+    ).toContain("YTM Enhancer");
+    expect(readFileSync(resolve(outputRoot, "site/.nojekyll"), "utf-8")).toBe(
+      "",
+    );
+    expect(
+      readFileSync(resolve(outputRoot, "site/releases.json"), "utf-8"),
+    ).toContain('"connectedApps"');
   });
 
   it("generates production native host manifests for app bundle installs", () => {

@@ -1,0 +1,97 @@
+name: Product Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pages.yml"
+      - "apps/cli/internal/protocol/protocol.go"
+      - "apps/menu-bar/release/**"
+      - "apps/menu-bar/scripts/generate-appcast.mjs"
+      - "apps/menu-bar/scripts/release-metadata.mjs"
+      - "apps/windows-tray/release/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "store/screenshots/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Preserve release-owned menu bar feed
+        run: |
+          feed_dir="apps/menu-bar/.build/appcast/menu-bar"
+          mkdir -p "$feed_dir/release-notes"
+          curl --fail --silent --show-error --location \
+            "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml" \
+            --output "$feed_dir/appcast.xml"
+          version="$(node -e "const fs = require('node:fs'); const feed = fs.readFileSync('apps/menu-bar/.build/appcast/menu-bar/appcast.xml', 'utf8'); process.stdout.write(feed.match(/<sparkle:shortVersionString>([^<]+)<\\/sparkle:shortVersionString>/)?.[1] ?? '');")"
+          build_number="$(node -e "const fs = require('node:fs'); const feed = fs.readFileSync('apps/menu-bar/.build/appcast/menu-bar/appcast.xml', 'utf8'); process.stdout.write(feed.match(/<sparkle:version>([^<]+)<\\/sparkle:version>/)?.[1] ?? '');")"
+          if [ -z "$version" ] || [ -z "$build_number" ]; then
+            echo "::error::Could not parse the current menu bar appcast."
+            exit 1
+          fi
+          {
+            echo "YTM_MENU_BAR_VERSION=$version"
+            echo "YTM_MENU_BAR_BUILD_NUMBER=$build_number"
+          } >> "$GITHUB_ENV"
+          curl --fail --silent --show-error --location \
+            "https://gormanity.github.io/ytm-enhancer/menu-bar/release-notes/${version}.html" \
+            --output "$feed_dir/release-notes/${version}.html" || true
+
+      - name: Build product pages
+        run: pnpm run site:build
+
+      - name: Validate product pages artifact
+        run: |
+          test -f apps/menu-bar/.build/appcast/.nojekyll
+          test -f apps/menu-bar/.build/appcast/index.html
+          test -f apps/menu-bar/.build/appcast/connected-apps/index.html
+          test -f apps/menu-bar/.build/appcast/menu-bar/appcast.xml
+          test -f apps/menu-bar/.build/appcast/menu-bar/install.html
+          test -f apps/menu-bar/.build/appcast/windows-tray/install.html
+          test -f apps/menu-bar/.build/appcast/cli/index.html
+          test -f apps/menu-bar/.build/appcast/releases.json
+          grep -q "<rss" apps/menu-bar/.build/appcast/menu-bar/appcast.xml
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/menu-bar/.build/appcast
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy-pages.outputs.page_url }}
+
+    steps:
+      - name: Deploy product pages
+        id: deploy-pages
+        uses: actions/deploy-pages@v5
