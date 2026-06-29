@@ -6,6 +6,8 @@ on:
     paths:
       - ".github/workflows/pages.yml"
       - "apps/cli/internal/protocol/protocol.go"
+      - "apps/cli/release/**"
+      - "apps/cli/scripts/render-demo-video.mjs"
       - "apps/menu-bar/release/**"
       - "apps/menu-bar/scripts/generate-appcast.mjs"
       - "apps/menu-bar/scripts/release-metadata.mjs"

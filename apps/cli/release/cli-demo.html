@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=960" />
+    <title>YTM Enhancer CLI Demo</title>
+    <style>
+      html,
+      body {
+        width: 960px;
+        height: 540px;
+        margin: 0;
+        overflow: hidden;
+        background: #050506;
+      }
+
+      canvas {
+        display: block;
+        width: 960px;
+        height: 540px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas
+      id="demo"
+      width="960"
+      height="540"
+      aria-label="YTM Enhancer CLI demo"
+    ></canvas>
+    <script>
+      const canvas = document.getElementById("demo");
+      const context = canvas.getContext("2d");
+      const width = canvas.width;
+      const height = canvas.height;
+      const durationMs = 9000;
+      const commands = [
+        {
+          start: 400,
+          command: "$ ytme doctor",
+          outputStart: 1600,
+          output: ["OK    Connected to YTM Enhancer", "OK    Browser: Firefox"],
+        },
+        {
+          start: 2600,
+          command: "$ ytme status",
+          outputStart: 3700,
+          output: ["Playing: A Walk - Tycho", "Album: Dive"],
+        },
+        {
+          start: 5000,
+          command: "$ ytme pause",
+          outputStart: 6100,
+          output: ["Paused YouTube Music"],
+        },
+        {
+          start: 6900,
+          command: "$ ytme focus",
+          outputStart: 8050,
+          output: ["Focused YouTube Music"],
+        },
+      ];
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function easeOutCubic(value) {
+        const t = clamp(value, 0, 1);
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      function roundRect(x, y, rectWidth, rectHeight, radius) {
+        const r = Math.min(radius, rectWidth / 2, rectHeight / 2);
+        context.beginPath();
+        context.moveTo(x + r, y);
+        context.arcTo(x + rectWidth, y, x + rectWidth, y + rectHeight, r);
+        context.arcTo(x + rectWidth, y + rectHeight, x, y + rectHeight, r);
+        context.arcTo(x, y + rectHeight, x, y, r);
+        context.arcTo(x, y, x + rectWidth, y, r);
+        context.closePath();
+      }
+
+      function fillRoundRect(x, y, rectWidth, rectHeight, radius, color) {
+        context.fillStyle = color;
+        roundRect(x, y, rectWidth, rectHeight, radius);
+        context.fill();
+      }
+
+      function strokeRoundRect(
+        x,
+        y,
+        rectWidth,
+        rectHeight,
+        radius,
+        color,
+        lineWidth = 1,
+      ) {
+        context.strokeStyle = color;
+        context.lineWidth = lineWidth;
+        roundRect(x, y, rectWidth, rectHeight, radius);
+        context.stroke();
+      }
+
+      function drawText(text, x, y, options = {}) {
+        context.font =
+          options.font ?? "24px ui-monospace, SFMono-Regular, Menlo, monospace";
+        context.fillStyle = options.color ?? "#f4f4f6";
+        context.textAlign = options.align ?? "left";
+        context.textBaseline = options.baseline ?? "alphabetic";
+        context.fillText(text, x, y);
+      }
+
+      function visibleText(text, start, now, charsPerSecond = 18) {
+        if (now < start) return "";
+        const count = Math.floor(((now - start) / 1000) * charsPerSecond);
+        return text.slice(0, clamp(count, 0, text.length));
+      }
+
+      function outputVisible(start, now, lineIndex) {
+        return now >= start + lineIndex * 260;
+      }
+
+      function drawBackground(now) {
+        const gradient = context.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, "#101013");
+        gradient.addColorStop(0.48, "#050506");
+        gradient.addColorStop(1, "#151016");
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, width, height);
+
+        const pulse = 0.42 + Math.sin(now / 900) * 0.08;
+        const glow = context.createRadialGradient(710, 166, 20, 710, 166, 330);
+        glow.addColorStop(0, `rgb(255 42 42 / ${pulse})`);
+        glow.addColorStop(0.42, "rgb(255 42 42 / 0.08)");
+        glow.addColorStop(1, "rgb(255 42 42 / 0)");
+        context.fillStyle = glow;
+        context.fillRect(0, 0, width, height);
+      }
+
+      function drawWindow(x, y, rectWidth, rectHeight, title) {
+        fillRoundRect(x, y, rectWidth, rectHeight, 22, "#111113");
+        strokeRoundRect(
+          x,
+          y,
+          rectWidth,
+          rectHeight,
+          22,
+          "rgb(255 255 255 / 0.16)",
+          1.5,
+        );
+        context.fillStyle = "rgb(255 255 255 / 0.04)";
+        context.fillRect(x + 1, y + 1, rectWidth - 2, 48);
+        context.save();
+        roundRect(x, y, rectWidth, rectHeight, 22);
+        context.clip();
+        context.fillRect(x, y, rectWidth, 52);
+        context.restore();
+
+        ["#ff5f57", "#ffbd2e", "#28c840"].forEach((color, index) => {
+          context.beginPath();
+          context.fillStyle = color;
+          context.arc(x + 28 + index * 20, y + 27, 6, 0, Math.PI * 2);
+          context.fill();
+        });
+        drawText(title, x + rectWidth - 28, y + 34, {
+          align: "right",
+          color: "#9a9aa2",
+          font: "13px Inter, Segoe UI, sans-serif",
+        });
+      }
+
+      function drawTerminal(now) {
+        const x = 54;
+        const y = 54;
+        drawWindow(x, y, 552, 432, "ytme");
+
+        const lineHeight = 31;
+        let lineY = y + 88;
+        for (const item of commands) {
+          const command = visibleText(item.command, item.start, now, 22);
+          if (!command && now < item.start) continue;
+          drawText(command, x + 36, lineY, {
+            color: "#f4f4f7",
+            font: "24px ui-monospace, SFMono-Regular, Menlo, monospace",
+          });
+          if (command.length < item.command.length && now >= item.start) {
+            const cursorX = x + 36 + context.measureText(command).width + 4;
+            context.fillStyle = "#ff2a2a";
+            context.fillRect(cursorX, lineY - 22, 10, 25);
+          }
+          lineY += lineHeight;
+
+          item.output.forEach((line, index) => {
+            if (!outputVisible(item.outputStart, now, index)) return;
+            const highlight =
+              line.startsWith("OK") || line.startsWith("Playing");
+            drawText(line, x + 36, lineY, {
+              color: highlight ? "#ffffff" : "#cfcfd6",
+              font: "22px ui-monospace, SFMono-Regular, Menlo, monospace",
+            });
+            lineY += lineHeight;
+          });
+          lineY += 20;
+        }
+      }
+
+      function drawAlbumArt(x, y, size) {
+        const gradient = context.createLinearGradient(x, y, x + size, y + size);
+        gradient.addColorStop(0, "#f2bc8d");
+        gradient.addColorStop(0.45, "#db8467");
+        gradient.addColorStop(1, "#607f80");
+        fillRoundRect(x, y, size, size, 16, gradient);
+
+        context.fillStyle = "rgb(50 87 91 / 0.55)";
+        context.beginPath();
+        context.ellipse(
+          x + size * 0.55,
+          y + size * 0.74,
+          size * 0.72,
+          size * 0.22,
+          -0.16,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+
+        context.strokeStyle = "rgb(255 255 255 / 0.62)";
+        context.lineWidth = 4;
+        context.beginPath();
+        context.ellipse(
+          x + size * 0.25,
+          y + size * 0.75,
+          size * 0.62,
+          size * 0.2,
+          0.08,
+          Math.PI * 1.05,
+          Math.PI * 1.82,
+        );
+        context.stroke();
+
+        context.fillStyle = "rgb(255 255 255 / 0.9)";
+        context.beginPath();
+        context.arc(
+          x + size * 0.47,
+          y + size * 0.72,
+          size * 0.14,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+        fillRoundRect(
+          x + size * 0.54,
+          y + size * 0.28,
+          size * 0.04,
+          size * 0.44,
+          3,
+          "rgb(255 255 255 / 0.9)",
+        );
+        fillRoundRect(
+          x + size * 0.55,
+          y + size * 0.27,
+          size * 0.28,
+          size * 0.06,
+          4,
+          "rgb(255 255 255 / 0.9)",
+        );
+      }
+
+      function drawNowPlaying(now) {
+        const x = 640;
+        const y = 72;
+        const cardWidth = 266;
+        const cardHeight = 396;
+
+        fillRoundRect(x, y, cardWidth, cardHeight, 22, "rgb(18 18 20 / 0.92)");
+        strokeRoundRect(
+          x,
+          y,
+          cardWidth,
+          cardHeight,
+          22,
+          "rgb(255 255 255 / 0.15)",
+        );
+
+        fillRoundRect(x + 22, y + 22, 140, 26, 13, "rgb(48 196 182 / 0.14)");
+        drawText("Connected Apps", x + 40, y + 41, {
+          color: "#b8fff6",
+          font: "13px Inter, Segoe UI, sans-serif",
+        });
+        context.fillStyle = "#30c4b6";
+        context.beginPath();
+        context.arc(x + 30, y + 34, 4, 0, Math.PI * 2);
+        context.fill();
+
+        drawAlbumArt(x + 32, y + 76, 86);
+        drawText("YTM Enhancer CLI", x + 134, y + 97, {
+          color: "#ffffff",
+          font: "19px Inter, Segoe UI, sans-serif",
+        });
+        const paused = now >= 6100 && now < 7600;
+        drawText(paused ? "Paused" : "Playing", x + 134, y + 123, {
+          color: paused ? "#ffb86b" : "#9a9aa2",
+          font: "13px Inter, Segoe UI, sans-serif",
+        });
+        drawText("A Walk", x + 32, y + 190, {
+          color: "#ffffff",
+          font: "28px Inter, Segoe UI, sans-serif",
+        });
+        drawText("Tycho - Dive", x + 32, y + 224, {
+          color: "#cacad0",
+          font: "18px Inter, Segoe UI, sans-serif",
+        });
+
+        fillRoundRect(x + 32, y + 254, 202, 6, 999, "#37373d");
+        const fillWidth = 82 + easeOutCubic(now / durationMs) * 96;
+        fillRoundRect(x + 32, y + 254, fillWidth, 6, 999, "#ff2a2a");
+        drawText(paused ? "2:58" : "3:02", x + 32, y + 286, {
+          color: "#a3a3aa",
+          font: "14px Inter, Segoe UI, sans-serif",
+        });
+        drawText("5:17", x + 234, y + 286, {
+          align: "right",
+          color: "#a3a3aa",
+          font: "14px Inter, Segoe UI, sans-serif",
+        });
+
+        const chips = ["status", "toggle", "focus", "next"];
+        chips.forEach((chip, index) => {
+          const chipX = x + 32 + (index % 2) * 102;
+          const chipY = y + 320 + Math.floor(index / 2) * 38;
+          fillRoundRect(chipX, chipY, 88, 28, 8, "rgb(255 255 255 / 0.08)");
+          drawText(chip, chipX + 44, chipY + 19, {
+            align: "center",
+            color: "#eeeeef",
+            font: "13px ui-monospace, SFMono-Regular, Menlo, monospace",
+          });
+        });
+      }
+
+      function drawFrame(now) {
+        const time = ((now % durationMs) + durationMs) % durationMs;
+        context.clearRect(0, 0, width, height);
+        drawBackground(time);
+        drawTerminal(time);
+        drawNowPlaying(time);
+      }
+
+      function play() {
+        const started = performance.now();
+        function step(now) {
+          drawFrame(now - started);
+          requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      }
+
+      window.renderCliDemoFrame = drawFrame;
+      window.CLI_DEMO_DURATION_MS = durationMs;
+      drawFrame(7600);
+      if (!new URLSearchParams(window.location.search).has("render")) {
+        play();
+      }
+    </script>
+  </body>
+</html>

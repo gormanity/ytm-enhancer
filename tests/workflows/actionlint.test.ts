@@ -73,6 +73,8 @@ describe("GitHub Actions workflow linting", () => {
     expect(workflow).toContain("Product Pages");
     expect(workflow).toContain("branches: [main]");
     expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).toContain("apps/cli/release/**");
+    expect(workflow).toContain("apps/cli/scripts/render-demo-video.mjs");
     expect(workflow).toContain("pages: write");
     expect(workflow).toContain("id-token: write");
     expect(workflow).toContain("cancel-in-progress: false");

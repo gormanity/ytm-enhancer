@@ -403,7 +403,8 @@ function siteCss() {
       }
 
       .visual-frame,
-      .terminal-frame {
+      .terminal-frame,
+      .video-frame {
         min-width: 0;
         overflow: hidden;
         border: 1px solid rgb(255 255 255 / 0.13);
@@ -416,6 +417,14 @@ function siteCss() {
         display: block;
         width: 100%;
         height: auto;
+      }
+
+      .video-frame video {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        background: #050506;
       }
 
       .terminal-frame {
@@ -654,6 +663,16 @@ function writeSitePages({ metadata, outputPath }) {
       "apps/windows-tray/release/windows-tray-screenshot.png",
     ),
     fileName: "windows-tray-screenshot.png",
+  });
+  writeSiteAsset({
+    siteRoot,
+    sourcePath: resolve(repoRoot, "apps/cli/release/cli-demo.webm"),
+    fileName: "cli-demo.webm",
+  });
+  writeSiteAsset({
+    siteRoot,
+    sourcePath: resolve(repoRoot, "apps/cli/release/cli-demo-poster.png"),
+    fileName: "cli-demo-poster.png",
   });
   writeFileSync(resolve(siteRoot, ".nojekyll"), "");
   writeFileSync(resolve(siteRoot, "favicon.svg"), iconSvg);
@@ -963,16 +982,14 @@ function writeSitePages({ metadata, outputPath }) {
               Connected Apps bridge as the desktop companion apps.
             </p>
             <div class="actions" aria-label="CLI resources">
-              <a class="button button-primary" href="https://github.com/gormanity/ytm-enhancer/tree/main/apps/cli">Read CLI README</a>
+              <a class="button button-primary" href="#install-title">Install for macOS/Linux</a>
               <a class="button" href="../connected-apps/">Connected Apps Beta</a>
             </div>
           </div>
-          <figure class="terminal-frame" aria-label="CLI example">
-            <code>$ ytme status
-Playing: Artist - Track
-
-$ ytme toggle
-Paused YouTube Music</code>
+          <figure class="video-frame" aria-label="CLI demo video">
+            <video autoplay muted loop playsinline poster="../assets/cli-demo-poster.png">
+              <source src="../assets/cli-demo.webm" type="video/webm">
+            </video>
           </figure>
         </section>
 

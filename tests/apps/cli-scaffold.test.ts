@@ -62,6 +62,28 @@ describe("YTM Enhancer CLI app scaffold", () => {
     );
   });
 
+  it("has a repeatable CLI demo video source", () => {
+    const demoSource = read("apps/cli/release/cli-demo.html");
+    const demoRenderer = read("apps/cli/scripts/render-demo-video.mjs");
+    const packageJson = JSON.parse(read("package.json")) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(demoSource).toContain("YTM Enhancer CLI");
+    expect(demoSource).toContain("$ ytme doctor");
+    expect(demoSource).toContain("$ ytme status");
+    expect(demoSource).toContain("$ ytme pause");
+    expect(demoSource).toContain("Connected Apps");
+    expect(demoSource).toContain("window.renderCliDemoFrame");
+    expect(demoRenderer).toContain("cli-demo.html");
+    expect(demoRenderer).toContain("cli-demo.webm");
+    expect(demoRenderer).toContain("cli-demo-poster.png");
+    expect(demoRenderer).toContain("canvas.captureStream(30)");
+    expect(packageJson.scripts["cli:demo-video"]).toBe(
+      "node apps/cli/scripts/render-demo-video.mjs",
+    );
+  });
+
   it("registers the CLI as a first-party Connected App", () => {
     const settingsSource = read("src/core/connectors/settings.ts");
 

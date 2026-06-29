@@ -1522,11 +1522,17 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(appcastScript).toContain("menu-bar-screenshot.png");
     expect(appcastScript).toContain("windows-tray-screenshot.png");
+    expect(appcastScript).toContain("cli-demo.webm");
+    expect(appcastScript).toContain("cli-demo-poster.png");
     expect(appcastScript).toContain("playback-controls.png");
     expect(appcastScript).toContain("mini-player.png");
     expect(appcastScript).toContain("Connected Apps Beta");
     expect(appcastScript).toContain("YTM Tray");
     expect(appcastScript).toContain("YTM Enhancer CLI");
+    expect(appcastScript).toContain("Install for macOS/Linux");
+    expect(appcastScript).toContain('poster="../assets/cli-demo-poster.png"');
+    expect(appcastScript).toContain('src="../assets/cli-demo.webm"');
+    expect(appcastScript).not.toContain("Read CLI README");
     expect(appcastScript).toContain("Browser Support");
     expect(appcastScript).toMatch(
       /Chrome, Chromium, Microsoft Edge, and\s+Firefox on macOS/,
@@ -1682,6 +1688,12 @@ describe("menu bar connector app scaffold", () => {
     const copiedWindowsTrayScreenshot = readFileSync(
       resolve(outputRoot, "site/assets/windows-tray-screenshot.png"),
     );
+    const copiedCliDemoVideo = readFileSync(
+      resolve(outputRoot, "site/assets/cli-demo.webm"),
+    );
+    const copiedCliDemoPoster = readFileSync(
+      resolve(outputRoot, "site/assets/cli-demo-poster.png"),
+    );
 
     expect(releaseIndex.schemaVersion).toBe(1);
     expect(releaseIndex.products.extension.latestVersion).toBe(
@@ -1761,10 +1773,20 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(windowsTrayPage).toContain("windows-tray-v&amp;expanded=true");
     expect(cliPage).toContain("YTM Enhancer CLI");
+    expect(cliPage).toContain("Install for macOS/Linux");
+    expect(cliPage).toContain("../assets/cli-demo.webm");
+    expect(cliPage).toContain("../assets/cli-demo-poster.png");
+    expect(cliPage).not.toContain("Read CLI README");
     expect(cliPage).toContain("Chrome, Chromium, Microsoft Edge, Brave, and");
     expect(cliPage).toMatch(/Chromium and Firefox\s+on supported/);
     expect(cliPage).toContain("apps/cli/scripts/install-native-hosts.sh");
     expect([...copiedWindowsTrayScreenshot.subarray(0, 8)]).toEqual([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    expect([...copiedCliDemoVideo.subarray(0, 4)]).toEqual([
+      0x1a, 0x45, 0xdf, 0xa3,
+    ]);
+    expect([...copiedCliDemoPoster.subarray(0, 8)]).toEqual([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
     ]);
   });
