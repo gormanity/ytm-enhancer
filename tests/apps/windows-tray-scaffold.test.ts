@@ -151,6 +151,8 @@ describe("Windows tray connector scaffold", () => {
   it("has a populated visual QA fixture for tray screenshots", () => {
     const program = read("src/YTMTray/Program.cs");
     const visualSmoke = read("../../scripts/windows-qa/tray-visual-smoke.ps1");
+    const screenshotSource = read("release/windows-tray-screenshot.html");
+    const screenshotRenderer = read("scripts/render-release-screenshot.mjs");
 
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain('"YTM_TRAY_VISUAL_STATUS"');
@@ -171,6 +173,17 @@ describe("Windows tray connector scaffold", () => {
     expect(visualSmoke).toContain("metadata scroll advanced");
     expect(visualSmoke).toContain("Save-RectangleScreenshot");
     expect(visualSmoke).toContain("$PopupWindow.Current.BoundingRectangle");
+    expect(screenshotSource).toContain("A Walk");
+    expect(screenshotSource).toContain("Tycho - 2011");
+    expect(screenshotSource).toContain("Check for Updates");
+    expect(screenshotSource).toContain(
+      "packages/connector-ui-assets/playback/playback-pause.svg",
+    );
+    expect(screenshotRenderer).toContain("windows-tray-screenshot.html");
+    expect(screenshotRenderer).toContain("windows-tray-screenshot.png");
+    expect(screenshotRenderer).toContain(
+      "viewport: { width: 442, height: 574 }",
+    );
   });
 
   it("reopens the tray popup when button QA finds a hidden stale window", () => {
@@ -383,6 +396,9 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(packageJson.scripts["windows-tray:update-manifest"]).toBe(
       "node apps/windows-tray/scripts/generate-update-manifest.mjs",
+    );
+    expect(packageJson.scripts["windows-tray:screenshot"]).toBe(
+      "node apps/windows-tray/scripts/render-release-screenshot.mjs",
     );
   });
 

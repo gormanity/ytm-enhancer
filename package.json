@@ -37,6 +37,7 @@
     "windows-tray:package:win-x64": "node apps/windows-tray/scripts/package-release.mjs --runtime=win-x64",
     "windows-tray:package:win-arm64": "node apps/windows-tray/scripts/package-release.mjs --runtime=win-arm64",
     "windows-tray:update-manifest": "node apps/windows-tray/scripts/generate-update-manifest.mjs",
+    "windows-tray:screenshot": "node apps/windows-tray/scripts/render-release-screenshot.mjs",
     "package": "pnpm run build && node scripts/package.mjs",
     "lint:addons:firefox": "pnpm run build:firefox && pnpm run lint:addons:firefox:dist",
     "lint:addons:firefox:dist": "addons-linter dist/firefox",

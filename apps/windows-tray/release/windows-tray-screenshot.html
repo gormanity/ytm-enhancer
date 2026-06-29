@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=442" />
+    <title>YTM Tray Promo Screenshot</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      :root {
+        color-scheme: dark;
+        font-family:
+          "Segoe UI",
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: #000;
+        color: #fff;
+      }
+
+      body {
+        width: 442px;
+        height: 574px;
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+      }
+
+      .popup {
+        position: relative;
+        width: 442px;
+        height: 574px;
+        overflow: hidden;
+        border: 1px solid #58585e;
+        border-radius: 18px;
+        background:
+          linear-gradient(rgb(255 255 255 / 0.07), transparent 180px), #080809;
+        box-shadow: 0 22px 70px rgb(0 0 0 / 0.42);
+      }
+
+      .popup::before {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: 18px;
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+        content: "";
+      }
+
+      .close {
+        position: absolute;
+        top: 18px;
+        right: 20px;
+        width: 16px;
+        height: 16px;
+        opacity: 0.8;
+      }
+
+      .close::before,
+      .close::after {
+        position: absolute;
+        top: 7px;
+        left: 1px;
+        width: 14px;
+        height: 1.5px;
+        border-radius: 1px;
+        background: #a6a6ae;
+        content: "";
+      }
+
+      .close::before {
+        transform: rotate(45deg);
+      }
+
+      .close::after {
+        transform: rotate(-45deg);
+      }
+
+      .artwork {
+        position: absolute;
+        top: 32px;
+        left: 32px;
+        width: 92px;
+        height: 92px;
+        overflow: hidden;
+        border: 1px solid rgb(255 255 255 / 0.16);
+        border-radius: 10px;
+        background:
+          radial-gradient(circle at 62% 44%, #f27d5e 0 22%, transparent 23%),
+          linear-gradient(153deg, #f0bc90 0%, #df8b68 36%, #6d8e90 72%), #222;
+      }
+
+      .artwork::before {
+        position: absolute;
+        right: -18px;
+        bottom: 23px;
+        width: 132px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgb(40 84 90 / 0.5);
+        transform: rotate(-9deg);
+        content: "";
+      }
+
+      .artwork::after {
+        position: absolute;
+        left: -14px;
+        bottom: 16px;
+        width: 116px;
+        height: 32px;
+        border-top: 3px solid rgb(255 255 255 / 0.62);
+        border-radius: 50%;
+        transform: rotate(4deg);
+        content: "";
+      }
+
+      .note {
+        position: absolute;
+        left: 29px;
+        bottom: 21px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgb(255 255 255 / 0.88);
+      }
+
+      .note::before {
+        position: absolute;
+        right: 2px;
+        bottom: 9px;
+        width: 6px;
+        height: 43px;
+        border-radius: 3px;
+        background: rgb(255 255 255 / 0.88);
+        content: "";
+      }
+
+      .note::after {
+        position: absolute;
+        right: -19px;
+        bottom: 38px;
+        width: 26px;
+        height: 7px;
+        border-radius: 4px;
+        background: rgb(255 255 255 / 0.88);
+        transform: rotate(-8deg);
+        content: "";
+      }
+
+      .status {
+        position: absolute;
+        top: 22px;
+        right: 50px;
+        color: #919198;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .title {
+        position: absolute;
+        top: 37px;
+        left: 148px;
+        right: 50px;
+        overflow: hidden;
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.18;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .album {
+        position: absolute;
+        top: 78px;
+        left: 148px;
+        right: 50px;
+        overflow: hidden;
+        color: #cacad0;
+        font-size: 17px;
+        font-weight: 750;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .artist {
+        position: absolute;
+        top: 106px;
+        left: 148px;
+        right: 50px;
+        overflow: hidden;
+        color: #919198;
+        font-size: 15px;
+        font-weight: 750;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .progress {
+        position: absolute;
+        top: 163px;
+        left: 32px;
+        width: 376px;
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #33333a;
+      }
+
+      .progress-fill {
+        width: 62%;
+        height: 100%;
+        border-radius: inherit;
+        background: #ff2012;
+      }
+
+      .time {
+        position: absolute;
+        top: 180px;
+        color: #919198;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .elapsed {
+        left: 32px;
+      }
+
+      .duration {
+        right: 34px;
+      }
+
+      .controls {
+        position: absolute;
+        top: 210px;
+        left: 60px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .control {
+        display: grid;
+        width: 46px;
+        height: 46px;
+        place-items: center;
+        opacity: 0.58;
+      }
+
+      .control.prominent {
+        width: 64px;
+        height: 64px;
+        opacity: 1;
+      }
+
+      .control img {
+        display: block;
+        width: 22px;
+        height: 22px;
+        filter: invert(1);
+      }
+
+      .control.prominent img {
+        width: 28px;
+        height: 28px;
+      }
+
+      .divider {
+        position: absolute;
+        left: 32px;
+        width: 376px;
+        height: 1px;
+        background: #3a3a3e;
+      }
+
+      .divider.top {
+        top: 294px;
+      }
+
+      .divider.bottom {
+        top: 426px;
+      }
+
+      .up-next {
+        position: absolute;
+        top: 321px;
+        left: 32px;
+        color: #9fb3d8;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .next-art {
+        position: absolute;
+        top: 354px;
+        left: 32px;
+        width: 54px;
+        height: 54px;
+        overflow: hidden;
+        border: 1px solid rgb(255 255 255 / 0.13);
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 67% 33%, #b8bdbe 0 18%, transparent 19%),
+          radial-gradient(circle at 28% 42%, #777 0 14%, transparent 15%),
+          linear-gradient(135deg, #707070, #202124);
+      }
+
+      .next-title {
+        position: absolute;
+        top: 353px;
+        left: 104px;
+        right: 34px;
+        overflow: hidden;
+        color: #cacad0;
+        font-size: 17px;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .next-detail {
+        position: absolute;
+        top: 383px;
+        left: 104px;
+        right: 34px;
+        color: #919198;
+        font-size: 15px;
+        font-weight: 650;
+      }
+
+      .actions {
+        position: absolute;
+        top: 444px;
+        left: 32px;
+        right: 34px;
+        display: grid;
+        gap: 5px;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 22px 1fr;
+        gap: 16px;
+        align-items: center;
+        min-height: 25px;
+        color: #f3f3f5;
+        font-size: 16px;
+        font-weight: 750;
+      }
+
+      .row-icon {
+        position: relative;
+        width: 18px;
+        height: 18px;
+        color: #d9d9df;
+      }
+
+      .focus-icon {
+        border: 2px solid currentcolor;
+        border-radius: 2px;
+      }
+
+      .focus-icon::before {
+        position: absolute;
+        top: -4px;
+        right: -5px;
+        width: 10px;
+        height: 10px;
+        border-top: 2px solid currentcolor;
+        border-right: 2px solid currentcolor;
+        content: "";
+      }
+
+      .focus-icon::after {
+        position: absolute;
+        top: -5px;
+        right: -7px;
+        width: 11px;
+        height: 2px;
+        background: currentcolor;
+        transform: rotate(-45deg);
+        transform-origin: right center;
+        content: "";
+      }
+
+      .update-icon {
+        border: 2px solid currentcolor;
+        border-right-color: transparent;
+        border-radius: 50%;
+      }
+
+      .update-icon::after {
+        position: absolute;
+        right: -2px;
+        bottom: 1px;
+        width: 7px;
+        height: 7px;
+        border-right: 2px solid currentcolor;
+        border-bottom: 2px solid currentcolor;
+        transform: rotate(-20deg);
+        content: "";
+      }
+
+      .info-icon {
+        border: 2px solid currentcolor;
+        border-radius: 50%;
+      }
+
+      .info-icon::before {
+        position: absolute;
+        top: 3px;
+        left: 7px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: currentcolor;
+        content: "";
+      }
+
+      .info-icon::after {
+        position: absolute;
+        top: 8px;
+        left: 7px;
+        width: 3px;
+        height: 6px;
+        border-radius: 2px;
+        background: currentcolor;
+        content: "";
+      }
+
+      .quit-icon {
+        border: 2px solid currentcolor;
+        border-radius: 50%;
+      }
+
+      .quit-icon::before,
+      .quit-icon::after {
+        position: absolute;
+        top: 7px;
+        left: 4px;
+        width: 8px;
+        height: 2px;
+        border-radius: 1px;
+        background: currentcolor;
+        content: "";
+      }
+
+      .quit-icon::before {
+        transform: rotate(45deg);
+      }
+
+      .quit-icon::after {
+        transform: rotate(-45deg);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="popup" aria-label="YTM Tray promo screenshot">
+      <div class="close" aria-hidden="true"></div>
+      <div class="artwork" aria-hidden="true"><div class="note"></div></div>
+      <div class="status">Playing</div>
+      <div class="title">A Walk</div>
+      <div class="album">Dive</div>
+      <div class="artist">Tycho - 2011</div>
+
+      <div class="progress" aria-hidden="true">
+        <div class="progress-fill"></div>
+      </div>
+      <div class="time elapsed">2:58</div>
+      <div class="time duration">5:17</div>
+
+      <div class="controls" aria-hidden="true">
+        <div class="control">
+          <img
+            src="../../../packages/connector-ui-assets/playback/playback-shuffle.svg"
+            alt=""
+          />
+        </div>
+        <div class="control">
+          <img
+            src="../../../packages/connector-ui-assets/playback/playback-previous.svg"
+            alt=""
+          />
+        </div>
+        <div class="control prominent">
+          <img
+            src="../../../packages/connector-ui-assets/playback/playback-pause.svg"
+            alt=""
+          />
+        </div>
+        <div class="control">
+          <img
+            src="../../../packages/connector-ui-assets/playback/playback-next.svg"
+            alt=""
+          />
+        </div>
+        <div class="control">
+          <img
+            src="../../../packages/connector-ui-assets/playback/playback-repeat.svg"
+            alt=""
+          />
+        </div>
+      </div>
+
+      <div class="divider top"></div>
+      <div class="up-next">Up Next</div>
+      <div class="next-art" aria-hidden="true"></div>
+      <div class="next-title">Send And Receive (Chachi Jones Remix)</div>
+      <div class="next-detail">Tycho</div>
+      <div class="divider bottom"></div>
+
+      <div class="actions">
+        <div class="row">
+          <div class="row-icon focus-icon" aria-hidden="true"></div>
+          <div>Focus YouTube Music</div>
+        </div>
+        <div class="row">
+          <div class="row-icon update-icon" aria-hidden="true"></div>
+          <div>Check for Updates</div>
+        </div>
+        <div class="row">
+          <div class="row-icon info-icon" aria-hidden="true"></div>
+          <div>About YTM Tray</div>
+        </div>
+        <div class="row">
+          <div class="row-icon quit-icon" aria-hidden="true"></div>
+          <div>Quit</div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
