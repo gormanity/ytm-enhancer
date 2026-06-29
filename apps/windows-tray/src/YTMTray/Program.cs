@@ -50,6 +50,9 @@ internal static class Program
 
 internal sealed class DemoConnectorConnection : IConnectorConnection
 {
+    private const string DemoCurrentArtworkUrl = "ytm-tray-resource://demo-current-artwork";
+    private const string DemoNextArtworkUrl = "ytm-tray-resource://demo-next-artwork";
+
     private readonly string? visualStatus;
     private readonly bool useScrollQaMetadata;
     private Action<HostMessage>? onMessage;
@@ -111,13 +114,13 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
                 "Tycho and the Extended QA Ensemble",
                 "Dive Into a Very Wide Album Name",
                 2011,
-                null,
+                DemoCurrentArtworkUrl,
                 new TrackMetadata(
                     "Send and Receive (Chachi Jones Remix)",
                     "Tycho and the Extended QA Ensemble",
                     null,
                     null,
-                    null
+                    DemoNextArtworkUrl
                 ),
                 true,
                 178,
@@ -132,8 +135,8 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
             "Tycho",
             "Dive",
             2011,
-            null,
-            new TrackMetadata("Hours", "Tycho", null, null, null),
+            DemoCurrentArtworkUrl,
+            new TrackMetadata("Hours", "Tycho", null, null, DemoNextArtworkUrl),
             true,
             178,
             317,

@@ -21,6 +21,13 @@ function Assert-PathExists {
   }
 }
 
+function Assert-PathMissing {
+  param([Parameter(Mandatory = $true)][string] $Path)
+  if (Test-Path -LiteralPath $Path) {
+    throw "Expected path to be removed: $Path"
+  }
+}
+
 function Assert-Equal {
   param(
     [Parameter(Mandatory = $true)][object] $Expected,
@@ -170,6 +177,11 @@ try {
 
   & (Join-Path $RepositoryRoot "apps/windows-tray/scripts/uninstall-native-hosts.ps1") `
     -InstallRoot $InstallRoot
+
+  Assert-PathMissing $InstallRoot
+  Assert-PathMissing $UninstallRegistryKey
+  Assert-PathMissing (Join-Path $StartMenuFolder "YTM Tray.lnk")
+  Assert-PathMissing (Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk")
 
   if (Test-Path -LiteralPath $ExtractRoot) {
     Remove-Item -LiteralPath $ExtractRoot -Recurse -Force

@@ -111,6 +111,10 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("PlaybackButtonIcon.Shuffle");
     expect(popupForm).toContain("PlaybackButtonIcon.RepeatOne");
     expect(popupForm).toContain("PlaybackSvgIconRenderer.Draw");
+    expect(popupForm).toContain("PlaybackSvgIconRenderer.IntrinsicSize");
+    expect(popupForm).toContain("PlaybackIconDisplayScale");
+    expect(popupForm).toContain("ScaledIconSize");
+    expect(popupForm).toContain("CenteredIconBounds");
     expect(popupForm).toContain("PopupActionSvgIconRenderer.Draw");
     expect(popupForm).toContain("TextFormatFlags.GlyphOverhangPadding");
     expect(popupForm).toContain("TextFormatFlags.NoClipping");
@@ -125,6 +129,12 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain('"About YTM Tray"');
     expect(popupForm).toContain("ToolTip controlTips");
     expect(popupForm).toContain("private bool hasPlayableTrack");
+    expect(popupForm).toContain("PackagedArtworkScheme");
+    expect(popupForm).toContain("FixtureArtworkHost");
+    expect(popupForm).toContain("TryLoadPackagedArtwork");
+    expect(popupForm).toContain("PackagedArtworkResourceName");
+    expect(popupForm).toContain("Resources.{resourceName}.png");
+    expect(popupForm).not.toContain("|| uri.Scheme != PackagedArtworkScheme");
     expect(popupForm).toContain(
       "ShowControlStatus(status, ControlStatusTextColor(status), !isNeutral)",
     );
@@ -156,11 +166,17 @@ describe("Windows tray connector scaffold", () => {
     expect(project).toContain(
       "packages\\connector-ui-assets\\status\\extension-icon-*.svg",
     );
+    expect(project).toContain(
+      "packages\\connector-ui-assets\\demo-artwork\\*.png",
+    );
     expect(project).toContain('Link="Resources\\%(Filename)%(Extension)"');
     expect(renderer).toContain("playback-shuffle");
     expect(renderer).toContain("playback-repeat-one");
     expect(renderer).toContain("action-focus");
     expect(renderer).toContain("extension-icon-monochrome-ring");
+    expect(renderer).toContain("IntrinsicPixelSize");
+    expect(renderer).toContain("ParseIntrinsicSize");
+    expect(renderer).toContain("ParseOptionalSvgLength");
     expect(renderer).toContain("SvgPathParser.Parse");
     expect(renderer).toContain("ParseLineElement");
     expect(renderer).toContain("ParseCircleElement");
@@ -192,6 +208,7 @@ describe("Windows tray connector scaffold", () => {
     const pausedFixture = readRepo(
       "tests/e2e/fixtures/player-loaded-paused.html",
     );
+    const fixtureHelper = readRepo("tests/e2e/helpers/fixtures.ts");
     const releaseScreenshot = readRepo(
       "scripts/windows-qa/tray-release-screenshot.ps1",
     );
@@ -203,6 +220,8 @@ describe("Windows tray connector scaffold", () => {
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain('"YTM_TRAY_VISUAL_STATUS"');
     expect(program).toContain('"YTM_TRAY_SCROLL_QA"');
+    expect(program).toContain('"ytm-tray-resource://demo-current-artwork"');
+    expect(program).toContain('"ytm-tray-resource://demo-next-artwork"');
     expect(program).toContain("useScrollQaMetadata");
     expect(program).toContain("DemoConnectorConnection : IConnectorConnection");
     expect(program).toContain("DemoConnectorConnection(visualDemoStatus)");
@@ -225,6 +244,16 @@ describe("Windows tray connector scaffold", () => {
     expect(buttonSmoke).toContain("Move-CursorAwayFromRectangle");
     expect(buttonSmoke).toContain("tray-screenshot.json");
     expect(pausedFixture).toContain('video class="html5-main-video"');
+    expect(pausedFixture).toContain(
+      "https://ytm-enhancer.local/demo-current-artwork.png",
+    );
+    expect(pausedFixture).toContain(
+      "https://ytm-enhancer.local/demo-next-artwork.png",
+    );
+    expect(fixtureHelper).toContain("routeDemoArtwork");
+    expect(fixtureHelper).toContain(
+      "packages/connector-ui-assets/demo-artwork",
+    );
     expect(pausedFixture).toContain("publishMediaUpdate");
     expect(pausedFixture).toContain("setInterval(advanceProgress");
     expect(releaseScreenshot).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
@@ -235,8 +264,11 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(releaseScreenshot).toContain("--project=edge");
     expect(remoteReleaseScreenshot).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
+    expect(remoteReleaseScreenshot).toContain("YTME_SCREENSHOT_BASE64_CHUNK");
     expect(remoteReleaseScreenshot).toContain("final = block");
-    expect(remoteReleaseScreenshot).toContain("tr -cd 'A-Za-z0-9+/=\\n'");
+    expect(remoteReleaseScreenshot).toContain(
+      "capture && /^YTME_SCREENSHOT_BASE64_CHUNK /",
+    );
     expect(remoteReleaseScreenshot).toContain('<"$encoded_file"');
     expect(remoteReleaseScreenshot).toContain("mask-release-screenshot.mjs");
     expect(releaseScreenshotMask).toContain("DEFAULT_RADIUS = 18");

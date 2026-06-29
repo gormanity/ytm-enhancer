@@ -21,6 +21,10 @@
       Include="..\..\..\..\packages\connector-ui-assets\status\extension-icon-*.svg"
       Link="Resources\%(Filename)%(Extension)"
     />
+    <EmbeddedResource
+      Include="..\..\..\..\packages\connector-ui-assets\demo-artwork\*.png"
+      Link="Resources\%(Filename)%(Extension)"
+    />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\YTMTray.Core\YTMTray.Core.csproj" />

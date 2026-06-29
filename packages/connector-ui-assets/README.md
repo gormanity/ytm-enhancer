@@ -12,3 +12,7 @@ that cannot use a platform symbol library.
 
 `status/` contains the shared monochrome app status icons used by the macOS menu
 bar and Windows tray surfaces.
+
+`demo-artwork/` contains deterministic release-demo thumbnails used by native
+connector screenshot automation so promo captures do not depend on network
+artwork availability.

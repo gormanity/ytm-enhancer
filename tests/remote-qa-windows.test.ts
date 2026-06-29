@@ -152,8 +152,11 @@ describe("Windows remote QA scaffold", () => {
       "scripts\\windows-qa\\tray-release-screenshot.ps1",
     );
     expect(releaseScreenshotShell).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
+    expect(releaseScreenshotShell).toContain("YTME_SCREENSHOT_BASE64_CHUNK");
     expect(releaseScreenshotShell).toContain("final = block");
-    expect(releaseScreenshotShell).toContain("tr -cd 'A-Za-z0-9+/=\\n'");
+    expect(releaseScreenshotShell).toContain(
+      "capture && /^YTME_SCREENSHOT_BASE64_CHUNK /",
+    );
     expect(releaseScreenshotShell).toContain("base64 --decode");
     expect(releaseScreenshotShell).toContain('<"$encoded_file"');
     expect(releaseScreenshotShell).toContain("mask-release-screenshot.mjs");
@@ -191,6 +194,11 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).toContain("release.json");
     expect(packageSmoke).toContain("Read-FilePrefixBytes");
     expect(packageSmoke).toContain("[System.IO.File]::OpenRead");
+    expect(packageSmoke).toContain("Assert-PathMissing $InstallRoot");
+    expect(packageSmoke).toContain("Assert-PathMissing $UninstallRegistryKey");
+    expect(packageSmoke).toContain(
+      'Assert-PathMissing (Join-Path $StartMenuFolder "YTM Tray.lnk")',
+    );
     expect(packageSmoke).not.toContain("-Encoding Byte");
     expect(packageSmokeShell).toContain(
       "scripts\\windows-qa\\tray-package-smoke.ps1",

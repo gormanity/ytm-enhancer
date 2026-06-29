@@ -38,6 +38,16 @@ internal static class PlaybackSvgIconRenderer
         return SvgIconRenderer.Draw(graphics, definition, bounds, color);
     }
 
+    public static Size IntrinsicSize(PlaybackButtonIcon icon)
+    {
+        if (!Icons.Value.TryGetValue(icon, out var definition))
+        {
+            return new Size(24, 24);
+        }
+
+        return SvgIconRenderer.IntrinsicPixelSize(definition);
+    }
+
     private static IReadOnlyDictionary<PlaybackButtonIcon, SvgIconDefinition> LoadIcons() =>
         ResourceNames.ToDictionary(entry => entry.Key, entry => SvgIconRenderer.Load(entry.Value));
 }
@@ -166,13 +176,20 @@ internal static class SvgIconRenderer
         var document = XDocument.Load(stream);
         var svg = document.Root ?? throw new InvalidOperationException("SVG root is missing.");
         var viewBox = ParseViewBox(svg.Attribute("viewBox")?.Value);
+        var intrinsicSize = ParseIntrinsicSize(svg, viewBox);
         var elements = svg
             .Descendants()
             .SelectMany(ParseGraphicElement)
             .ToArray();
 
-        return new SvgIconDefinition(viewBox, elements);
+        return new SvgIconDefinition(viewBox, intrinsicSize, elements);
     }
+
+    public static Size IntrinsicPixelSize(SvgIconDefinition definition) =>
+        new(
+            Math.Max(1, (int)Math.Round(definition.IntrinsicSize.Width)),
+            Math.Max(1, (int)Math.Round(definition.IntrinsicSize.Height))
+        );
 
     private static RectangleF ParseViewBox(string? value)
     {
@@ -192,6 +209,18 @@ internal static class SvgIconRenderer
         }
 
         return new RectangleF(parts[0], parts[1], parts[2], parts[3]);
+    }
+
+    private static SizeF ParseIntrinsicSize(XElement svg, RectangleF viewBox)
+    {
+        var width = ParseOptionalSvgLength(svg.Attribute("width")?.Value);
+        var height = ParseOptionalSvgLength(svg.Attribute("height")?.Value);
+        if (width is > 0 && height is > 0)
+        {
+            return new SizeF(width.Value, height.Value);
+        }
+
+        return new SizeF(viewBox.Width, viewBox.Height);
     }
 
     private static IEnumerable<SvgPathElement> ParseGraphicElement(XElement element)
@@ -318,10 +347,26 @@ internal static class SvgIconRenderer
         string.IsNullOrWhiteSpace(value)
             ? null
             : float.Parse(value, CultureInfo.InvariantCulture);
+
+    private static float? ParseOptionalSvgLength(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return float.Parse(
+            value.EndsWith("px", StringComparison.OrdinalIgnoreCase)
+                ? value[..^2]
+                : value,
+            CultureInfo.InvariantCulture
+        );
+    }
 }
 
 internal sealed record SvgIconDefinition(
     RectangleF ViewBox,
+    SizeF IntrinsicSize,
     IReadOnlyList<SvgPathElement> Elements
 );
 

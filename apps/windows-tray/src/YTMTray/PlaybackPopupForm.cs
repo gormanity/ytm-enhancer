@@ -17,7 +17,7 @@ internal sealed class PlaybackPopupForm : Form
     private static readonly Color TertiaryTextColor = Color.FromArgb(145, 145, 152);
     private static readonly Color AccentColor = Color.FromArgb(255, 32, 18);
     private static readonly Color WarningColor = Color.FromArgb(255, 158, 61);
-    private static readonly Color SurfaceHighlightColor = Color.FromArgb(18, 255, 255, 255);
+    private static readonly Color SurfaceTopColor = Color.FromArgb(18, 18, 20);
 
     private readonly ArtworkBoxControl currentArtwork = new(10);
     private readonly Label statusLabel = new();
@@ -203,11 +203,10 @@ internal sealed class PlaybackPopupForm : Form
         base.OnPaint(e);
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        using var surfaceBrush = new SolidBrush(SurfaceColor);
-        using var highlightBrush = new LinearGradientBrush(
-            new Rectangle(0, 0, ClientSize.Width, 180),
-            SurfaceHighlightColor,
-            Color.Transparent,
+        using var surfaceBrush = new LinearGradientBrush(
+            ClientRectangle,
+            SurfaceTopColor,
+            SurfaceColor,
             LinearGradientMode.Vertical
         );
         using var borderPen = new Pen(BorderColor);
@@ -218,7 +217,6 @@ internal sealed class PlaybackPopupForm : Form
         );
 
         e.Graphics.FillPath(surfaceBrush, surfacePath);
-        e.Graphics.FillPath(highlightBrush, surfacePath);
         e.Graphics.DrawPath(borderPen, surfacePath);
         e.Graphics.DrawLine(dividerPen, 32, 294, ClientSize.Width - 32, 294);
         e.Graphics.DrawLine(dividerPen, 32, 426, ClientSize.Width - 32, 426);
@@ -1019,6 +1017,8 @@ internal sealed class ArtworkBoxControl : Control
     private static readonly Color BorderColor = Color.FromArgb(68, 68, 74);
     private static readonly Color PlaceholderColor = Color.FromArgb(138, 138, 146);
     private static readonly HttpClient HttpClient = new();
+    private const string PackagedArtworkScheme = "ytm-tray-resource";
+    private const string FixtureArtworkHost = "ytm-enhancer.local";
 
     private readonly int cornerRadius;
     private Image? artwork;
@@ -1040,6 +1040,13 @@ internal sealed class ArtworkBoxControl : Control
 
     public void SetArtworkUrl(string? artworkUrl)
     {
+        if (TryLoadPackagedArtwork(artworkUrl, out var packagedArtwork))
+        {
+            requestedArtworkUrl = artworkUrl;
+            ReplaceArtwork(packagedArtwork);
+            return;
+        }
+
         if (!IsSupportedArtworkUrl(artworkUrl))
         {
             requestedArtworkUrl = null;
@@ -1227,6 +1234,69 @@ internal sealed class ArtworkBoxControl : Control
         if (!Uri.TryCreate(artworkUrl, UriKind.Absolute, out var uri)) return false;
         return uri.Scheme is "http" or "https";
     }
+
+    private static bool TryLoadPackagedArtwork(
+        string? artworkUrl,
+        [NotNullWhen(true)] out Image? packagedArtwork
+    )
+    {
+        packagedArtwork = null;
+        if (
+            string.IsNullOrWhiteSpace(artworkUrl)
+            || !Uri.TryCreate(artworkUrl, UriKind.Absolute, out var uri)
+        )
+        {
+            return false;
+        }
+
+        var resourceName = PackagedArtworkResourceName(uri);
+        if (string.IsNullOrWhiteSpace(resourceName))
+        {
+            return false;
+        }
+
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        var manifestResourceName = assembly
+            .GetManifestResourceNames()
+            .FirstOrDefault(name =>
+                name.EndsWith(
+                    $"Resources.{resourceName}.png",
+                    StringComparison.Ordinal
+                )
+            );
+        if (manifestResourceName is null)
+        {
+            return false;
+        }
+
+        using var stream = assembly.GetManifestResourceStream(manifestResourceName);
+        if (stream is null)
+        {
+            return false;
+        }
+
+        using var loadedImage = Image.FromStream(stream);
+        packagedArtwork = new Bitmap(loadedImage);
+        return true;
+    }
+
+    private static string? PackagedArtworkResourceName(Uri uri)
+    {
+        if (uri.Scheme == PackagedArtworkScheme)
+        {
+            return uri.Host;
+        }
+
+        if (uri.Scheme != "https" || uri.Host != FixtureArtworkHost)
+        {
+            return null;
+        }
+
+        var fileName = uri.AbsolutePath.Trim('/');
+        return fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+            ? fileName[..^4]
+            : fileName;
+    }
 }
 
 internal enum PlaybackButtonIcon
@@ -1247,6 +1317,7 @@ internal sealed class PlaybackButtonControl : Control
     private static readonly Color IconColor = Color.White;
     private static readonly Color IconInactiveColor = Color.FromArgb(132, 132, 138);
     private static readonly Color IconDisabledColor = Color.FromArgb(92, 92, 98);
+    private const float PlaybackIconDisplayScale = 1.16f;
 
     private bool hovering;
     private bool pressing;
@@ -1378,12 +1449,8 @@ internal sealed class PlaybackButtonControl : Control
         }
 
         var iconColor = IconPaintColor();
-        var iconSize = IconSize();
-        var iconBounds = new Rectangle(
-            (Width - iconSize) / 2,
-            (Height - iconSize) / 2,
-            iconSize,
-            iconSize
+        var iconBounds = CenteredIconBounds(
+            ScaledIconSize(PlaybackSvgIconRenderer.IntrinsicSize(buttonIcon))
         );
         PlaybackSvgIconRenderer.Draw(e.Graphics, buttonIcon, iconBounds, iconColor);
     }
@@ -1395,16 +1462,19 @@ internal sealed class PlaybackButtonControl : Control
         return IconInactiveColor;
     }
 
-    private int IconSize() =>
-        buttonIcon switch
-        {
-            PlaybackButtonIcon.Play or PlaybackButtonIcon.Pause => prominent ? 28 : 26,
-            PlaybackButtonIcon.Previous or PlaybackButtonIcon.Next => 22,
-            PlaybackButtonIcon.Shuffle
-            or PlaybackButtonIcon.Repeat
-            or PlaybackButtonIcon.RepeatOne => 20,
-            _ => 21
-        };
+    private Rectangle CenteredIconBounds(Size iconSize) =>
+        new(
+            (Width - iconSize.Width) / 2,
+            (Height - iconSize.Height) / 2,
+            iconSize.Width,
+            iconSize.Height
+        );
+
+    private static Size ScaledIconSize(Size iconSize) =>
+        new(
+            Math.Max(1, (int)Math.Round(iconSize.Width * PlaybackIconDisplayScale)),
+            Math.Max(1, (int)Math.Round(iconSize.Height * PlaybackIconDisplayScale))
+        );
 }
 
 internal enum PopupActionIcon

@@ -17,7 +17,12 @@ if ! "$script_dir/crabbox-run.sh" --shell '
 $OutputPath = Join-Path (Get-Location) "apps/windows-tray/release/windows-tray-screenshot.png"
 & .\scripts\windows-qa\tray-release-screenshot.ps1 -OutputPath $OutputPath
 Write-Output "YTME_SCREENSHOT_BASE64_BEGIN"
-[Convert]::ToBase64String([IO.File]::ReadAllBytes($OutputPath))
+$EncodedScreenshot = [Convert]::ToBase64String([IO.File]::ReadAllBytes($OutputPath))
+$ChunkSize = 4096
+for ($Offset = 0; $Offset -lt $EncodedScreenshot.Length; $Offset += $ChunkSize) {
+  $Length = [Math]::Min($ChunkSize, $EncodedScreenshot.Length - $Offset)
+  Write-Output ("YTME_SCREENSHOT_BASE64_CHUNK " + $EncodedScreenshot.Substring($Offset, $Length))
+}
 Write-Output "YTME_SCREENSHOT_BASE64_END"
 ' >"$log_file" 2>&1; then
   cat "$log_file" >&2
@@ -37,9 +42,12 @@ awk '
     }
     next
   }
-  capture { block = block $0 "\n" }
+  capture && /^YTME_SCREENSHOT_BASE64_CHUNK / {
+    sub(/^YTME_SCREENSHOT_BASE64_CHUNK /, "")
+    block = block $0 "\n"
+  }
   END { printf "%s", final }
-' "$log_file" | LC_ALL=C tr -d '\r' | LC_ALL=C tr -cd 'A-Za-z0-9+/=\n' >"$encoded_file"
+' "$log_file" | LC_ALL=C tr -d '\r' >"$encoded_file"
 
 if [ ! -s "$encoded_file" ]; then
   cat "$log_file" >&2
