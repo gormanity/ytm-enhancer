@@ -1,97 +1,68 @@
 #!/usr/bin/env node
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { chromium } from "playwright";
+import { promisify } from "node:util";
 
-const appRoot = resolve(import.meta.dirname, "..");
-const inputPath = resolve(appRoot, "release/cli-demo.html");
+const execFileAsync = promisify(execFile);
+const repoRoot = resolve(import.meta.dirname, "../../..");
+const appRoot = resolve(repoRoot, "apps/cli");
+const inputPath = resolve(appRoot, "release/cli-demo.tape");
 const outputVideoPath = resolve(appRoot, "release/cli-demo.webm");
 const outputPosterPath = resolve(appRoot, "release/cli-demo-poster.png");
 
-async function recordDemo(page) {
-  const dataUrl = await page.evaluate(async () => {
-    const canvas = document.querySelector("canvas");
-    if (!(canvas instanceof HTMLCanvasElement)) {
-      throw new Error("CLI demo canvas was not found.");
-    }
-
-    const stream = canvas.captureStream(30);
-    const supportedMimeTypes = [
-      "video/webm;codecs=vp9",
-      "video/webm;codecs=vp8",
-      "video/webm",
-    ];
-    const mimeType =
-      supportedMimeTypes.find((type) => MediaRecorder.isTypeSupported(type)) ??
-      "";
-    const recorder = new MediaRecorder(stream, {
-      ...(mimeType ? { mimeType } : {}),
-      videoBitsPerSecond: 1800000,
+async function run(command, args) {
+  try {
+    const { stderr, stdout } = await execFileAsync(command, args, {
+      cwd: repoRoot,
+      maxBuffer: 1024 * 1024 * 8,
     });
-    const chunks = [];
-    recorder.addEventListener("dataavailable", (event) => {
-      if (event.data.size > 0) {
-        chunks.push(event.data);
-      }
+    return { stderr, stdout };
+  } catch (error) {
+    const commandError = error;
+    const output = [commandError.stdout, commandError.stderr]
+      .filter(Boolean)
+      .join("\n");
+    throw new Error(`${command} ${args.join(" ")} failed\n${output}`, {
+      cause: error,
     });
+  }
+}
 
-    const stopped = new Promise((resolve) => {
-      recorder.addEventListener("stop", resolve, { once: true });
-    });
+async function requireCommand(command) {
+  try {
+    await run(command, ["--help"]);
+  } catch {
+    throw new Error(
+      `CLI demo rendering requires '${command}' on PATH. Install VHS with Homebrew and ensure ffmpeg is available.`,
+    );
+  }
+}
 
-    const duration = window.CLI_DEMO_DURATION_MS;
-    recorder.start();
-    await new Promise((resolve) => {
-      const started = performance.now();
-      function step(now) {
-        const elapsed = Math.min(duration, now - started);
-        window.renderCliDemoFrame(elapsed);
-        if (elapsed >= duration) {
-          resolve();
-          return;
-        }
-        requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
-    });
-    recorder.stop();
-    await stopped;
-
-    const blob = new Blob(chunks, { type: mimeType || "video/webm" });
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.addEventListener("load", () => resolve(reader.result));
-      reader.addEventListener("error", () => reject(reader.error));
-      reader.readAsDataURL(blob);
-    });
-  });
-
-  return Buffer.from(dataUrl.split(",")[1], "base64");
+async function renderPoster() {
+  await run("ffmpeg", [
+    "-y",
+    "-loglevel",
+    "error",
+    "-ss",
+    "6",
+    "-i",
+    outputVideoPath,
+    "-frames:v",
+    "1",
+    outputPosterPath,
+  ]);
 }
 
 async function renderDemoVideo() {
   await mkdir(dirname(outputVideoPath), { recursive: true });
 
-  const browser = await chromium.launch();
-  try {
-    const page = await browser.newPage({
-      deviceScaleFactor: 1,
-      viewport: { width: 960, height: 540 },
-    });
-    await page.goto(`${pathToFileURL(inputPath).href}?render=1`);
-    await page.evaluate(() => window.renderCliDemoFrame(7600));
-    await page.screenshot({
-      path: outputPosterPath,
-      clip: { x: 0, y: 0, width: 960, height: 540 },
-    });
-
-    const video = await recordDemo(page);
-    await writeFile(outputVideoPath, video);
-  } finally {
-    await browser.close();
-  }
+  await requireCommand("vhs");
+  await requireCommand("ffmpeg");
+  await run("vhs", ["validate", inputPath]);
+  await run("vhs", [inputPath]);
+  await renderPoster();
 
   console.log(`Rendered ${outputVideoPath}`);
   console.log(`Rendered ${outputPosterPath}`);
