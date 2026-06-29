@@ -198,6 +198,7 @@ describe("Windows tray connector scaffold", () => {
     const remoteReleaseScreenshot = readRepo(
       "scripts/remote/windows-qa/tray-release-screenshot.sh",
     );
+    const releaseScreenshotMask = read("scripts/mask-release-screenshot.mjs");
 
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain('"YTM_TRAY_VISUAL_STATUS"');
@@ -237,6 +238,10 @@ describe("Windows tray connector scaffold", () => {
     expect(remoteReleaseScreenshot).toContain("final = block");
     expect(remoteReleaseScreenshot).toContain("tr -cd 'A-Za-z0-9+/=\\n'");
     expect(remoteReleaseScreenshot).toContain('<"$encoded_file"');
+    expect(remoteReleaseScreenshot).toContain("mask-release-screenshot.mjs");
+    expect(releaseScreenshotMask).toContain("DEFAULT_RADIUS = 18");
+    expect(releaseScreenshotMask).toContain("DEFAULT_EDGE_INSET = 1");
+    expect(releaseScreenshotMask).toContain('blend: "dest-in"');
     expect(remoteReleaseScreenshot).toContain(
       "apps/windows-tray/release/windows-tray-screenshot.png",
     );

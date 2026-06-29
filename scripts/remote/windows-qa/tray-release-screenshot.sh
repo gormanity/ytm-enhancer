@@ -61,6 +61,7 @@ fi
 
 mkdir -p "$(dirname -- "$output_path")"
 mv "$decoded_file" "$output_path"
+node "$repo_root/apps/windows-tray/scripts/mask-release-screenshot.mjs" "$output_path"
 
 awk '
   /YTME_SCREENSHOT_BASE64_BEGIN/ { suppress = 1; next }
@@ -68,3 +69,4 @@ awk '
   !suppress { print }
 ' "$log_file"
 printf "Copied Windows tray release screenshot to %s\n" "$output_path"
+printf "Masked Windows tray release screenshot corners\n"

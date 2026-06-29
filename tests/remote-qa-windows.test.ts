@@ -132,6 +132,9 @@ describe("Windows remote QA scaffold", () => {
     const releaseScreenshotShell = read(
       "scripts/remote/windows-qa/tray-release-screenshot.sh",
     );
+    const releaseScreenshotMask = read(
+      "apps/windows-tray/scripts/mask-release-screenshot.mjs",
+    );
     const trayE2e = read("tests/e2e/windows-tray-connector.spec.ts");
 
     expect(releaseScreenshot).toContain(
@@ -153,6 +156,9 @@ describe("Windows remote QA scaffold", () => {
     expect(releaseScreenshotShell).toContain("tr -cd 'A-Za-z0-9+/=\\n'");
     expect(releaseScreenshotShell).toContain("base64 --decode");
     expect(releaseScreenshotShell).toContain('<"$encoded_file"');
+    expect(releaseScreenshotShell).toContain("mask-release-screenshot.mjs");
+    expect(releaseScreenshotMask).toContain('from "sharp"');
+    expect(releaseScreenshotMask).toContain('blend: "dest-in"');
     expect(trayE2e).toContain("Save-TrayPopupScreenshot");
     expect(trayE2e).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
   });
