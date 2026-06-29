@@ -25,6 +25,10 @@ When an update is available, the tray menu and flyout expose an install action
 that downloads the update manifest, verifies the release zip checksum, and runs
 the packaged installer after confirmation.
 
+Packaged installs also register YTM Tray in Windows Settings > Apps, add Start
+Menu shortcuts, and install a local uninstaller script under
+`%LOCALAPPDATA%\YTM Enhancer\Tray`.
+
 For local QA against a temporary unpacked Chromium-family extension ID, pass an
 extra native messaging origin:
 
@@ -37,6 +41,13 @@ Uninstall local native messaging registration:
 
 ```powershell
 .\scripts\uninstall-native-hosts.ps1
+```
+
+For release zips, prefer the packaged command launchers:
+
+```powershell
+.\Install YTM Tray.cmd
+.\Uninstall YTM Tray.cmd
 ```
 
 This app intentionally does not provide a Windows CLI. The user-facing Windows

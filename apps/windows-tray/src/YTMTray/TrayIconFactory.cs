@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 
 namespace YTMTray;
@@ -10,21 +11,17 @@ internal static class TrayIconFactory
         using var bitmap = new Bitmap(32, 32);
         using var graphics = Graphics.FromImage(bitmap);
         graphics.Clear(Color.Transparent);
-        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-        using var ring = new Pen(isPlaying ? Color.FromArgb(255, 230, 72, 72) : Color.White, 3);
-        using var fill = new SolidBrush(isPlaying ? Color.White : Color.FromArgb(210, 210, 210));
+        var resourceName = isPlaying
+            ? StatusSvgIconRenderer.PlayingResourceName
+            : StatusSvgIconRenderer.IdleResourceName;
+        var color = isPlaying
+            ? Color.FromArgb(255, 235, 82, 82)
+            : Color.FromArgb(232, 232, 238);
 
-        graphics.DrawEllipse(ring, 4, 4, 24, 24);
-        if (isPlaying)
-        {
-            graphics.FillPolygon(fill, [new Point(13, 10), new Point(13, 22), new Point(23, 16)]);
-        }
-        else
-        {
-            graphics.FillRectangle(fill, 12, 10, 3, 12);
-            graphics.FillRectangle(fill, 18, 10, 3, 12);
-        }
+        StatusSvgIconRenderer.Draw(graphics, resourceName, new Rectangle(2, 2, 28, 28), color);
 
         var handle = bitmap.GetHicon();
         try

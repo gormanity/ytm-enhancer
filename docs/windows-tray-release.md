@@ -27,8 +27,16 @@ YTM Tray currently supports Chrome, Microsoft Edge, and Firefox native messaging
 on Windows.
 
 Release packages include prebuilt self-contained executables, the native host
-relay, the installer script, the uninstaller script, and package metadata. Users
-do not need the .NET SDK when installing from a release zip.
+relay, friendly install and uninstall command launchers, the installer script,
+the uninstaller script, and package metadata. Users do not need the .NET SDK
+when installing from a release zip.
+
+The installer registers YTM Tray as a user-level Windows app under
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\YTMTray`, creates
+Start Menu shortcuts under `YTM Enhancer`, and copies the uninstaller into the
+installed app folder. Users can uninstall from Windows Settings > Apps >
+Installed apps, from Start Menu > YTM Enhancer > Uninstall YTM Tray, or by
+running `Uninstall YTM Tray.cmd` from the extracted release zip.
 
 The release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe` when these
 repository secrets are configured:
@@ -83,8 +91,8 @@ pnpm run windows-tray:update-manifest
 Then extract the package for the current architecture and run:
 
 ```powershell
-.\install-native-hosts.ps1
-.\uninstall-native-hosts.ps1
+.\Install YTM Tray.cmd
+.\Uninstall YTM Tray.cmd
 ```
 
 The installer should copy prebuilt binaries from the release package. It should
@@ -125,6 +133,7 @@ scripts/remote/windows-qa/tray-button-smoke.sh
    - a component release that does not replace GitHub's repo-wide latest release
    - `win-x64` and `win-arm64` release zips
    - `YTM-Tray-update.json` with package checksums and release URLs
+   - `Install YTM Tray.cmd` and `Uninstall YTM Tray.cmd` in each zip
    - signed `YTMTray.exe` and `YTMTray.NativeHost.exe` when signing secrets are
      configured
 8. On a clean Windows account, install from the release zip and confirm:
@@ -134,7 +143,8 @@ scripts/remote/windows-qa/tray-button-smoke.sh
      manifests
    - the tray app connects after Connected Apps is enabled
    - playback controls, seeking, focus, About, and Quit still work
-   - uninstall removes registry keys and app files
+   - Windows Settings > Apps > Installed apps shows YTM Tray
+   - uninstall removes registry keys, Start Menu shortcuts, and app files
 
 The release workflow derives package and manifest versions from the
 `windows-tray-vX.Y.Z` tag and compares generated GitHub release notes against

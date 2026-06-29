@@ -117,6 +117,8 @@ describe("Windows remote QA scaffold", () => {
     expect(releaseScreenshot).toContain(
       "$env:YTME_WINDOWS_TRAY_SCREENSHOT_PATH",
     );
+    expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_VISUAL_DEMO");
+    expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_SCROLL_QA");
     expect(releaseScreenshot).toContain("pnpm run dev:build:edge");
     expect(releaseScreenshot).toContain(
       "tests/e2e/windows-tray-connector.spec.ts",
@@ -151,6 +153,11 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).toContain("YTM-Tray-update.json");
     expect(packageSmoke).toContain("Expand-Archive");
     expect(packageSmoke).toContain("install-native-hosts.ps1");
+    expect(packageSmoke).toContain("Uninstall YTM Tray.cmd");
+    expect(packageSmoke).toContain(
+      "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\YTMTray",
+    );
+    expect(packageSmoke).toContain("Start Menu\\Programs\\YTM Enhancer");
     expect(packageSmoke).toContain("release.json");
     expect(packageSmoke).toContain("Read-FilePrefixBytes");
     expect(packageSmoke).toContain("[System.IO.File]::OpenRead");

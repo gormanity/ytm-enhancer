@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Diagnostics;
 using System.Windows.Forms;
 using YTMTray.Core;
 
@@ -84,6 +85,11 @@ internal sealed class TrayController : ITrayController, IDisposable
         RunOnUiThread(popup.SetStalePlaybackState);
     }
 
+    public void RequestUninstall()
+    {
+        RunOnUiThread(() => StartUninstaller(popup));
+    }
+
     public void UpdatePlayback(PlaybackState state)
     {
         RunOnUiThread(() =>
@@ -115,6 +121,7 @@ internal sealed class TrayController : ITrayController, IDisposable
         );
         menu.Items.Add(updateMenuItem);
         menu.Items.Add("About YTM Tray", null, (_, _) => ShowAbout());
+        menu.Items.Add("Uninstall YTM Tray...", null, (_, _) => StartUninstaller());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Quit", null, (_, _) => OnQuit?.Invoke());
         return menu;
@@ -258,6 +265,71 @@ internal sealed class TrayController : ITrayController, IDisposable
     )
     {
         const string title = "Update YTM Tray";
+        if (owner is null)
+        {
+            MessageBox.Show(message, title, MessageBoxButtons.OK, icon);
+            return;
+        }
+
+        MessageBox.Show(owner, message, title, MessageBoxButtons.OK, icon);
+    }
+
+    private void StartUninstaller(IWin32Window? owner = null)
+    {
+        var uninstallerPath = Path.Combine(AppContext.BaseDirectory, "uninstall-native-hosts.ps1");
+        if (!File.Exists(uninstallerPath))
+        {
+            ShowUninstallMessage(
+                owner,
+                "This YTM Tray build does not include the packaged uninstaller. Use the uninstaller script from the release zip, or reinstall from the Windows install page.",
+                MessageBoxIcon.Warning
+            );
+            return;
+        }
+
+        var uninstallChoice = MessageBox.Show(
+            owner,
+            "Uninstall YTM Tray?\n\nThis will close the tray app, remove browser native messaging registration, remove Start Menu shortcuts, and remove the installed app files.",
+            "Uninstall YTM Tray",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning
+        );
+        if (uninstallChoice != DialogResult.Yes) return;
+
+        var startInfo = new ProcessStartInfo("powershell.exe")
+        {
+            UseShellExecute = false,
+            WorkingDirectory = AppContext.BaseDirectory
+        };
+        startInfo.ArgumentList.Add("-NoProfile");
+        startInfo.ArgumentList.Add("-ExecutionPolicy");
+        startInfo.ArgumentList.Add("Bypass");
+        startInfo.ArgumentList.Add("-File");
+        startInfo.ArgumentList.Add(uninstallerPath);
+
+        try
+        {
+            Process.Start(startInfo);
+            OnQuit?.Invoke();
+        }
+        catch (Exception error)
+        {
+            logger?.Log($"windows tray uninstall launch failed: {error.Message}");
+            ShowUninstallMessage(
+                owner,
+                $"YTM Tray could not start the uninstaller.\n\n{error.Message}",
+                MessageBoxIcon.Warning
+            );
+        }
+    }
+
+    private static void ShowUninstallMessage(
+        IWin32Window? owner,
+        string message,
+        MessageBoxIcon icon
+    )
+    {
+        const string title = "Uninstall YTM Tray";
         if (owner is null)
         {
             MessageBox.Show(message, title, MessageBoxButtons.OK, icon);

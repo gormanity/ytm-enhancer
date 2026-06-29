@@ -91,6 +91,8 @@ $ArchivePath = "apps/windows-tray/.build/packages/YTM-Tray-$($Metadata.version)-
 $UpdateManifestPath = "apps/windows-tray/.build/update-manifest/YTM-Tray-update.json"
 $ExtractRoot = Join-Path $env:TEMP "ytm-tray-package-smoke"
 $InstallRoot = Join-Path $env:TEMP "ytm-tray-package-install"
+$UninstallRegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\YTMTray"
+$StartMenuFolder = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\YTM Enhancer"
 
 $env:CI = "true"
 
@@ -119,6 +121,8 @@ New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
 
 try {
   Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractRoot -Force
+  Assert-PathExists (Join-Path $ExtractRoot "Install YTM Tray.cmd")
+  Assert-PathExists (Join-Path $ExtractRoot "Uninstall YTM Tray.cmd")
 
   Push-Location $ExtractRoot
   & .\install-native-hosts.ps1 -InstallRoot $InstallRoot
@@ -128,8 +132,17 @@ try {
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.NativeHost.exe")
   Assert-PathExists (Join-Path $InstallRoot "com.gormanity.ytm_enhancer.tray.json")
   Assert-PathExists (Join-Path $InstallRoot "com.gormanity.ytm_enhancer.tray.firefox.json")
+  Assert-PathExists (Join-Path $InstallRoot "uninstall-native-hosts.ps1")
+  Assert-PathExists (Join-Path $InstallRoot "Uninstall YTM Tray.cmd")
   Assert-PathExists (Join-Path $InstallRoot "release.json")
   Assert-PathExists (Join-Path $ExtractRoot "release.json")
+  Assert-PathExists $UninstallRegistryKey
+  Assert-PathExists (Join-Path $StartMenuFolder "YTM Tray.lnk")
+  Assert-PathExists (Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk")
+
+  $UninstallEntry = Get-ItemProperty -LiteralPath $UninstallRegistryKey
+  Assert-Equal $InstallRoot $UninstallEntry.InstallLocation "uninstall install location"
+  Assert-Equal $Metadata.version $UninstallEntry.DisplayVersion "uninstall display version"
 
   $PackageMetadata = Get-Content -LiteralPath (Join-Path $ExtractRoot "release.json") -Raw |
     ConvertFrom-Json

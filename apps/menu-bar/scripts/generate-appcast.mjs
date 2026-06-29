@@ -918,6 +918,7 @@ function writeSitePages({ metadata, outputPath }) {
             <div class="actions" aria-label="Install YTM Tray">
               <a class="button button-primary" href="${escapeHtml(windowsReleaseListUrl)}">Download for Windows</a>
               <a class="button" href="../connected-apps/">Connected Apps Beta</a>
+              <a class="button" href="#uninstall">Uninstall</a>
             </div>
             <p class="beta-note">
               YTM Tray is part of the Connected Apps beta. Windows code signing
@@ -957,6 +958,31 @@ function writeSitePages({ metadata, outputPath }) {
               YTM Tray connects through the extension's native messaging host.
               It can read playback details, control playback, and focus YouTube
               Music after you approve Connected Apps in the extension.
+            </p>
+          </article>
+        </section>
+
+        <section class="section split" id="uninstall" aria-labelledby="uninstall-title">
+          <div>
+            <div class="section-header">
+              <h2 id="uninstall-title">Uninstall</h2>
+              <p>
+                Release packages register YTM Tray as a user-level Windows app.
+                Remove it from Windows Settings or run the packaged uninstaller.
+              </p>
+            </div>
+            <ul class="meta-list" aria-label="YTM Tray uninstall options">
+              <li>Windows Settings > Apps > Installed apps > YTM Tray > Uninstall</li>
+              <li>Start Menu > YTM Enhancer > Uninstall YTM Tray</li>
+              <li>Extracted release zip: <code>Uninstall YTM Tray.cmd</code></li>
+            </ul>
+          </div>
+          <article class="card">
+            <h3>What Gets Removed</h3>
+            <p>
+              The uninstaller closes YTM Tray, removes Chrome, Edge, and Firefox
+              native messaging registration, removes Start Menu shortcuts, and
+              deletes the installed app files from Local AppData.
             </p>
           </article>
         </section>

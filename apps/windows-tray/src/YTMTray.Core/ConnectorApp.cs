@@ -78,6 +78,10 @@ public sealed class ConnectorApp : IDisposable
             case "connector.error":
                 HandleConnectorError(message);
                 break;
+            case ConnectorProtocol.UninstallRequestedType:
+                logger.Log("connector uninstall requested");
+                tray.RequestUninstall();
+                break;
             default:
                 logger.Log($"ignored message type={message.Type}");
                 break;

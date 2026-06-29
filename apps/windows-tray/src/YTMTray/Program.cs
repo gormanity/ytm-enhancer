@@ -51,6 +51,7 @@ internal static class Program
 internal sealed class DemoConnectorConnection : IConnectorConnection
 {
     private readonly string? visualStatus;
+    private readonly bool useScrollQaMetadata;
     private Action<HostMessage>? onMessage;
 
     public DemoConnectorConnection(string? visualStatus = null)
@@ -58,6 +59,7 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
         this.visualStatus = string.IsNullOrWhiteSpace(visualStatus)
             ? null
             : visualStatus;
+        useScrollQaMetadata = Environment.GetEnvironmentVariable("YTM_TRAY_SCROLL_QA") == "1";
     }
 
     public void Start(Action<HostMessage> onMessage, Action onDisconnect)
@@ -78,7 +80,7 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
                         ? new HostMessage
                         {
                             Type = "playback.state",
-                            State = DemoPlaybackState()
+                            State = DemoPlaybackState(useScrollQaMetadata)
                         }
                         : new HostMessage
                         {
@@ -100,24 +102,43 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
     private void Emit(HostMessage message) =>
         ThreadPool.QueueUserWorkItem(_ => onMessage?.Invoke(message));
 
-    private static PlaybackState DemoPlaybackState() =>
-        new(
-            "A Walk Through the Longest Possible YouTube Music Title Fixture",
-            "Tycho and the Extended QA Ensemble",
-            "Dive Into a Very Wide Album Name for Tray Scrolling",
+    private static PlaybackState DemoPlaybackState(bool useLongMetadata)
+    {
+        if (useLongMetadata)
+        {
+            return new PlaybackState(
+                "A Walk Through a Wide Release QA Title",
+                "Tycho and the Extended QA Ensemble",
+                "Dive Into a Very Wide Album Name",
+                2011,
+                null,
+                new TrackMetadata(
+                    "Send and Receive (Chachi Jones Remix)",
+                    "Tycho and the Extended QA Ensemble",
+                    null,
+                    null,
+                    null
+                ),
+                true,
+                178,
+                317,
+                false,
+                "off"
+            );
+        }
+
+        return new PlaybackState(
+            "A Walk",
+            "Tycho",
+            "Dive",
             2011,
             null,
-            new TrackMetadata(
-                "Send And Receive (Chachi Jones Remix) With Extra Words",
-                "Tycho and the Extended QA Ensemble",
-                null,
-                null,
-                null
-            ),
+            new TrackMetadata("Hours", "Tycho", null, null, null),
             true,
             178,
             317,
             false,
             "off"
         );
+    }
 }

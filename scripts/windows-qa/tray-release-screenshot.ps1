@@ -27,6 +27,9 @@ if ($OutputDirectory) {
 $env:CI = "true"
 $env:YTME_E2E_WINDOWS_TRAY = "1"
 $env:YTME_WINDOWS_TRAY_SCREENSHOT_PATH = $ResolvedOutputPath
+Remove-Item Env:YTM_TRAY_VISUAL_DEMO -ErrorAction SilentlyContinue
+Remove-Item Env:YTM_TRAY_VISUAL_STATUS -ErrorAction SilentlyContinue
+Remove-Item Env:YTM_TRAY_SCROLL_QA -ErrorAction SilentlyContinue
 
 Invoke-Native corepack enable
 Invoke-Native corepack prepare pnpm@11.9.0 --activate

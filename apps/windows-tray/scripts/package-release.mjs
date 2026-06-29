@@ -64,6 +64,13 @@ function maybeSignPayload(payloadRoot) {
   ]);
 }
 
+function writeCommandFile(path, scriptName) {
+  writeFileSync(
+    path,
+    `@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0${scriptName}"\r\n`,
+  );
+}
+
 function packageRelease({
   runtime = "win-x64",
   outputRoot = resolve(appRoot, ".build/packages"),
@@ -105,6 +112,14 @@ function packageRelease({
   copyFileSync(
     resolve(appRoot, "scripts/uninstall-native-hosts.ps1"),
     join(payloadRoot, "uninstall-native-hosts.ps1"),
+  );
+  writeCommandFile(
+    join(payloadRoot, "Install YTM Tray.cmd"),
+    "install-native-hosts.ps1",
+  );
+  writeCommandFile(
+    join(payloadRoot, "Uninstall YTM Tray.cmd"),
+    "uninstall-native-hosts.ps1",
   );
   writeFileSync(
     join(payloadRoot, "release.json"),

@@ -11,6 +11,7 @@ public interface ITrayController
     Action? OnFocusYouTubeMusic { get; set; }
 
     void UpdateConnectionStatus(string status);
+    void RequestUninstall();
     void SetStalePlaybackState();
     void UpdatePlayback(PlaybackState state);
 }

@@ -10,6 +10,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("protocol manifest uses tray connector identity", ProtocolManifest),
     ("native messaging codec round trips JSON frames", NativeMessagingCodecRoundTrip),
     ("connector app handshakes and subscribes after ready", ConnectorAppHandshake),
+    ("connector app routes uninstall requests", ConnectorAppUninstallRequest),
     ("connector app updates tray playback state", ConnectorAppPlaybackState),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
@@ -89,6 +90,19 @@ static async Task ConnectorAppHandshake()
     AssertEqual("connector.subscribe", connection.MessageTypeAt(1));
     AssertEqual("playback.getState", connection.MessageTypeAt(2));
     await Task.CompletedTask;
+}
+
+static Task ConnectorAppUninstallRequest()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(connection, tray);
+
+    app.Start();
+    connection.Emit(new HostMessage { Type = ConnectorProtocol.UninstallRequestedType });
+
+    AssertEqual(true, tray.UninstallRequested);
+    return Task.CompletedTask;
 }
 
 static Task ConnectorAppPlaybackState()
@@ -454,8 +468,10 @@ sealed class FakeTrayController : ITrayController
     public Action? OnFocusYouTubeMusic { get; set; }
     public string? Status { get; private set; }
     public PlaybackState? State { get; private set; }
+    public bool UninstallRequested { get; private set; }
 
     public void UpdateConnectionStatus(string status) => Status = status;
+    public void RequestUninstall() => UninstallRequested = true;
     public void SetStalePlaybackState() => Status = "Waiting for playback updates...";
     public void UpdatePlayback(PlaybackState state) => State = state;
 }

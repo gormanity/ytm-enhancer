@@ -236,20 +236,20 @@ internal sealed class PlaybackPopupForm : Form
         statusLabel.TextAlign = ContentAlignment.MiddleRight;
         statusLabel.AutoEllipsis = true;
 
-        titleLabel.SetBounds(148, 34, 244, 34);
-        titleLabel.Font = new Font(Font.FontFamily, 16.5f, FontStyle.Bold);
+        titleLabel.SetBounds(148, 30, 244, 42);
+        titleLabel.Font = new Font(Font.FontFamily, 15.5f, FontStyle.Bold);
         titleLabel.ForeColor = PrimaryTextColor;
         titleLabel.BackColor = Color.Transparent;
         titleLabel.ScrollDiagnosticName = "title";
 
-        albumLabel.SetBounds(148, 74, 244, 24);
-        albumLabel.Font = new Font(Font.FontFamily, 11.5f, FontStyle.Bold);
+        albumLabel.SetBounds(148, 76, 244, 30);
+        albumLabel.Font = new Font(Font.FontFamily, 10.75f, FontStyle.Regular);
         albumLabel.ForeColor = SecondaryTextColor;
         albumLabel.BackColor = Color.Transparent;
         albumLabel.ScrollDiagnosticName = "album";
 
-        artistYearLabel.SetBounds(148, 102, 244, 22);
-        artistYearLabel.Font = new Font(Font.FontFamily, 10.25f, FontStyle.Bold);
+        artistYearLabel.SetBounds(148, 106, 244, 28);
+        artistYearLabel.Font = new Font(Font.FontFamily, 9.75f, FontStyle.Regular);
         artistYearLabel.ForeColor = TertiaryTextColor;
         artistYearLabel.BackColor = Color.Transparent;
         artistYearLabel.ScrollDiagnosticName = "artist-year";
@@ -280,12 +280,12 @@ internal sealed class PlaybackPopupForm : Form
         };
 
         elapsedLabel.SetBounds(32, 178, 92, 22);
-        elapsedLabel.Font = new Font(Font.FontFamily, 10f, FontStyle.Bold);
+        elapsedLabel.Font = new Font(Font.FontFamily, 9.75f, FontStyle.Bold);
         elapsedLabel.ForeColor = TertiaryTextColor;
         elapsedLabel.BackColor = Color.Transparent;
 
         durationLabel.SetBounds(316, 178, 92, 22);
-        durationLabel.Font = new Font(Font.FontFamily, 10f, FontStyle.Bold);
+        durationLabel.Font = new Font(Font.FontFamily, 9.75f, FontStyle.Bold);
         durationLabel.ForeColor = TertiaryTextColor;
         durationLabel.BackColor = Color.Transparent;
         durationLabel.TextAlign = ContentAlignment.MiddleRight;
@@ -336,14 +336,14 @@ internal sealed class PlaybackPopupForm : Form
 
         nextArtwork.SetBounds(32, 354, 54, 54);
 
-        nextTitleLabel.SetBounds(104, 352, 304, 26);
-        nextTitleLabel.Font = new Font(Font.FontFamily, 11.5f, FontStyle.Bold);
+        nextTitleLabel.SetBounds(104, 348, 304, 34);
+        nextTitleLabel.Font = new Font(Font.FontFamily, 10.75f, FontStyle.Bold);
         nextTitleLabel.ForeColor = SecondaryTextColor;
         nextTitleLabel.BackColor = Color.Transparent;
         nextTitleLabel.ScrollDiagnosticName = "next-title";
 
-        nextDetailLabel.SetBounds(104, 381, 304, 22);
-        nextDetailLabel.Font = new Font(Font.FontFamily, 10f, FontStyle.Regular);
+        nextDetailLabel.SetBounds(104, 382, 304, 28);
+        nextDetailLabel.Font = new Font(Font.FontFamily, 9.5f, FontStyle.Regular);
         nextDetailLabel.ForeColor = TertiaryTextColor;
         nextDetailLabel.BackColor = Color.Transparent;
         nextDetailLabel.ScrollDiagnosticName = "next-detail";
@@ -695,7 +695,7 @@ internal sealed class StatusMessageControl : Control
         var iconWidth = showWarningIcon ? iconSize + iconGap : 0;
         var maxTextWidth = Math.Max(0, Width - iconWidth);
         var textFlags =
-            TextFormatFlags.NoPadding
+            TextFormatFlags.GlyphOverhangPadding
             | TextFormatFlags.NoPrefix
             | TextFormatFlags.WordBreak
             | TextFormatFlags.VerticalCenter;
@@ -865,7 +865,8 @@ internal sealed class ScrollingLabelControl : Control
         ScheduleScrollIfNeeded();
 
         var flags =
-            TextFormatFlags.NoPadding
+            TextFormatFlags.GlyphOverhangPadding
+            | TextFormatFlags.NoClipping
             | TextFormatFlags.SingleLine
             | TextFormatFlags.VerticalCenter
             | TextFormatFlags.NoPrefix;
@@ -883,18 +884,16 @@ internal sealed class ScrollingLabelControl : Control
             return;
         }
 
-        var textHeight = TextRenderer.MeasureText(Text, Font, Size.Empty, flags).Height;
-        var y = Math.Max(0, (Height - textHeight) / 2);
         var firstBounds = new Rectangle(
             (int)Math.Round(-scrollOffset),
-            y,
-            TextWidth + 2,
+            0,
+            TextWidth + 6,
             Height
         );
         var secondBounds = new Rectangle(
             (int)Math.Round(-scrollOffset + TextWidth + ScrollLoopGap),
-            y,
-            TextWidth + 2,
+            0,
+            TextWidth + 6,
             Height
         );
         using var previousClip = e.Graphics.Clip.Clone();
@@ -930,7 +929,8 @@ internal sealed class ScrollingLabelControl : Control
             if (measuredTextWidth >= 0) return measuredTextWidth;
 
             var flags =
-                TextFormatFlags.NoPadding
+                TextFormatFlags.GlyphOverhangPadding
+                | TextFormatFlags.NoClipping
                 | TextFormatFlags.SingleLine
                 | TextFormatFlags.NoPrefix;
             measuredTextWidth = TextRenderer.MeasureText(Text, Font, Size.Empty, flags).Width;
@@ -1490,52 +1490,25 @@ internal sealed class PopupActionRowControl : Control
             e.Graphics.FillPath(backgroundBrush, backgroundPath);
         }
 
-        using var iconPen = new Pen(IconColor, 1.8f)
-        {
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round,
-            LineJoin = LineJoin.Round
-        };
-        using var iconBrush = new SolidBrush(IconColor);
-        using var font = new Font(Font.FontFamily, 11f, FontStyle.Bold);
+        using var font = new Font(Font.FontFamily, 10.75f, FontStyle.Bold);
 
-        DrawIcon(e.Graphics, new Rectangle(2, 4, 18, 18), iconPen, iconBrush);
+        PopupActionSvgIconRenderer.Draw(
+            e.Graphics,
+            icon,
+            new Rectangle(2, 5, 18, 18),
+            IconColor
+        );
         TextRenderer.DrawText(
             e.Graphics,
             Text,
             font,
             new Rectangle(34, 0, Width - 34, Height),
             TextColor,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+            TextFormatFlags.Left
+                | TextFormatFlags.VerticalCenter
+                | TextFormatFlags.EndEllipsis
+                | TextFormatFlags.GlyphOverhangPadding
         );
-    }
-
-    private void DrawIcon(Graphics graphics, Rectangle bounds, Pen pen, Brush brush)
-    {
-        switch (icon)
-        {
-            case PopupActionIcon.Focus:
-                graphics.DrawRectangle(pen, bounds.Left + 2, bounds.Top + 5, 11, 11);
-                graphics.DrawLine(pen, bounds.Left + 8, bounds.Top + 4, bounds.Right - 2, bounds.Top + 4);
-                graphics.DrawLine(pen, bounds.Right - 2, bounds.Top + 4, bounds.Right - 2, bounds.Bottom - 6);
-                graphics.DrawLine(pen, bounds.Right - 2, bounds.Top + 4, bounds.Left + 9, bounds.Bottom - 7);
-                break;
-            case PopupActionIcon.Update:
-                graphics.DrawArc(pen, bounds.Left + 3, bounds.Top + 3, 12, 12, 35, 280);
-                graphics.DrawLine(pen, bounds.Right - 4, bounds.Top + 4, bounds.Right - 2, bounds.Top + 9);
-                graphics.DrawLine(pen, bounds.Right - 4, bounds.Top + 4, bounds.Right - 9, bounds.Top + 5);
-                break;
-            case PopupActionIcon.Info:
-                graphics.DrawEllipse(pen, bounds.Left + 2, bounds.Top + 2, 14, 14);
-                graphics.FillEllipse(brush, bounds.Left + 8, bounds.Top + 5, 2.5f, 2.5f);
-                graphics.DrawLine(pen, bounds.Left + 9, bounds.Top + 10, bounds.Left + 9, bounds.Bottom - 3);
-                break;
-            case PopupActionIcon.Quit:
-                graphics.DrawEllipse(pen, bounds.Left + 2, bounds.Top + 2, 14, 14);
-                graphics.DrawLine(pen, bounds.Left + 6, bounds.Top + 6, bounds.Right - 6, bounds.Bottom - 6);
-                graphics.DrawLine(pen, bounds.Right - 6, bounds.Top + 6, bounds.Left + 6, bounds.Bottom - 6);
-                break;
-        }
     }
 }
 

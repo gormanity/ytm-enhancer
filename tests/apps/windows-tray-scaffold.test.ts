@@ -66,6 +66,8 @@ describe("Windows tray connector scaffold", () => {
     expect(sources).toContain('"playback.action"');
     expect(sources).toContain('"playback.seek"');
     expect(sources).toContain('"ytm.focus"');
+    expect(sources).toContain('"connector.uninstallRequested"');
+    expect(sources).toContain("RequestUninstall");
     expect(sources).toContain("Console.OpenStandardInput()");
     expect(sources).toContain("Console.OpenStandardOutput()");
     expect(sources).toContain("starting YTM Tray native host");
@@ -109,6 +111,9 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("PlaybackButtonIcon.Shuffle");
     expect(popupForm).toContain("PlaybackButtonIcon.RepeatOne");
     expect(popupForm).toContain("PlaybackSvgIconRenderer.Draw");
+    expect(popupForm).toContain("PopupActionSvgIconRenderer.Draw");
+    expect(popupForm).toContain("TextFormatFlags.GlyphOverhangPadding");
+    expect(popupForm).toContain("TextFormatFlags.NoClipping");
     expect(popupForm).toContain("ControlStyles.OptimizedDoubleBuffer");
     expect(popupForm).toContain("LinearGradientBrush");
     expect(popupForm).toContain("UserSeekRequested");
@@ -141,11 +146,39 @@ describe("Windows tray connector scaffold", () => {
     expect(project).toContain(
       "packages\\connector-ui-assets\\playback\\playback-*.svg",
     );
+    expect(project).toContain(
+      "packages\\connector-ui-assets\\actions\\action-*.svg",
+    );
+    expect(project).toContain(
+      "packages\\connector-ui-assets\\status\\extension-icon-*.svg",
+    );
     expect(project).toContain('Link="Resources\\%(Filename)%(Extension)"');
     expect(renderer).toContain("playback-shuffle");
     expect(renderer).toContain("playback-repeat-one");
+    expect(renderer).toContain("action-focus");
+    expect(renderer).toContain("extension-icon-monochrome-ring");
     expect(renderer).toContain("SvgPathParser.Parse");
+    expect(renderer).toContain("ParseLineElement");
+    expect(renderer).toContain("ParseCircleElement");
     expect(renderer).not.toContain("PackageReference");
+  });
+
+  it("keeps menu bar and Windows tray shared icons in sync", () => {
+    const sharedStatusIcon = readRepo(
+      "packages/connector-ui-assets/status/extension-icon-monochrome.svg",
+    );
+    const sharedPlayingStatusIcon = readRepo(
+      "packages/connector-ui-assets/status/extension-icon-monochrome-ring.svg",
+    );
+    const menuBarStatusIcon = readRepo(
+      "apps/menu-bar/Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome.svg",
+    );
+    const menuBarPlayingStatusIcon = readRepo(
+      "apps/menu-bar/Sources/YTMMenuBarConnector/Resources/extension-icon-monochrome-ring.svg",
+    );
+
+    expect(menuBarStatusIcon).toBe(sharedStatusIcon);
+    expect(menuBarPlayingStatusIcon).toBe(sharedPlayingStatusIcon);
   });
 
   it("captures Windows tray release screenshots from real connector playback", () => {
@@ -161,15 +194,15 @@ describe("Windows tray connector scaffold", () => {
 
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain('"YTM_TRAY_VISUAL_STATUS"');
+    expect(program).toContain('"YTM_TRAY_SCROLL_QA"');
+    expect(program).toContain("useScrollQaMetadata");
     expect(program).toContain("DemoConnectorConnection : IConnectorConnection");
     expect(program).toContain("DemoConnectorConnection(visualDemoStatus)");
     expect(program).toContain('Type = "connector.error"');
-    expect(program).toContain(
-      '"A Walk Through the Longest Possible YouTube Music Title Fixture"',
-    );
-    expect(program).toContain(
-      '"Send And Receive (Chachi Jones Remix) With Extra Words"',
-    );
+    expect(program).toContain('"Tycho"');
+    expect(program).toContain('"A Walk"');
+    expect(program).toContain('"Dive"');
+    expect(program).toContain("Send and Receive");
     expect(visualSmoke).toContain('$env:YTM_TRAY_VISUAL_DEMO = "1"');
     expect(visualSmoke).toContain("[string] $VisualStatus =");
     expect(visualSmoke).toContain("$env:YTM_TRAY_VISUAL_STATUS");
@@ -183,6 +216,8 @@ describe("Windows tray connector scaffold", () => {
     expect(buttonSmoke).toContain("Save-RectangleScreenshot");
     expect(buttonSmoke).toContain("tray-screenshot.json");
     expect(releaseScreenshot).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
+    expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_VISUAL_DEMO");
+    expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_SCROLL_QA");
     expect(releaseScreenshot).toContain(
       "tests/e2e/windows-tray-connector.spec.ts",
     );
@@ -216,6 +251,12 @@ describe("Windows tray connector scaffold", () => {
     expect(installScript).toContain("chrome-extension://[a-p]{32}/");
     expect(installScript).toContain("Invoke-Native -FilePath dotnet");
     expect(installScript).toContain("YTMTray.NativeHost.exe");
+    expect(installScript).toContain("uninstall-native-hosts.ps1");
+    expect(installScript).toContain("Install-StartMenuShortcuts");
+    expect(installScript).toContain("Register-UninstallEntry");
+    expect(installScript).toContain(
+      "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\YTMTray",
+    );
     expect(installScript).toContain(
       '$HostName = "com.gormanity.ytm_enhancer.tray"',
     );
@@ -232,6 +273,11 @@ describe("Windows tray connector scaffold", () => {
     expect(installScript).toContain("ytm-enhancer@gormanity");
     expect(uninstallScript).toContain("Remove-Item");
     expect(uninstallScript).toContain("HKCU:\\Software\\Mozilla");
+    expect(uninstallScript).toContain("Remove-StartMenuShortcuts");
+    expect(uninstallScript).toContain("Unregister-UninstallEntry");
+    expect(uninstallScript).toContain(
+      "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\YTMTray",
+    );
     expect(uninstallScript).toContain("YTMTray");
     expect(uninstallScript).toContain("YTMTray.NativeHost");
   });
@@ -287,6 +333,8 @@ describe("Windows tray connector scaffold", () => {
     expect(packageScript).toContain("sign-release-payload.ps1");
     expect(packageScript).toContain("install-native-hosts.ps1");
     expect(packageScript).toContain("uninstall-native-hosts.ps1");
+    expect(packageScript).toContain("Install YTM Tray.cmd");
+    expect(packageScript).toContain("Uninstall YTM Tray.cmd");
     expect(packageScript).toContain("release.json");
     expect(packageScript).toContain(
       "releaseListUrl: metadata.githubReleaseListUrl",
@@ -441,6 +489,9 @@ describe("Windows tray connector scaffold", () => {
     expect(trayController).toContain("ShowBalloonTip");
     expect(trayController).toContain("DownloadAndPrepareUpdateAsync");
     expect(trayController).toContain("StartInstaller");
+    expect(trayController).toContain("Uninstall YTM Tray...");
+    expect(trayController).toContain("StartUninstaller");
+    expect(trayController).toContain("RequestUninstall");
     expect(popupForm).toContain("OnCheckForUpdates");
     expect(appContext).toContain("trayController.StartBackgroundUpdateCheck()");
   });
@@ -470,6 +521,8 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("windows-tray-vX.Y.Z");
     expect(releaseDocs).toContain("YTM-Tray-<version>-win-x64.zip");
     expect(releaseDocs).toContain("YTM-Tray-update.json");
+    expect(releaseDocs).toContain("Windows Settings > Apps > Installed apps");
+    expect(releaseDocs).toContain("Uninstall YTM Tray.cmd");
     expect(releaseDocs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
     expect(releaseDocs).toContain(
       "scripts/remote/windows-qa/tray-button-smoke.sh",

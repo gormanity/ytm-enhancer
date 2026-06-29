@@ -1772,6 +1772,9 @@ describe("menu bar connector app scaffold", () => {
       /Browser support: Chrome, Microsoft Edge, and Firefox/,
     );
     expect(windowsTrayPage).toContain("windows-tray-v&amp;expanded=true");
+    expect(windowsTrayPage).toContain("Windows Settings > Apps");
+    expect(windowsTrayPage).toContain("Uninstall YTM Tray.cmd");
+    expect(windowsTrayPage).toContain("Start Menu > YTM Enhancer");
     expect(cliPage).toContain("YTM Enhancer CLI");
     expect(cliPage).toContain("Install for macOS/Linux");
     expect(cliPage).toContain("../assets/cli-demo.webm");
