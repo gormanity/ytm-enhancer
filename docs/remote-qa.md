@@ -482,8 +482,14 @@ scripts/remote/windows-qa/crabbox-run.sh -- powershell.exe -NoProfile \
 If `nc` can connect to the forwarded port from the remote Mac, but SSH fails
 before authentication with `Connection timed out during banner exchange` or
 `kex_exchange_identification`, the repo wrapper has reached UTM and the failure
-is inside the Windows guest. In an elevated Windows PowerShell session, make the
-OpenSSH server and firewall rule idempotently active:
+is inside the Windows guest. From the Windows desktop, double-click
+`scripts/windows-qa/repair-openssh.cmd` to request administrator permission,
+repair OpenSSH Server, restore the firewall rule, fix
+`administrators_authorized_keys` ACLs when that file exists, and write a log to
+the Desktop.
+
+If a manual repair is easier, run this in an elevated Windows PowerShell
+session:
 
 ```powershell
 Set-Service sshd -StartupType Automatic

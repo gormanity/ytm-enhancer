@@ -22,6 +22,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-release-screenshot.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-button-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/repair-openssh.cmd");
     expect(docs).toContain("scripts/remote/windows-qa/probe.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-package-smoke.sh");
@@ -32,6 +33,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/remote/windows-qa/tray-button-smoke.sh");
     expect(docs).toContain("Connection timed out during banner exchange");
     expect(docs).toContain("OpenSSH-Server-In-TCP");
+    expect(docs).toContain("administrators_authorized_keys");
     expect(docs).toContain("Microsoft.DotNet.SDK.10");
     expect(docs).toMatch(
       /the tray\s+connector button smoke covers Edge and Firefox/,
@@ -46,6 +48,24 @@ describe("Windows remote QA scaffold", () => {
     expect(probe).toContain("nc -vz");
     expect(probe).toContain("powershell.exe -NoProfile -Command");
     expect(probe).not.toContain("tar -czf");
+  });
+
+  it("provides a clickable Windows OpenSSH repair helper", () => {
+    const launcher = read("scripts/windows-qa/repair-openssh.cmd");
+    const repair = read("scripts/windows-qa/repair-openssh.ps1");
+
+    expect(launcher).toContain("repair-openssh.ps1");
+    expect(launcher).toContain("-PauseOnExit");
+    expect(repair).toContain("Test-IsAdministrator");
+    expect(repair).toContain("Start-Process");
+    expect(repair).toContain("OpenSSH.Server~~~~0.0.1.0");
+    expect(repair).toContain("ssh-keygen.exe -A");
+    expect(repair).toContain("Set-Service sshd -StartupType Automatic");
+    expect(repair).toContain("Restart-Service sshd -Force");
+    expect(repair).toContain("OpenSSH-Server-In-TCP");
+    expect(repair).toContain("administrators_authorized_keys");
+    expect(repair).toContain("Test-NetConnection 127.0.0.1 -Port 22");
+    expect(repair).toContain("YTM-Windows-QA-SSH-Repair.log");
   });
 
   it("bridges through the macOS Crabbox runner into Windows OpenSSH", () => {
