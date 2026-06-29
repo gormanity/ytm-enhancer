@@ -6,6 +6,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -20,6 +21,10 @@ function read(relativePath: string): string {
 
 function readJson<T>(relativePath: string): T {
   return JSON.parse(read(relativePath)) as T;
+}
+
+function sha256Prefix(content: Buffer): string {
+  return createHash("sha256").update(content).digest("hex").slice(0, 12);
 }
 
 function toPosixPath(path: string): string {
@@ -1688,6 +1693,9 @@ describe("menu bar connector app scaffold", () => {
     const copiedWindowsTrayScreenshot = readFileSync(
       resolve(outputRoot, "site/assets/windows-tray-screenshot.png"),
     );
+    const windowsTrayScreenshotUrl =
+      "../assets/windows-tray-screenshot.png?v=" +
+      sha256Prefix(copiedWindowsTrayScreenshot);
     const copiedCliDemoVideo = readFileSync(
       resolve(outputRoot, "site/assets/cli-demo.webm"),
     );
@@ -1760,14 +1768,13 @@ describe("menu bar connector app scaffold", () => {
     expect(siteHome).toContain("assets/playback-controls.png");
     expect(connectedAppsPage).toContain("Connected Apps Beta");
     expect(connectedAppsPage).toContain("../assets/menu-bar-screenshot.png");
-    expect(connectedAppsPage).toContain(
-      "../assets/windows-tray-screenshot.png",
-    );
+    expect(connectedAppsPage).toContain(windowsTrayScreenshotUrl);
     expect(connectedAppsPage).toContain("Browser Support");
     expect(connectedAppsPage).toContain(
       "YTM Tray currently supports Chrome, Microsoft Edge, and Firefox.",
     );
     expect(windowsTrayPage).toContain("YTM Tray");
+    expect(windowsTrayPage).toContain(windowsTrayScreenshotUrl);
     expect(windowsTrayPage).toMatch(
       /Browser support: Chrome, Microsoft Edge, and Firefox/,
     );

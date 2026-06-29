@@ -55,6 +55,7 @@ internal sealed class PlaybackPopupForm : Form
     private readonly NativeAppLogger? logger;
     private readonly bool scrollDiagnosticsEnabled;
     private double currentDuration;
+    private bool hasPlayableTrack;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? OnShuffle { get; set; }
@@ -124,6 +125,7 @@ internal sealed class PlaybackPopupForm : Form
         artistYearLabel.ForeColor = TertiaryTextColor;
         currentArtwork.SetArtworkUrl(null);
         currentDuration = 0;
+        hasPlayableTrack = false;
         UpdateProgress(0, 0);
         UpdateNextTrack(null);
         ShowControlStatus(status, ControlStatusTextColor(status), !isNeutral);
@@ -134,8 +136,14 @@ internal sealed class PlaybackPopupForm : Form
     {
         statusLabel.Text = "";
         statusLabel.ForeColor = WarningColor;
-        artistYearLabel.Text = "";
-        artistYearLabel.ForeColor = TertiaryTextColor;
+        if (hasPlayableTrack)
+        {
+            statusLabel.Text = "Updating";
+            HideControlStatus();
+            SetControlsEnabled(true);
+            return;
+        }
+
         ShowControlStatus("Waiting for playback updates...", WarningColor, true);
         SetControlsEnabled(false);
     }
@@ -160,6 +168,7 @@ internal sealed class PlaybackPopupForm : Form
         repeatButton.ButtonIcon = RepeatButtonIcon(state.RepeatMode);
         repeatButton.Active = (state.RepeatMode ?? "off") != "off";
         currentDuration = Math.Max(0, state.Duration);
+        hasPlayableTrack = hasTrack;
         UpdateProgress(state.Progress, state.Duration);
         UpdateNextTrack(state.NextTrack);
         if (hasTrack)

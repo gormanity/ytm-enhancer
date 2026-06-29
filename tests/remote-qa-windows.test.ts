@@ -144,11 +144,15 @@ describe("Windows remote QA scaffold", () => {
       "tests/e2e/windows-tray-connector.spec.ts",
     );
     expect(releaseScreenshot).toContain("--project=edge");
+    expect(trayE2e).toContain("Move-CursorAwayFromRectangle");
     expect(releaseScreenshotShell).toContain(
       "scripts\\windows-qa\\tray-release-screenshot.ps1",
     );
     expect(releaseScreenshotShell).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
+    expect(releaseScreenshotShell).toContain("final = block");
+    expect(releaseScreenshotShell).toContain("tr -cd 'A-Za-z0-9+/=\\n'");
     expect(releaseScreenshotShell).toContain("base64 --decode");
+    expect(releaseScreenshotShell).toContain('<"$encoded_file"');
     expect(trayE2e).toContain("Save-TrayPopupScreenshot");
     expect(trayE2e).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
   });

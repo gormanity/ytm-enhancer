@@ -412,11 +412,25 @@ function Save-RectangleScreenshot {
   }
 }
 
+function Move-CursorAwayFromRectangle {
+  param([Parameter(Mandatory = $true)] $Rect)
+  $ScreenBounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+  $X = [int]($ScreenBounds.Right - 16)
+  $Y = [int]($ScreenBounds.Top + 16)
+  if ($Rect.Contains($X, $Y)) {
+    $X = [int]($ScreenBounds.Left + 16)
+    $Y = [int]($ScreenBounds.Bottom - 16)
+  }
+  [NativeInput]::SetCursorPos($X, $Y) | Out-Null
+  Start-Sleep -Milliseconds 700
+}
+
 function Save-TrayPopupScreenshot {
   param([Parameter(Mandatory = $true)][string] $Path)
   $PopupWindow = Open-TrayPopup
   Activate-Window $PopupWindow
-  Save-RectangleScreenshot -Path $Path -Rect $PopupWindow.Current.BoundingRectangle -Padding 2
+  Move-CursorAwayFromRectangle $PopupWindow.Current.BoundingRectangle
+  Save-RectangleScreenshot -Path $Path -Rect $PopupWindow.Current.BoundingRectangle -Padding 0
 }
 
 function Click-PopupElementByName {
@@ -644,7 +658,7 @@ test("routes Windows tray buttons through the browser native messaging host", as
     await expectFixtureEvent(ytmPage, "player-play-clicked");
     await expectFixtureEvent(ytmPage, "player-play-pause-clicked");
     if (promoScreenshotPath && testInfo.project.name === "edge") {
-      await ytmPage.waitForTimeout(1500);
+      await ytmPage.waitForTimeout(500);
       await captureTrayPromoScreenshot(
         testInfo.outputPath("tray-screenshot.json"),
         promoScreenshotPath,

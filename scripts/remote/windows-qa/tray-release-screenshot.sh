@@ -25,10 +25,21 @@ Write-Output "YTME_SCREENSHOT_BASE64_END"
 fi
 
 awk '
-  /YTME_SCREENSHOT_BASE64_BEGIN/ { capture = 1; next }
-  /YTME_SCREENSHOT_BASE64_END/ { capture = 0; next }
-  capture { print }
-' "$log_file" >"$encoded_file"
+  /YTME_SCREENSHOT_BASE64_BEGIN/ {
+    capture = 1
+    block = ""
+    next
+  }
+  /YTME_SCREENSHOT_BASE64_END/ {
+    if (capture) {
+      final = block
+      capture = 0
+    }
+    next
+  }
+  capture { block = block $0 "\n" }
+  END { printf "%s", final }
+' "$log_file" | LC_ALL=C tr -d '\r' | LC_ALL=C tr -cd 'A-Za-z0-9+/=\n' >"$encoded_file"
 
 if [ ! -s "$encoded_file" ]; then
   cat "$log_file" >&2
@@ -36,7 +47,9 @@ if [ ! -s "$encoded_file" ]; then
   exit 1
 fi
 
-if base64 --decode "$encoded_file" >"$decoded_file" 2>/dev/null; then
+if base64 --decode <"$encoded_file" >"$decoded_file" 2>/dev/null; then
+  :
+elif base64 -d -i "$encoded_file" -o "$decoded_file" 2>/dev/null; then
   :
 elif base64 -D -i "$encoded_file" -o "$decoded_file" 2>/dev/null; then
   :

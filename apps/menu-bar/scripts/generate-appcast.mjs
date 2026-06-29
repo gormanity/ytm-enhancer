@@ -626,6 +626,10 @@ function writeSiteAsset({ siteRoot, sourcePath, fileName }) {
   copyFileSync(sourcePath, resolve(assetDir, fileName));
 }
 
+function siteAssetUrl(path, sourcePath) {
+  return `${path}?v=${sha256(sourcePath).slice(0, 12)}`;
+}
+
 function writeSitePage(path, html) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, html);
@@ -640,6 +644,14 @@ function writeSitePages({ metadata, outputPath }) {
   const stores = extensionStoreUrls();
   const windowsReleaseListUrl =
     "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true";
+  const windowsTrayScreenshotSourcePath = resolve(
+    repoRoot,
+    "apps/windows-tray/release/windows-tray-screenshot.png",
+  );
+  const windowsTrayScreenshotUrl = siteAssetUrl(
+    "../assets/windows-tray-screenshot.png",
+    windowsTrayScreenshotSourcePath,
+  );
 
   writeSiteAsset({
     siteRoot,
@@ -658,10 +670,7 @@ function writeSitePages({ metadata, outputPath }) {
   });
   writeSiteAsset({
     siteRoot,
-    sourcePath: resolve(
-      repoRoot,
-      "apps/windows-tray/release/windows-tray-screenshot.png",
-    ),
+    sourcePath: windowsTrayScreenshotSourcePath,
     fileName: "windows-tray-screenshot.png",
   });
   writeSiteAsset({
@@ -813,7 +822,7 @@ function writeSitePages({ metadata, outputPath }) {
             </figure>
             <figure class="visual-frame">
               <img
-                src="../assets/windows-tray-screenshot.png"
+                src="${windowsTrayScreenshotUrl}"
                 alt="YTM Tray connected app showing Windows playback controls"
               >
             </figure>
@@ -928,7 +937,7 @@ function writeSitePages({ metadata, outputPath }) {
           </div>
           <figure class="visual-frame">
             <img
-              src="../assets/windows-tray-screenshot.png"
+              src="${windowsTrayScreenshotUrl}"
               alt="YTM Tray app showing playback controls in a Windows tray popup"
             >
           </figure>

@@ -78,6 +78,7 @@
       </div>
       <span id="time-info">1:23 / 4:56</span>
       <input id="progress-bar" max="296" min="0" type="range" value="83" />
+      <video class="html5-main-video"></video>
       <ytmusic-player-queue-item selected>
         <img
           class="image"
@@ -117,9 +118,44 @@
         window.__ytmTestEvents.push("window-focused");
       });
       const playPauseButton = document.querySelector("#play-pause-button");
+      const progressBar = document.querySelector("#progress-bar");
+      const timeInfo = document.querySelector("#time-info");
+      const video = document.querySelector("video.html5-main-video");
+      let progressTimer = null;
+
+      function formatTime(totalSeconds) {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = String(totalSeconds % 60).padStart(2, "0");
+        return `${minutes}:${seconds}`;
+      }
+
+      function publishMediaUpdate(eventName = "timeupdate") {
+        video.dispatchEvent(new Event(eventName));
+        if (eventName !== "timeupdate") {
+          video.dispatchEvent(new Event("timeupdate"));
+        }
+      }
+
+      function advanceProgress() {
+        const max = Number(progressBar.max);
+        const current = Number(progressBar.value);
+        const next = Math.min(max, current + 1);
+        progressBar.value = String(next);
+        timeInfo.textContent = `${formatTime(next)} / ${formatTime(max)}`;
+        publishMediaUpdate();
+      }
+
+      function startProgressUpdates() {
+        if (progressTimer !== null) return;
+        progressTimer = window.setInterval(advanceProgress, 1000);
+      }
+
       playPauseButton.addEventListener("click", () => {
         playPauseButton.setAttribute("title", "Pause");
         playPauseButton.setAttribute("aria-label", "Pause");
+        startProgressUpdates();
+        advanceProgress();
+        publishMediaUpdate("play");
         window.__ytmTestEvents.push("player-play-clicked");
         window.__ytmTestEvents.push("player-play-pause-clicked");
       });
