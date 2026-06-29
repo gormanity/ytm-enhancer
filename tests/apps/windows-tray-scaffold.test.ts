@@ -148,11 +148,16 @@ describe("Windows tray connector scaffold", () => {
     expect(renderer).not.toContain("PackageReference");
   });
 
-  it("has a populated visual QA fixture for tray screenshots", () => {
+  it("captures Windows tray release screenshots from real connector playback", () => {
     const program = read("src/YTMTray/Program.cs");
     const visualSmoke = read("../../scripts/windows-qa/tray-visual-smoke.ps1");
-    const screenshotSource = read("release/windows-tray-screenshot.html");
-    const screenshotRenderer = read("scripts/render-release-screenshot.mjs");
+    const buttonSmoke = read("../../tests/e2e/windows-tray-connector.spec.ts");
+    const releaseScreenshot = readRepo(
+      "scripts/windows-qa/tray-release-screenshot.ps1",
+    );
+    const remoteReleaseScreenshot = readRepo(
+      "scripts/remote/windows-qa/tray-release-screenshot.sh",
+    );
 
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain('"YTM_TRAY_VISUAL_STATUS"');
@@ -173,16 +178,18 @@ describe("Windows tray connector scaffold", () => {
     expect(visualSmoke).toContain("metadata scroll advanced");
     expect(visualSmoke).toContain("Save-RectangleScreenshot");
     expect(visualSmoke).toContain("$PopupWindow.Current.BoundingRectangle");
-    expect(screenshotSource).toContain("A Walk");
-    expect(screenshotSource).toContain("Tycho - 2011");
-    expect(screenshotSource).toContain("Check for Updates");
-    expect(screenshotSource).toContain(
-      "packages/connector-ui-assets/playback/playback-pause.svg",
+    expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
+    expect(buttonSmoke).toContain("Save-TrayPopupScreenshot");
+    expect(buttonSmoke).toContain("Save-RectangleScreenshot");
+    expect(buttonSmoke).toContain("tray-screenshot.json");
+    expect(releaseScreenshot).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
+    expect(releaseScreenshot).toContain(
+      "tests/e2e/windows-tray-connector.spec.ts",
     );
-    expect(screenshotRenderer).toContain("windows-tray-screenshot.html");
-    expect(screenshotRenderer).toContain("windows-tray-screenshot.png");
-    expect(screenshotRenderer).toContain(
-      "viewport: { width: 442, height: 574 }",
+    expect(releaseScreenshot).toContain("--project=edge");
+    expect(remoteReleaseScreenshot).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
+    expect(remoteReleaseScreenshot).toContain(
+      "apps/windows-tray/release/windows-tray-screenshot.png",
     );
   });
 
@@ -397,9 +404,7 @@ describe("Windows tray connector scaffold", () => {
     expect(packageJson.scripts["windows-tray:update-manifest"]).toBe(
       "node apps/windows-tray/scripts/generate-update-manifest.mjs",
     );
-    expect(packageJson.scripts["windows-tray:screenshot"]).toBe(
-      "node apps/windows-tray/scripts/render-release-screenshot.mjs",
-    );
+    expect(packageJson.scripts["windows-tray:screenshot"]).toBeUndefined();
   });
 
   it("reports the packaged assembly version through connector hello", () => {

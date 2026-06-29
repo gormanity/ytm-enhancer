@@ -189,6 +189,8 @@ async function launchTrayApp(
 }
 
 const TRAY_UIA_HELPERS = String.raw`
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $NativeInputSource = @'
@@ -379,6 +381,44 @@ function Open-TrayPopup {
   return $PopupWindow
 }
 
+function Save-RectangleScreenshot {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)] $Rect,
+    [int] $Padding = 0
+  )
+  $ScreenBounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+  $Left = [Math]::Max($ScreenBounds.Left, [int][Math]::Floor($Rect.X) - $Padding)
+  $Top = [Math]::Max($ScreenBounds.Top, [int][Math]::Floor($Rect.Y) - $Padding)
+  $Right = [Math]::Min($ScreenBounds.Right, [int][Math]::Ceiling($Rect.Right) + $Padding)
+  $Bottom = [Math]::Min($ScreenBounds.Bottom, [int][Math]::Ceiling($Rect.Bottom) + $Padding)
+  $Width = $Right - $Left
+  $Height = $Bottom - $Top
+  if ($Width -le 0 -or $Height -le 0) {
+    throw "Invalid screenshot rectangle: $Rect"
+  }
+  $OutputDirectory = Split-Path -Parent $Path
+  if ($OutputDirectory) {
+    New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
+  }
+  $Bitmap = New-Object System.Drawing.Bitmap $Width, $Height
+  $Graphics = [System.Drawing.Graphics]::FromImage($Bitmap)
+  try {
+    $Graphics.CopyFromScreen($Left, $Top, 0, 0, $Bitmap.Size)
+    $Bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+  } finally {
+    $Graphics.Dispose()
+    $Bitmap.Dispose()
+  }
+}
+
+function Save-TrayPopupScreenshot {
+  param([Parameter(Mandatory = $true)][string] $Path)
+  $PopupWindow = Open-TrayPopup
+  Activate-Window $PopupWindow
+  Save-RectangleScreenshot -Path $Path -Rect $PopupWindow.Current.BoundingRectangle -Padding 2
+}
+
 function Click-PopupElementByName {
   param(
     [Parameter(Mandatory = $true)][string] $Name,
@@ -417,6 +457,16 @@ async function clickTrayPopupElement(
 ): Promise<void> {
   await runTrayUiAction(name, resultPath, [
     `Click-PopupElementByName ${psLiteral(elementName)} ${xFraction}`,
+    "Start-Sleep -Milliseconds 350",
+  ]);
+}
+
+async function captureTrayPromoScreenshot(
+  resultPath: string,
+  screenshotPath: string,
+): Promise<void> {
+  await runTrayUiAction("screenshot", resultPath, [
+    `Save-TrayPopupScreenshot ${psLiteral(screenshotPath)}`,
     "Start-Sleep -Milliseconds 350",
   ]);
 }
@@ -559,6 +609,7 @@ test("routes Windows tray buttons through the browser native messaging host", as
   const installRoot = testInfo.outputPath("tray-install");
   const executablePath = `${installRoot}\\YTMTray.exe`;
   const trayLogPath = testInfo.outputPath("tray.log");
+  const promoScreenshotPath = process.env.YTME_WINDOWS_TRAY_SCREENSHOT_PATH;
   let extension: Awaited<ReturnType<typeof launchExtensionContext>> | undefined;
 
   try {
@@ -592,6 +643,13 @@ test("routes Windows tray buttons through the browser native messaging host", as
     );
     await expectFixtureEvent(ytmPage, "player-play-clicked");
     await expectFixtureEvent(ytmPage, "player-play-pause-clicked");
+    if (promoScreenshotPath && testInfo.project.name === "edge") {
+      await ytmPage.waitForTimeout(1500);
+      await captureTrayPromoScreenshot(
+        testInfo.outputPath("tray-screenshot.json"),
+        promoScreenshotPath,
+      );
+    }
 
     await clickTrayPopupElement(
       "next",

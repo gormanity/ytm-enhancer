@@ -20,11 +20,15 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/windows-qa/tray-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-package-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-release-screenshot.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-button-smoke.ps1");
     expect(docs).toContain("scripts/remote/windows-qa/probe.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-package-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-visual-smoke.sh");
+    expect(docs).toContain(
+      "scripts/remote/windows-qa/tray-release-screenshot.sh",
+    );
     expect(docs).toContain("scripts/remote/windows-qa/tray-button-smoke.sh");
     expect(docs).toContain("Connection timed out during banner exchange");
     expect(docs).toContain("OpenSSH-Server-In-TCP");
@@ -99,6 +103,32 @@ describe("Windows remote QA scaffold", () => {
     expect(visualSmokeShell).toContain(
       "scripts\\windows-qa\\tray-visual-smoke.ps1",
     );
+  });
+
+  it("captures the release screenshot through the real tray connector smoke", () => {
+    const releaseScreenshot = read(
+      "scripts/windows-qa/tray-release-screenshot.ps1",
+    );
+    const releaseScreenshotShell = read(
+      "scripts/remote/windows-qa/tray-release-screenshot.sh",
+    );
+    const trayE2e = read("tests/e2e/windows-tray-connector.spec.ts");
+
+    expect(releaseScreenshot).toContain(
+      "$env:YTME_WINDOWS_TRAY_SCREENSHOT_PATH",
+    );
+    expect(releaseScreenshot).toContain("pnpm run dev:build:edge");
+    expect(releaseScreenshot).toContain(
+      "tests/e2e/windows-tray-connector.spec.ts",
+    );
+    expect(releaseScreenshot).toContain("--project=edge");
+    expect(releaseScreenshotShell).toContain(
+      "scripts\\windows-qa\\tray-release-screenshot.ps1",
+    );
+    expect(releaseScreenshotShell).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
+    expect(releaseScreenshotShell).toContain("base64 --decode");
+    expect(trayE2e).toContain("Save-TrayPopupScreenshot");
+    expect(trayE2e).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
   });
 
   it("preflights the .NET 10 runtime needed by tray unit smoke", () => {

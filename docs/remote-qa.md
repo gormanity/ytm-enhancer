@@ -605,6 +605,25 @@ Automation, opens the tray popup, captures desktop/overflow/popup screenshots
 under the Windows user's temp directory, verifies long metadata scrolls, and
 removes the smoke install.
 
+Regenerate the Windows tray release screenshot from the same active Windows
+desktop session:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-release-screenshot.ps1
+```
+
+Run the same capture through bowfin and the Windows guest:
+
+```sh
+scripts/remote/windows-qa/tray-release-screenshot.sh
+```
+
+This runs the real Windows tray app against the Edge Connected Apps smoke,
+captures the tray popup after playback has been routed through native messaging,
+and copies the PNG back to
+`apps/windows-tray/release/windows-tray-screenshot.png`.
+
 Run the Windows tray button smoke from an active Windows desktop session:
 
 ```powershell

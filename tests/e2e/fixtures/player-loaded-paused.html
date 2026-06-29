@@ -60,15 +60,49 @@
         ></iron-icon>
       </button>
       <yt-formatted-string class="title style-scope ytmusic-player-bar">
-        Loaded Track
+        A Walk
       </yt-formatted-string>
       <span class="subtitle style-scope ytmusic-player-bar">
         <yt-formatted-string>
-          <a href="/channel/fixture">Fixture Artist</a>
+          <a href="/channel/fixture">Tycho</a>
+          <a href="/browse/MPREb_fixture">Dive</a>
+          <span>2011</span>
         </yt-formatted-string>
       </span>
+      <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+        <img
+          class="image"
+          alt=""
+          src="https://lh3.googleusercontent.com/ytm-enhancer-fixture=w226-h226-l90-rj"
+        />
+      </div>
       <span id="time-info">1:23 / 4:56</span>
       <input id="progress-bar" max="296" min="0" type="range" value="83" />
+      <ytmusic-player-queue-item selected>
+        <img
+          class="image"
+          alt=""
+          src="https://lh3.googleusercontent.com/ytm-enhancer-fixture=w226-h226-l90-rj"
+        />
+        <yt-formatted-string class="song-title">A Walk</yt-formatted-string>
+        <yt-formatted-string class="byline">
+          <a href="/channel/fixture">Tycho</a>
+          <a href="/browse/MPREb_fixture">Dive</a>
+        </yt-formatted-string>
+      </ytmusic-player-queue-item>
+      <ytmusic-player-queue-item>
+        <img
+          class="image"
+          alt=""
+          src="https://lh3.googleusercontent.com/ytm-enhancer-next-fixture=w226-h226-l90-rj"
+        />
+        <yt-formatted-string class="song-title">
+          Send And Receive
+        </yt-formatted-string>
+        <yt-formatted-string class="byline">
+          <a href="/channel/fixture">Tycho</a>
+        </yt-formatted-string>
+      </ytmusic-player-queue-item>
     </section>
 
     <main>
@@ -84,6 +118,8 @@
       });
       const playPauseButton = document.querySelector("#play-pause-button");
       playPauseButton.addEventListener("click", () => {
+        playPauseButton.setAttribute("title", "Pause");
+        playPauseButton.setAttribute("aria-label", "Pause");
         window.__ytmTestEvents.push("player-play-clicked");
         window.__ytmTestEvents.push("player-play-pause-clicked");
       });
