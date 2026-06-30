@@ -14,6 +14,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("connector app updates tray playback state", ConnectorAppPlaybackState),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
+    ("update options use packaged release version", UpdateOptionsUsePackagedReleaseVersion),
     ("update service prepares verified package", UpdateServicePreparesVerifiedPackage),
     ("update service rejects unsafe package entries", UpdateServiceRejectsUnsafePackageEntries)
 };
@@ -235,6 +236,30 @@ static async Task UpdateServiceIgnoresCurrentTrayRelease()
 
     AssertEqual(false, update.IsUpdateAvailable);
     AssertEqual("0.1.0", update.LatestVersion);
+}
+
+static Task UpdateOptionsUsePackagedReleaseVersion()
+{
+    using var temp = new TempDirectory();
+    File.WriteAllText(
+        Path.Combine(temp.Path, "release.json"),
+        """
+        {
+          "releaseListUrl": "https://example.test/releases",
+          "githubReleaseTagPrefix": "windows-tray-v",
+          "runtimeIdentifier": "win-arm64",
+          "updateManifestAssetName": "YTM-Tray-update.json",
+          "version": "0.0.2"
+        }
+        """
+    );
+
+    var options = WindowsTrayUpdateOptions.FromReleaseMetadataFile(temp.Path);
+
+    AssertNotNull(options, "packaged release options");
+    AssertEqual("0.0.2", options!.CurrentVersion);
+    AssertEqual("win-arm64", options.RuntimeIdentifier);
+    return Task.CompletedTask;
 }
 
 static async Task UpdateServicePreparesVerifiedPackage()
