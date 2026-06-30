@@ -18,8 +18,11 @@ internal sealed class TrayController : ITrayController, IDisposable
     private readonly NativeAppLogger? logger;
     private readonly CancellationTokenSource updateCancellation = new();
     private ToolStripMenuItem? updateMenuItem;
+    private AboutDialogForm? aboutDialog;
     private WindowsTrayUpdateCheckResult? availableUpdate;
+    private string? updateCheckError;
     private bool updateCheckInProgress;
+    private bool updateCheckCompleted;
 
     public Action? OnShuffle { get; set; }
     public Action? OnPrevious { get; set; }
@@ -105,6 +108,7 @@ internal sealed class TrayController : ITrayController, IDisposable
         updateCancellation.Dispose();
         notifyIcon.Visible = false;
         notifyIcon.Dispose();
+        aboutDialog?.Dispose();
         popup.Dispose();
         idleIcon.Dispose();
         playingIcon.Dispose();
@@ -143,6 +147,8 @@ internal sealed class TrayController : ITrayController, IDisposable
         }
 
         updateCheckInProgress = true;
+        updateCheckError = null;
+        SetAboutUpdateStatus(WindowsTrayAboutUpdateStatus.Checking());
         var cancellationToken = updateCancellation.Token;
 
         try
@@ -201,6 +207,8 @@ internal sealed class TrayController : ITrayController, IDisposable
         catch (Exception error)
         {
             logger?.Log($"windows tray update check failed: {error.Message}");
+            updateCheckError = error.Message;
+            SetAboutUpdateStatus(WindowsTrayAboutUpdateStatus.Failed(error.Message));
             if (userInitiated)
             {
                 ShowUpdateMessage(
@@ -235,16 +243,25 @@ internal sealed class TrayController : ITrayController, IDisposable
     )
     {
         availableUpdate = update.IsUpdateAvailable ? update : null;
+        updateCheckError = null;
+        updateCheckCompleted = true;
+        var latestVersion = update.LatestVersion;
+        var aboutUpdateStatus =
+            update.IsUpdateAvailable && !string.IsNullOrWhiteSpace(latestVersion)
+                ? WindowsTrayAboutUpdateStatus.UpdateAvailable(latestVersion)
+                : WindowsTrayAboutUpdateStatus.UpToDate();
         RunOnUiThread(() =>
         {
-            var updateLabel = update.IsUpdateAvailable
-                ? $"Install Update {update.LatestVersion}"
-                : "Check for Updates";
+            var updateLabel =
+                update.IsUpdateAvailable && !string.IsNullOrWhiteSpace(latestVersion)
+                    ? $"Install Update {latestVersion}"
+                    : "Check for Updates";
             if (updateMenuItem is not null)
             {
                 updateMenuItem.Text = updateLabel;
             }
-            popup.SetUpdateAvailable(update.IsUpdateAvailable ? update.LatestVersion : null);
+            popup.SetUpdateAvailable(update.IsUpdateAvailable ? latestVersion : null);
+            aboutDialog?.SetUpdateStatus(aboutUpdateStatus);
 
             if (showNotification && update.IsUpdateAvailable)
             {
@@ -381,29 +398,62 @@ internal sealed class TrayController : ITrayController, IDisposable
         action();
     }
 
-    private static void ShowAbout(IWin32Window? owner = null)
+    private void SetAboutUpdateStatus(WindowsTrayAboutUpdateStatus status)
     {
-        const string message =
-            "YTM Tray connects YTM Enhancer to Windows tray playback controls.";
-        const string title = "About YTM Tray";
+        RunOnUiThread(() => aboutDialog?.SetUpdateStatus(status));
+    }
 
-        if (owner is null)
+    private WindowsTrayAboutUpdateStatus CurrentAboutUpdateStatus()
+    {
+        if (updateCheckInProgress)
         {
-            MessageBox.Show(
-                message,
-                title,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            );
-            return;
+            return WindowsTrayAboutUpdateStatus.Checking();
         }
 
-        MessageBox.Show(
-            owner,
-            message,
-            title,
-            MessageBoxButtons.OK,
-            MessageBoxIcon.Information
-        );
+        var availableVersion = availableUpdate?.LatestVersion;
+        if (
+            availableUpdate?.IsUpdateAvailable == true
+            && !string.IsNullOrWhiteSpace(availableVersion)
+        )
+        {
+            return WindowsTrayAboutUpdateStatus.UpdateAvailable(availableVersion);
+        }
+
+        if (!string.IsNullOrWhiteSpace(updateCheckError))
+        {
+            return WindowsTrayAboutUpdateStatus.Failed(updateCheckError);
+        }
+
+        return updateCheckCompleted
+            ? WindowsTrayAboutUpdateStatus.UpToDate()
+            : WindowsTrayAboutUpdateStatus.Idle();
+    }
+
+    private void ShowAbout(IWin32Window? owner = null)
+    {
+        if (aboutDialog is null || aboutDialog.IsDisposed)
+        {
+            aboutDialog = new AboutDialogForm();
+            aboutDialog.OnCheckForUpdates = () =>
+                _ = CheckForUpdatesAsync(aboutDialog, userInitiated: true);
+            aboutDialog.FormClosed += (_, _) => aboutDialog = null;
+        }
+
+        aboutDialog.SetUpdateStatus(CurrentAboutUpdateStatus());
+
+        if (!aboutDialog.Visible)
+        {
+            if (owner is null)
+            {
+                aboutDialog.Show();
+            }
+            else
+            {
+                aboutDialog.Show(owner);
+            }
+        }
+
+        aboutDialog.BringToFront();
+        aboutDialog.Activate();
     }
 }

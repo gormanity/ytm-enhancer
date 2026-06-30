@@ -92,8 +92,31 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(trayController).toContain("popup.OnAbout = () => ShowAbout(popup)");
     expect(trayController).toContain("IWin32Window? owner");
-    expect(trayController).toContain("MessageBox.Show(");
-    expect(trayController).toContain("owner,");
+    expect(trayController).toContain("AboutDialogForm? aboutDialog");
+    expect(trayController).toContain("aboutDialog.Show(owner)");
+  });
+
+  it("includes update status and process details in the About dialog", () => {
+    const aboutDialog = read("src/YTMTray/AboutDialogForm.cs");
+    const trayController = read("src/YTMTray/TrayController.cs");
+
+    expect(aboutDialog).toContain("About YTM Tray");
+    expect(aboutDialog).toContain("Beta connected app");
+    expect(aboutDialog).toContain("WindowsTrayAboutUpdateStatus");
+    expect(aboutDialog).toContain("Updates");
+    expect(aboutDialog).toContain("Check for Updates");
+    expect(aboutDialog).toContain("Install Update");
+    expect(aboutDialog).toContain("SHA-256 checksum");
+    expect(aboutDialog).toContain("%LOCALAPPDATA%\\\\YTM Enhancer\\\\Tray");
+    expect(aboutDialog).toContain("native messaging host registration");
+    expect(aboutDialog).toContain("OnCheckForUpdates");
+    expect(trayController).toContain("SetAboutUpdateStatus");
+    expect(trayController).toContain("WindowsTrayAboutUpdateStatus.Checking()");
+    expect(trayController).toContain("WindowsTrayAboutUpdateStatus.UpToDate()");
+    expect(trayController).toContain(
+      "WindowsTrayAboutUpdateStatus.UpdateAvailable(latestVersion)",
+    );
+    expect(trayController).toContain("WindowsTrayAboutUpdateStatus.Failed");
   });
 
   it("uses a custom tray flyout instead of default dialog controls", () => {
