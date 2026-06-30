@@ -48,7 +48,9 @@ public sealed record WindowsTrayUpdateOptions(
             return new WindowsTrayUpdateOptions(
                 metadata.ReleaseListUrl,
                 metadata.GithubReleaseTagPrefix,
-                ConnectorProtocol.ConnectorVersion,
+                string.IsNullOrWhiteSpace(metadata.Version)
+                    ? ConnectorProtocol.ConnectorVersion
+                    : metadata.Version,
                 string.IsNullOrWhiteSpace(metadata.RuntimeIdentifier)
                     ? CurrentRuntimeIdentifier()
                     : metadata.RuntimeIdentifier
@@ -446,6 +448,7 @@ internal sealed class GitHubReleaseAsset
 
 internal sealed class PackagedReleaseMetadata
 {
+    public string? Version { get; init; }
     public Uri? ReleaseListUrl { get; init; }
     public string? GithubReleaseTagPrefix { get; init; }
     public string? RuntimeIdentifier { get; init; }
