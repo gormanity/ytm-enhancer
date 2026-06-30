@@ -17,6 +17,12 @@ function run(command, args) {
   execFileSync(command, args.filter(Boolean), { stdio: "inherit" });
 }
 
+function envFlag(name) {
+  return ["1", "true", "yes"].includes(
+    process.env[name]?.trim().toLowerCase() ?? "",
+  );
+}
+
 function fileVersion(metadata) {
   return `${metadata.version}.${metadata.buildNumber}`;
 }
@@ -47,6 +53,12 @@ function maybeSignPayload(payloadRoot) {
   const certificatePath =
     process.env.YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH?.trim();
   if (!certificatePath) {
+    if (envFlag("YTM_WINDOWS_TRAY_CODESIGN_REQUIRED")) {
+      throw new Error(
+        "Windows tray signing is required, but YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH is not set.",
+      );
+    }
+
     return;
   }
 

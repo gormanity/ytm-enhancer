@@ -60,20 +60,27 @@ jobs:
           pnpm exec vitest run tests/apps/windows-tray-scaffold.test.ts
           pnpm run windows-tray:test
 
-      - name: Prepare optional signing certificate
+      - name: Prepare signing certificate
         shell: pwsh
         env:
           WINDOWS_TRAY_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_TRAY_CODESIGN_PFX_BASE64 }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:WINDOWS_TRAY_CODESIGN_PFX_BASE64)) {
-            Write-Output "Windows tray signing certificate is not configured; packages will be unsigned."
-            exit 0
+            Write-Error "Windows tray release signing is required. Configure WINDOWS_TRAY_CODESIGN_PFX_BASE64 before pushing a windows-tray-v* tag."
+            exit 1
           }
 
           $certificatePath = Join-Path $env:RUNNER_TEMP "windows-tray-codesign.pfx"
+          try {
+            $certificateBytes = [Convert]::FromBase64String($env:WINDOWS_TRAY_CODESIGN_PFX_BASE64)
+          } catch {
+            Write-Error "WINDOWS_TRAY_CODESIGN_PFX_BASE64 is not valid base64."
+            exit 1
+          }
+
           [IO.File]::WriteAllBytes(
             $certificatePath,
-            [Convert]::FromBase64String($env:WINDOWS_TRAY_CODESIGN_PFX_BASE64)
+            $certificateBytes
           )
           "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH=$certificatePath" |
             Out-File -FilePath $env:GITHUB_ENV -Append
@@ -81,6 +88,7 @@ jobs:
       - name: Build release packages
         shell: pwsh
         env:
+          YTM_WINDOWS_TRAY_CODESIGN_REQUIRED: "1"
           YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_TRAY_CODESIGN_PASSWORD }}
           YTM_WINDOWS_TRAY_CODESIGN_TIMESTAMP_URL: http://timestamp.digicert.com
         run: |
@@ -90,6 +98,17 @@ jobs:
           pnpm run windows-tray:update-manifest -- `
             "--package=apps/windows-tray/.build/packages/YTM-Tray-$version-win-x64.zip" `
             "--package=apps/windows-tray/.build/packages/YTM-Tray-$version-win-arm64.zip"
+
+      - name: Remove signing certificate
+        if: always()
+        shell: pwsh
+        run: |
+          if (
+            -not [string]::IsNullOrWhiteSpace($env:YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH) -and
+            (Test-Path -LiteralPath $env:YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH)
+          ) {
+            Remove-Item -LiteralPath $env:YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH -Force
+          }
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3

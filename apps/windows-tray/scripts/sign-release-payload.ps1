@@ -15,10 +15,25 @@ if ([string]::IsNullOrWhiteSpace($TimestampUrl)) {
     $env:YTM_WINDOWS_TRAY_CODESIGN_TIMESTAMP_URL
   }
 }
+$ShouldSkipTimestamp = $TimestampUrl -in @("none", "off", "skip")
 
 function Find-SignTool {
+  function Test-SignToolCandidate {
+    param(
+      [Parameter(Mandatory = $true)]
+      [string] $Path
+    )
+
+    try {
+      & $Path sign /? *> $null
+      return $LASTEXITCODE -eq 0
+    } catch {
+      return $false
+    }
+  }
+
   $PathCommand = Get-Command signtool.exe -ErrorAction SilentlyContinue
-  if ($PathCommand) {
+  if ($PathCommand -and (Test-SignToolCandidate -Path $PathCommand.Source)) {
     return $PathCommand.Source
   }
 
@@ -27,16 +42,27 @@ function Find-SignTool {
     throw "signtool.exe was not found. Install the Windows SDK before signing Windows tray releases."
   }
 
-  $Candidate = Get-ChildItem -LiteralPath $KitsRoot -Recurse -Filter signtool.exe |
-    Where-Object { $_.FullName -match "\\x64\\signtool\.exe$" } |
-    Sort-Object FullName -Descending |
-    Select-Object -First 1
-
-  if (-not $Candidate) {
-    throw "signtool.exe was not found. Install the Windows SDK before signing Windows tray releases."
+  $Candidates = Get-ChildItem -LiteralPath $KitsRoot -Recurse -Filter signtool.exe |
+    Where-Object { $_.FullName -match "\\(arm64|x64|x86)\\signtool\.exe$" }
+  $PreferredArchitectures = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
+    @("arm64", "x64", "x86")
+  } else {
+    @("x64", "x86", "arm64")
   }
 
-  return $Candidate.FullName
+  foreach ($Architecture in $PreferredArchitectures) {
+    $ArchitectureCandidates = $Candidates |
+      Where-Object { $_.FullName -match "\\$Architecture\\signtool\.exe$" } |
+      Sort-Object FullName -Descending
+
+    foreach ($Candidate in $ArchitectureCandidates) {
+      if (Test-SignToolCandidate -Path $Candidate.FullName) {
+        return $Candidate.FullName
+      }
+    }
+  }
+
+  throw "signtool.exe was found, but no runnable Windows SDK SignTool executable could be started."
 }
 
 function Invoke-SignTool {
@@ -66,6 +92,11 @@ $CertificatePassword = $env:YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PASSWORD
 if ($null -eq $CertificatePassword) {
   $CertificatePassword = ""
 }
+$VerifyMode = $env:YTM_WINDOWS_TRAY_CODESIGN_VERIFY_MODE
+if ([string]::IsNullOrWhiteSpace($VerifyMode)) {
+  $VerifyMode = "trust"
+}
+
 $FilesToSign = @(
   Join-Path $PayloadRoot "YTMTray.exe"
   Join-Path $PayloadRoot "YTMTray.NativeHost.exe"
@@ -79,20 +110,43 @@ foreach ($FileToSign in $FilesToSign) {
   $SignArguments = @(
     "sign",
     "/fd",
-    "SHA256",
-    "/td",
-    "SHA256",
-    "/tr",
-    $TimestampUrl,
+    "SHA256"
+  )
+
+  if (-not $ShouldSkipTimestamp) {
+    $SignArguments += @(
+      "/td",
+      "SHA256",
+      "/tr",
+      $TimestampUrl
+    )
+  }
+
+  $SignArguments += @(
     "/f",
-    $CertificatePath,
-    "/p",
-    $CertificatePassword,
+    $CertificatePath
+  )
+
+  if (-not [string]::IsNullOrEmpty($CertificatePassword)) {
+    $SignArguments += @(
+      "/p",
+      $CertificatePassword
+    )
+  }
+
+  $SignArguments += @(
     "/d",
     "YTM Tray",
     $FileToSign
   )
 
   Invoke-SignTool -SignToolPath $SignTool -Arguments $SignArguments
-  Invoke-SignTool -SignToolPath $SignTool -Arguments @("verify", "/pa", "/all", $FileToSign)
+  if ($VerifyMode -eq "signature") {
+    $Signature = Get-AuthenticodeSignature -FilePath $FileToSign
+    if ($Signature.Status -eq "NotSigned" -or $null -eq $Signature.SignerCertificate) {
+      throw "Signed file has no Authenticode signer certificate: $FileToSign"
+    }
+  } else {
+    Invoke-SignTool -SignToolPath $SignTool -Arguments @("verify", "/pa", "/all", $FileToSign)
+  }
 }

@@ -19,6 +19,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/windows-qa/e2e-edge-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-package-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-signing-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-release-screenshot.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-button-smoke.ps1");
@@ -26,6 +27,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/remote/windows-qa/probe.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-package-smoke.sh");
+    expect(docs).toContain("scripts/remote/windows-qa/tray-signing-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-visual-smoke.sh");
     expect(docs).toContain(
       "scripts/remote/windows-qa/tray-release-screenshot.sh",
@@ -35,6 +37,8 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("OpenSSH-Server-In-TCP");
     expect(docs).toContain("administrators_authorized_keys");
     expect(docs).toContain("Microsoft.DotNet.SDK.10");
+    expect(docs).toContain("Windows SDK");
+    expect(docs).toContain("signtool.exe");
     expect(docs).toMatch(
       /the tray\s+connector button smoke covers Edge and Firefox/,
     );
@@ -202,6 +206,33 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).not.toContain("-Encoding Byte");
     expect(packageSmokeShell).toContain(
       "scripts\\windows-qa\\tray-package-smoke.ps1",
+    );
+  });
+
+  it("automates Windows tray release signing smoke with a disposable certificate", () => {
+    const signingSmoke = read("scripts/windows-qa/tray-signing-smoke.ps1");
+    const signingSmokeShell = read(
+      "scripts/remote/windows-qa/tray-signing-smoke.sh",
+    );
+
+    expect(signingSmoke).toContain("New-SelfSignedCertificate");
+    expect(signingSmoke).toContain("Test-SignToolAvailable");
+    expect(signingSmoke).toContain("signtool.exe");
+    expect(signingSmoke).toContain("CodeSigningCert");
+    expect(signingSmoke).toContain("Export-PfxCertificate");
+    expect(signingSmoke).toContain("YTM_WINDOWS_TRAY_CODESIGN_REQUIRED");
+    expect(signingSmoke).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH",
+    );
+    expect(signingSmoke).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PASSWORD",
+    );
+    expect(signingSmoke).toContain("YTM_WINDOWS_TRAY_CODESIGN_TIMESTAMP_URL");
+    expect(signingSmoke).toContain("Assert-SignedFile");
+    expect(signingSmoke).toContain("Get-AuthenticodeSignature");
+    expect(signingSmoke).toContain("Remove-CertificateByThumbprint");
+    expect(signingSmokeShell).toContain(
+      "scripts\\windows-qa\\tray-signing-smoke.ps1",
     );
   });
 

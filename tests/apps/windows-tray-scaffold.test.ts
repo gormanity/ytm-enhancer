@@ -381,6 +381,10 @@ describe("Windows tray connector scaffold", () => {
     expect(packageScript).toContain(
       "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH",
     );
+    expect(packageScript).toContain("YTM_WINDOWS_TRAY_CODESIGN_REQUIRED");
+    expect(packageScript).toContain(
+      "Windows tray signing is required, but YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH is not set.",
+    );
     expect(packageScript).toContain("sign-release-payload.ps1");
     expect(packageScript).toContain("install-native-hosts.ps1");
     expect(packageScript).toContain("uninstall-native-hosts.ps1");
@@ -426,10 +430,27 @@ describe("Windows tray connector scaffold", () => {
     expect(installScript).toContain("Get-Process YTMTray, YTMTray.NativeHost");
 
     expect(signingScript).toContain("signtool.exe");
+    expect(signingScript).toContain("PROCESSOR_ARCHITECTURE");
+    expect(signingScript).toContain("Test-SignToolCandidate");
+    expect(signingScript).toContain("& $Path sign /?");
+    expect(signingScript).toContain('@("arm64", "x64", "x86")');
+    expect(signingScript).toContain('@("x64", "x86", "arm64")');
+    expect(signingScript).toContain("\\\\(arm64|x64|x86)\\\\signtool\\.exe$");
+    expect(signingScript).toContain(
+      "no runnable Windows SDK SignTool executable could be started",
+    );
     expect(signingScript).toContain(
       "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PASSWORD",
     );
     expect(signingScript).toContain("YTM_WINDOWS_TRAY_CODESIGN_TIMESTAMP_URL");
+    expect(signingScript).toContain("YTM_WINDOWS_TRAY_CODESIGN_VERIFY_MODE");
+    expect(signingScript).toContain('$VerifyMode = "trust"');
+    expect(signingScript).toContain('$VerifyMode -eq "signature"');
+    expect(signingScript).toContain("Get-AuthenticodeSignature");
+    expect(signingScript).toContain("ShouldSkipTimestamp");
+    expect(signingScript).toContain(
+      'TimestampUrl -in @("none", "off", "skip")',
+    );
     expect(signingScript).toContain("YTMTray.exe");
     expect(signingScript).toContain("YTMTray.NativeHost.exe");
     expect(signingScript).toContain('"verify"');
@@ -562,7 +583,10 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:update-manifest");
     expect(workflow).toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
     expect(workflow).toContain("WINDOWS_TRAY_CODESIGN_PASSWORD");
+    expect(workflow).toContain('YTM_WINDOWS_TRAY_CODESIGN_REQUIRED: "1"');
     expect(workflow).toContain("YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH");
+    expect(workflow).toContain("Windows tray release signing is required.");
+    expect(workflow).toContain("Remove signing certificate");
     expect(workflow).toContain("make_latest: false");
     expect(workflow).toContain("apps/windows-tray/.build/packages/*.zip");
     expect(workflow).toContain(
@@ -582,6 +606,10 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("Checksum-Verified In-App Updates");
     expect(releaseDocs).toContain("Check for Updates");
     expect(releaseDocs).toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
+    expect(releaseDocs).toContain("YTM_WINDOWS_TRAY_CODESIGN_REQUIRED=1");
+    expect(releaseDocs).toContain(
+      "scripts/remote/windows-qa/tray-signing-smoke.sh",
+    );
     expect(releaseDocs).toContain("signed `YTMTray.exe`");
     expect(releaseDocs).toContain(
       "Chrome, Microsoft Edge, and Firefox native messaging",

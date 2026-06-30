@@ -437,6 +437,7 @@ Install the Windows toolchain in the guest:
 - Corepack with `pnpm@11.9.0`
 - Go 1.24 or newer
 - Microsoft Edge
+- Windows SDK, including `signtool.exe`, for Windows tray signing smoke
 
 Then prepare package-manager state:
 
@@ -590,6 +591,26 @@ This builds the release zip for the guest architecture, generates
 `YTM-Tray-update.json`, extracts the package, installs from the prebuilt
 executables, validates the package metadata and manifest, and removes the smoke
 install.
+
+Run the Windows tray release signing smoke:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-signing-smoke.ps1
+```
+
+Run the same smoke through bowfin and the Windows guest:
+
+```sh
+scripts/remote/windows-qa/tray-signing-smoke.sh
+```
+
+This creates a disposable self-signed code-signing certificate in the Windows QA
+user stores, exports a temporary PFX, builds the release zip with signing
+required, verifies the packaged tray executable and native host have
+Authenticode signatures from the disposable signer, and removes the temporary
+certificate. It validates the signing plumbing without installing production
+signing secrets on the QA VM.
 
 Run the Windows tray visual smoke from an active Windows desktop session:
 

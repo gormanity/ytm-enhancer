@@ -38,15 +38,17 @@ installed app folder. Users can uninstall from Windows Settings > Apps >
 Installed apps, from Start Menu > YTM Enhancer > Uninstall YTM Tray, or by
 running `Uninstall YTM Tray.cmd` from the extracted release zip.
 
-The release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe` when these
-repository secrets are configured:
+The release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe` before
+zipping release payloads. Signing is required for `windows-tray-v*` tag
+releases. Configure these repository secrets before pushing a release tag:
 
 - `WINDOWS_TRAY_CODESIGN_PFX_BASE64` - base64-encoded Authenticode PFX.
 - `WINDOWS_TRAY_CODESIGN_PASSWORD` - password for the PFX, if required.
 
-When those secrets are missing, package generation is intentionally unsigned so
-test and dry-run releases can still be built. Public Windows tray releases
-should use signed executables before broad distribution.
+Local package generation remains unsigned by default so development and dry-run
+package smokes do not need production signing material. Set
+`YTM_WINDOWS_TRAY_CODESIGN_REQUIRED=1` locally when validating that the
+packaging path fails closed without a signing certificate.
 
 The update manifest is published as a release asset with SHA-256 checksums,
 download URLs, runtime identifiers, the component tag, and the minimum Windows
@@ -106,37 +108,49 @@ and verifies that the previous installed executable is restored:
 scripts/remote/windows-qa/tray-package-smoke.sh
 ```
 
+The remote signing smoke requires the Windows SDK `signtool.exe`. It creates a
+disposable self-signed code-signing certificate, exports it to a temporary PFX,
+runs package generation with `YTM_WINDOWS_TRAY_CODESIGN_REQUIRED=1`, verifies
+both packaged executables have Authenticode signatures from the disposable
+signer, and removes the test certificate:
+
+```sh
+scripts/remote/windows-qa/tray-signing-smoke.sh
+```
+
 ## Release Steps
 
 1. Update `apps/windows-tray/release/metadata.json`.
 2. Update the default version metadata in
    `apps/windows-tray/src/YTMTray.Core/YTMTray.Core.csproj`.
-3. Run targeted tests:
+3. Confirm `WINDOWS_TRAY_CODESIGN_PFX_BASE64` and
+   `WINDOWS_TRAY_CODESIGN_PASSWORD` are configured for the repository.
+4. Run targeted tests:
 
 ```sh
 pnpm exec vitest run tests/apps/windows-tray-scaffold.test.ts
 scripts/remote/windows-qa/tray-smoke.sh
 scripts/remote/windows-qa/tray-package-smoke.sh
+scripts/remote/windows-qa/tray-signing-smoke.sh
 ```
 
-4. Run manual tray button smoke when release plumbing, native messaging, or
+5. Run manual tray button smoke when release plumbing, native messaging, or
    connector behavior changed:
 
 ```sh
 scripts/remote/windows-qa/tray-button-smoke.sh
 ```
 
-5. Create a `windows-tray-vX.Y.Z` tag from the verified commit.
-6. Push the tag.
-7. Confirm the `Windows Tray Release` workflow publishes:
+6. Create a `windows-tray-vX.Y.Z` tag from the verified commit.
+7. Push the tag.
+8. Confirm the `Windows Tray Release` workflow publishes:
    - a GitHub Release named `YTM Tray X.Y.Z`
    - a component release that does not replace GitHub's repo-wide latest release
    - `win-x64` and `win-arm64` release zips
    - `YTM-Tray-update.json` with package checksums and release URLs
    - `Install YTM Tray.cmd` and `Uninstall YTM Tray.cmd` in each zip
-   - signed `YTMTray.exe` and `YTMTray.NativeHost.exe` when signing secrets are
-     configured
-8. On a clean Windows account, install from the release zip and confirm:
+   - signed `YTMTray.exe` and `YTMTray.NativeHost.exe`
+9. On a clean Windows account, install from the release zip and confirm:
    - `YTMTray.exe` and `YTMTray.NativeHost.exe` are installed under
      `%LOCALAPPDATA%\YTM Enhancer\Tray`
    - Edge, Chrome, and Firefox native messaging registry keys point at their
@@ -170,6 +184,5 @@ Manual validation is optional:
 ## Follow-Up
 
 The current updater validates package checksums and safely hands off to the
-packaged installer. Windows Authenticode signing, SmartScreen reputation,
-rollback, and a future package-manager channel remain separate release hardening
-tasks.
+packaged installer. SmartScreen reputation and a future package-manager channel
+remain separate release hardening tasks.
