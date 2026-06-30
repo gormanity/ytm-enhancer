@@ -487,6 +487,9 @@ describe("Windows tray connector scaffold", () => {
       join(tmpdir(), "ytm-windows-tray-manifest-test-"),
     );
     const expectedVersion = process.env.YTM_WINDOWS_TRAY_VERSION ?? "0.1.0";
+    const expectedBuildNumber = Number(
+      process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER ?? "1000",
+    );
     const x64Package = join(
       outputRoot,
       `YTM-Tray-${expectedVersion}-win-x64.zip`,
@@ -527,7 +530,7 @@ describe("Windows tray connector scaffold", () => {
     };
 
     expect(manifest.version).toBe(expectedVersion);
-    expect(manifest.buildNumber).toBe(1000);
+    expect(manifest.buildNumber).toBe(expectedBuildNumber);
     expect(manifest.tag).toBe(`windows-tray-v${expectedVersion}`);
     expect(manifest.releaseListUrl).toBe(
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
