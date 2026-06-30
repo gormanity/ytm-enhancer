@@ -930,9 +930,9 @@ function writeSitePages({ metadata, outputPath }) {
               <a class="button" href="#uninstall">Uninstall</a>
             </div>
             <p class="beta-note">
-              YTM Tray is part of the Connected Apps beta. Windows code signing
-              is still being evaluated, so review the release notes before
-              installing.
+              YTM Tray is part of the Connected Apps beta. Builds are signed by
+              the release workflow while trusted publisher signing is pending.
+              See the <a href="https://github.com/gormanity/ytm-enhancer/blob/main/docs/code-signing-policy.md">code signing policy</a>.
             </p>
           </div>
           <figure class="visual-frame">
