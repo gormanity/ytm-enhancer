@@ -460,8 +460,15 @@ describe("Windows tray connector scaffold", () => {
     const outputRoot = mkdtempSync(
       join(tmpdir(), "ytm-windows-tray-manifest-test-"),
     );
-    const x64Package = join(outputRoot, "YTM-Tray-0.1.0-win-x64.zip");
-    const armPackage = join(outputRoot, "YTM-Tray-0.1.0-win-arm64.zip");
+    const expectedVersion = process.env.YTM_WINDOWS_TRAY_VERSION ?? "0.1.0";
+    const x64Package = join(
+      outputRoot,
+      `YTM-Tray-${expectedVersion}-win-x64.zip`,
+    );
+    const armPackage = join(
+      outputRoot,
+      `YTM-Tray-${expectedVersion}-win-arm64.zip`,
+    );
     const outputPath = join(outputRoot, "YTM-Tray-update.json");
     const { writeFileSync } = await import("node:fs");
     const manifestModulePath = resolve(
@@ -492,21 +499,23 @@ describe("Windows tray connector scaffold", () => {
       version: string;
     };
 
-    expect(manifest.version).toBe("0.1.0");
-    expect(manifest.tag).toBe("windows-tray-v0.1.0");
+    expect(manifest.version).toBe(expectedVersion);
+    expect(manifest.tag).toBe(`windows-tray-v${expectedVersion}`);
     expect(manifest.releaseListUrl).toBe(
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
     );
     expect(manifest.installUrl).toBe(
       "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
     );
-    expect(manifest.assets["win-x64"]?.name).toBe("YTM-Tray-0.1.0-win-x64.zip");
+    expect(manifest.assets["win-x64"]?.name).toBe(
+      `YTM-Tray-${expectedVersion}-win-x64.zip`,
+    );
     expect(manifest.assets["win-arm64"]?.name).toBe(
-      "YTM-Tray-0.1.0-win-arm64.zip",
+      `YTM-Tray-${expectedVersion}-win-arm64.zip`,
     );
     expect(manifest.assets["win-x64"]?.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(manifest.assets["win-x64"]?.url).toBe(
-      "https://example.test/download/windows-tray-v0.1.0/YTM-Tray-0.1.0-win-x64.zip",
+      `https://example.test/download/windows-tray-v${expectedVersion}/YTM-Tray-${expectedVersion}-win-x64.zip`,
     );
   });
 
@@ -594,6 +603,9 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:package:win-x64");
     expect(workflow).toContain("windows-tray:package:win-arm64");
     expect(workflow).toContain("windows-tray:update-manifest");
+    expect(
+      workflow.match(/\$LASTEXITCODE -ne 0/g)?.length ?? 0,
+    ).toBeGreaterThanOrEqual(5);
     expect(workflow).toContain('YTM_WINDOWS_TRAY_CODESIGN_REQUIRED: "1"');
     expect(workflow).toContain("Prepare beta self-signed certificate");
     expect(workflow).toContain("prepare-windows-tray-codesign.ps1");
@@ -614,6 +626,9 @@ describe("Windows tray connector scaffold", () => {
     expect(signingCheckWorkflow).toContain("windows-tray:package:win-x64");
     expect(signingCheckWorkflow).toContain("windows-tray:package:win-arm64");
     expect(signingCheckWorkflow).toContain("windows-tray:update-manifest");
+    expect(
+      signingCheckWorkflow.match(/\$LASTEXITCODE -ne 0/g)?.length ?? 0,
+    ).toBeGreaterThanOrEqual(5);
     expect(signingCheckWorkflow).toContain("remove-windows-tray-codesign.ps1");
     expect(signingCheckWorkflow).not.toContain("softprops/action-gh-release");
 

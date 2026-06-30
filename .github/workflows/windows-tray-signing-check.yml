@@ -28,9 +28,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run Windows tray tests
+        shell: pwsh
         run: |
           pnpm exec vitest run tests/apps/windows-tray-scaffold.test.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm run windows-tray:test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Prepare beta self-signed certificate
         shell: pwsh
@@ -43,8 +46,11 @@ jobs:
           YTM_WINDOWS_TRAY_CODESIGN_REQUIRED: "1"
         run: |
           pnpm run windows-tray:package:win-x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm run windows-tray:package:win-arm64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm run windows-tray:update-manifest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Remove signing certificate
         if: always()
