@@ -617,13 +617,15 @@ Run the Windows tray live-update UI smoke:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
-  scripts/windows-qa/tray-live-update-smoke.ps1
+  scripts/windows-qa/tray-live-update-smoke.ps1 `
+  -BaselineVersion 0.1.1 `
+  -TargetVersion 0.1.2
 ```
 
 Run the same smoke through bowfin and the Windows guest:
 
 ```sh
-scripts/remote/windows-qa/tray-live-update-smoke.sh
+scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.1 0.1.2
 ```
 
 This installs the published baseline release into the real user-level install
@@ -633,6 +635,9 @@ release to replace the baseline, validates the installed files and native host
 registrations, then uninstalls and verifies cleanup. It intentionally uses the
 default `%LOCALAPPDATA%\YTM Enhancer\Tray` path because the in-app updater hands
 off to the packaged installer exactly as users receive it.
+
+The remote wrapper also accepts `YTM_WINDOWS_TRAY_BASELINE_VERSION` and
+`YTM_WINDOWS_TRAY_TARGET_VERSION` when positional arguments are not convenient.
 
 Run the Windows tray release signing smoke:
 

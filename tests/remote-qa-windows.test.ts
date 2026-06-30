@@ -281,6 +281,10 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmokeShell).toContain(
       "scripts\\windows-qa\\tray-live-update-smoke.ps1",
     );
+    expect(liveUpdateSmokeShell).toContain("YTM_WINDOWS_TRAY_BASELINE_VERSION");
+    expect(liveUpdateSmokeShell).toContain("YTM_WINDOWS_TRAY_TARGET_VERSION");
+    expect(liveUpdateSmokeShell).toContain("-BaselineVersion");
+    expect(liveUpdateSmokeShell).toContain("-TargetVersion");
   });
 
   it("automates Windows tray release signing smoke with a disposable certificate", () => {
