@@ -40,6 +40,14 @@ function runtimeFromPackageName(name, metadata) {
   return match[1];
 }
 
+function numericBuildNumber(value) {
+  const buildNumber = Number(value);
+  if (!Number.isSafeInteger(buildNumber) || buildNumber < 0) {
+    throw new Error(`Invalid Windows tray build number: ${value}`);
+  }
+  return buildNumber;
+}
+
 export function generateUpdateManifest({
   outputPath = resolve(appRoot, ".build/update-manifest/YTM-Tray-update.json"),
   packagePaths,
@@ -78,7 +86,7 @@ export function generateUpdateManifest({
     product: "windows-tray",
     name: metadata.appName,
     version: metadata.version,
-    buildNumber: metadata.buildNumber,
+    buildNumber: numericBuildNumber(metadata.buildNumber),
     tag,
     releaseUrl: releasePageUrl(tag),
     installUrl: metadata.installUrl,

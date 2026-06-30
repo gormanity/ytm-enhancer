@@ -493,6 +493,7 @@ describe("Windows tray connector scaffold", () => {
 
     const manifest = JSON.parse(readFileSync(outputPath, "utf-8")) as {
       assets: Record<string, { name: string; sha256: string; url: string }>;
+      buildNumber: number;
       installUrl: string;
       releaseListUrl: string;
       tag: string;
@@ -500,6 +501,7 @@ describe("Windows tray connector scaffold", () => {
     };
 
     expect(manifest.version).toBe(expectedVersion);
+    expect(manifest.buildNumber).toBe(1000);
     expect(manifest.tag).toBe(`windows-tray-v${expectedVersion}`);
     expect(manifest.releaseListUrl).toBe(
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
