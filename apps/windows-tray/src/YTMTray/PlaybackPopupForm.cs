@@ -245,20 +245,20 @@ internal sealed class PlaybackPopupForm : Form
         statusLabel.TextAlign = ContentAlignment.MiddleRight;
         statusLabel.AutoEllipsis = true;
 
-        titleLabel.SetBounds(148, 30, 244, 42);
-        titleLabel.Font = new Font(Font.FontFamily, 15.5f, FontStyle.Bold);
+        titleLabel.SetBounds(148, 34, 244, 28);
+        titleLabel.Font = new Font(Font.FontFamily, 15f, FontStyle.Bold);
         titleLabel.ForeColor = PrimaryTextColor;
         titleLabel.BackColor = Color.Transparent;
         titleLabel.ScrollDiagnosticName = "title";
 
-        albumLabel.SetBounds(148, 76, 244, 30);
-        albumLabel.Font = new Font(Font.FontFamily, 10.75f, FontStyle.Regular);
+        albumLabel.SetBounds(148, 65, 244, 22);
+        albumLabel.Font = new Font(Font.FontFamily, 11f, FontStyle.Regular);
         albumLabel.ForeColor = SecondaryTextColor;
         albumLabel.BackColor = Color.Transparent;
         albumLabel.ScrollDiagnosticName = "album";
 
-        artistYearLabel.SetBounds(148, 106, 244, 28);
-        artistYearLabel.Font = new Font(Font.FontFamily, 9.75f, FontStyle.Regular);
+        artistYearLabel.SetBounds(148, 88, 244, 20);
+        artistYearLabel.Font = new Font(Font.FontFamily, 10f, FontStyle.Regular);
         artistYearLabel.ForeColor = TertiaryTextColor;
         artistYearLabel.BackColor = Color.Transparent;
         artistYearLabel.ScrollDiagnosticName = "artist-year";
