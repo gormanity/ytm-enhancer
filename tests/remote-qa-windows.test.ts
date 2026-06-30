@@ -20,6 +20,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/windows-qa/tray-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-package-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-release-e2e.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-live-update-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-signing-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-release-screenshot.ps1");
@@ -29,6 +30,9 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-package-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-release-e2e.sh");
+    expect(docs).toContain(
+      "scripts/remote/windows-qa/tray-live-update-smoke.sh",
+    );
     expect(docs).toContain("scripts/remote/windows-qa/tray-signing-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-visual-smoke.sh");
     expect(docs).toContain(
@@ -239,6 +243,43 @@ describe("Windows remote QA scaffold", () => {
     expect(releaseE2e).toContain("Assert-Uninstalled");
     expect(releaseE2eShell).toContain(
       "scripts\\windows-qa\\tray-release-e2e.ps1",
+    );
+  });
+
+  it("automates Windows tray live-update UI smoke", () => {
+    const liveUpdateSmoke = read(
+      "scripts/windows-qa/tray-live-update-smoke.ps1",
+    );
+    const liveUpdateSmokeShell = read(
+      "scripts/remote/windows-qa/tray-live-update-smoke.sh",
+    );
+
+    expect(liveUpdateSmoke).toContain('$BaselineVersion = "0.0.2"');
+    expect(liveUpdateSmoke).toContain('$TargetVersion = "0.1.0"');
+    expect(liveUpdateSmoke).toContain(
+      'Join-Path $env:LOCALAPPDATA "YTM Enhancer\\Tray"',
+    );
+    expect(liveUpdateSmoke).toContain("Invoke-InteractivePowerShell");
+    expect(liveUpdateSmoke).toContain("New-ScheduledTaskPrincipal");
+    expect(liveUpdateSmoke).toContain("-LogonType Interactive");
+    expect(liveUpdateSmoke).toContain("Start-ReleasedTrayApp");
+    expect(liveUpdateSmoke).toContain("Open-TrayPopup");
+    expect(liveUpdateSmoke).toContain("Open-TrayContextMenu");
+    expect(liveUpdateSmoke).toContain("GetClickablePoint");
+    expect(liveUpdateSmoke).toContain("Invoke-Element");
+    expect(liveUpdateSmoke).toContain("SendKeys");
+    expect(liveUpdateSmoke).toContain("popup root");
+    expect(liveUpdateSmoke).toContain("Install Update $TargetVersion");
+    expect(liveUpdateSmoke).toContain("Check for Updates");
+    expect(liveUpdateSmoke).toContain("Wait-DialogButton");
+    expect(liveUpdateSmoke).toContain("Update YTM Tray");
+    expect(liveUpdateSmoke).toContain("Wait-InstalledRelease");
+    expect(liveUpdateSmoke).toContain("actionSurface");
+    expect(liveUpdateSmoke).toContain("Assert-AuthenticodeSigner");
+    expect(liveUpdateSmoke).toContain("Invoke-InstalledUninstaller");
+    expect(liveUpdateSmoke).toContain("Assert-Uninstalled");
+    expect(liveUpdateSmokeShell).toContain(
+      "scripts\\windows-qa\\tray-live-update-smoke.ps1",
     );
   });
 

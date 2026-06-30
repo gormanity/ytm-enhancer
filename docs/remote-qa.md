@@ -613,6 +613,27 @@ manifests, Start Menu shortcuts, and uninstall metadata, then runs the installed
 uninstaller and verifies cleanup. Pass `-BaselineVersion` and `-TargetVersion`
 to validate a different release pair.
 
+Run the Windows tray live-update UI smoke:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-live-update-smoke.ps1
+```
+
+Run the same smoke through bowfin and the Windows guest:
+
+```sh
+scripts/remote/windows-qa/tray-live-update-smoke.sh
+```
+
+This installs the published baseline release into the real user-level install
+location, launches the released tray app in the active Windows desktop session,
+clicks the popup update action, accepts the update dialogs, waits for the target
+release to replace the baseline, validates the installed files and native host
+registrations, then uninstalls and verifies cleanup. It intentionally uses the
+default `%LOCALAPPDATA%\YTM Enhancer\Tray` path because the in-app updater hands
+off to the packaged installer exactly as users receive it.
+
 Run the Windows tray release signing smoke:
 
 ```powershell
