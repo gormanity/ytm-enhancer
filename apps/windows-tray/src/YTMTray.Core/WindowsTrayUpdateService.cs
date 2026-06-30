@@ -217,9 +217,20 @@ public sealed class WindowsTrayUpdateService
             );
         }
 
+        var runnerScriptPath = Path.Combine(
+            update.ExtractDirectory,
+            "run-update-installer.ps1"
+        );
+        var installerLogPath = Path.Combine(update.ExtractDirectory, "update-installer.log");
+        File.WriteAllText(
+            runnerScriptPath,
+            CreateInstallerRunnerScript(Environment.ProcessId, update, installerLogPath)
+        );
+
         var startInfo = new ProcessStartInfo("powershell.exe")
         {
             WorkingDirectory = update.ExtractDirectory,
+            CreateNoWindow = true,
             UseShellExecute = false
         };
         startInfo.ArgumentList.Add("-NoLogo");
@@ -227,13 +238,60 @@ public sealed class WindowsTrayUpdateService
         startInfo.ArgumentList.Add("-ExecutionPolicy");
         startInfo.ArgumentList.Add("Bypass");
         startInfo.ArgumentList.Add("-File");
-        startInfo.ArgumentList.Add(update.InstallerScriptPath);
-        startInfo.ArgumentList.Add("-RuntimeIdentifier");
-        startInfo.ArgumentList.Add(update.RuntimeIdentifier);
+        startInfo.ArgumentList.Add(runnerScriptPath);
 
         return Process.Start(startInfo)
             ?? throw new InvalidOperationException("Failed to start the Windows tray installer.");
     }
+
+    internal static string CreateInstallerRunnerScript(
+        int parentProcessId,
+        PreparedWindowsTrayUpdate update,
+        string logPath
+    )
+    {
+        return $$"""
+            $ErrorActionPreference = 'Stop'
+            $ProgressPreference = 'SilentlyContinue'
+            $ParentProcessId = {{parentProcessId}}
+            $ExtractDirectory = {{PowerShellLiteral(update.ExtractDirectory)}}
+            $InstallerScriptPath = {{PowerShellLiteral(update.InstallerScriptPath)}}
+            $RuntimeIdentifier = {{PowerShellLiteral(update.RuntimeIdentifier)}}
+            $LogPath = {{PowerShellLiteral(logPath)}}
+
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $LogPath) | Out-Null
+
+            function Write-InstallerLog {
+              param([Parameter(Mandatory = $true)][string] $Message)
+
+              Add-Content -LiteralPath $LogPath -Value "$([DateTimeOffset]::Now.ToString('o')) $Message"
+            }
+
+            try {
+              Write-InstallerLog "waiting for YTM Tray process $ParentProcessId to exit"
+              Wait-Process -Id $ParentProcessId -Timeout 45 -ErrorAction SilentlyContinue
+              Start-Sleep -Milliseconds 500
+
+              Write-InstallerLog "starting installer $InstallerScriptPath"
+              Push-Location -LiteralPath $ExtractDirectory
+              try {
+                & $InstallerScriptPath -RuntimeIdentifier $RuntimeIdentifier *>> $LogPath
+              } finally {
+                Pop-Location
+              }
+              Write-InstallerLog "installer completed"
+            } catch {
+              Write-InstallerLog "installer failed: $($_.Exception.Message)"
+              if ($_.ScriptStackTrace) {
+                Write-InstallerLog $_.ScriptStackTrace
+              }
+              exit 1
+            }
+            """;
+    }
+
+    private static string PowerShellLiteral(string value) =>
+        $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
 
     private UpdateCandidate? ToCandidate(GitHubRelease release)
     {

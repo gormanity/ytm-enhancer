@@ -594,6 +594,9 @@ describe("Windows tray connector scaffold", () => {
     expect(updater).toContain("unsafe package path");
     expect(updater).toContain('ProcessStartInfo("powershell.exe")');
     expect(updater).toContain("ArgumentList.Add");
+    expect(updater).toContain("run-update-installer.ps1");
+    expect(updater).toContain("update-installer.log");
+    expect(updater).toContain("Wait-Process -Id $ParentProcessId");
     expect(updater).toContain("FromReleaseMetadataFile");
 
     expect(trayController).toContain("StartBackgroundUpdateCheck");
