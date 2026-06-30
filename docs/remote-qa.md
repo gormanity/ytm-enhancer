@@ -592,6 +592,27 @@ This builds the release zip for the guest architecture, generates
 executables, validates the package metadata and manifest, and removes the smoke
 install.
 
+Run the Windows tray published release E2E smoke:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-release-e2e.ps1
+```
+
+Run the same smoke through bowfin and the Windows guest:
+
+```sh
+scripts/remote/windows-qa/tray-release-e2e.sh
+```
+
+This downloads published `windows-tray-v*` release zips from GitHub, installs
+the baseline release, fetches the target release's `YTM-Tray-update.json`,
+verifies the runtime package checksum, installs the target release over the
+baseline, validates files, Authenticode signers, registry keys, native host
+manifests, Start Menu shortcuts, and uninstall metadata, then runs the installed
+uninstaller and verifies cleanup. Pass `-BaselineVersion` and `-TargetVersion`
+to validate a different release pair.
+
 Run the Windows tray release signing smoke:
 
 ```powershell

@@ -19,6 +19,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/windows-qa/e2e-edge-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-package-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-release-e2e.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-signing-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-release-screenshot.ps1");
@@ -27,6 +28,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/remote/windows-qa/probe.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-package-smoke.sh");
+    expect(docs).toContain("scripts/remote/windows-qa/tray-release-e2e.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-signing-smoke.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-visual-smoke.sh");
     expect(docs).toContain(
@@ -206,6 +208,37 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).not.toContain("-Encoding Byte");
     expect(packageSmokeShell).toContain(
       "scripts\\windows-qa\\tray-package-smoke.ps1",
+    );
+  });
+
+  it("automates Windows tray published release install, update, and uninstall", () => {
+    const releaseE2e = read("scripts/windows-qa/tray-release-e2e.ps1");
+    const releaseE2eShell = read(
+      "scripts/remote/windows-qa/tray-release-e2e.sh",
+    );
+
+    expect(releaseE2e).toContain('$BaselineVersion = "0.0.2"');
+    expect(releaseE2e).toContain('$TargetVersion = "0.1.0"');
+    expect(releaseE2e).toContain("Invoke-WebRequest");
+    expect(releaseE2e).toContain("YTM-Tray-update.json");
+    expect(releaseE2e).toContain("Get-FileHash");
+    expect(releaseE2e).toContain("Expand-Archive");
+    expect(releaseE2e).toContain("Install-ReleasePackage");
+    expect(releaseE2e).toContain("Assert-AuthenticodeSigner");
+    expect(releaseE2e).toContain("Get-AuthenticodeSignature");
+    expect(releaseE2e).toContain(
+      "HKCU:\\Software\\Google\\Chrome\\NativeMessagingHosts",
+    );
+    expect(releaseE2e).toContain(
+      "HKCU:\\Software\\Microsoft\\Edge\\NativeMessagingHosts",
+    );
+    expect(releaseE2e).toContain(
+      "HKCU:\\Software\\Mozilla\\NativeMessagingHosts",
+    );
+    expect(releaseE2e).toContain("Invoke-InstalledUninstaller");
+    expect(releaseE2e).toContain("Assert-Uninstalled");
+    expect(releaseE2eShell).toContain(
+      "scripts\\windows-qa\\tray-release-e2e.ps1",
     );
   });
 
