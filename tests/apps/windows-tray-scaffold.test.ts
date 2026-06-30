@@ -570,9 +570,22 @@ describe("Windows tray connector scaffold", () => {
 
   it("publishes component-scoped Windows tray releases", () => {
     const workflow = readRepo(".github/workflows/windows-tray-release.yml");
+    const signingCheckWorkflow = readRepo(
+      ".github/workflows/windows-tray-signing-check.yml",
+    );
     const releaseDocs = readRepo("docs/windows-tray-release.md");
     const releaseStrategy = readRepo("docs/release-strategy.md");
     const connectorsDocs = readRepo("docs/connectors.md");
+    const prepareCodesignScript = readRepo(
+      "scripts/ci/prepare-windows-tray-codesign.ps1",
+    );
+    const removeCodesignScript = readRepo(
+      "scripts/ci/remove-windows-tray-codesign.ps1",
+    );
+    const packageJson = JSON.parse(readRepo("package.json")) as {
+      scripts: Record<string, string>;
+    };
+    const codeSigningPolicy = readRepo("docs/code-signing-policy.md");
 
     expect(workflow).toContain("Windows Tray Release");
     expect(workflow).toContain("windows-tray-v*");
@@ -581,17 +594,57 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:package:win-x64");
     expect(workflow).toContain("windows-tray:package:win-arm64");
     expect(workflow).toContain("windows-tray:update-manifest");
-    expect(workflow).toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
-    expect(workflow).toContain("WINDOWS_TRAY_CODESIGN_PASSWORD");
     expect(workflow).toContain('YTM_WINDOWS_TRAY_CODESIGN_REQUIRED: "1"');
-    expect(workflow).toContain("YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH");
-    expect(workflow).toContain("Windows tray release signing is required.");
+    expect(workflow).toContain("Prepare beta self-signed certificate");
+    expect(workflow).toContain("prepare-windows-tray-codesign.ps1");
+    expect(workflow).toContain("remove-windows-tray-codesign.ps1");
     expect(workflow).toContain("Remove signing certificate");
     expect(workflow).toContain("make_latest: false");
     expect(workflow).toContain("apps/windows-tray/.build/packages/*.zip");
     expect(workflow).toContain(
       "apps/windows-tray/.build/update-manifest/*.json",
     );
+
+    expect(signingCheckWorkflow).toContain("Windows Tray Signing Check");
+    expect(signingCheckWorkflow).toContain("workflow_dispatch");
+    expect(signingCheckWorkflow).toContain(
+      "Prepare beta self-signed certificate",
+    );
+    expect(signingCheckWorkflow).toContain("prepare-windows-tray-codesign.ps1");
+    expect(signingCheckWorkflow).toContain("windows-tray:package:win-x64");
+    expect(signingCheckWorkflow).toContain("windows-tray:package:win-arm64");
+    expect(signingCheckWorkflow).toContain("windows-tray:update-manifest");
+    expect(signingCheckWorkflow).toContain("remove-windows-tray-codesign.ps1");
+    expect(signingCheckWorkflow).not.toContain("softprops/action-gh-release");
+
+    expect(prepareCodesignScript).toContain("New-SelfSignedCertificate");
+    expect(prepareCodesignScript).toContain("-Type CodeSigningCert");
+    expect(prepareCodesignScript).toContain("CN=YTM Tray Beta Self-Signed");
+    expect(prepareCodesignScript).toContain("Export-PfxCertificate");
+    expect(prepareCodesignScript).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PASSWORD",
+    );
+    expect(prepareCodesignScript).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH",
+    );
+    expect(prepareCodesignScript).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_VERIFY_MODE=signature",
+    );
+    expect(workflow).not.toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
+    expect(workflow).not.toContain("WINDOWS_TRAY_CODESIGN_PASSWORD");
+    expect(signingCheckWorkflow).not.toContain(
+      "WINDOWS_TRAY_CODESIGN_PFX_BASE64",
+    );
+    expect(signingCheckWorkflow).not.toContain(
+      "WINDOWS_TRAY_CODESIGN_PASSWORD",
+    );
+    expect(removeCodesignScript).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH",
+    );
+    expect(removeCodesignScript).toContain(
+      "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_THUMBPRINT",
+    );
+    expect(packageJson.scripts["windows-tray:signing:secrets"]).toBeUndefined();
 
     expect(releaseDocs).toContain("windows-tray-vX.Y.Z");
     expect(releaseDocs).toContain("YTM-Tray-<version>-win-x64.zip");
@@ -605,7 +658,10 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("component release that does not replace");
     expect(releaseDocs).toContain("Checksum-Verified In-App Updates");
     expect(releaseDocs).toContain("Check for Updates");
-    expect(releaseDocs).toContain("WINDOWS_TRAY_CODESIGN_PFX_BASE64");
+    expect(releaseDocs).toContain("Beta Self-Signing");
+    expect(releaseDocs).toContain("SmartScreen or unknown-publisher warnings");
+    expect(releaseDocs).toContain("Windows Tray Signing Check");
+    expect(releaseDocs).toContain("Code Signing Policy");
     expect(releaseDocs).toContain("YTM_WINDOWS_TRAY_CODESIGN_REQUIRED=1");
     expect(releaseDocs).toContain(
       "scripts/remote/windows-qa/tray-signing-smoke.sh",
@@ -614,6 +670,10 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain(
       "Chrome, Microsoft Edge, and Firefox native messaging",
     );
+    expect(codeSigningPolicy).toContain("Current Windows Tray Beta");
+    expect(codeSigningPolicy).toContain("short-lived self-signed");
+    expect(codeSigningPolicy).toContain("SignPath.io");
+    expect(codeSigningPolicy).toContain("SignPath Foundation");
 
     expect(releaseStrategy).toContain("YTM Tray:");
     expect(releaseStrategy).toContain("windows-tray-vX.Y.Z");

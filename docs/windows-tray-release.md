@@ -38,12 +38,36 @@ installed app folder. Users can uninstall from Windows Settings > Apps >
 Installed apps, from Start Menu > YTM Enhancer > Uninstall YTM Tray, or by
 running `Uninstall YTM Tray.cmd` from the extracted release zip.
 
-The release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe` before
-zipping release payloads. Signing is required for `windows-tray-v*` tag
-releases. Configure these repository secrets before pushing a release tag:
+The beta release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe`
+before zipping release payloads. Signing is required for `windows-tray-v*` tag
+releases.
 
-- `WINDOWS_TRAY_CODESIGN_PFX_BASE64` - base64-encoded Authenticode PFX.
-- `WINDOWS_TRAY_CODESIGN_PASSWORD` - password for the PFX, if required.
+## Beta Self-Signing
+
+Windows tray beta releases use a short-lived self-signed code-signing
+certificate generated inside the GitHub Actions release job. The private key is
+exported only to a temporary PFX on the runner, used to sign the two release
+executables, then removed along with the temporary certificate before the job
+exits.
+
+This is intentionally not a trusted publisher identity. Users may still see
+Windows SmartScreen or unknown-publisher warnings. The beta goal is to prove the
+release workflow, make signatures inspectable, and provide a concrete signing
+process while the project applies for a trusted signing provider.
+
+See [Code Signing Policy](code-signing-policy.md) for the current policy and
+trusted-signing follow-up.
+
+Run the manual `Windows Tray Signing Check` workflow on `main` after changing
+release signing, packaging, or installer behavior. It builds self-signed
+`win-x64` and `win-arm64` packages, verifies signing through the package script,
+and generates the update manifest without publishing a GitHub Release:
+
+```sh
+gh workflow run "Windows Tray Signing Check" \
+  --repo gormanity/ytm-enhancer \
+  --ref main
+```
 
 Local package generation remains unsigned by default so development and dry-run
 package smokes do not need production signing material. Set
@@ -123,8 +147,8 @@ scripts/remote/windows-qa/tray-signing-smoke.sh
 1. Update `apps/windows-tray/release/metadata.json`.
 2. Update the default version metadata in
    `apps/windows-tray/src/YTMTray.Core/YTMTray.Core.csproj`.
-3. Confirm `WINDOWS_TRAY_CODESIGN_PFX_BASE64` and
-   `WINDOWS_TRAY_CODESIGN_PASSWORD` are configured for the repository.
+3. Run the manual `Windows Tray Signing Check` workflow after changing release
+   signing, packaging, or installer behavior.
 4. Run targeted tests:
 
 ```sh
@@ -151,14 +175,15 @@ scripts/remote/windows-qa/tray-button-smoke.sh
    - `Install YTM Tray.cmd` and `Uninstall YTM Tray.cmd` in each zip
    - signed `YTMTray.exe` and `YTMTray.NativeHost.exe`
 9. On a clean Windows account, install from the release zip and confirm:
-   - `YTMTray.exe` and `YTMTray.NativeHost.exe` are installed under
-     `%LOCALAPPDATA%\YTM Enhancer\Tray`
-   - Edge, Chrome, and Firefox native messaging registry keys point at their
-     manifests
-   - the tray app connects after Connected Apps is enabled
-   - playback controls, seeking, focus, About, and Quit still work
-   - Windows Settings > Apps > Installed apps shows YTM Tray
-   - uninstall removes registry keys, Start Menu shortcuts, and app files
+
+- `YTMTray.exe` and `YTMTray.NativeHost.exe` are installed under
+  `%LOCALAPPDATA%\YTM Enhancer\Tray`
+- Edge, Chrome, and Firefox native messaging registry keys point at their
+  manifests
+- the tray app connects after Connected Apps is enabled
+- playback controls, seeking, focus, About, and Quit still work
+- Windows Settings > Apps > Installed apps shows YTM Tray
+- uninstall removes registry keys, Start Menu shortcuts, and app files
 
 The release workflow derives package and manifest versions from the
 `windows-tray-vX.Y.Z` tag and compares generated GitHub release notes against
