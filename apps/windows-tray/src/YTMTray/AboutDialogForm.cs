@@ -85,6 +85,7 @@ internal sealed class AboutDialogForm : Form
     private readonly Label updateSummaryLabel = new();
     private readonly Label updateDetailLabel = new();
     private readonly Button updateButton = new();
+    private readonly Button closeButton = new();
 
     public AboutDialogForm()
     {
@@ -144,17 +145,20 @@ internal sealed class AboutDialogForm : Form
             BackColor = SurfaceColor,
             Padding = new Padding(24),
             ColumnCount = 1,
-            RowCount = 5
+            RowCount = 7
         };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         layout.Controls.Add(BuildHeader(), 0, 0);
         layout.Controls.Add(BuildUpdateSection(), 0, 2);
         layout.Controls.Add(BuildProcessSection(), 0, 4);
+        layout.Controls.Add(BuildFooter(), 0, 6);
         return layout;
     }
 
@@ -329,6 +333,36 @@ internal sealed class AboutDialogForm : Form
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         return panel;
+    }
+
+    private Control BuildFooter()
+    {
+        var row = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            Dock = DockStyle.Top,
+            BackColor = SurfaceColor,
+            FlowDirection = FlowDirection.RightToLeft,
+            Margin = new Padding(0)
+        };
+
+        closeButton.Text = "Close";
+        closeButton.AccessibleName = "Close";
+        closeButton.AutoSize = false;
+        closeButton.Width = 96;
+        closeButton.Height = 32;
+        closeButton.FlatStyle = FlatStyle.Flat;
+        closeButton.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+        closeButton.FlatAppearance.BorderSize = 1;
+        closeButton.BackColor = Color.FromArgb(32, 32, 36);
+        closeButton.ForeColor = PrimaryTextColor;
+        closeButton.Font = new Font(Font.FontFamily, 9f, FontStyle.Regular);
+        closeButton.Cursor = Cursors.Hand;
+        closeButton.Click += (_, _) => Close();
+        CancelButton = closeButton;
+
+        row.Controls.Add(closeButton);
+        return row;
     }
 
     private Label MakeSectionLabel(string text) =>

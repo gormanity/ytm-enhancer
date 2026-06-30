@@ -106,6 +106,7 @@ describe("Windows tray connector scaffold", () => {
     expect(aboutDialog).toContain("Updates");
     expect(aboutDialog).toContain("Check for Updates");
     expect(aboutDialog).toContain("Install Update");
+    expect(aboutDialog).toContain('closeButton.Text = "Close"');
     expect(aboutDialog).toContain("SHA-256 checksum");
     expect(aboutDialog).toContain("%LOCALAPPDATA%\\\\YTM Enhancer\\\\Tray");
     expect(aboutDialog).toContain("native messaging host registration");
@@ -263,6 +264,8 @@ describe("Windows tray connector scaffold", () => {
     expect(visualSmoke).toContain("$PopupWindow.Current.BoundingRectangle");
     expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
     expect(buttonSmoke).toContain("Save-TrayPopupScreenshot");
+    expect(buttonSmoke).toContain("ExpectedAboutText");
+    expect(buttonSmoke).toContain('"Close"');
     expect(buttonSmoke).toContain("Save-RectangleScreenshot");
     expect(buttonSmoke).toContain("Move-CursorAwayFromRectangle");
     expect(buttonSmoke).toContain("tray-screenshot.json");
