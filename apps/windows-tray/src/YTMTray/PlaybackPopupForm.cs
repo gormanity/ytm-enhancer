@@ -19,7 +19,7 @@ internal sealed class PlaybackPopupForm : Form
     private static readonly Color WarningColor = Color.FromArgb(255, 158, 61);
     private static readonly Color SurfaceTopColor = Color.FromArgb(18, 18, 20);
 
-    private readonly ArtworkBoxControl currentArtwork = new(10);
+    private readonly ArtworkBoxControl currentArtwork;
     private readonly Label statusLabel = new();
     private readonly ScrollingLabelControl titleLabel = new();
     private readonly ScrollingLabelControl albumLabel = new();
@@ -39,7 +39,7 @@ internal sealed class PlaybackPopupForm : Form
     private readonly PlaybackButtonControl nextButton = new(PlaybackButtonIcon.Next, "Next");
     private readonly PlaybackButtonControl repeatButton = new(PlaybackButtonIcon.Repeat, "Repeat");
     private readonly Label nextSectionLabel = new();
-    private readonly ArtworkBoxControl nextArtwork = new(8);
+    private readonly ArtworkBoxControl nextArtwork;
     private readonly ScrollingLabelControl nextTitleLabel = new();
     private readonly ScrollingLabelControl nextDetailLabel = new();
     private readonly PopupActionRowControl focusRow = new(
@@ -90,6 +90,8 @@ internal sealed class PlaybackPopupForm : Form
     public PlaybackPopupForm(NativeAppLogger? logger = null)
     {
         this.logger = logger;
+        currentArtwork = new ArtworkBoxControl(10, logger, "current");
+        nextArtwork = new ArtworkBoxControl(8, logger, "next");
         scrollDiagnosticsEnabled =
             Environment.GetEnvironmentVariable("YTM_TRAY_SCROLL_QA") == "1";
 
@@ -1021,12 +1023,20 @@ internal sealed class ArtworkBoxControl : Control
     private const string FixtureArtworkHost = "ytm-enhancer.local";
 
     private readonly int cornerRadius;
+    private readonly NativeAppLogger? logger;
+    private readonly string logName;
     private Image? artwork;
     private string? requestedArtworkUrl;
 
-    public ArtworkBoxControl(int cornerRadius)
+    public ArtworkBoxControl(
+        int cornerRadius,
+        NativeAppLogger? logger = null,
+        string logName = "artwork"
+    )
     {
         this.cornerRadius = cornerRadius;
+        this.logger = logger;
+        this.logName = logName;
         SetStyle(
             ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
@@ -1043,6 +1053,7 @@ internal sealed class ArtworkBoxControl : Control
         if (TryLoadPackagedArtwork(artworkUrl, out var packagedArtwork))
         {
             requestedArtworkUrl = artworkUrl;
+            logger?.Log($"{logName} artwork loaded packaged url={artworkUrl}");
             ReplaceArtwork(packagedArtwork);
             return;
         }
@@ -1132,11 +1143,17 @@ internal sealed class ArtworkBoxControl : Control
                     }
 
                     ReplaceArtwork(nextArtwork);
+                    logger?.Log(
+                        $"{logName} artwork displayed url={artworkUrl} bytes={bytes.Length}"
+                    );
                 })
             );
         }
-        catch
+        catch (Exception error)
         {
+            logger?.Log(
+                $"{logName} artwork failed url={artworkUrl} error={error.Message}"
+            );
             if (!IsDisposed && IsHandleCreated)
             {
                 BeginInvoke(

@@ -680,9 +680,13 @@ under the Windows user's temp directory, verifies long metadata scrolls, and
 removes the smoke install.
 
 Regenerate the Windows tray release screenshot from the same active Windows
-desktop session:
+desktop session. Use the approved Creative Commons YouTube Music track URL so
+the checked-in promo image shows live artwork read through the connector, not
+fixture artwork:
 
 ```powershell
+$env:YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL = `
+  "https://music.youtube.com/watch?v=<approved-track-id>"
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-release-screenshot.ps1
 ```
@@ -690,12 +694,15 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
 Run the same capture through bowfin and the Windows guest:
 
 ```sh
+YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL=\
+"https://music.youtube.com/watch?v=<approved-track-id>" \
 scripts/remote/windows-qa/tray-release-screenshot.sh
 ```
 
 This runs the real Windows tray app against the Edge Connected Apps smoke,
-captures the tray popup after playback has been routed through native messaging,
-and copies the PNG back to
+verifies button behavior against the local fixture, switches to the approved
+live YouTube Music track for the screenshot, captures the tray popup after
+artwork has been downloaded by the tray app, and copies the PNG back to
 `apps/windows-tray/release/windows-tray-screenshot.png`.
 
 Run the Windows tray button smoke from an active Windows desktop session:

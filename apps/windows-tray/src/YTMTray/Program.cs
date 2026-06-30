@@ -50,10 +50,14 @@ internal static class Program
 
 internal sealed class DemoConnectorConnection : IConnectorConnection
 {
-    private const string DemoCurrentArtworkUrl = "ytm-tray-resource://demo-current-artwork";
-    private const string DemoNextArtworkUrl = "ytm-tray-resource://demo-next-artwork";
+    private const string VisualDemoArtworkUrlEnvironmentVariable =
+        "YTM_TRAY_VISUAL_ARTWORK_URL";
+    private const string VisualDemoNextArtworkUrlEnvironmentVariable =
+        "YTM_TRAY_VISUAL_NEXT_ARTWORK_URL";
 
     private readonly string? visualStatus;
+    private readonly string? currentArtworkUrl;
+    private readonly string? nextArtworkUrl;
     private readonly bool useScrollQaMetadata;
     private Action<HostMessage>? onMessage;
 
@@ -62,6 +66,10 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
         this.visualStatus = string.IsNullOrWhiteSpace(visualStatus)
             ? null
             : visualStatus;
+        currentArtworkUrl = OptionalEnvironmentValue(VisualDemoArtworkUrlEnvironmentVariable);
+        nextArtworkUrl = OptionalEnvironmentValue(
+            VisualDemoNextArtworkUrlEnvironmentVariable
+        );
         useScrollQaMetadata = Environment.GetEnvironmentVariable("YTM_TRAY_SCROLL_QA") == "1";
     }
 
@@ -83,7 +91,11 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
                         ? new HostMessage
                         {
                             Type = "playback.state",
-                            State = DemoPlaybackState(useScrollQaMetadata)
+                            State = DemoPlaybackState(
+                                useScrollQaMetadata,
+                                currentArtworkUrl,
+                                nextArtworkUrl
+                            )
                         }
                         : new HostMessage
                         {
@@ -105,7 +117,17 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
     private void Emit(HostMessage message) =>
         ThreadPool.QueueUserWorkItem(_ => onMessage?.Invoke(message));
 
-    private static PlaybackState DemoPlaybackState(bool useLongMetadata)
+    private static string? OptionalEnvironmentValue(string name)
+    {
+        var value = Environment.GetEnvironmentVariable(name);
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static PlaybackState DemoPlaybackState(
+        bool useLongMetadata,
+        string? currentArtworkUrl,
+        string? nextArtworkUrl
+    )
     {
         if (useLongMetadata)
         {
@@ -114,13 +136,13 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
                 "Tycho and the Extended QA Ensemble",
                 "Dive Into a Very Wide Album Name",
                 2011,
-                DemoCurrentArtworkUrl,
+                currentArtworkUrl,
                 new TrackMetadata(
                     "Send and Receive (Chachi Jones Remix)",
                     "Tycho and the Extended QA Ensemble",
                     null,
                     null,
-                    DemoNextArtworkUrl
+                    nextArtworkUrl
                 ),
                 true,
                 178,
@@ -135,8 +157,8 @@ internal sealed class DemoConnectorConnection : IConnectorConnection
             "Tycho",
             "Dive",
             2011,
-            DemoCurrentArtworkUrl,
-            new TrackMetadata("Hours", "Tycho", null, null, DemoNextArtworkUrl),
+            currentArtworkUrl,
+            new TrackMetadata("Hours", "Tycho", null, null, nextArtworkUrl),
             true,
             178,
             317,

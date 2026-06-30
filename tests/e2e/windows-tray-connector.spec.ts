@@ -13,9 +13,24 @@ import {
 } from "./helpers/fixtures";
 
 const execFile = promisify(execFileCallback);
+const SCREENSHOT_PATH_ENV = "YTME_WINDOWS_TRAY_SCREENSHOT_PATH";
+const SCREENSHOT_PLAYBACK_URL_ENV = "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL";
 
 function windowsTraySmokeEnabled(): boolean {
   return process.env.YTME_E2E_WINDOWS_TRAY === "1";
+}
+
+function screenshotPlaybackUrl(): string | null {
+  const value = process.env[SCREENSHOT_PLAYBACK_URL_ENV]?.trim();
+  if (!value) return null;
+
+  const url = new URL(value);
+  if (url.protocol !== "https:" || url.hostname !== "music.youtube.com") {
+    throw new Error(
+      `${SCREENSHOT_PLAYBACK_URL_ENV} must be an https://music.youtube.com URL.`,
+    );
+  }
+  return url.toString();
 }
 
 function psLiteral(value: string): string {
@@ -485,6 +500,45 @@ async function captureTrayPromoScreenshot(
   ]);
 }
 
+async function loadLivePlaybackForScreenshot(
+  page: Page,
+  playbackUrl: string,
+): Promise<void> {
+  await page.goto(playbackUrl, {
+    waitUntil: "domcontentloaded",
+    timeout: 120_000,
+  });
+  await page.bringToFront();
+  await page
+    .waitForLoadState("networkidle", { timeout: 30_000 })
+    .catch(() => undefined);
+  await page.waitForTimeout(5000);
+}
+
+async function captureLiveTrayPromoScreenshot(
+  extension: ExtensionTestContext,
+  resultPath: string,
+  screenshotPath: string,
+  trayLogPath: string,
+): Promise<void> {
+  const playbackUrl = screenshotPlaybackUrl();
+  if (!playbackUrl) {
+    throw new Error(
+      `Set ${SCREENSHOT_PLAYBACK_URL_ENV} to the approved Creative Commons ` +
+        `YouTube Music track before setting ${SCREENSHOT_PATH_ENV}.`,
+    );
+  }
+
+  const playbackPage = await extension.context.newPage();
+  try {
+    await loadLivePlaybackForScreenshot(playbackPage, playbackUrl);
+    await expectTrayLogContains(trayLogPath, "current artwork displayed url=");
+    await captureTrayPromoScreenshot(resultPath, screenshotPath);
+  } finally {
+    await playbackPage.close().catch(() => undefined);
+  }
+}
+
 async function clickAboutAndClose(resultPath: string): Promise<void> {
   await runTrayUiAction("about", resultPath, [
     'Click-PopupElementByName "About YTM Tray"',
@@ -641,7 +695,7 @@ test("routes Windows tray buttons through the browser native messaging host", as
   const installRoot = testInfo.outputPath("tray-install");
   const executablePath = `${installRoot}\\YTMTray.exe`;
   const trayLogPath = testInfo.outputPath("tray.log");
-  const promoScreenshotPath = process.env.YTME_WINDOWS_TRAY_SCREENSHOT_PATH;
+  const promoScreenshotPath = process.env[SCREENSHOT_PATH_ENV];
   let extension: Awaited<ReturnType<typeof launchExtensionContext>> | undefined;
 
   try {
@@ -675,14 +729,6 @@ test("routes Windows tray buttons through the browser native messaging host", as
     );
     await expectFixtureEvent(ytmPage, "player-play-clicked");
     await expectFixtureEvent(ytmPage, "player-play-pause-clicked");
-    if (promoScreenshotPath && testInfo.project.name === "edge") {
-      await ytmPage.waitForTimeout(500);
-      await captureTrayPromoScreenshot(
-        testInfo.outputPath("tray-screenshot.json"),
-        promoScreenshotPath,
-      );
-    }
-
     await clickTrayPopupElement(
       "next",
       testInfo.outputPath("tray-next.json"),
@@ -727,6 +773,15 @@ test("routes Windows tray buttons through the browser native messaging host", as
     await expectTrayLogContains(trayLogPath, "requestId=focus-");
 
     await clickAboutAndClose(testInfo.outputPath("tray-about.json"));
+    if (promoScreenshotPath && testInfo.project.name === "edge") {
+      await captureLiveTrayPromoScreenshot(
+        extension,
+        testInfo.outputPath("tray-screenshot.json"),
+        promoScreenshotPath,
+        trayLogPath,
+      );
+    }
+
     await clickTrayPopupElement(
       "quit",
       testInfo.outputPath("tray-quit.json"),

@@ -244,8 +244,10 @@ describe("Windows tray connector scaffold", () => {
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain('"YTM_TRAY_VISUAL_STATUS"');
     expect(program).toContain('"YTM_TRAY_SCROLL_QA"');
-    expect(program).toContain('"ytm-tray-resource://demo-current-artwork"');
-    expect(program).toContain('"ytm-tray-resource://demo-next-artwork"');
+    expect(program).toContain('"YTM_TRAY_VISUAL_ARTWORK_URL"');
+    expect(program).toContain('"YTM_TRAY_VISUAL_NEXT_ARTWORK_URL"');
+    expect(program).not.toContain('"ytm-tray-resource://demo-current-artwork"');
+    expect(program).not.toContain('"ytm-tray-resource://demo-next-artwork"');
     expect(program).toContain("useScrollQaMetadata");
     expect(program).toContain("DemoConnectorConnection : IConnectorConnection");
     expect(program).toContain("DemoConnectorConnection(visualDemoStatus)");
@@ -263,6 +265,8 @@ describe("Windows tray connector scaffold", () => {
     expect(visualSmoke).toContain("Save-RectangleScreenshot");
     expect(visualSmoke).toContain("$PopupWindow.Current.BoundingRectangle");
     expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
+    expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL");
+    expect(buttonSmoke).toContain("current artwork displayed url=");
     expect(buttonSmoke).toContain("Save-TrayPopupScreenshot");
     expect(buttonSmoke).toContain("ExpectedAboutText");
     expect(buttonSmoke).toContain('"Close"');
@@ -283,6 +287,12 @@ describe("Windows tray connector scaffold", () => {
     expect(pausedFixture).toContain("publishMediaUpdate");
     expect(pausedFixture).toContain("setInterval(advanceProgress");
     expect(releaseScreenshot).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
+    expect(releaseScreenshot).toContain(
+      "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
+    );
+    expect(releaseScreenshot).toContain(
+      "approved Creative Commons YouTube Music track",
+    );
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_VISUAL_DEMO");
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_SCROLL_QA");
     expect(releaseScreenshot).toContain(
@@ -290,6 +300,10 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(releaseScreenshot).toContain("--project=edge");
     expect(remoteReleaseScreenshot).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
+    expect(remoteReleaseScreenshot).toContain(
+      "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
+    );
+    expect(remoteReleaseScreenshot).toContain("-PlaybackUrl");
     expect(remoteReleaseScreenshot).toContain("YTME_SCREENSHOT_BASE64_CHUNK");
     expect(remoteReleaseScreenshot).toContain("final = block");
     expect(remoteReleaseScreenshot).toContain(

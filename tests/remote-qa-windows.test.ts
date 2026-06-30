@@ -150,6 +150,12 @@ describe("Windows remote QA scaffold", () => {
     expect(releaseScreenshot).toContain(
       "$env:YTME_WINDOWS_TRAY_SCREENSHOT_PATH",
     );
+    expect(releaseScreenshot).toContain(
+      "$env:YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
+    );
+    expect(releaseScreenshot).toContain(
+      "approved Creative Commons YouTube Music track",
+    );
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_VISUAL_DEMO");
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_SCROLL_QA");
     expect(releaseScreenshot).toContain("pnpm run dev:build:edge");
@@ -161,6 +167,7 @@ describe("Windows remote QA scaffold", () => {
     expect(releaseScreenshotShell).toContain(
       "scripts\\windows-qa\\tray-release-screenshot.ps1",
     );
+    expect(releaseScreenshotShell).toContain("-PlaybackUrl");
     expect(releaseScreenshotShell).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
     expect(releaseScreenshotShell).toContain("YTME_SCREENSHOT_BASE64_CHUNK");
     expect(releaseScreenshotShell).toContain("final = block");

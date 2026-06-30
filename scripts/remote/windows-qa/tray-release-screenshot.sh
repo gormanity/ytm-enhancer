@@ -4,6 +4,7 @@ set -eu
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 repo_root="$(CDPATH= cd -- "$script_dir/../../.." && pwd)"
 output_path="${1:-$repo_root/apps/windows-tray/release/windows-tray-screenshot.png}"
+playback_url="${YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL:-}"
 log_file="$(mktemp)"
 encoded_file="$(mktemp)"
 decoded_file="$(mktemp)"
@@ -13,9 +14,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
+ps_quote() {
+  printf "'%s'" "$(printf "%s" "$1" | sed "s/'/''/g")"
+}
+
+playback_argument=""
+if [ -n "$playback_url" ]; then
+  playback_argument=" -PlaybackUrl $(ps_quote "$playback_url")"
+fi
+
 if ! "$script_dir/crabbox-run.sh" --shell '
 $OutputPath = Join-Path (Get-Location) "apps/windows-tray/release/windows-tray-screenshot.png"
-& .\scripts\windows-qa\tray-release-screenshot.ps1 -OutputPath $OutputPath
+& .\scripts\windows-qa\tray-release-screenshot.ps1 -OutputPath $OutputPath'"$playback_argument"'
 Write-Output "YTME_SCREENSHOT_BASE64_BEGIN"
 $EncodedScreenshot = [Convert]::ToBase64String([IO.File]::ReadAllBytes($OutputPath))
 $ChunkSize = 4096
