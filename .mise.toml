@@ -1,0 +1,43 @@
+[tools]
+node = "24"
+pnpm = "11.9.0"
+go = "1.24"
+dotnet = "10.0"
+actionlint = "1.7.12"
+vhs = "0.11.0"
+
+[tasks.deps]
+description = "Install JavaScript workspace dependencies."
+run = "pnpm install"
+
+[tasks.format]
+description = "Format the repository."
+run = "pnpm run format"
+
+[tasks.check]
+description = "Run the CI-equivalent local check."
+run = "pnpm run check"
+
+[tasks.dev-build]
+description = "Build all dev extension targets."
+run = "pnpm run dev:build"
+
+[tasks.workflow-check]
+description = "Lint GitHub Actions workflows."
+run = "pnpm run workflow:check"
+
+[tasks.cli-test]
+description = "Run CLI connector tests."
+run = "pnpm run cli:test"
+
+[tasks.cli-demo-video]
+description = "Render the CLI demo video."
+run = "pnpm run cli:demo-video"
+
+[tasks.windows-tray-build]
+description = "Build the Windows tray app and native host."
+run = "pnpm run windows-tray:build"
+
+[tasks.windows-tray-test]
+description = "Run Windows tray unit tests."
+run = "pnpm run windows-tray:test"

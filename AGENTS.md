@@ -100,6 +100,7 @@ This file covers **how to work**, not what the project is.
 
 | Task                     | Command                   |
 | ------------------------ | ------------------------- |
+| Install tools            | `mise install`            |
 | Install deps             | `pnpm install`            |
 | Format check             | `pnpm run format:check`   |
 | Workflow lint            | `pnpm run workflow:check` |
@@ -107,6 +108,7 @@ This file covers **how to work**, not what the project is.
 | Lint                     | `pnpm run lint`           |
 | Type check               | `pnpm run typecheck`      |
 | Test                     | `pnpm run test`           |
+| CLI demo video           | `pnpm run cli:demo-video` |
 | Build (Chrome)           | `pnpm run build:chrome`   |
 | Build (Firefox)          | `pnpm run build:firefox`  |
 | Dev build (stack tip)    | `pnpm run dev:build`      |
@@ -114,9 +116,10 @@ This file covers **how to work**, not what the project is.
 
 All checks must pass before pushing.
 
-Install `actionlint` locally with `brew install actionlint` before running
-`pnpm run workflow:check`. CI installs the official actionlint binary with the
-upstream download script before running the same command.
+Use `mise install` to install the pinned project toolchain, including
+`actionlint`. Without mise, install `actionlint` locally before running
+`pnpm run workflow:check`. CI installs the same pinned actionlint version with
+the upstream download script before running the same command.
 
 After each feature change cycle, run `pnpm run dev:build` so the extension can
 be optested with debug logging enabled. Dev builds output to `dist-dev/` and

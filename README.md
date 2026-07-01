@@ -78,8 +78,11 @@ Use manual loading when developing or testing a local build.
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm 10+
+- [mise](https://mise.jdx.dev/) for the pinned project toolchain
+
+Run `mise install` from the repository root before installing dependencies.
+Without mise, use Node.js 24, pnpm 11.9.0, Go 1.24, .NET 10, actionlint 1.7.12,
+and VHS 0.11.0. macOS menu bar app work also requires Xcode's Swift toolchain.
 
 ### Chrome / Chromium (Chrome, Brave)
 
@@ -162,17 +165,22 @@ Start with:
 
 ### Common Commands
 
-| Task                          | Command              |
-| ----------------------------- | -------------------- |
-| Install dependencies          | `pnpm install`       |
-| Format                        | `pnpm run format`    |
-| Lint                          | `pnpm run lint`      |
-| Typecheck                     | `pnpm run typecheck` |
-| Test                          | `pnpm run test`      |
-| CI-equivalent check           | `pnpm run check`     |
-| Dev build for local optesting | `pnpm run dev:build` |
-| Production build              | `pnpm run build`     |
-| Package store zips            | `pnpm run package`   |
+| Task                          | Command                   |
+| ----------------------------- | ------------------------- |
+| Install pinned tools          | `mise install`            |
+| Install dependencies          | `pnpm install`            |
+| Format                        | `pnpm run format`         |
+| Lint                          | `pnpm run lint`           |
+| Typecheck                     | `pnpm run typecheck`      |
+| Test                          | `pnpm run test`           |
+| CI-equivalent check           | `pnpm run check`          |
+| Dev build for local optesting | `pnpm run dev:build`      |
+| Render CLI demo video         | `pnpm run cli:demo-video` |
+| Production build              | `pnpm run build`          |
+| Package store zips            | `pnpm run package`        |
+
+Common commands are also available through mise, for example `mise run check`
+`mise run dev-build`, and `mise run cli-demo-video`.
 
 ### Watch Builds
 

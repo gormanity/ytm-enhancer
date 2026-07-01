@@ -15,8 +15,13 @@ modules.
 ## Local Setup
 
 1. Clone the repository.
-2. Install dependencies: `pnpm install`
-3. Run the test suite once: `pnpm run test`
+2. Install the pinned project tools: `mise install`
+3. Install dependencies: `pnpm install`
+4. Run the test suite once: `pnpm run test`
+
+If you do not use mise, install Node.js 24, pnpm 11.9.0, Go 1.24, .NET 10,
+actionlint 1.7.12, and VHS 0.11.0 yourself. macOS menu bar app work also
+requires Xcode's Swift toolchain.
 
 ## Development Commands
 
@@ -33,6 +38,9 @@ modules.
 - Full validation: `pnpm run validate`
   - Runs format, format check, lint, dead CSS check, data-role uniqueness check,
     typecheck, tests, and all browser builds (Chrome, Firefox, Edge).
+
+You can run the common checks through mise as well, for example `mise run check`
+`mise run dev-build`, and `mise run cli-demo-video`.
 
 ## Browser Store Build Policy
 

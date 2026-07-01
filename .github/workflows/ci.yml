@@ -28,9 +28,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
         run: |
           mkdir -p "$HOME/.local/bin"
-          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest "$HOME/.local/bin"
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) "$ACTIONLINT_VERSION" "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Lint GitHub Actions workflows

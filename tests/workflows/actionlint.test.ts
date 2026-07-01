@@ -11,10 +11,21 @@ describe("GitHub Actions workflow linting", () => {
     const packageJson = JSON.parse(
       readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
     ) as { scripts: Record<string, string> };
+    const miseConfig = readFileSync(
+      resolve(process.cwd(), ".mise.toml"),
+      "utf-8",
+    );
+    const actionlintVersionMatch = miseConfig.match(
+      /^actionlint = "([^"]+)"$/m,
+    );
+    const actionlintVersion = actionlintVersionMatch?.[1] ?? "";
 
     expect(ciWorkflow).toContain("workflow-lint:");
     expect(ciWorkflow).toContain('mkdir -p "$HOME/.local/bin"');
     expect(ciWorkflow).toContain("scripts/download-actionlint.bash");
+    expect(actionlintVersion).toBe("1.7.12");
+    expect(ciWorkflow).toContain(`ACTIONLINT_VERSION: ${actionlintVersion}`);
+    expect(ciWorkflow).toContain('"$ACTIONLINT_VERSION" "$HOME/.local/bin"');
     expect(ciWorkflow).toContain("Lint GitHub Actions workflows");
     expect(ciWorkflow).toContain("pnpm run workflow:check");
     expect(packageJson.scripts["workflow:check"]).toBe("actionlint");

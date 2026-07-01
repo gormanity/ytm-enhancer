@@ -223,12 +223,17 @@ Current notable divergence:
 
 Tooling stack:
 
+- mise
+- Node.js
 - TypeScript (strict)
 - Vite
 - Vitest
 - ESLint
 - Prettier
 - pnpm
+- Go
+- .NET
+- VHS
 - GitHub Actions
 
 Primary scripts:
