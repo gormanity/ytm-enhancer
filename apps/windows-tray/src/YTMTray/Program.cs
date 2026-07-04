@@ -8,6 +8,7 @@ internal static class Program
     private const string MutexName = "Local\\YTMEnhancerTray";
     private const string VisualDemoEnvironmentVariable = "YTM_TRAY_VISUAL_DEMO";
     private const string VisualDemoStatusEnvironmentVariable = "YTM_TRAY_VISUAL_STATUS";
+    private const string TestOpenPopupEnvironmentVariable = "YTM_TRAY_TEST_OPEN_POPUP";
 
     [STAThread]
     private static void Main()
@@ -28,22 +29,35 @@ internal static class Program
         var visualDemoStatus = Environment.GetEnvironmentVariable(
             VisualDemoStatusEnvironmentVariable
         );
+        var openPopupForTest =
+            Environment.GetEnvironmentVariable(TestOpenPopupEnvironmentVariable) == "1";
         IConnectorConnection connection = useVisualDemo
             ? new DemoConnectorConnection(visualDemoStatus)
             : new BridgeUiConnection(logger: logger);
-        RunTray(connection, logger, useVisualDemo ? "Connected" : "Waiting for YTM Enhancer");
+        RunTray(
+            connection,
+            logger,
+            useVisualDemo ? "Connected" : "Waiting for YTM Enhancer",
+            openPopupForTest
+        );
     }
 
     private static void RunTray(
         IConnectorConnection connection,
         NativeAppLogger logger,
-        string initialStatus
+        string initialStatus,
+        bool openPopupForTest
     )
     {
         Application.SetHighDpiMode(HighDpiMode.SystemAware);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        using var context = new TrayApplicationContext(connection, logger, initialStatus);
+        using var context = new TrayApplicationContext(
+            connection,
+            logger,
+            initialStatus,
+            openPopupForTest
+        );
         Application.Run(context);
     }
 }

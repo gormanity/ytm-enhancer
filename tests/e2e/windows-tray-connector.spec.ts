@@ -133,37 +133,49 @@ if (Test-Path -LiteralPath $ResultPath) {
 $ScriptContent = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("${encodedScript}"))
 Set-Content -LiteralPath $ScriptPath -Value $ScriptContent -Encoding UTF8
 try {
-  if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
-    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+  function Invoke-ScheduledTaskCommand {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]] $Arguments)
+
+    $Output = & schtasks.exe @Arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+      throw "schtasks.exe $($Arguments -join ' ') failed with code $LASTEXITCODE\`n$Output"
+    }
+    return $Output
   }
-  $Action = New-ScheduledTaskAction \`
-    -Execute "powershell.exe" \`
-    -Argument "-NoProfile -ExecutionPolicy Bypass -File \`"$ScriptPath\`""
-  $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
-  $Principal = New-ScheduledTaskPrincipal \`
-    -UserId $Identity \`
-    -LogonType Interactive \`
-    -RunLevel Limited
-  $Settings = New-ScheduledTaskSettingsSet \`
-    -AllowStartIfOnBatteries \`
-    -DontStopIfGoingOnBatteries \`
-    -ExecutionTimeLimit (New-TimeSpan -Minutes 2)
-  Register-ScheduledTask \`
-    -TaskName $TaskName \`
-    -Action $Action \`
-    -Trigger $Trigger \`
-    -Principal $Principal \`
-    -Settings $Settings \`
-    -Force |
+
+  function Remove-ScheduledTaskIfPresent {
+    $PreviousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+      & schtasks.exe /Delete /TN $TaskName /F 2>&1 | Out-Null
+    } finally {
+      $ErrorActionPreference = $PreviousErrorActionPreference
+      $global:LASTEXITCODE = 0
+    }
+  }
+
+  Remove-ScheduledTaskIfPresent
+  $StartTime = (Get-Date).AddMinutes(5).ToString("HH:mm")
+  $TaskAction = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \`"$ScriptPath\`""
+  Invoke-ScheduledTaskCommand \`
+    /Create \`
+    /TN $TaskName \`
+    /SC ONCE \`
+    /ST $StartTime \`
+    /TR $TaskAction \`
+    /RL LIMITED \`
+    /IT \`
+    /F |
     Out-Null
-  Start-ScheduledTask -TaskName $TaskName
+  Invoke-ScheduledTaskCommand /Run /TN $TaskName | Out-Null
+
   $Deadline = (Get-Date).AddSeconds(30)
   while ((Get-Date) -lt $Deadline -and -not (Test-Path -LiteralPath $ResultPath)) {
     Start-Sleep -Milliseconds 250
   }
   if (-not (Test-Path -LiteralPath $ResultPath)) {
-    $TaskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
-    throw "$TaskName did not create $ResultPath. LastTaskResult=$($TaskInfo.LastTaskResult)"
+    $TaskInfo = & schtasks.exe /Query /TN $TaskName /V /FO LIST 2>&1
+    throw "$TaskName did not create $ResultPath. Ensure $Identity is logged into an unlocked desktop session.\`n$TaskInfo"
   }
   $Payload = Get-Content -LiteralPath $ResultPath -Raw | ConvertFrom-Json
   if (-not $Payload.ok) {
@@ -171,9 +183,7 @@ try {
   }
   $Payload | ConvertTo-Json -Depth 8 -Compress
 } finally {
-  if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
-    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-  }
+  Remove-ScheduledTaskIfPresent
   if (Test-Path -LiteralPath $ScriptPath) {
     Remove-Item -LiteralPath $ScriptPath -Force
   }
@@ -190,6 +200,7 @@ async function launchTrayApp(
     interactiveScript("launch", resultPath, [
       `$ExecutablePath = ${psLiteral(executablePath)}`,
       `$env:YTM_TRAY_LOG_PATH = ${psLiteral(logPath)}`,
+      '$env:YTM_TRAY_TEST_OPEN_POPUP = "1"',
       "$Process = Start-Process -FilePath $ExecutablePath -PassThru",
       "Start-Sleep -Milliseconds 1500",
       "$StartedProcess = Get-Process -Id $Process.Id -ErrorAction Stop",
@@ -218,6 +229,8 @@ public static class NativeInput {
   public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
   [DllImport("user32.dll")]
   public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")]
+  public static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 }
 '@
 Add-Type -TypeDefinition $NativeInputSource
@@ -341,12 +354,62 @@ function Get-VisibleWindowNames {
   return $Names
 }
 
+function Invoke-ElementDefaultAction {
+  param([Parameter(Mandatory = $true)] $Element)
+
+  $InvokePattern = $null
+  if ($Element.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$InvokePattern)) {
+    try {
+      $InvokePattern.Invoke()
+      return $true
+    } catch {
+      # Fall through to pointer activation.
+    }
+  }
+
+  return $false
+}
+
+function Send-ElementWindowClick {
+  param(
+    [Parameter(Mandatory = $true)] $Element,
+    [double] $XFraction = 0.5,
+    [double] $YFraction = 0.5
+  )
+
+  $Handle = $Element.Current.NativeWindowHandle
+  if ($Handle -eq 0) { return $false }
+
+  $Rect = $Element.Current.BoundingRectangle
+  if ($Rect.Width -le 0 -or $Rect.Height -le 0) { return $false }
+
+  $ClientX = [Math]::Max(0, [int]($Rect.Width * $XFraction))
+  $ClientY = [Math]::Max(0, [int]($Rect.Height * $YFraction))
+  $LParamValue = (($ClientY -band 0xffff) -shl 16) -bor ($ClientX -band 0xffff)
+  $LParam = [IntPtr]$LParamValue
+  [NativeInput]::SendMessage([IntPtr]$Handle, 0x0201, [IntPtr]1, $LParam) | Out-Null
+  [NativeInput]::SendMessage([IntPtr]$Handle, 0x0202, [IntPtr]0, $LParam) | Out-Null
+  return $true
+}
+
 function Click-Element {
   param(
     [Parameter(Mandatory = $true)] $Element,
     [double] $XFraction = 0.5,
     [double] $YFraction = 0.5
   )
+  if ([Math]::Abs($XFraction - 0.5) -lt 0.001 -and [Math]::Abs($YFraction - 0.5) -lt 0.001) {
+    if (Invoke-ElementDefaultAction $Element) {
+      Start-Sleep -Milliseconds 150
+      return
+    }
+  }
+
+  if (Send-ElementWindowClick $Element $XFraction $YFraction) {
+    Start-Sleep -Milliseconds 150
+    return
+  }
+
   $Rect = $Element.Current.BoundingRectangle
   if ($Rect.Width -le 0 -or $Rect.Height -le 0) {
     throw "Element is not clickable: $($Element.Current.Name)"

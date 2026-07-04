@@ -37,11 +37,11 @@ Remove-Item Env:YTM_TRAY_VISUAL_DEMO -ErrorAction SilentlyContinue
 Remove-Item Env:YTM_TRAY_VISUAL_STATUS -ErrorAction SilentlyContinue
 Remove-Item Env:YTM_TRAY_SCROLL_QA -ErrorAction SilentlyContinue
 
-Invoke-Native corepack enable
-Invoke-Native corepack prepare pnpm@11.9.0 --activate
-Invoke-Native pnpm install --frozen-lockfile
-Invoke-Native pnpm run dev:build:edge
-Invoke-Native pnpm exec playwright test `
+. "$PSScriptRoot\ensure-pnpm.ps1"
+Ensure-Pnpm
+Invoke-Pnpm install --frozen-lockfile
+Invoke-Pnpm run dev:build:edge
+Invoke-Pnpm exec playwright test `
   tests/e2e/windows-tray-connector.spec.ts `
   --project=edge `
   --workers=1

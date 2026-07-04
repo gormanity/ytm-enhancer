@@ -12,7 +12,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     public TrayApplicationContext(
         IConnectorConnection connection,
         NativeAppLogger logger,
-        string initialStatus
+        string initialStatus,
+        bool openPopupForTest = false
     )
     {
         this.connection = connection;
@@ -21,6 +22,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
         connectorApp = new ConnectorApp(connection, trayController, logger);
         connectorApp.Start();
         trayController.StartBackgroundUpdateCheck();
+        if (openPopupForTest)
+        {
+            trayController.OpenPopupForTest();
+        }
     }
 
     protected override void Dispose(bool disposing)

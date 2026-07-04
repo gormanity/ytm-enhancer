@@ -564,6 +564,7 @@ internal sealed class CloseButtonControl : Control
             ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
                 | ControlStyles.ResizeRedraw
+                | ControlStyles.Selectable
                 | ControlStyles.SupportsTransparentBackColor
                 | ControlStyles.UserPaint,
             true
@@ -1360,7 +1361,7 @@ internal sealed class PlaybackButtonControl : Control
         AccessibleRole = AccessibleRole.PushButton;
         BackColor = Color.Transparent;
         Cursor = Cursors.Default;
-        TabStop = false;
+        TabStop = true;
     }
 
     public event EventHandler? Pressed;
@@ -1450,9 +1451,18 @@ internal sealed class PlaybackButtonControl : Control
 
         if (ClientRectangle.Contains(e.Location))
         {
-            Pressed?.Invoke(this, EventArgs.Empty);
+            PerformPress();
         }
     }
+
+    internal void PerformPress()
+    {
+        if (!Enabled || !playbackEnabled) return;
+        Pressed?.Invoke(this, EventArgs.Empty);
+    }
+
+    protected override AccessibleObject CreateAccessibilityInstance() =>
+        new PlaybackButtonAccessibleObject(this);
 
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -1492,6 +1502,24 @@ internal sealed class PlaybackButtonControl : Control
             Math.Max(1, (int)Math.Round(iconSize.Width * PlaybackIconDisplayScale)),
             Math.Max(1, (int)Math.Round(iconSize.Height * PlaybackIconDisplayScale))
         );
+
+    private sealed class PlaybackButtonAccessibleObject : ControlAccessibleObject
+    {
+        private readonly PlaybackButtonControl owner;
+
+        public PlaybackButtonAccessibleObject(PlaybackButtonControl owner)
+            : base(owner)
+        {
+            this.owner = owner;
+        }
+
+        public override string? DefaultAction => "Press";
+
+        public override void DoDefaultAction()
+        {
+            owner.PerformPress();
+        }
+    }
 }
 
 internal enum PopupActionIcon
@@ -1520,11 +1548,12 @@ internal sealed class PopupActionRowControl : Control
         AccessibleName = label;
         AccessibleRole = AccessibleRole.PushButton;
         Cursor = Cursors.Hand;
-        TabStop = false;
+        TabStop = true;
         SetStyle(
             ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
                 | ControlStyles.ResizeRedraw
+                | ControlStyles.Selectable
                 | ControlStyles.SupportsTransparentBackColor
                 | ControlStyles.UserPaint,
             true
@@ -1567,9 +1596,18 @@ internal sealed class PopupActionRowControl : Control
 
         if (ClientRectangle.Contains(e.Location))
         {
-            Pressed?.Invoke(this, EventArgs.Empty);
+            PerformPress();
         }
     }
+
+    internal void PerformPress()
+    {
+        if (!Enabled) return;
+        Pressed?.Invoke(this, EventArgs.Empty);
+    }
+
+    protected override AccessibleObject CreateAccessibilityInstance() =>
+        new PopupActionRowAccessibleObject(this);
 
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -1605,6 +1643,24 @@ internal sealed class PopupActionRowControl : Control
                 | TextFormatFlags.EndEllipsis
                 | TextFormatFlags.GlyphOverhangPadding
         );
+    }
+
+    private sealed class PopupActionRowAccessibleObject : ControlAccessibleObject
+    {
+        private readonly PopupActionRowControl owner;
+
+        public PopupActionRowAccessibleObject(PopupActionRowControl owner)
+            : base(owner)
+        {
+            this.owner = owner;
+        }
+
+        public override string? DefaultAction => "Press";
+
+        public override void DoDefaultAction()
+        {
+            owner.PerformPress();
+        }
     }
 }
 

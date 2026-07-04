@@ -23,7 +23,7 @@ if [ -n "$playback_url" ]; then
   playback_argument=" -PlaybackUrl $(ps_quote "$playback_url")"
 fi
 
-if ! "$script_dir/crabbox-run.sh" --shell '
+if ! "$script_dir/run.sh" --shell '
 $OutputPath = Join-Path (Get-Location) "apps/windows-tray/release/windows-tray-screenshot.png"
 & .\scripts\windows-qa\tray-release-screenshot.ps1 -OutputPath $OutputPath'"$playback_argument"'
 Write-Output "YTME_SCREENSHOT_BASE64_BEGIN"

@@ -103,8 +103,11 @@ $StartMenuFolder = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs
 
 $env:CI = "true"
 
-Invoke-Native pnpm run $PackageScript
-Invoke-Native pnpm run windows-tray:update-manifest -- "--package=$ArchivePath"
+. "$PSScriptRoot\ensure-pnpm.ps1"
+Ensure-Pnpm
+Invoke-Pnpm install --frozen-lockfile
+Invoke-Pnpm run $PackageScript
+Invoke-Pnpm run windows-tray:update-manifest -- "--package=$ArchivePath"
 
 Assert-PathExists $ArchivePath
 Assert-PathExists $UpdateManifestPath

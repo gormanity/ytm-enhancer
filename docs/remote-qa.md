@@ -394,10 +394,19 @@ REMOTE_QA_LINUX_X64_ALLOW_EMULATED_BROWSER_E2E=1 \
 scripts/remote/linux-x64-qa/e2e-smoke.sh
 ```
 
-## Windows On Bowfin
+## Windows QA
 
-Use a persistent Windows 11 ARM VM on the remote Mac for Windows validation. The
-intended path is:
+Windows validation can target either a physical Windows machine over direct SSH
+or a Windows VM reachable through a remote macOS intermediary. Prefer direct SSH
+for a dedicated Windows PC:
+
+```text
+local checkout
+  -> Windows OpenSSH target
+```
+
+Use the macOS intermediary transport when the Windows target is a VM that is
+only reachable from a remote Mac:
 
 ```text
 local checkout
@@ -406,13 +415,13 @@ local checkout
   -> Windows OpenSSH guest
 ```
 
-Prefer Windows ARM as the VM architecture. Use Windows' own x64 app emulation
-only where a tool does not provide ARM binaries. Avoid full x86_64 Windows
-emulation on Apple silicon for browser QA; it is expected to be slow and
-brittle.
+For a Windows VM on Apple silicon, prefer Windows ARM as the VM architecture.
+Use Windows' own x64 app emulation only where a tool does not provide ARM
+binaries. Avoid full x86_64 Windows emulation on Apple silicon for browser QA;
+it is expected to be slow and brittle.
 
-Create the VM with a disposable non-admin QA account, bridged networking if
-available, and enough resources for browser builds:
+For a VM, create it with a disposable non-admin QA account, bridged networking
+if available, and enough resources for browser builds:
 
 ```text
 CPU: 4
@@ -420,7 +429,11 @@ Memory: 8-12 GB
 Disk: 80+ GB
 ```
 
-Enable OpenSSH in the Windows guest:
+For a physical Windows PC, create a dedicated non-admin QA account such as
+`codex`, log into that desktop account at least once so its user profile exists,
+and keep an administrator account separate for machine setup.
+
+Enable OpenSSH on the Windows target:
 
 ```powershell
 Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
@@ -430,11 +443,43 @@ New-NetFirewallRule -Name sshd -DisplayName "OpenSSH Server" `
   -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
 ```
 
-Install the Windows toolchain in the guest:
+For a non-admin QA account, add the public key to the user's own profile and
+grant `SYSTEM` read access so OpenSSH can validate the key:
+
+```powershell
+$key = "ssh-ed25519 <public-key> <comment>"
+$sshDir = "$env:USERPROFILE\.ssh"
+$keyPath = "$sshDir\authorized_keys"
+$user = "$env:USERDOMAIN\$env:USERNAME"
+
+New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
+Set-Content -Path $keyPath -Value $key -Encoding ascii
+
+icacls.exe $sshDir /inheritance:r
+icacls.exe $sshDir /grant "$($user):(OI)(CI)F"
+icacls.exe $sshDir /grant "*S-1-5-18:(OI)(CI)F"
+
+icacls.exe $keyPath /inheritance:r
+icacls.exe $keyPath /grant "$($user):F"
+icacls.exe $keyPath /grant "*S-1-5-18:F"
+```
+
+The public key must be a single line. Verify the key count before testing from
+the local machine:
+
+```powershell
+@(Get-Content $keyPath).Count
+```
+
+For an administrator QA account, Windows OpenSSH reads keys from
+`$env:ProgramData\ssh\administrators_authorized_keys`; prefer a non-admin QA
+account for repeatable validation unless a smoke explicitly needs elevation.
+
+Install the Windows toolchain on the target:
 
 - Git
 - Node.js matching this repo's supported development version
-- Corepack with `pnpm@11.9.0`
+- Corepack with `pnpm@11.9.0`, or a global `pnpm@11.9.0` install
 - Go 1.24 or newer
 - Microsoft Edge
 - Windows SDK, including `signtool.exe`, for Windows tray signing smoke
@@ -442,23 +487,54 @@ Install the Windows toolchain in the guest:
 Then prepare package-manager state:
 
 ```powershell
-corepack enable
-corepack prepare pnpm@11.9.0 --activate
+if (Get-Command corepack -ErrorAction SilentlyContinue) {
+  corepack enable
+  corepack prepare pnpm@11.9.0 --activate
+} else {
+  npm install -g pnpm@11.9.0
+}
+
+pnpm --version
 git config --global core.autocrlf false
 ```
 
 Configure the Windows target locally through `.remote-qa.env` or shell
-environment. `REMOTE_QA_WINDOWS_SSH_KEY` is optional; when set, it must be a
-path readable by the remote macOS QA account because the second SSH hop starts
-from that Mac.
+environment. Direct SSH is the default transport:
 
 ```sh
-REMOTE_QA_WINDOWS_HOST="<guest-ip-or-bowfin-forward-host>"
+REMOTE_QA_WINDOWS_TRANSPORT="direct"
+REMOTE_QA_WINDOWS_HOST="<windows-host-or-ssh-alias>"
 REMOTE_QA_WINDOWS_USER="<windows-qa-user>"
 REMOTE_QA_WINDOWS_PORT="22"
 REMOTE_QA_WINDOWS_WORK_ROOT="C:/Users/<windows-qa-user>/work/ytm-enhancer"
-REMOTE_QA_WINDOWS_SSH_KEY="$HOME/.ssh/<windows-guest-key-on-remote-mac>"
+REMOTE_QA_WINDOWS_SSH_KEY="$HOME/.ssh/<windows-target-key>"
 ```
+
+Leave pnpm settings unset for the normal repo install layout. If a Windows SSH
+session cannot traverse pnpm's junction-backed `node_modules`, use this
+target-specific workaround in ignored local config only:
+
+```sh
+REMOTE_QA_WINDOWS_PNPM_NODE_LINKER="hoisted"
+REMOTE_QA_WINDOWS_PNPM_PACKAGE_IMPORT_METHOD="copy"
+```
+
+For a Windows VM reachable only from a remote Mac, use the macOS intermediary
+transport:
+
+```sh
+REMOTE_QA_WINDOWS_TRANSPORT="macos"
+REMOTE_QA_WINDOWS_HOST="<guest-ip-or-forward-host-from-macos>"
+REMOTE_QA_WINDOWS_USER="<windows-qa-user>"
+REMOTE_QA_WINDOWS_PORT="22"
+REMOTE_QA_WINDOWS_WORK_ROOT="C:/Users/<windows-qa-user>/work/ytm-enhancer"
+REMOTE_QA_WINDOWS_SSH_KEY="/Users/<macos-qa-user>/.ssh/<windows-target-key>"
+```
+
+`REMOTE_QA_WINDOWS_SSH_KEY` is optional when your SSH config resolves the key.
+When `REMOTE_QA_WINDOWS_TRANSPORT=direct`, the key path is read on the local
+machine. When `REMOTE_QA_WINDOWS_TRANSPORT=macos`, the key path is read on the
+remote macOS intermediary because the second SSH hop starts there.
 
 `REMOTE_QA_WINDOWS_WORK_ROOT` is deleted and recreated on every run. Point it at
 a disposable repository checkout directory, not a broad parent directory.
@@ -469,21 +545,24 @@ Run the Windows SSH preflight before a full Windows QA sync:
 scripts/remote/windows-qa/probe.sh
 ```
 
-The probe verifies that the remote Mac can reach the UTM forwarded port and that
-the Windows guest returns an OpenSSH banner before PowerShell runs. It does not
-copy the repository into Windows.
+The probe verifies that the selected transport can reach the Windows SSH port
+and that the Windows target returns an OpenSSH banner before PowerShell runs. It
+does not copy the repository into Windows.
 
-Run a minimal Windows smoke:
+Run a minimal Windows smoke through the configured transport:
 
 ```sh
-scripts/remote/windows-qa/crabbox-run.sh -- powershell.exe -NoProfile \
+scripts/remote/windows-qa/run.sh -- powershell.exe -NoProfile \
   -Command '$PSVersionTable.PSVersion.ToString()'
 ```
 
+`scripts/remote/windows-qa/crabbox-run.sh` remains as a compatibility alias for
+the macOS intermediary transport. Prefer `run.sh` in new docs and automation.
+
 If `nc` can connect to the forwarded port from the remote Mac, but SSH fails
 before authentication with `Connection timed out during banner exchange` or
-`kex_exchange_identification`, the repo wrapper has reached UTM and the failure
-is inside the Windows guest. From the Windows desktop, double-click
+`kex_exchange_identification`, the wrapper has reached the Windows target and
+the failure is inside Windows. From the Windows desktop, double-click
 `scripts/windows-qa/repair-openssh.cmd` to request administrator permission,
 repair OpenSSH Server, restore the firewall rule, fix
 `administrators_authorized_keys` ACLs when that file exists, and write a log to
@@ -522,7 +601,7 @@ Run the Windows build/unit check:
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/windows-qa/check.ps1
 ```
 
-Run the same check through bowfin and the Windows guest:
+Run the same check through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/check.sh
@@ -540,15 +619,15 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/e2e-edge-smoke.ps1
 ```
 
-Run the same smoke through bowfin and the Windows guest:
+Run the same smoke through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/e2e-edge-smoke.sh
 ```
 
 This runs the Playwright `edge` project against the system Microsoft Edge app in
-the Windows guest. General Windows browser E2E remains scoped to Edge; the tray
-connector button smoke covers Edge and Firefox.
+Windows. General Windows browser E2E remains scoped to Edge; the tray connector
+button smoke covers Edge and Firefox.
 
 Windows CLI native messaging QA is not wired yet. The current CLI native-host
 install scripts and connector e2e smoke target macOS/Linux paths. Windows CLI
@@ -561,16 +640,16 @@ Run the Windows tray connector smoke:
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/windows-qa/tray-smoke.ps1
 ```
 
-Run the same smoke through bowfin and the Windows guest:
+Run the same smoke through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/tray-smoke.sh
 ```
 
 This requires a .NET SDK that can build .NET 10 projects plus the .NET 10
-runtime in the Windows guest. The `Microsoft.DotNet.SDK.10` winget package
+runtime on the Windows target. The `Microsoft.DotNet.SDK.10` winget package
 provides both. It runs the dependency-free tray tests, publishes the WinForms
-tray executable and native host relay for the guest architecture, installs
+tray executable and native host relay for the target architecture, installs
 user-level Edge, Chrome, and Firefox native messaging registry keys, validates
 the Chromium and Firefox manifests, and removes the smoke install.
 
@@ -581,13 +660,13 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-package-smoke.ps1
 ```
 
-Run the same smoke through bowfin and the Windows guest:
+Run the same smoke through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/tray-package-smoke.sh
 ```
 
-This builds the release zip for the guest architecture, generates
+This builds the release zip for the target architecture, generates
 `YTM-Tray-update.json`, extracts the package, installs from the prebuilt
 executables, validates the package metadata and manifest, and removes the smoke
 install.
@@ -599,7 +678,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-release-e2e.ps1
 ```
 
-Run the same smoke through bowfin and the Windows guest:
+Run the same smoke through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/tray-release-e2e.sh
@@ -622,7 +701,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
   -TargetVersion 0.1.2
 ```
 
-Run the same smoke through bowfin and the Windows guest:
+Run the same smoke through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.1 0.1.2
@@ -646,7 +725,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-signing-smoke.ps1
 ```
 
-Run the same smoke through bowfin and the Windows guest:
+Run the same smoke through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/tray-signing-smoke.sh
@@ -657,7 +736,7 @@ user stores, exports a temporary PFX, builds the release zip with signing
 required, verifies the packaged tray executable and native host have
 Authenticode signatures from the disposable signer, and removes the temporary
 certificate. It validates the signing plumbing without installing production
-signing secrets on the QA VM.
+signing secrets on the QA target.
 
 Run the Windows tray visual smoke from an active Windows desktop session:
 
@@ -666,7 +745,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-visual-smoke.ps1
 ```
 
-Run the same smoke through bowfin and the Windows guest:
+Run the same smoke through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/tray-visual-smoke.sh
@@ -691,7 +770,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-release-screenshot.ps1
 ```
 
-Run the same capture through bowfin and the Windows guest:
+Run the same capture through the configured Windows transport:
 
 ```sh
 YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL=\
@@ -712,7 +791,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-button-smoke.ps1
 ```
 
-Run the same smoke through bowfin and the Windows guest:
+Run the same smoke through the configured Windows transport:
 
 ```sh
 scripts/remote/windows-qa/tray-button-smoke.sh
@@ -792,6 +871,7 @@ The remote QA scripts accept these variables:
 - `REMOTE_QA_LINUX_X64_ALLOW_EMULATED_BROWSER_E2E`
 - `REMOTE_QA_LINUX_X64_E2E_PLATFORM`
 - `REMOTE_QA_LINUX_X64_E2E_IMAGE`
+- `REMOTE_QA_WINDOWS_TRANSPORT`
 - `REMOTE_QA_WINDOWS_HOST`
 - `REMOTE_QA_WINDOWS_USER`
 - `REMOTE_QA_WINDOWS_PORT`

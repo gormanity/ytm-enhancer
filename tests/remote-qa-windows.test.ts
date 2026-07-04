@@ -7,13 +7,18 @@ function read(path: string): string {
 }
 
 describe("Windows remote QA scaffold", () => {
-  it("documents the bowfin Windows VM path and environment", () => {
+  it("documents direct and intermediary Windows QA paths", () => {
     const docs = read("docs/remote-qa.md");
 
-    expect(docs).toContain("## Windows On Bowfin");
-    expect(docs).toContain("Windows 11 ARM VM");
+    expect(docs).toContain("## Windows QA");
+    expect(docs).toContain("physical Windows machine over direct SSH");
+    expect(docs).toContain("remote macOS intermediary");
+    expect(docs).toContain('REMOTE_QA_WINDOWS_TRANSPORT="direct"');
+    expect(docs).toContain('REMOTE_QA_WINDOWS_TRANSPORT="macos"');
     expect(docs).toContain("REMOTE_QA_WINDOWS_HOST");
     expect(docs).toContain("REMOTE_QA_WINDOWS_WORK_ROOT");
+    expect(docs).toContain("REMOTE_QA_WINDOWS_PNPM_NODE_LINKER");
+    expect(docs).toContain("scripts/remote/windows-qa/run.sh");
     expect(docs).toContain("Windows CLI native messaging QA is not wired yet");
     expect(docs).toContain("scripts/windows-qa/check.ps1");
     expect(docs).toContain("scripts/windows-qa/e2e-edge-smoke.ps1");
@@ -45,18 +50,26 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("Microsoft.DotNet.SDK.10");
     expect(docs).toContain("Windows SDK");
     expect(docs).toContain("signtool.exe");
-    expect(docs).toMatch(
-      /the tray\s+connector button smoke covers Edge and Firefox/,
+    expect(docs).toContain("button smoke covers Edge and Firefox");
+    expect(docs).toContain(
+      "Corepack with `pnpm@11.9.0`, or a global `pnpm@11.9.0` install",
     );
   });
 
   it("provides a no-sync Windows SSH preflight", () => {
     const probe = read("scripts/remote/windows-qa/probe.sh");
 
+    expect(probe).toContain("REMOTE_QA_WINDOWS_TRANSPORT");
     expect(probe).toContain("REMOTE_QA_WINDOWS_HOST");
     expect(probe).toContain("REMOTE_QA_WINDOWS_USER");
-    expect(probe).toContain("nc -vz");
-    expect(probe).toContain("powershell.exe -NoProfile -Command");
+    expect(probe).toContain('ssh -G "$windows_host"');
+    expect(probe).toContain("resolve_probe_host");
+    expect(probe).toContain("nc -vz -w 10");
+    expect(probe).toContain(
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand",
+    );
+    expect(probe).toContain("REMOTE_QA_CONFIG=/dev/null");
+    expect(probe).toContain("scripts/remote/windows-qa/probe.sh");
     expect(probe).not.toContain("tar -czf");
   });
 
@@ -78,31 +91,57 @@ describe("Windows remote QA scaffold", () => {
     expect(repair).toContain("YTM-Windows-QA-SSH-Repair.log");
   });
 
-  it("bridges through the macOS Crabbox runner into Windows OpenSSH", () => {
-    const runner = read("scripts/remote/windows-qa/crabbox-run.sh");
+  it("runs Windows QA directly or through a macOS intermediary", () => {
+    const runner = read("scripts/remote/windows-qa/run.sh");
+    const crabboxRunner = read("scripts/remote/windows-qa/crabbox-run.sh");
 
     expect(runner).toContain(
       'macos_runner="$repo_root/scripts/remote/macos-qa/crabbox-run.sh"',
     );
+    expect(runner).toContain(
+      'transport="${REMOTE_QA_WINDOWS_TRANSPORT:-direct}"',
+    );
+    expect(runner).toContain("run_direct");
+    expect(runner).toContain("run_macos_intermediary");
+    expect(runner).toContain("REMOTE_QA_CONFIG=/dev/null");
     expect(runner).toContain("REMOTE_QA_WINDOWS_HOST");
+    expect(runner).toContain("REMOTE_QA_WINDOWS_PNPM_NODE_LINKER");
+    expect(runner).toContain("PNPM_CONFIG_NODE_LINKER");
+    expect(runner).toContain("PNPM_CONFIG_PACKAGE_IMPORT_METHOD");
     expect(runner).toContain("powershell.exe");
     expect(runner).toContain("-EncodedCommand");
     expect(runner).toContain("function Remove-QaTree");
     expect(runner).toContain("Get-Process msedge, firefox, YTMTray");
     expect(runner).toContain("[System.IO.Directory]::Delete");
     expect(runner).toContain("COPYFILE_DISABLE=1 tar -czf -");
+    expect(runner).toContain("--exclude CLAUDE.md");
+    expect(runner).toContain("--exclude apps/menu-bar/.build");
+    expect(runner).toContain("--exclude apps/windows-tray/.build");
     expect(runner).toContain("tar -xzf - -C \\$target");
+    expect(crabboxRunner).toContain(
+      'REMOTE_QA_WINDOWS_TRANSPORT="${REMOTE_QA_WINDOWS_TRANSPORT:-macos}"',
+    );
+    expect(crabboxRunner).toContain('exec "$script_dir/run.sh" "$@"');
   });
 
   it("uses Windows-native checks instead of the POSIX check script", () => {
     const check = read("scripts/windows-qa/check.ps1");
     const checkShell = read("scripts/remote/windows-qa/check.sh");
+    const ensurePnpm = read("scripts/windows-qa/ensure-pnpm.ps1");
 
-    expect(check).toContain("Invoke-Native pnpm run format:check");
-    expect(check).toContain("Invoke-Native pnpm run lint");
+    expect(check).toContain('ensure-pnpm.ps1"');
+    expect(check).toContain("Ensure-Pnpm");
+    expect(check).toContain("Invoke-Pnpm run format:check");
+    expect(check).toContain("Invoke-Pnpm run lint");
     expect(check).toContain("Invoke-Native go -C apps/cli test ./...");
-    expect(check).toContain("Invoke-Native pnpm run dev:build:edge");
+    expect(check).toContain("Invoke-Pnpm run dev:build:edge");
     expect(check).not.toContain("pnpm run check");
+    expect(check).not.toContain("corepack enable");
+    expect(ensurePnpm).toContain("Get-Command pnpm.cmd");
+    expect(ensurePnpm).toContain("Get-Command pnpm");
+    expect(ensurePnpm).toContain("Get-Command corepack");
+    expect(ensurePnpm).toContain("function Invoke-Pnpm");
+    expect(ensurePnpm).toContain("npm install -g pnpm@$RequiredVersion");
     expect(checkShell).toContain("scripts\\windows-qa\\check.ps1");
   });
 
@@ -110,7 +149,7 @@ describe("Windows remote QA scaffold", () => {
     const e2e = read("scripts/windows-qa/e2e-edge-smoke.ps1");
     const e2eShell = read("scripts/remote/windows-qa/e2e-edge-smoke.sh");
 
-    expect(e2e).toContain("Invoke-Native pnpm run dev:build:edge");
+    expect(e2e).toContain("Invoke-Pnpm run dev:build:edge");
     expect(e2e).toContain("playwright test tests/e2e --project=edge");
     expect(e2eShell).toContain("scripts\\windows-qa\\e2e-edge-smoke.ps1");
   });
@@ -158,7 +197,7 @@ describe("Windows remote QA scaffold", () => {
     );
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_VISUAL_DEMO");
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_SCROLL_QA");
-    expect(releaseScreenshot).toContain("pnpm run dev:build:edge");
+    expect(releaseScreenshot).toContain("Invoke-Pnpm run dev:build:edge");
     expect(releaseScreenshot).toContain(
       "tests/e2e/windows-tray-connector.spec.ts",
     );
@@ -197,6 +236,9 @@ describe("Windows remote QA scaffold", () => {
       "scripts/remote/windows-qa/tray-package-smoke.sh",
     );
 
+    expect(packageSmoke).toContain('ensure-pnpm.ps1"');
+    expect(packageSmoke).toContain("Invoke-Pnpm install --frozen-lockfile");
+    expect(packageSmoke).toContain("Invoke-Pnpm run $PackageScript");
     expect(packageSmoke).toContain("windows-tray:package:$RuntimeIdentifier");
     expect(packageSmoke).toContain("windows-tray:update-manifest");
     expect(packageSmoke).toContain("--package=$ArchivePath");
@@ -330,11 +372,13 @@ describe("Windows remote QA scaffold", () => {
 
     expect(buttonSmoke).toContain('$env:YTME_E2E_WINDOWS_TRAY = "1"');
     expect(buttonSmoke).toContain("playwright install firefox");
-    expect(buttonSmoke).toContain("pnpm run dev:build:edge");
-    expect(buttonSmoke).toContain("pnpm run dev:build:firefox");
+    expect(buttonSmoke).toContain("Invoke-Pnpm run dev:build:edge");
+    expect(buttonSmoke).toContain("Invoke-Pnpm run dev:build:firefox");
     expect(buttonSmoke).toContain(
       "playwright test tests/e2e/windows-tray-connector.spec.ts --project=edge --project=firefox --workers=1",
     );
+    expect(trayE2e).toContain("schtasks.exe");
+    expect(trayE2e).toContain("logged into an unlocked desktop session");
     expect(buttonSmokeShell).toContain(
       "scripts\\windows-qa\\tray-button-smoke.ps1",
     );

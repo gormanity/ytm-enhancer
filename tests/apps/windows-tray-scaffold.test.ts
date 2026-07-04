@@ -246,6 +246,7 @@ describe("Windows tray connector scaffold", () => {
 
     expect(program).toContain('"YTM_TRAY_VISUAL_DEMO"');
     expect(program).toContain('"YTM_TRAY_VISUAL_STATUS"');
+    expect(program).toContain('"YTM_TRAY_TEST_OPEN_POPUP"');
     expect(program).toContain('"YTM_TRAY_SCROLL_QA"');
     expect(program).toContain('"YTM_TRAY_VISUAL_ARTWORK_URL"');
     expect(program).toContain('"YTM_TRAY_VISUAL_NEXT_ARTWORK_URL"');
@@ -268,6 +269,11 @@ describe("Windows tray connector scaffold", () => {
     expect(visualSmoke).toContain("Save-RectangleScreenshot");
     expect(visualSmoke).toContain("$PopupWindow.Current.BoundingRectangle");
     expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
+    expect(buttonSmoke).toContain('YTM_TRAY_TEST_OPEN_POPUP = "1"');
+    expect(buttonSmoke).toContain("Invoke-ElementDefaultAction");
+    expect(buttonSmoke).toContain("InvokePattern");
+    expect(buttonSmoke).toContain("Send-ElementWindowClick");
+    expect(buttonSmoke).toContain("SendMessage");
     expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL");
     expect(buttonSmoke).toContain("current artwork displayed url=");
     expect(buttonSmoke).toContain("Save-TrayPopupScreenshot");
@@ -330,6 +336,18 @@ describe("Windows tray connector scaffold", () => {
     expect(buttonSmoke).toContain(
       "$null -ne $PopupWindow -and (Test-VisibleWindow $PopupWindow)",
     );
+  });
+
+  it("exposes accessible default actions for custom tray controls", () => {
+    const popup = read("src/YTMTray/PlaybackPopupForm.cs");
+
+    expect(popup).toContain("PlaybackButtonAccessibleObject");
+    expect(popup).toContain("PopupActionRowAccessibleObject");
+    expect(popup).toContain('DefaultAction => "Press"');
+    expect(popup).toContain("DoDefaultAction()");
+    expect(popup).toContain("owner.PerformPress()");
+    expect(popup).toContain("ControlStyles.Selectable");
+    expect(popup).toContain("TabStop = true");
   });
 
   it("installs Edge, Chrome, and Firefox native messaging registration under HKCU", () => {

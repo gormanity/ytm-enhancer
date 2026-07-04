@@ -16,8 +16,8 @@ function Invoke-Native {
 
 $env:CI = "true"
 
-Invoke-Native corepack enable
-Invoke-Native corepack prepare pnpm@11.9.0 --activate
-Invoke-Native pnpm install --frozen-lockfile
-Invoke-Native pnpm run dev:build:edge
-Invoke-Native pnpm exec playwright test tests/e2e --project=edge
+. "$PSScriptRoot\ensure-pnpm.ps1"
+Ensure-Pnpm
+Invoke-Pnpm install --frozen-lockfile
+Invoke-Pnpm run dev:build:edge
+Invoke-Pnpm exec playwright test tests/e2e --project=edge

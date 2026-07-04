@@ -73,6 +73,11 @@ internal sealed class TrayController : ITrayController, IDisposable
         _ = CheckForUpdatesAfterDelayAsync();
     }
 
+    public void OpenPopupForTest()
+    {
+        RunOnUiThread(() => ShowPopup(Screen.PrimaryScreen?.WorkingArea));
+    }
+
     public void UpdateConnectionStatus(string status)
     {
         RunOnUiThread(() =>
@@ -366,7 +371,12 @@ internal sealed class TrayController : ITrayController, IDisposable
             return;
         }
 
-        var workingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+        ShowPopup(Screen.FromPoint(Cursor.Position).WorkingArea);
+    }
+
+    private void ShowPopup(Rectangle? bounds)
+    {
+        var workingArea = bounds ?? Screen.PrimaryScreen?.WorkingArea ?? Screen.GetWorkingArea(popup);
         var x = Math.Min(Cursor.Position.X, workingArea.Right - popup.Width);
         var y = workingArea.Bottom - popup.Height - TaskbarFlyoutClearance;
         popup.Location = new Point(

@@ -38,4 +38,4 @@ windows_script="& .\scripts\windows-qa\tray-live-update-smoke.ps1"
 windows_script="$windows_script -BaselineVersion $(ps_quote "$baseline_version")"
 windows_script="$windows_script -TargetVersion $(ps_quote "$target_version")"
 
-"$script_dir/crabbox-run.sh" --shell "$windows_script"
+"$script_dir/run.sh" --shell "$windows_script"
