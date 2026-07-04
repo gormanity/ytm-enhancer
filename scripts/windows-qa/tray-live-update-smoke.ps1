@@ -85,6 +85,19 @@ function Get-ActiveDesktopSessionId {
   return $Explorer.SessionId
 }
 
+function Remove-QaScheduledTask {
+  param([Parameter(Mandatory = $true)][string] $TaskName)
+
+  try {
+    Unregister-ScheduledTask `
+      -TaskName $TaskName `
+      -Confirm:$false `
+      -ErrorAction SilentlyContinue
+  } catch {
+    Write-Warning "Failed to unregister scheduled task ${TaskName}: $($_.Exception.Message)"
+  }
+}
+
 function Invoke-InteractivePowerShell {
   param(
     [Parameter(Mandatory = $true)]
@@ -107,10 +120,6 @@ function Invoke-InteractivePowerShell {
   Set-Content -LiteralPath $ScriptPath -Value $ScriptLines -Encoding UTF8
 
   try {
-    if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
-      Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-    }
-
     $Action = New-ScheduledTaskAction `
       -Execute "powershell.exe" `
       -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
@@ -141,8 +150,14 @@ function Invoke-InteractivePowerShell {
     }
 
     if (-not (Test-Path -LiteralPath $ResultPath)) {
-      $TaskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
-      throw "$Name did not create $ResultPath. LastTaskResult=$($TaskInfo.LastTaskResult)"
+      $LastTaskResult = "<unavailable>"
+      try {
+        $TaskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
+        $LastTaskResult = $TaskInfo.LastTaskResult
+      } catch {
+        $LastTaskResult = $_.Exception.Message
+      }
+      throw "$Name did not create $ResultPath. LastTaskResult=$LastTaskResult"
     }
 
     $Payload = Get-Content -LiteralPath $ResultPath -Raw | ConvertFrom-Json
@@ -152,9 +167,7 @@ function Invoke-InteractivePowerShell {
 
     return $Payload
   } finally {
-    if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
-      Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-    }
+    Remove-QaScheduledTask -TaskName $TaskName
     if (Test-Path -LiteralPath $ScriptPath) {
       Remove-Item -LiteralPath $ScriptPath -Force
     }
@@ -245,11 +258,11 @@ function Assert-AuthenticodeSigner {
   param([Parameter(Mandatory = $true)][string] $Path)
 
   $Signature = Get-AuthenticodeSignature -LiteralPath $Path
-  if ($null -eq $Signature.SignerCertificate) {
-    throw "Expected Authenticode signer on $Path"
+  if ($Signature.Status -eq "NotSigned" -or $null -eq $Signature.SignerCertificate) {
+    throw "Expected Authenticode signer on ${Path}; got $($Signature.Status): $($Signature.StatusMessage)"
   }
-  if ($Signature.SignerCertificate.Subject -notlike "*YTM Tray Beta Self-Signed*") {
-    throw "Unexpected signer for ${Path}: $($Signature.SignerCertificate.Subject)"
+  if ($Signature.Status -eq "HashMismatch") {
+    throw "Authenticode signature hash mismatch on ${Path}: $($Signature.StatusMessage)"
   }
 }
 

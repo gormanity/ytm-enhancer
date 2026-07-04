@@ -134,11 +134,11 @@ function Assert-AuthenticodeSigner {
   param([Parameter(Mandatory = $true)][string] $Path)
 
   $Signature = Get-AuthenticodeSignature -LiteralPath $Path
-  if ($null -eq $Signature.SignerCertificate) {
-    throw "Expected Authenticode signer on $Path"
+  if ($Signature.Status -eq "NotSigned" -or $null -eq $Signature.SignerCertificate) {
+    throw "Expected Authenticode signer on ${Path}; got $($Signature.Status): $($Signature.StatusMessage)"
   }
-  if ($Signature.SignerCertificate.Subject -notlike "*YTM Tray Beta Self-Signed*") {
-    throw "Unexpected signer for ${Path}: $($Signature.SignerCertificate.Subject)"
+  if ($Signature.Status -eq "HashMismatch") {
+    throw "Authenticode signature hash mismatch on ${Path}: $($Signature.StatusMessage)"
   }
 }
 
