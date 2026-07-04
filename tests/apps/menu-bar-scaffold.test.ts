@@ -2218,6 +2218,10 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain("pnpm run menu-bar:update-test:sparkle");
     expect(workflow).toContain("pnpm run menu-bar:update-test:homebrew");
     expect(workflow).toContain("generate_keys");
+    expect(workflow).toContain("SPARKLE_TEST_PORT");
+    expect(workflow).toContain("--bind 127.0.0.1");
+    expect(workflow).toContain("sparkle-http-server.log");
+    expect(workflow).toContain('kill -0 "$server_pid"');
     expect(workflow).toContain("curl -fsS");
     expect(workflow).toContain("sudo installer");
     expect(workflow).toContain("HOMEBREW_NO_REQUIRE_TAP_TRUST");

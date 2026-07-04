@@ -63,32 +63,61 @@ jobs:
         run: |
           test_root="${TMPDIR:-/tmp}/ytm-menu-bar-sparkle-update-test"
           echo "SPARKLE_TEST_ROOT=$test_root" >> "$GITHUB_ENV"
+          test_port="$(python3 - <<'PY'
+          import socket
+
+          with socket.socket() as server:
+              server.bind(("127.0.0.1", 0))
+              print(server.getsockname()[1])
+          PY
+          )"
+          echo "SPARKLE_TEST_PORT=$test_port" >> "$GITHUB_ENV"
 
           pnpm run menu-bar:update-test:sparkle -- \
             --old-version=0.0.1 \
             --old-build=1 \
             --new-version=0.0.2 \
             --new-build=2 \
-            --port=8787 \
+            --port="$test_port" \
             --ed-key-file="$SPARKLE_TEST_PRIVATE_KEY" \
             --public-ed-key="$SPARKLE_TEST_PUBLIC_KEY" \
             --output="$test_root"
 
       - name: Validate Sparkle feed and direct package
         run: |
-          python3 -m http.server 8787 --directory "$SPARKLE_TEST_ROOT/feed" &
+          server_log="${TMPDIR:-/tmp}/sparkle-http-server.log"
+          python3 -m http.server "$SPARKLE_TEST_PORT" \
+            --bind 127.0.0.1 \
+            --directory "$SPARKLE_TEST_ROOT/feed" \
+            > "$server_log" 2>&1 &
           server_pid="$!"
           trap 'kill "$server_pid"' EXIT
-          sleep 1
+
+          for _ in {1..30}; do
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat "$server_log"
+              exit 1
+            fi
+
+            if curl -fsS \
+              "http://127.0.0.1:$SPARKLE_TEST_PORT/menu-bar/appcast.xml" \
+              --output "${TMPDIR:-/tmp}/appcast.xml"; then
+              break
+            fi
+
+            sleep 1
+          done
+
+          if [ ! -s "${TMPDIR:-/tmp}/appcast.xml" ]; then
+            cat "$server_log"
+            exit 1
+          fi
 
           curl -fsS \
-            http://127.0.0.1:8787/menu-bar/appcast.xml \
-            --output "${TMPDIR:-/tmp}/appcast.xml"
-          curl -fsS \
-            http://127.0.0.1:8787/YTM-Menu-Bar-0.0.2.pkg \
+            "http://127.0.0.1:$SPARKLE_TEST_PORT/YTM-Menu-Bar-0.0.2.pkg" \
             --output "${TMPDIR:-/tmp}/YTM-Menu-Bar-0.0.2.pkg"
           curl -fsS \
-            http://127.0.0.1:8787/release-notes.html \
+            "http://127.0.0.1:$SPARKLE_TEST_PORT/release-notes.html" \
             --output "${TMPDIR:-/tmp}/release-notes.html"
 
           test -s "${TMPDIR:-/tmp}/YTM-Menu-Bar-0.0.2.pkg"
