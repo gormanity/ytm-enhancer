@@ -539,6 +539,38 @@ remote macOS intermediary because the second SSH hop starts there.
 `REMOTE_QA_WINDOWS_WORK_ROOT` is deleted and recreated on every run. Point it at
 a disposable repository checkout directory, not a broad parent directory.
 
+Windows UI smoke tests need a small QA agent running inside the logged-in QA
+user's desktop session. Install or update the stable per-user agent copy from
+macOS:
+
+```sh
+scripts/remote/windows-qa/run.sh --shell \
+  '& .\scripts\windows-qa\install-ui-agent.ps1'
+```
+
+Then log into the Windows QA user's desktop and start:
+
+```text
+%LOCALAPPDATA%\YTM Enhancer\WindowsQaAgent\start-ui-agent.cmd
+```
+
+Leave that window open while UI smoke runs. The agent listens on a same-user
+named pipe and moves its own working directory to `%TEMP%`, so the remote sync
+wrapper can continue deleting and recreating `REMOTE_QA_WINDOWS_WORK_ROOT`. The
+machine can stay locked for SSH, package, release, and signing checks. Real tray
+UI smoke is the exception: Windows does not expose the notification area or
+popup UI from the lock screen. The UI smoke scripts wait up to
+`YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS` seconds for the QA desktop to unlock
+before launching the tray app, then fail with a clear `LogonUI` message if the
+desktop is still locked.
+
+Probe the running agent through the configured transport:
+
+```sh
+scripts/remote/windows-qa/run.sh --shell \
+  '& "$env:LOCALAPPDATA\YTM Enhancer\WindowsQaAgent\invoke-ui-agent.ps1" -Action Probe -LaunchNotepad'
+```
+
 Run the Windows SSH preflight before a full Windows QA sync:
 
 ```sh
@@ -698,7 +730,8 @@ Run the Windows tray live-update UI smoke:
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-live-update-smoke.ps1 `
   -BaselineVersion 0.1.1 `
-  -TargetVersion 0.1.2
+  -TargetVersion 0.1.2 `
+  -UiReadyTimeoutSeconds 60
 ```
 
 Run the same smoke through the configured Windows transport:
@@ -708,8 +741,8 @@ scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.1 0.1.2
 ```
 
 This installs the published baseline release into the real user-level install
-location, launches the released tray app in the active Windows desktop session,
-clicks the popup update action, accepts the update dialogs, waits for the target
+location, launches the released tray app through the Windows QA UI agent, clicks
+the popup update action, accepts the update dialogs, waits for the target
 release to replace the baseline, validates the installed files and native host
 registrations, then uninstalls and verifies cleanup. It intentionally uses the
 default `%LOCALAPPDATA%\YTM Enhancer\Tray` path because the in-app updater hands
@@ -717,6 +750,8 @@ off to the packaged installer exactly as users receive it.
 
 The remote wrapper also accepts `YTM_WINDOWS_TRAY_BASELINE_VERSION` and
 `YTM_WINDOWS_TRAY_TARGET_VERSION` when positional arguments are not convenient.
+Set `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS` to control how long the remote
+wrapper waits for the desktop to unlock before UI automation starts.
 
 Run the Windows tray release signing smoke:
 
@@ -742,7 +777,8 @@ Run the Windows tray visual smoke from an active Windows desktop session:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
-  scripts/windows-qa/tray-visual-smoke.ps1
+  scripts/windows-qa/tray-visual-smoke.ps1 `
+  -UiReadyTimeoutSeconds 60
 ```
 
 Run the same smoke through the configured Windows transport:
@@ -752,11 +788,13 @@ scripts/remote/windows-qa/tray-visual-smoke.sh
 ```
 
 This requires the same .NET SDK as the tray smoke and a logged-in desktop for
-the QA user. It installs the tray app to a temporary directory, launches it
-through an interactive scheduled task, finds the tray icon through Windows UI
-Automation, opens the tray popup, captures desktop/overflow/popup screenshots
-under the Windows user's temp directory, verifies long metadata scrolls, and
-removes the smoke install.
+the QA user. The machine may be locked before the command starts, but it must be
+unlocked before the readiness timeout expires and remain unlocked while UI
+automation is clicking the tray app. The smoke installs the tray app to a
+temporary directory, launches it through the Windows QA UI agent, finds the tray
+icon through Windows UI Automation, opens the tray popup, captures
+desktop/overflow/popup screenshots under the Windows user's temp directory,
+verifies long metadata scrolls, and removes the smoke install.
 
 Regenerate the Windows tray release screenshot from the same active Windows
 desktop session. Use the approved Creative Commons YouTube Music track URL so
@@ -877,6 +915,7 @@ The remote QA scripts accept these variables:
 - `REMOTE_QA_WINDOWS_PORT`
 - `REMOTE_QA_WINDOWS_WORK_ROOT`
 - `REMOTE_QA_WINDOWS_SSH_KEY`
+- `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS`
 
 Keep real values local. If the remote address changes, update `.remote-qa.env`
 or your shell environment.

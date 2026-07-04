@@ -134,6 +134,15 @@ function Remove-QaTree {
   \$RmdirCommand = 'rmdir /s /q ' + \$Quote + \$Path + \$Quote
   \$Process = Start-Process -FilePath cmd.exe -ArgumentList @('/d', '/c', \$RmdirCommand) -Wait -PassThru -WindowStyle Hidden
   if ((Test-Path -LiteralPath \$Path) -or \$Process.ExitCode -ne 0) {
+    \$RemainingItems = @()
+    if (Test-Path -LiteralPath \$Path) {
+      \$RemainingItems = @(Get-ChildItem -LiteralPath \$Path -Force -ErrorAction SilentlyContinue)
+    }
+
+    if (\$RemainingItems.Count -eq 0) {
+      return
+    }
+
     throw \"Unable to remove Windows QA work root: \$Path\"
   }
 }

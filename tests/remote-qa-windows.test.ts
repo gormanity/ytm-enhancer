@@ -30,6 +30,10 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-release-screenshot.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-button-smoke.ps1");
+    expect(docs).toContain("install-ui-agent.ps1");
+    expect(docs).toContain("WindowsQaAgent");
+    expect(docs).toContain("start-ui-agent.cmd");
+    expect(docs).toContain("LogonUI");
     expect(docs).toContain("scripts/windows-qa/repair-openssh.cmd");
     expect(docs).toContain("scripts/remote/windows-qa/probe.sh");
     expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
@@ -73,6 +77,43 @@ describe("Windows remote QA scaffold", () => {
     expect(probe).not.toContain("tar -czf");
   });
 
+  it("provides a user-session Windows UI QA agent probe", () => {
+    const common = read("scripts/windows-qa/ui-agent-common.ps1");
+    const helper = read("scripts/windows-qa/ui-agent-client.ps1");
+    const installer = read("scripts/windows-qa/install-ui-agent.ps1");
+    const agent = read("scripts/windows-qa/start-ui-agent.ps1");
+    const client = read("scripts/windows-qa/invoke-ui-agent.ps1");
+
+    expect(common).toContain("function Get-WindowsQaAgentPipeName");
+    expect(common).toContain("WindowsIdentity");
+    expect(agent).toContain("NamedPipeServerStream");
+    expect(agent).toContain("Set-Location -LiteralPath $env:TEMP");
+    expect(agent).toContain("Windows QA UI agent must be started");
+    expect(agent).toContain("session 0");
+    expect(agent).toContain("Invoke-AgentProbe");
+    expect(agent).toContain('Start-Process -FilePath "notepad.exe"');
+    expect(agent).toContain("explorerSessionIds");
+    expect(agent).toContain("hasExplorerInAgentSession");
+    expect(agent).toContain("hasLogonUiInAgentSession");
+    expect(agent).toContain("Invoke-AgentLaunch");
+    expect(agent).toContain("launch only supports PowerShell script execution");
+    expect(agent).toContain("current user's temp directory");
+    expect(agent).not.toContain("Register-ScheduledTask");
+    expect(helper).toContain("Get-WindowsQaUiAgentReadiness");
+    expect(helper).toContain("Assert-WindowsQaUiAgentReady");
+    expect(helper).toContain("Wait-WindowsQaUiAgentReady");
+    expect(helper).toContain("Unlock the Windows QA desktop session");
+    expect(helper).toContain("Invoke-InteractivePowerShell");
+    expect(helper).toContain("invoke-ui-agent.ps1");
+    expect(installer).toContain("YTM Enhancer\\WindowsQaAgent");
+    expect(installer).toContain("start-ui-agent.cmd");
+    expect(installer).toContain("Copy-Item");
+    expect(client).toContain("NamedPipeClientStream");
+    expect(client).toContain("Cannot connect to Windows QA UI agent");
+    expect(client).toContain("LaunchNotepad");
+    expect(client).not.toContain("Register-ScheduledTask");
+  });
+
   it("provides a clickable Windows OpenSSH repair helper", () => {
     const launcher = read("scripts/windows-qa/repair-openssh.cmd");
     const repair = read("scripts/windows-qa/repair-openssh.ps1");
@@ -113,6 +154,7 @@ describe("Windows remote QA scaffold", () => {
     expect(runner).toContain("function Remove-QaTree");
     expect(runner).toContain("Get-Process msedge, firefox, YTMTray");
     expect(runner).toContain("[System.IO.Directory]::Delete");
+    expect(runner).toContain("$RemainingItems.Count -eq 0");
     expect(runner).toContain("COPYFILE_DISABLE=1 tar -czf -");
     expect(runner).toContain("--exclude CLAUDE.md");
     expect(runner).toContain("--exclude apps/menu-bar/.build");
@@ -160,8 +202,11 @@ describe("Windows remote QA scaffold", () => {
       "scripts/remote/windows-qa/tray-visual-smoke.sh",
     );
 
-    expect(visualSmoke).toContain("New-ScheduledTaskPrincipal");
-    expect(visualSmoke).toContain("-LogonType Interactive");
+    expect(visualSmoke).toContain("ui-agent-client.ps1");
+    expect(visualSmoke).toContain("Wait-WindowsQaUiAgentReady");
+    expect(visualSmoke).toContain("Invoke-InteractivePowerShell");
+    expect(visualSmoke).toContain("UiReadyTimeoutSeconds");
+    expect(visualSmoke).not.toContain("New-ScheduledTaskPrincipal");
     expect(visualSmoke).toContain("UIAutomationClient");
     expect(visualSmoke).toContain("Show Hidden Icons");
     expect(visualSmoke).toContain("YTM Enhancer");
@@ -172,6 +217,10 @@ describe("Windows remote QA scaffold", () => {
     expect(visualSmokeShell).toContain(
       "scripts\\windows-qa\\tray-visual-smoke.ps1",
     );
+    expect(visualSmokeShell).toContain(
+      "YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS",
+    );
+    expect(visualSmokeShell).toContain("-UiReadyTimeoutSeconds");
   });
 
   it("captures the release screenshot through the real tray connector smoke", () => {
@@ -308,9 +357,11 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmoke).toContain(
       'Join-Path $env:LOCALAPPDATA "YTM Enhancer\\Tray"',
     );
+    expect(liveUpdateSmoke).toContain("ui-agent-client.ps1");
+    expect(liveUpdateSmoke).toContain("Wait-WindowsQaUiAgentReady");
     expect(liveUpdateSmoke).toContain("Invoke-InteractivePowerShell");
-    expect(liveUpdateSmoke).toContain("New-ScheduledTaskPrincipal");
-    expect(liveUpdateSmoke).toContain("-LogonType Interactive");
+    expect(liveUpdateSmoke).toContain("UiReadyTimeoutSeconds");
+    expect(liveUpdateSmoke).not.toContain("New-ScheduledTaskPrincipal");
     expect(liveUpdateSmoke).toContain("Start-ReleasedTrayApp");
     expect(liveUpdateSmoke).toContain("Open-TrayPopup");
     expect(liveUpdateSmoke).toContain("Open-TrayContextMenu");
@@ -322,6 +373,11 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmoke).toContain("Check for Updates");
     expect(liveUpdateSmoke).toContain("Wait-DialogButton");
     expect(liveUpdateSmoke).toContain("Update YTM Tray");
+    expect(liveUpdateSmoke).toContain("runnerScripts");
+    expect(liveUpdateSmoke).toContain("$SmokePassed");
+    expect(liveUpdateSmoke).toContain(
+      "Retained Windows tray live-update smoke artifacts",
+    );
     expect(liveUpdateSmoke).toContain("Wait-InstalledRelease");
     expect(liveUpdateSmoke).toContain("actionSurface");
     expect(liveUpdateSmoke).toContain("Assert-AuthenticodeSigner");
@@ -332,8 +388,12 @@ describe("Windows remote QA scaffold", () => {
     );
     expect(liveUpdateSmokeShell).toContain("YTM_WINDOWS_TRAY_BASELINE_VERSION");
     expect(liveUpdateSmokeShell).toContain("YTM_WINDOWS_TRAY_TARGET_VERSION");
+    expect(liveUpdateSmokeShell).toContain(
+      "YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS",
+    );
     expect(liveUpdateSmokeShell).toContain("-BaselineVersion");
     expect(liveUpdateSmokeShell).toContain("-TargetVersion");
+    expect(liveUpdateSmokeShell).toContain("-UiReadyTimeoutSeconds");
   });
 
   it("automates Windows tray release signing smoke with a disposable certificate", () => {

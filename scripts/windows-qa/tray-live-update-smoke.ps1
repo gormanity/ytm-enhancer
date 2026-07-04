@@ -3,11 +3,14 @@ param(
   [string] $TargetVersion = "0.1.0",
   [string] $InstallRoot = (Join-Path $env:LOCALAPPDATA "YTM Enhancer\Tray"),
   [string] $WorkRoot = (Join-Path $env:TEMP "ytm-tray-live-update-smoke"),
+  [int] $UiReadyTimeoutSeconds = 60,
   [switch] $KeepArtifacts
 )
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+. "$PSScriptRoot\ui-agent-client.ps1"
 
 $HostName = "com.gormanity.ytm_enhancer.tray"
 $ReleaseDownloadRoot = "https://github.com/gormanity/ytm-enhancer/releases/download"
@@ -27,6 +30,7 @@ $UninstallerPath = Join-Path $InstallRoot "uninstall-native-hosts.ps1"
 $LaunchResultPath = Join-Path $WorkRoot "launch.json"
 $UpdateResultPath = Join-Path $WorkRoot "update-ui.json"
 $TrayLogPath = Join-Path $WorkRoot "tray.log"
+$SmokePassed = $false
 $NativeRegistryKeys = @{
   "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$HostName" = $ChromiumManifestPath
   "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName" = $ChromiumManifestPath
@@ -71,106 +75,6 @@ function Remove-QaTree {
 
   if (Test-Path -LiteralPath $Path) {
     Remove-Item -LiteralPath $Path -Recurse -Force
-  }
-}
-
-function Get-ActiveDesktopSessionId {
-  $Explorer = Get-Process explorer -ErrorAction SilentlyContinue |
-    Select-Object -First 1
-
-  if ($null -eq $Explorer) {
-    throw "No active explorer.exe desktop session is available."
-  }
-
-  return $Explorer.SessionId
-}
-
-function Remove-QaScheduledTask {
-  param([Parameter(Mandatory = $true)][string] $TaskName)
-
-  try {
-    Unregister-ScheduledTask `
-      -TaskName $TaskName `
-      -Confirm:$false `
-      -ErrorAction SilentlyContinue
-  } catch {
-    Write-Warning "Failed to unregister scheduled task ${TaskName}: $($_.Exception.Message)"
-  }
-}
-
-function Invoke-InteractivePowerShell {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string] $Name,
-    [Parameter(Mandatory = $true)]
-    [string[]] $ScriptLines,
-    [Parameter(Mandatory = $true)]
-    [string] $ResultPath,
-    [int] $TimeoutSeconds = 120
-  )
-
-  $TaskName = "YTMEnhancerTrayLiveUpdate-$Name-$PID"
-  $ScriptPath = Join-Path $env:TEMP "$TaskName.ps1"
-  $Identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-
-  if (Test-Path -LiteralPath $ResultPath) {
-    Remove-Item -LiteralPath $ResultPath -Force
-  }
-
-  Set-Content -LiteralPath $ScriptPath -Value $ScriptLines -Encoding UTF8
-
-  try {
-    $Action = New-ScheduledTaskAction `
-      -Execute "powershell.exe" `
-      -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
-    $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
-    $Principal = New-ScheduledTaskPrincipal `
-      -UserId $Identity `
-      -LogonType Interactive `
-      -RunLevel Limited
-    $Settings = New-ScheduledTaskSettingsSet `
-      -AllowStartIfOnBatteries `
-      -DontStopIfGoingOnBatteries `
-      -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
-
-    Register-ScheduledTask `
-      -TaskName $TaskName `
-      -Action $Action `
-      -Trigger $Trigger `
-      -Principal $Principal `
-      -Settings $Settings `
-      -Force |
-      Out-Null
-
-    Start-ScheduledTask -TaskName $TaskName
-
-    $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    while ((Get-Date) -lt $Deadline -and -not (Test-Path -LiteralPath $ResultPath)) {
-      Start-Sleep -Milliseconds 500
-    }
-
-    if (-not (Test-Path -LiteralPath $ResultPath)) {
-      $LastTaskResult = "<unavailable>"
-      try {
-        $TaskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
-        $LastTaskResult = $TaskInfo.LastTaskResult
-      } catch {
-        $LastTaskResult = $_.Exception.Message
-      }
-      throw "$Name did not create $ResultPath. LastTaskResult=$LastTaskResult"
-    }
-
-    $Payload = Get-Content -LiteralPath $ResultPath -Raw | ConvertFrom-Json
-    if (-not $Payload.ok) {
-      throw "$Name failed: $($Payload.error)`n$($Payload.scriptStack)"
-    }
-
-    return $Payload
-  } finally {
-    Remove-QaScheduledTask -TaskName $TaskName
-    if (Test-Path -LiteralPath $ScriptPath) {
-      Remove-Item -LiteralPath $ScriptPath -Force
-    }
   }
 }
 
@@ -681,10 +585,31 @@ function Invoke-LiveUpdateUi {
       '  throw "Verified update OK button was not shown. Visible elements: $((Get-VisibleElementNames) -join '', '')"',
       '}',
       'Click-Element $OkButton',
+      'Start-Sleep -Milliseconds 1000',
+      '$UpdateRoot = Join-Path $env:TEMP "YTM Enhancer\Tray\Updates"',
+      '$RunnerScripts = @()',
+      '$InstallerLogs = @()',
+      'if (Test-Path -LiteralPath $UpdateRoot) {',
+      '  $RunnerScripts = @(',
+      '    Get-ChildItem -LiteralPath $UpdateRoot -Recurse -Filter "run-update-installer.ps1" -ErrorAction SilentlyContinue |',
+      '      Select-Object -ExpandProperty FullName',
+      '  )',
+      '  $InstallerLogs = @(',
+      '    Get-ChildItem -LiteralPath $UpdateRoot -Recurse -Filter "update-installer.log" -ErrorAction SilentlyContinue |',
+      '      Select-Object -ExpandProperty FullName',
+      '  )',
+      '}',
+      '$TrayProcessIds = @(',
+      '  Get-Process YTMTray -ErrorAction SilentlyContinue |',
+      '    Select-Object -ExpandProperty Id',
+      ')',
       '$Payload = @{',
       '  ok = $true',
       '  clickedAction = $ActionName',
       '  actionSurface = $ActionSurface',
+      '  runnerScripts = $RunnerScripts',
+      '  installerLogs = $InstallerLogs',
+      '  trayProcessIds = $TrayProcessIds',
       '}'
     )
 
@@ -702,6 +627,12 @@ Remove-QaTree -Path $WorkRoot
 New-Item -ItemType Directory -Force -Path $WorkRoot | Out-Null
 
 try {
+  $AgentProbe = Wait-WindowsQaUiAgentReady `
+    -TimeoutSeconds $UiReadyTimeoutSeconds `
+    -ProbeTimeoutSeconds 10
+  $ActiveSessionId = $AgentProbe.sessionId
+  Write-Host "Using Windows QA UI agent desktop session $ActiveSessionId."
+
   Invoke-InstalledUninstaller
   Remove-QaTree -Path $InstallRoot
 
@@ -718,7 +649,6 @@ try {
   Write-Host "Installing YTM Tray $BaselineVersion from published release."
   Install-ReleasePackage -ExtractRoot $BaselineExtractRoot -Version $BaselineVersion
 
-  $ActiveSessionId = Get-ActiveDesktopSessionId
   Write-Host "Launching YTM Tray $BaselineVersion in desktop session $ActiveSessionId."
   $Launch = Start-ReleasedTrayApp
   Assert-Equal $ActiveSessionId $Launch.sessionId "tray process session"
@@ -734,6 +664,7 @@ try {
 
   Write-Host "Windows tray live-update smoke passed: $BaselineVersion -> $TargetVersion ($RuntimeIdentifier)."
   Write-Host "Clicked update action: $($Update.clickedAction) via $($Update.actionSurface)"
+  $SmokePassed = $true
 } finally {
   Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
     Stop-Process -Force
@@ -742,7 +673,9 @@ try {
     & $UninstallerPath -Quiet
   }
 
-  if (-not $KeepArtifacts) {
+  if (-not $KeepArtifacts -and $SmokePassed) {
     Remove-QaTree -Path $WorkRoot
+  } elseif (Test-Path -LiteralPath $WorkRoot) {
+    Write-Host "Retained Windows tray live-update smoke artifacts: $WorkRoot"
   }
 }

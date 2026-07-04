@@ -2,113 +2,17 @@ param(
   [string] $InstallRoot = (Join-Path $env:TEMP "ytm-enhancer-tray-visual-install"),
   [string] $ArtifactRoot = (Join-Path $env:TEMP "ytm-enhancer-tray-visual-artifacts"),
   [int] $TimeoutSeconds = 30,
+  [int] $UiReadyTimeoutSeconds = 60,
   [string] $VisualStatus = ""
 )
 
 $ErrorActionPreference = "Stop"
 
+. "$PSScriptRoot\ui-agent-client.ps1"
+
 function ConvertTo-PowerShellLiteral {
   param([Parameter(Mandatory = $true)][string] $Value)
   return "'" + $Value.Replace("'", "''") + "'"
-}
-
-function Get-ActiveDesktopSessionId {
-  $Explorer = Get-Process explorer -ErrorAction SilentlyContinue |
-    Select-Object -First 1
-
-  if ($null -eq $Explorer) {
-    throw "No active explorer.exe desktop session is available."
-  }
-
-  return $Explorer.SessionId
-}
-
-function Remove-QaScheduledTask {
-  param([Parameter(Mandatory = $true)][string] $TaskName)
-
-  try {
-    Unregister-ScheduledTask `
-      -TaskName $TaskName `
-      -Confirm:$false `
-      -ErrorAction SilentlyContinue
-  } catch {
-    Write-Warning "Failed to unregister scheduled task ${TaskName}: $($_.Exception.Message)"
-  }
-}
-
-function Invoke-InteractivePowerShell {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string] $Name,
-    [Parameter(Mandatory = $true)]
-    [string[]] $ScriptLines,
-    [Parameter(Mandatory = $true)]
-    [string] $ResultPath
-  )
-
-  $TaskName = "YTMEnhancerTrayVisual-$Name-$PID"
-  $ScriptPath = Join-Path $env:TEMP "$TaskName.ps1"
-  $Identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-
-  if (Test-Path -LiteralPath $ResultPath) {
-    Remove-Item -LiteralPath $ResultPath -Force
-  }
-
-  Set-Content -LiteralPath $ScriptPath -Value $ScriptLines -Encoding UTF8
-
-  try {
-    $Action = New-ScheduledTaskAction `
-      -Execute "powershell.exe" `
-      -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
-    $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
-    $Principal = New-ScheduledTaskPrincipal `
-      -UserId $Identity `
-      -LogonType Interactive `
-      -RunLevel Limited
-    $Settings = New-ScheduledTaskSettingsSet `
-      -AllowStartIfOnBatteries `
-      -DontStopIfGoingOnBatteries `
-      -ExecutionTimeLimit (New-TimeSpan -Minutes 2)
-
-    Register-ScheduledTask `
-      -TaskName $TaskName `
-      -Action $Action `
-      -Trigger $Trigger `
-      -Principal $Principal `
-      -Settings $Settings `
-      -Force |
-      Out-Null
-
-    Start-ScheduledTask -TaskName $TaskName
-
-    $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    while ((Get-Date) -lt $Deadline -and -not (Test-Path -LiteralPath $ResultPath)) {
-      Start-Sleep -Milliseconds 500
-    }
-
-    if (-not (Test-Path -LiteralPath $ResultPath)) {
-      $LastTaskResult = "<unavailable>"
-      try {
-        $TaskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
-        $LastTaskResult = $TaskInfo.LastTaskResult
-      } catch {
-        $LastTaskResult = $_.Exception.Message
-      }
-      throw "$Name did not create $ResultPath. LastTaskResult=$LastTaskResult"
-    }
-
-    $Payload = Get-Content -LiteralPath $ResultPath -Raw | ConvertFrom-Json
-    if (-not $Payload.ok) {
-      throw "$Name failed: $($Payload.error)`n$($Payload.scriptStack)"
-    }
-
-    return $Payload
-  } finally {
-    Remove-QaScheduledTask -TaskName $TaskName
-    if (Test-Path -LiteralPath $ScriptPath) {
-      Remove-Item -LiteralPath $ScriptPath -Force
-    }
-  }
 }
 
 function New-ResultWrapper {
@@ -172,7 +76,10 @@ $PopupScreenshotPath = Join-Path $ArtifactRoot "tray-popup.png"
 $ScrollLogPath = Join-Path $ArtifactRoot "tray-scroll.log"
 $LaunchResultPath = Join-Path $ArtifactRoot "launch.json"
 $VisualResultPath = Join-Path $ArtifactRoot "visual.json"
-$ActiveSessionId = Get-ActiveDesktopSessionId
+$AgentProbe = Wait-WindowsQaUiAgentReady `
+  -TimeoutSeconds $UiReadyTimeoutSeconds `
+  -ProbeTimeoutSeconds 10
+$ActiveSessionId = $AgentProbe.sessionId
 $HasVisualStatus = -not [string]::IsNullOrWhiteSpace($VisualStatus)
 $VisualStatusLine = if ($HasVisualStatus) {
   "`$env:YTM_TRAY_VISUAL_STATUS = $(ConvertTo-PowerShellLiteral $VisualStatus)"
@@ -222,7 +129,8 @@ try {
   $Launch = Invoke-InteractivePowerShell `
     -Name "launch" `
     -ScriptLines $LaunchLines `
-    -ResultPath $LaunchResultPath
+    -ResultPath $LaunchResultPath `
+    -TimeoutSeconds $TimeoutSeconds
 
   Assert-Equal $ActiveSessionId $Launch.sessionId "tray process session"
 
@@ -399,7 +307,8 @@ try {
   $Visual = Invoke-InteractivePowerShell `
     -Name "visual" `
     -ScriptLines $VisualLines `
-    -ResultPath $VisualResultPath
+    -ResultPath $VisualResultPath `
+    -TimeoutSeconds $TimeoutSeconds
 
   Write-Output "Windows tray visual smoke passed."
   Write-Output "tray process session: $($Launch.sessionId)"

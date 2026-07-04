@@ -4,6 +4,7 @@ set -eu
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 baseline_version="${1:-${YTM_WINDOWS_TRAY_BASELINE_VERSION:-0.0.2}}"
 target_version="${2:-${YTM_WINDOWS_TRAY_TARGET_VERSION:-0.1.0}}"
+ui_ready_timeout="${YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS:-60}"
 
 usage() {
   echo "Usage: $0 [baseline-version target-version]" >&2
@@ -34,8 +35,16 @@ fi
 validate_version "baseline" "$baseline_version"
 validate_version "target" "$target_version"
 
+case "$ui_ready_timeout" in
+  "" | *[!0123456789]*)
+    echo "Invalid YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS: $ui_ready_timeout" >&2
+    exit 2
+    ;;
+esac
+
 windows_script="& .\scripts\windows-qa\tray-live-update-smoke.ps1"
 windows_script="$windows_script -BaselineVersion $(ps_quote "$baseline_version")"
 windows_script="$windows_script -TargetVersion $(ps_quote "$target_version")"
+windows_script="$windows_script -UiReadyTimeoutSeconds $ui_ready_timeout"
 
 "$script_dir/run.sh" --shell "$windows_script"
