@@ -3,17 +3,20 @@
 This policy covers release signing for first-party native YTM Enhancer Connected
 Apps.
 
-## Current Windows Tray Beta
+## Current Windows Tray Signing
 
-YTM Tray beta release zips are Authenticode-signed in GitHub Actions with a
-short-lived self-signed code-signing certificate generated during the release
-workflow. The certificate private key exists only on the workflow runner for
-that run and is removed before the job exits.
+### Azure Artifact Signing
 
-Self-signing is a beta-only control. It confirms that the release workflow can
-produce signed Windows binaries and gives testers an Authenticode signature to
-inspect, but it does not establish a trusted Windows publisher identity and does
-not avoid SmartScreen or unknown-publisher warnings.
+YTM Tray release zips are Authenticode-signed in GitHub Actions with Azure
+Artifact Signing. The release workflow authenticates to Azure through GitHub
+OIDC, signs `YTMTray.exe` and `YTMTray.NativeHost.exe` before zipping the
+payloads, and then verifies both Authenticode signatures before publishing.
+
+The GitHub Actions app registration must have the
+`Artifact Signing Certificate Profile Signer` role on the Azure certificate
+profile or Artifact Signing account. GitHub stores Azure identifiers in the
+protected `windows-signing` environment; no PFX file or certificate password is
+stored in the repository or GitHub secrets.
 
 ## Release Controls
 
@@ -22,21 +25,11 @@ not avoid SmartScreen or unknown-publisher warnings.
 - `YTMTray.exe` and `YTMTray.NativeHost.exe` are signed before being zipped.
 - Release zips are listed in `YTM-Tray-update.json` with SHA-256 checksums.
 - The tray updater verifies package checksums before starting the installer.
-- Release workflows remove temporary signing certificates and PFX files before
-  the job exits.
+- The release workflow uses OIDC and does not export or import signing keys.
 
-## Future Trusted Signing
+## Local Signing Smoke
 
-Before the Windows tray app leaves beta, the project should switch from
-self-signing to a trusted provider, such as SignPath Foundation, Microsoft Store
-package signing, or Microsoft Artifact Signing.
-
-If SignPath Foundation accepts the project, release copy and download pages
-should include the required attribution:
-
-```text
-Free code signing provided by SignPath.io, certificate by SignPath Foundation
-```
-
-Until that provider is active, project pages must not imply that Windows tray
-artifacts are signed by SignPath Foundation or by any other trusted publisher.
+The remote Windows QA signing smoke still creates a disposable self-signed
+certificate on the QA VM. That check validates the local PFX fallback and the
+package script's fail-closed behavior without installing production signing
+secrets on a development machine. It is not the release signing path.

@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -83,11 +89,7 @@ function writeCommandFile(path, scriptName) {
   );
 }
 
-function packageRelease({
-  runtime = "win-x64",
-  outputRoot = resolve(appRoot, ".build/packages"),
-} = {}) {
-  const metadata = readReleaseMetadata();
+function releasePaths({ runtime, metadata, outputRoot }) {
   if (!metadata.runtimes.includes(runtime)) {
     throw new Error(`Unsupported Windows tray runtime: ${runtime}`);
   }
@@ -96,6 +98,20 @@ function packageRelease({
   const payloadRoot = join(workRoot, "payload");
   const archiveName = `${metadata.assetPrefix}-${metadata.version}-${runtime}.zip`;
   const archivePath = resolve(outputRoot, archiveName);
+
+  return { archivePath, payloadRoot, workRoot };
+}
+
+function buildReleasePayload({
+  runtime = "win-x64",
+  outputRoot = resolve(appRoot, ".build/packages"),
+} = {}) {
+  const metadata = readReleaseMetadata();
+  const { archivePath, payloadRoot, workRoot } = releasePaths({
+    runtime,
+    metadata,
+    outputRoot,
+  });
 
   rmSync(workRoot, { recursive: true, force: true });
   mkdirSync(payloadRoot, { recursive: true });
@@ -155,22 +171,71 @@ function packageRelease({
     )}\n`,
   );
 
-  maybeSignPayload(payloadRoot);
+  return { archivePath, payloadRoot };
+}
 
+function archiveReleasePayload({
+  runtime = "win-x64",
+  outputRoot = resolve(appRoot, ".build/packages"),
+} = {}) {
+  const metadata = readReleaseMetadata();
+  const { archivePath, payloadRoot } = releasePaths({
+    runtime,
+    metadata,
+    outputRoot,
+  });
+
+  if (!existsSync(payloadRoot)) {
+    throw new Error(
+      `Windows tray package payload was not found: ${payloadRoot}`,
+    );
+  }
+
+  mkdirSync(outputRoot, { recursive: true });
   rmSync(archivePath, { force: true });
   run("tar", ["-a", "-c", "-f", archivePath, "-C", payloadRoot, "."]);
 
   return archivePath;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const archivePath = packageRelease({
-    runtime: argValue("runtime", "win-x64"),
-    outputRoot: resolve(
-      argValue("output", resolve(appRoot, ".build/packages")),
-    ),
+function packageRelease({
+  runtime = "win-x64",
+  outputRoot = resolve(appRoot, ".build/packages"),
+} = {}) {
+  const { archivePath, payloadRoot } = buildReleasePayload({
+    runtime,
+    outputRoot,
   });
-  console.log(`Built Windows tray package at ${archivePath}`);
+
+  maybeSignPayload(payloadRoot);
+
+  archiveReleasePayload({
+    runtime,
+    outputRoot,
+  });
+
+  return archivePath;
 }
 
-export { packageRelease };
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const runtime = argValue("runtime", "win-x64");
+  const outputRoot = resolve(
+    argValue("output", resolve(appRoot, ".build/packages")),
+  );
+  const stage = argValue("stage", "package");
+
+  if (stage === "payload") {
+    const { payloadRoot } = buildReleasePayload({ runtime, outputRoot });
+    console.log(`Built Windows tray package payload at ${payloadRoot}`);
+  } else if (stage === "archive") {
+    const archivePath = archiveReleasePayload({ runtime, outputRoot });
+    console.log(`Built Windows tray package at ${archivePath}`);
+  } else if (stage === "package") {
+    const archivePath = packageRelease({ runtime, outputRoot });
+    console.log(`Built Windows tray package at ${archivePath}`);
+  } else {
+    throw new Error(`Unsupported Windows tray package stage: ${stage}`);
+  }
+}
+
+export { archiveReleasePayload, buildReleasePayload, packageRelease };

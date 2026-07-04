@@ -5,10 +5,12 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   signing-check:
     runs-on: windows-latest
+    environment: windows-signing
 
     steps:
       - uses: actions/checkout@v6
@@ -35,25 +37,50 @@ jobs:
           pnpm run windows-tray:test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Prepare beta self-signed certificate
-        shell: pwsh
-        run: |
-          & ./scripts/ci/prepare-windows-tray-codesign.ps1
+      - name: Azure login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build signed release packages
+      - name: Build release payloads
         shell: pwsh
-        env:
-          YTM_WINDOWS_TRAY_CODESIGN_REQUIRED: "1"
         run: |
-          pnpm run windows-tray:package:win-x64
+          pnpm run windows-tray:payload:win-x64
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          pnpm run windows-tray:package:win-arm64
+          pnpm run windows-tray:payload:win-arm64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Sign release payloads
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_ARTIFACT_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ vars.AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\apps\windows-tray\.build\package-work
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Verify signed payloads
+        shell: pwsh
+        run: |
+          & ./scripts/ci/verify-windows-tray-codesign.ps1 `
+            -PayloadRoot "apps/windows-tray/.build/package-work/win-x64/payload"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./scripts/ci/verify-windows-tray-codesign.ps1 `
+            -PayloadRoot "apps/windows-tray/.build/package-work/win-arm64/payload"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Archive signed release packages
+        shell: pwsh
+        run: |
+          pnpm run windows-tray:archive:win-x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm run windows-tray:archive:win-arm64
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm run windows-tray:update-manifest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Remove signing certificate
-        if: always()
-        shell: pwsh
-        run: |
-          & ./scripts/ci/remove-windows-tray-codesign.ps1

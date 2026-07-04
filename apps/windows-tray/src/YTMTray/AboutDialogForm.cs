@@ -308,7 +308,7 @@ internal sealed class AboutDialogForm : Form
         );
         panel.Controls.Add(
             MakeLabel(
-                "Beta builds may use a self-signed publisher while Windows signing is finalized.",
+                "Beta builds are signed and delivered as GitHub release zips while the Windows install experience is finalized.",
                 8.5f,
                 FontStyle.Regular,
                 MutedTextColor,

@@ -38,30 +38,42 @@ installed app folder. Users can uninstall from Windows Settings > Apps >
 Installed apps, from Start Menu > YTM Enhancer > Uninstall YTM Tray, or by
 running `Uninstall YTM Tray.cmd` from the extracted release zip.
 
-The beta release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe`
-before zipping release payloads. Signing is required for `windows-tray-v*` tag
-releases.
+The release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe` with Azure
+Artifact Signing before zipping release payloads. Signing is required for
+`windows-tray-v*` tag releases.
 
-## Beta Self-Signing
+## Azure Artifact Signing
 
-Windows tray beta releases use a short-lived self-signed code-signing
-certificate generated inside the GitHub Actions release job. The private key is
-exported only to a temporary PFX on the runner, used to sign the two release
-executables, then removed along with the temporary certificate before the job
-exits.
+Windows tray releases use Azure Artifact Signing from a protected GitHub
+environment named `windows-signing`. The release workflow authenticates with
+GitHub OIDC, builds unzipped package payloads, signs all payload executables,
+verifies Authenticode signatures, then archives the signed payloads.
 
-This is intentionally not a trusted publisher identity. Users may still see
-Windows SmartScreen or unknown-publisher warnings. The beta goal is to prove the
-release workflow, make signatures inspectable, and provide a concrete signing
-process while the project applies for a trusted signing provider.
+The `windows-signing` GitHub environment must provide these secrets:
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+
+It must also provide these environment variables:
+
+- `AZURE_ARTIFACT_SIGNING_ENDPOINT`
+- `AZURE_ARTIFACT_SIGNING_ACCOUNT_NAME`
+- `AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME`
+
+The Azure app registration must have the
+`Artifact Signing Certificate Profile Signer` role on the certificate profile or
+Artifact Signing account. The endpoint must match the Artifact Signing account
+region.
 
 See [Code Signing Policy](code-signing-policy.md) for the current policy and
-trusted-signing follow-up.
+local signing-smoke details.
 
 Run the manual `Windows Tray Signing Check` workflow on `main` after changing
-release signing, packaging, or installer behavior. It builds self-signed
-`win-x64` and `win-arm64` packages, verifies signing through the package script,
-and generates the update manifest without publishing a GitHub Release:
+release signing, packaging, or installer behavior. It builds `win-x64` and
+`win-arm64` payloads, signs them with Azure Artifact Signing, verifies
+signatures, archives the release packages, and generates the update manifest
+without publishing a GitHub Release:
 
 ```sh
 gh workflow run "Windows Tray Signing Check" \
@@ -71,8 +83,8 @@ gh workflow run "Windows Tray Signing Check" \
 
 Local package generation remains unsigned by default so development and dry-run
 package smokes do not need production signing material. Set
-`YTM_WINDOWS_TRAY_CODESIGN_REQUIRED=1` locally when validating that the
-packaging path fails closed without a signing certificate.
+`YTM_WINDOWS_TRAY_CODESIGN_REQUIRED=1` locally when validating that the local
+PFX fallback fails closed without a signing certificate.
 
 The update manifest is published as a release asset with SHA-256 checksums,
 download URLs, runtime identifiers, the component tag, and the minimum Windows
