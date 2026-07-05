@@ -2,7 +2,9 @@ param(
   [ValidateSet("win-x64", "win-arm64")]
   [string] $RuntimeIdentifier = "",
   [string] $InstallRoot = "",
-  [string[]] $AdditionalAllowedOrigins = @()
+  [string[]] $AdditionalAllowedOrigins = @(),
+  [switch] $InstallerWorker,
+  [string] $InstallerLogPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,6 +19,7 @@ $PackagedExecutablePath = Join-Path $ScriptRoot "YTMTray.exe"
 $PackagedNativeHostExecutablePath = Join-Path $ScriptRoot "YTMTray.NativeHost.exe"
 $PackagedUninstallerPath = Join-Path $ScriptRoot "uninstall-native-hosts.ps1"
 $PackagedReleaseMetadataPath = Join-Path $ScriptRoot "release.json"
+$CompatibilityRunnerPath = Join-Path $ScriptRoot "run-update-installer.ps1"
 
 if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) {
   $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
@@ -28,6 +31,10 @@ if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) {
 
 if ([string]::IsNullOrWhiteSpace($InstallRoot)) {
   $InstallRoot = Join-Path $env:LOCALAPPDATA "YTM Enhancer\Tray"
+}
+
+if ([string]::IsNullOrWhiteSpace($InstallerLogPath)) {
+  $InstallerLogPath = Join-Path $ScriptRoot "update-installer.log"
 }
 
 $ExecutablePath = Join-Path $InstallRoot "YTMTray.exe"
@@ -100,6 +107,94 @@ function Test-PackagedBinaries {
     (Test-Path -LiteralPath $PackagedExecutablePath) -and
     (Test-Path -LiteralPath $PackagedNativeHostExecutablePath)
   )
+}
+
+function ConvertTo-PowerShellLiteral {
+  param([Parameter(Mandatory = $true)][string] $Value)
+  return "'" + $Value.Replace("'", "''") + "'"
+}
+
+function ConvertTo-ProcessArgument {
+  param([Parameter(Mandatory = $true)][string] $Value)
+  return '"' + $Value.Replace('"', '\"') + '"'
+}
+
+function Get-RunningTrayProcesses {
+  return @(
+    Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue
+  )
+}
+
+function Start-DetachedInstallerWorker {
+  $InstallerScriptPath = $MyInvocation.MyCommand.Path
+  $AdditionalOriginValues = if ($AdditionalAllowedOrigins.Count -gt 0) {
+    ($AdditionalAllowedOrigins | ForEach-Object { ConvertTo-PowerShellLiteral $_ }) -join ", "
+  } else {
+    ""
+  }
+
+  $RunnerScript = @(
+    '$ErrorActionPreference = "Stop"',
+    '$ProgressPreference = "SilentlyContinue"',
+    "`$InstallerScriptPath = $(ConvertTo-PowerShellLiteral $InstallerScriptPath)",
+    "`$LogPath = $(ConvertTo-PowerShellLiteral $InstallerLogPath)",
+    "function Write-InstallerLog {",
+    "  param([Parameter(Mandatory = `$true)][string] `$Message)",
+    '  Add-Content -LiteralPath $LogPath -Value "$(Get-Date -Format o) $Message" -Encoding utf8',
+    "}",
+    "try {",
+    '  Write-InstallerLog "compatibility installer worker started"',
+    '  $Processes = @(Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue)',
+    '  if ($Processes.Count -gt 0) {',
+    '    $ProcessIds = @($Processes | ForEach-Object { $_.Id })',
+    '    Write-InstallerLog "stopping existing YTM Tray processes $($ProcessIds -join '', '')"',
+    '    $Processes | Stop-Process -Force -ErrorAction SilentlyContinue',
+    '    foreach ($ProcessId in $ProcessIds) {',
+    '      try {',
+    '        Wait-Process -Id $ProcessId -Timeout 30 -ErrorAction SilentlyContinue',
+    '      } catch {}',
+    '    }',
+    '  }',
+    '  $InstallerArgs = @(',
+    '    "-RuntimeIdentifier",',
+    "    $(ConvertTo-PowerShellLiteral $RuntimeIdentifier),",
+    '    "-InstallRoot",',
+    "    $(ConvertTo-PowerShellLiteral $InstallRoot),",
+    '    "-InstallerWorker",',
+    '    "-InstallerLogPath",',
+    "    $(ConvertTo-PowerShellLiteral $InstallerLogPath)",
+    '  )',
+    "  `$AdditionalAllowedOrigins = @($AdditionalOriginValues)",
+    '  foreach ($Origin in $AdditionalAllowedOrigins) {',
+    '    $InstallerArgs += @("-AdditionalAllowedOrigins", $Origin)',
+    '  }',
+    '  & $InstallerScriptPath @InstallerArgs',
+    '  if ($LASTEXITCODE -is [int] -and $LASTEXITCODE -ne 0) {',
+    '    throw "installer exited with code $LASTEXITCODE"',
+    '  }',
+    '  Write-InstallerLog "installer completed"',
+    "} catch {",
+    '  Write-InstallerLog "installer failed: $($_.Exception.Message)"',
+    "  throw",
+    "}"
+  ) -join "`r`n"
+
+  Set-Content -LiteralPath $CompatibilityRunnerPath -Value $RunnerScript -Encoding utf8
+
+  $RunnerArguments = @(
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    (ConvertTo-ProcessArgument $CompatibilityRunnerPath)
+  )
+  $Process = Start-Process `
+    -FilePath "powershell.exe" `
+    -ArgumentList $RunnerArguments `
+    -WorkingDirectory $ScriptRoot `
+    -WindowStyle Hidden `
+    -PassThru
+  Write-Output "Started YTM Tray installer worker $($Process.Id)"
 }
 
 function Publish-FromSource {
@@ -263,7 +358,7 @@ function Get-InstalledVersion {
     }
   }
 
-  return "0.1.1"
+  return "0.1.2"
 }
 
 function Register-UninstallEntry {
@@ -289,6 +384,15 @@ function Remove-InstallBackup {
   if (Test-Path -LiteralPath $BackupRoot) {
     Remove-Item -LiteralPath $BackupRoot -Recurse -Force
   }
+}
+
+if (
+  -not $InstallerWorker -and
+  (Test-PackagedBinaries) -and
+  (Get-RunningTrayProcesses).Count -gt 0
+) {
+  Start-DetachedInstallerWorker
+  return
 }
 
 Save-InstallBackup
