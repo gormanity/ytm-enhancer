@@ -130,6 +130,46 @@ function Get-RunningTrayProcesses {
   )
 }
 
+function Stop-RunningTrayProcesses {
+  $Processes = Get-RunningTrayProcesses
+  if ($Processes.Count -eq 0) {
+    return
+  }
+
+  $ProcessIds = @($Processes | ForEach-Object { $_.Id })
+  $Processes | Stop-Process -Force -ErrorAction SilentlyContinue
+  foreach ($ProcessId in $ProcessIds) {
+    try {
+      Wait-Process -Id $ProcessId -Timeout 30 -ErrorAction SilentlyContinue
+    } catch {}
+  }
+  Start-Sleep -Milliseconds 750
+}
+
+function Copy-ItemWithRetry {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $LiteralPath,
+    [Parameter(Mandatory = $true)]
+    [string] $Destination,
+    [int] $TimeoutSeconds = 30
+  )
+
+  $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  $LastError = $null
+  do {
+    try {
+      Copy-Item -LiteralPath $LiteralPath -Destination $Destination -Force
+      return
+    } catch [System.IO.IOException], [System.UnauthorizedAccessException] {
+      $LastError = $_
+      Start-Sleep -Milliseconds 300
+    }
+  } while ((Get-Date) -lt $Deadline)
+
+  throw $LastError
+}
+
 function Start-DetachedInstallerWorker {
   $AdditionalOriginValues = if ($AdditionalAllowedOrigins.Count -gt 0) {
     ($AdditionalAllowedOrigins | ForEach-Object { ConvertTo-PowerShellLiteral $_ }) -join ", "
@@ -158,6 +198,7 @@ function Start-DetachedInstallerWorker {
     '        Wait-Process -Id $ProcessId -Timeout 30 -ErrorAction SilentlyContinue',
     '      } catch {}',
     '    }',
+    '    Start-Sleep -Milliseconds 750',
     '  }',
     '  $InstallerParameters = @{',
     "    RuntimeIdentifier = $(ConvertTo-PowerShellLiteral $RuntimeIdentifier)",
@@ -237,10 +278,12 @@ function Publish-FromSource {
 }
 
 function Install-PackagedBinaries {
-  Copy-Item -LiteralPath $PackagedExecutablePath -Destination $ExecutablePath -Force
-  Copy-Item -LiteralPath $PackagedNativeHostExecutablePath -Destination $NativeHostExecutablePath -Force
+  Copy-ItemWithRetry -LiteralPath $PackagedExecutablePath -Destination $ExecutablePath
+  Copy-ItemWithRetry `
+    -LiteralPath $PackagedNativeHostExecutablePath `
+    -Destination $NativeHostExecutablePath
   if (Test-Path -LiteralPath $PackagedReleaseMetadataPath) {
-    Copy-Item -LiteralPath $PackagedReleaseMetadataPath -Destination $ReleaseMetadataPath -Force
+    Copy-ItemWithRetry -LiteralPath $PackagedReleaseMetadataPath -Destination $ReleaseMetadataPath
   }
 }
 
@@ -359,7 +402,7 @@ function Get-InstalledVersion {
     }
   }
 
-  return "0.1.3"
+  return "0.1.4"
 }
 
 function Register-UninstallEntry {
@@ -400,8 +443,7 @@ Save-InstallBackup
 Save-RegistryBackup
 New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
 
-Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
-  Stop-Process -Force -ErrorAction SilentlyContinue
+Stop-RunningTrayProcesses
 
 try {
   if (Test-PackagedBinaries) {
