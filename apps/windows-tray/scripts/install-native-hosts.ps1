@@ -12,6 +12,11 @@ $ErrorActionPreference = "Stop"
 $HostName = "com.gormanity.ytm_enhancer.tray"
 $Description = "YTM Enhancer Windows Tray Connector"
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$InstallerScriptPath = if ($PSCommandPath) {
+  $PSCommandPath
+} else {
+  $MyInvocation.MyCommand.Path
+}
 $AppRoot = Resolve-Path (Join-Path $ScriptRoot "..")
 $TrayProjectPath = Join-Path $AppRoot "src\YTMTray\YTMTray.csproj"
 $NativeHostProjectPath = Join-Path $AppRoot "src\YTMTray.NativeHost\YTMTray.NativeHost.csproj"
@@ -126,7 +131,6 @@ function Get-RunningTrayProcesses {
 }
 
 function Start-DetachedInstallerWorker {
-  $InstallerScriptPath = $MyInvocation.MyCommand.Path
   $AdditionalOriginValues = if ($AdditionalAllowedOrigins.Count -gt 0) {
     ($AdditionalAllowedOrigins | ForEach-Object { ConvertTo-PowerShellLiteral $_ }) -join ", "
   } else {
@@ -155,20 +159,17 @@ function Start-DetachedInstallerWorker {
     '      } catch {}',
     '    }',
     '  }',
-    '  $InstallerArgs = @(',
-    '    "-RuntimeIdentifier",',
-    "    $(ConvertTo-PowerShellLiteral $RuntimeIdentifier),",
-    '    "-InstallRoot",',
-    "    $(ConvertTo-PowerShellLiteral $InstallRoot),",
-    '    "-InstallerWorker",',
-    '    "-InstallerLogPath",',
-    "    $(ConvertTo-PowerShellLiteral $InstallerLogPath)",
-    '  )',
-    "  `$AdditionalAllowedOrigins = @($AdditionalOriginValues)",
-    '  foreach ($Origin in $AdditionalAllowedOrigins) {',
-    '    $InstallerArgs += @("-AdditionalAllowedOrigins", $Origin)',
+    '  $InstallerParameters = @{',
+    "    RuntimeIdentifier = $(ConvertTo-PowerShellLiteral $RuntimeIdentifier)",
+    "    InstallRoot = $(ConvertTo-PowerShellLiteral $InstallRoot)",
+    '    InstallerWorker = $true',
+    "    InstallerLogPath = $(ConvertTo-PowerShellLiteral $InstallerLogPath)",
     '  }',
-    '  & $InstallerScriptPath @InstallerArgs',
+    "  `$AdditionalAllowedOrigins = @($AdditionalOriginValues)",
+    '  if ($AdditionalAllowedOrigins.Count -gt 0) {',
+    '    $InstallerParameters.Add("AdditionalAllowedOrigins", $AdditionalAllowedOrigins)',
+    '  }',
+    '  & $InstallerScriptPath @InstallerParameters',
     '  if ($LASTEXITCODE -is [int] -and $LASTEXITCODE -ne 0) {',
     '    throw "installer exited with code $LASTEXITCODE"',
     '  }',
@@ -358,7 +359,7 @@ function Get-InstalledVersion {
     }
   }
 
-  return "0.1.2"
+  return "0.1.3"
 }
 
 function Register-UninstallEntry {
