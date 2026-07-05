@@ -263,7 +263,7 @@ function Get-InstalledVersion {
     }
   }
 
-  return "0.1.0"
+  return "0.1.1"
 }
 
 function Register-UninstallEntry {

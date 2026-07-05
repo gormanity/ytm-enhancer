@@ -1756,8 +1756,8 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.menuBar.channels.homebrew.updateCommand).toBe(
       "brew update && brew upgrade --cask ytm-menu-bar",
     );
-    expect(releaseIndex.products.windowsTray.latestVersion).toBe("0.1.0");
-    expect(releaseIndex.products.windowsTray.tag).toBe("windows-tray-v0.1.0");
+    expect(releaseIndex.products.windowsTray.latestVersion).toBe("0.1.1");
+    expect(releaseIndex.products.windowsTray.tag).toBe("windows-tray-v0.1.1");
     expect(releaseIndex.products.windowsTray.installPage).toBe(
       "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
     );

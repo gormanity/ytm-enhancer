@@ -11,7 +11,7 @@ public static class ConnectorProtocol
         typeof(ConnectorProtocol)
             .Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion ?? "0.1.0";
+            ?.InformationalVersion ?? "0.1.1";
     public const string ProtocolVersion = "1.0.0";
     public const string UninstallRequestedType = "connector.uninstallRequested";
 
