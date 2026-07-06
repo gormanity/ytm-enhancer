@@ -98,6 +98,8 @@ describe("Windows remote QA scaffold", () => {
     expect(agent).toContain("Invoke-AgentLaunch");
     expect(agent).toContain("launch only supports PowerShell script execution");
     expect(agent).toContain("current user's temp directory");
+    expect(agent).toContain('WindowStyle = "Hidden"');
+    expect(agent).toContain("processStillRunning");
     expect(agent).not.toContain("Register-ScheduledTask");
     expect(helper).toContain("Get-WindowsQaUiAgentReadiness");
     expect(helper).toContain("Assert-WindowsQaUiAgentReady");
@@ -152,7 +154,7 @@ describe("Windows remote QA scaffold", () => {
     expect(runner).toContain("powershell.exe");
     expect(runner).toContain("-EncodedCommand");
     expect(runner).toContain("function Remove-QaTree");
-    expect(runner).toContain("Get-Process msedge, firefox, YTMTray");
+    expect(runner).toContain("Get-Process chrome, msedge, firefox, YTMTray");
     expect(runner).toContain("[System.IO.Directory]::Delete");
     expect(runner).toContain("$RemainingItems.Count -eq 0");
     expect(runner).toContain("COPYFILE_DISABLE=1 tar -czf -");
@@ -394,6 +396,42 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmokeShell).toContain("-BaselineVersion");
     expect(liveUpdateSmokeShell).toContain("-TargetVersion");
     expect(liveUpdateSmokeShell).toContain("-UiReadyTimeoutSeconds");
+  });
+
+  it("installs a published Windows tray build for operational QA", () => {
+    const operationalSmoke = read(
+      "scripts/windows-qa/tray-operational-smoke.ps1",
+    );
+    const operationalSmokeShell = read(
+      "scripts/remote/windows-qa/tray-operational-smoke.sh",
+    );
+    const docs = read("docs/remote-qa.md");
+
+    expect(operationalSmoke).toContain("Wait-WindowsQaUiAgentReady");
+    expect(operationalSmoke).toContain("Invoke-InteractivePowerShell");
+    expect(operationalSmoke).toContain("Get-AuthenticodeSignature");
+    expect(operationalSmoke).toContain("Google Chrome");
+    expect(operationalSmoke).toContain("Left YTM Tray installed");
+    expect(operationalSmoke).toContain(
+      "$LaunchBodyLines += $ChromeLaunchLines",
+    );
+    expect(operationalSmoke).toContain(
+      'Join-Path $env:LOCALAPPDATA "YTM Enhancer\\Tray"',
+    );
+    expect(operationalSmokeShell).toContain(
+      "scripts\\windows-qa\\tray-operational-smoke.ps1",
+    );
+    expect(operationalSmokeShell).toContain(
+      "YTM_WINDOWS_TRAY_OPERATIONAL_PLAYBACK_URL",
+    );
+    expect(operationalSmokeShell).toContain(
+      "YTM_WINDOWS_TRAY_OPERATIONAL_SKIP_CHROME",
+    );
+    expect(docs).toContain(
+      "scripts/remote/windows-qa/tray-operational-smoke.sh",
+    );
+    expect(docs).toContain("does not uninstall or");
+    expect(docs).toContain("quit the tray app");
   });
 
   it("automates Windows tray release signing smoke with a disposable certificate", () => {

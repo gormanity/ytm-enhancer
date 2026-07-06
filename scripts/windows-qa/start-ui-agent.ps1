@@ -130,6 +130,7 @@ function Invoke-AgentLaunch {
     $StartArguments = @{
       FilePath = [string] $Request.filePath
       PassThru = $true
+      WindowStyle = "Hidden"
     }
 
     if ($Arguments.Count -gt 0) {
@@ -148,12 +149,19 @@ function Invoke-AgentLaunch {
     }
     Start-Sleep -Milliseconds $WaitMilliseconds
 
-    $ObservedProcess = Get-Process -Id $StartedProcess.Id -ErrorAction Stop
+    $ObservedProcess = Get-Process -Id $StartedProcess.Id -ErrorAction SilentlyContinue
+    $ObservedSessionId = if ($ObservedProcess) {
+      $ObservedProcess.SessionId
+    } else {
+      (Get-Process -Id $PID).SessionId
+    }
+
     return @{
       ok = $true
       action = "launch"
-      processId = $ObservedProcess.Id
-      sessionId = $ObservedProcess.SessionId
+      processId = $StartedProcess.Id
+      processStillRunning = $null -ne $ObservedProcess
+      sessionId = $ObservedSessionId
       filePath = [string] $Request.filePath
     }
   } finally {

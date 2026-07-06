@@ -926,7 +926,7 @@ async function restoreModuleState(): Promise<void> {
       (connector) => [connector.id, connector],
     ),
   );
-  connectorSupportEnabled = bool(CONNECTORS_ENABLED_STATE_KEY, false);
+  connectorSupportEnabled = bool(CONNECTORS_ENABLED_STATE_KEY, __DEV__);
   if (connectorSupportEnabled) {
     await startConnectorSupportIfAvailable();
   }

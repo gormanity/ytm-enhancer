@@ -25,6 +25,12 @@ When an update is available, the tray menu and flyout expose an install action
 that downloads the update manifest, verifies the release zip checksum, and runs
 the packaged installer after confirmation.
 
+YTM Tray is currently a Connected Apps beta. Beta users should install from the
+Windows tray install page or a component-scoped `windows-tray-v*` GitHub
+Release, enable Connected Apps in YTM Enhancer, and use the tray popup or About
+window to check for updates. Release installs are signed in GitHub Actions with
+Azure Artifact Signing.
+
 Packaged installs also register YTM Tray in Windows Settings > Apps, add Start
 Menu shortcuts, and install a local uninstaller script under
 `%LOCALAPPDATA%\YTM Enhancer\Tray`.

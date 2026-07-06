@@ -112,7 +112,7 @@ function Remove-QaTree {
     return
   }
 
-  Get-Process msedge, firefox, YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
+  Get-Process chrome, msedge, firefox, YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
     Stop-Process -Force -ErrorAction SilentlyContinue
   Start-Sleep -Milliseconds 500
 

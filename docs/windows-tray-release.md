@@ -42,6 +42,26 @@ The release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe` with Azure
 Artifact Signing before zipping release payloads. Signing is required for
 `windows-tray-v*` tag releases.
 
+## Beta User Path
+
+YTM Tray is a Connected Apps beta. The install page and release notes should set
+that expectation plainly without overstating risk: users install a signed direct
+package, enable Connected Apps in the extension, and can remove the app through
+normal Windows app-management surfaces.
+
+The user-facing release path is:
+
+1. Download the current `YTM-Tray-<version>-<runtime>.zip` from the Windows tray
+   install page or component-scoped GitHub Release.
+2. Extract the zip and run `Install YTM Tray.cmd`.
+3. Start YTM Tray, open YTM Enhancer > Connected Apps, and enable Connected Apps
+   plus the YTM Tray card.
+4. Use `Check for Updates` from the tray popup or About window. The app checks
+   the `windows-tray-v*` GitHub release list, downloads `YTM-Tray-update.json`,
+   verifies the package checksum, and hands off to the packaged installer.
+5. Uninstall from Windows Settings > Apps > Installed apps, Start Menu > YTM
+   Enhancer > Uninstall YTM Tray, or the packaged `Uninstall YTM Tray.cmd`.
+
 ## Azure Artifact Signing
 
 Windows tray releases use Azure Artifact Signing from a protected GitHub
@@ -177,16 +197,23 @@ scripts/remote/windows-qa/tray-signing-smoke.sh
 scripts/remote/windows-qa/tray-button-smoke.sh
 ```
 
-6. Create a `windows-tray-vX.Y.Z` tag from the verified commit.
-7. Push the tag.
-8. Confirm the `Windows Tray Release` workflow publishes:
+6. For a beta release candidate, run the operational smoke and leave the app
+   installed for hands-on testing:
+
+```sh
+scripts/remote/windows-qa/tray-operational-smoke.sh X.Y.Z
+```
+
+7. Create a `windows-tray-vX.Y.Z` tag from the verified commit.
+8. Push the tag.
+9. Confirm the `Windows Tray Release` workflow publishes:
    - a GitHub Release named `YTM Tray X.Y.Z`
    - a component release that does not replace GitHub's repo-wide latest release
    - `win-x64` and `win-arm64` release zips
    - `YTM-Tray-update.json` with package checksums and release URLs
    - `Install YTM Tray.cmd` and `Uninstall YTM Tray.cmd` in each zip
    - signed `YTMTray.exe` and `YTMTray.NativeHost.exe`
-9. On a clean Windows account, install from the release zip and confirm:
+10. On a clean Windows account, install from the release zip and confirm:
 
 - `YTMTray.exe` and `YTMTray.NativeHost.exe` are installed under
   `%LOCALAPPDATA%\YTM Enhancer\Tray`
@@ -196,6 +223,12 @@ scripts/remote/windows-qa/tray-button-smoke.sh
 - playback controls, seeking, focus, About, and Quit still work
 - Windows Settings > Apps > Installed apps shows YTM Tray
 - uninstall removes registry keys, Start Menu shortcuts, and app files
+
+For operational testing where a developer needs to keep using the installed
+candidate, run `scripts/remote/windows-qa/tray-operational-smoke.sh` instead of
+the destructive release E2E. It verifies the published package, launches the
+tray app in the active Windows desktop session, opens Chrome to YouTube Music,
+and intentionally leaves the app installed.
 
 The release workflow derives package and manifest versions from the
 `windows-tray-vX.Y.Z` tag and compares generated GitHub release notes against

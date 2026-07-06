@@ -803,6 +803,10 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain(
       "scripts/remote/windows-qa/tray-button-smoke.sh",
     );
+    expect(releaseDocs).toContain(
+      "scripts/remote/windows-qa/tray-operational-smoke.sh",
+    );
+    expect(releaseDocs).toContain("Connected Apps beta");
     expect(releaseDocs).toContain("component release that does not replace");
     expect(releaseDocs).toContain("Checksum-Verified In-App Updates");
     expect(releaseDocs).toContain("Check for Updates");

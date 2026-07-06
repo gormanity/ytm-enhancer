@@ -564,6 +564,14 @@ popup UI from the lock screen. The UI smoke scripts wait up to
 before launching the tray app, then fail with a clear `LogonUI` message if the
 desktop is still locked.
 
+Treat the unlocked desktop as an explicit contract for UI smoke. The SSH user,
+the logged-in desktop user, and the UI agent user should be the same non-admin
+QA account. The target can be locked again after the UI smoke finishes, but
+button, visual, live-update, and operational tray smokes need the desktop
+unlocked for their full run. This is a Windows shell limitation, not a transport
+choice: SSH, package, release, signing, and non-GUI checks remain usable while
+the target is locked.
+
 Probe the running agent through the configured transport:
 
 ```sh
@@ -752,6 +760,34 @@ The remote wrapper also accepts `YTM_WINDOWS_TRAY_BASELINE_VERSION` and
 `YTM_WINDOWS_TRAY_TARGET_VERSION` when positional arguments are not convenient.
 Set `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS` to control how long the remote
 wrapper waits for the desktop to unlock before UI automation starts.
+
+Run the Windows tray operational smoke when you want to install a published
+candidate and keep it in place for manual testing:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-operational-smoke.ps1 `
+  -Version 0.1.4 `
+  -UiReadyTimeoutSeconds 60
+```
+
+Run the same smoke through the configured Windows transport:
+
+```sh
+scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.4
+```
+
+This downloads the published release zip, installs it to the real user-level
+`%LOCALAPPDATA%\YTM Enhancer\Tray` location, verifies Authenticode signers,
+native host manifests, browser registrations, Start Menu shortcuts, and the
+Windows uninstall entry, launches YTM Tray through the Windows QA UI agent, and
+opens Google Chrome to YouTube Music. It intentionally does not uninstall or
+quit the tray app. Use it after destructive install/update/uninstall smokes when
+you want the target left ready for hands-on operational testing.
+
+Set `YTM_WINDOWS_TRAY_OPERATIONAL_PLAYBACK_URL` to open a specific YouTube Music
+URL, or `YTM_WINDOWS_TRAY_OPERATIONAL_SKIP_CHROME=1` to leave Chrome untouched
+while still installing and launching YTM Tray.
 
 Run the Windows tray release signing smoke:
 

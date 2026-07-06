@@ -44,11 +44,11 @@ describe("connector host background gating", () => {
     expect(backgroundSource).not.toContain("import(");
   });
 
-  it("only enables connector support from persisted module state", () => {
+  it("enables connector support from persisted state with a dev default", () => {
     expect(backgroundSource).toContain("CONNECTORS_ENABLED_STATE_KEY");
     expect(backgroundSource).toContain("createNativeMessagingTransport");
     expect(backgroundSource).toContain(
-      "connectorSupportEnabled = bool(CONNECTORS_ENABLED_STATE_KEY, false)",
+      "connectorSupportEnabled = bool(CONNECTORS_ENABLED_STATE_KEY, __DEV__)",
     );
     expect(backgroundSource).toContain("enableConnectorSupport()");
     expect(functionBody("enableConnectorSupport")).toContain(
