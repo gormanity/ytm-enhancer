@@ -82,6 +82,8 @@ internal sealed class AboutDialogForm : Form
 
     private readonly Icon appIcon;
     private readonly Image appIconImage;
+    private readonly Label connectionSummaryLabel = new();
+    private readonly Label connectionDetailLabel = new();
     private readonly Label updateSummaryLabel = new();
     private readonly Label updateDetailLabel = new();
     private readonly Button updateButton = new();
@@ -103,14 +105,32 @@ internal sealed class AboutDialogForm : Form
         MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 500);
+        ClientSize = new Size(520, 570);
 
         Controls.Add(BuildLayout());
+        SetBrowserSource(null);
         SetUpdateStatus(WindowsTrayAboutUpdateStatus.Idle());
     }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? OnCheckForUpdates { get; set; }
+
+    public void SetBrowserSource(ConnectorSource? source)
+    {
+        if (source is null)
+        {
+            connectionSummaryLabel.Text = "Not connected to a browser.";
+            connectionDetailLabel.Text =
+                "Open one supported browser with YTM Enhancer enabled. YTM Tray supports one active browser connection at a time.";
+            connectionSummaryLabel.ForeColor = WarningColor;
+            return;
+        }
+
+        connectionSummaryLabel.Text = $"Connected to {source.DisplayName}.";
+        connectionDetailLabel.Text =
+            "YTM Tray is using this browser for playback info and controls. Disconnect this browser before connecting from another browser.";
+        connectionSummaryLabel.ForeColor = SuccessColor;
+    }
 
     public void SetUpdateStatus(WindowsTrayAboutUpdateStatus status)
     {
@@ -145,10 +165,12 @@ internal sealed class AboutDialogForm : Form
             BackColor = SurfaceColor,
             Padding = new Padding(24),
             ColumnCount = 1,
-            RowCount = 7
+            RowCount = 9
         };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -156,9 +178,10 @@ internal sealed class AboutDialogForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         layout.Controls.Add(BuildHeader(), 0, 0);
-        layout.Controls.Add(BuildUpdateSection(), 0, 2);
-        layout.Controls.Add(BuildProcessSection(), 0, 4);
-        layout.Controls.Add(BuildFooter(), 0, 6);
+        layout.Controls.Add(BuildConnectionSection(), 0, 2);
+        layout.Controls.Add(BuildUpdateSection(), 0, 4);
+        layout.Controls.Add(BuildProcessSection(), 0, 6);
+        layout.Controls.Add(BuildFooter(), 0, 8);
         return layout;
     }
 
@@ -278,6 +301,26 @@ internal sealed class AboutDialogForm : Form
 
         row.Controls.Add(updateButton);
         return row;
+    }
+
+    private Control BuildConnectionSection()
+    {
+        var panel = BuildPanel();
+        panel.Controls.Add(MakeSectionLabel("Browser Connection"), 0, 0);
+        panel.Controls.Add(connectionSummaryLabel, 0, 1);
+        panel.Controls.Add(connectionDetailLabel, 0, 2);
+
+        connectionSummaryLabel.Font = new Font(Font.FontFamily, 10.25f, FontStyle.Bold);
+        connectionSummaryLabel.AutoSize = true;
+        connectionSummaryLabel.MaximumSize = new Size(424, 0);
+        connectionSummaryLabel.Margin = new Padding(0, 6, 0, 0);
+
+        connectionDetailLabel.Font = new Font(Font.FontFamily, 9f, FontStyle.Regular);
+        connectionDetailLabel.ForeColor = MutedTextColor;
+        connectionDetailLabel.AutoSize = true;
+        connectionDetailLabel.MaximumSize = new Size(424, 0);
+        connectionDetailLabel.Margin = new Padding(0, 4, 0, 0);
+        return panel;
     }
 
     private Control BuildProcessSection()

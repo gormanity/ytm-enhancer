@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.Versioning;
 using System.Security.Principal;
@@ -10,6 +11,85 @@ public static class TrayBridge
 {
     public static string PipeName =>
         $"ytm-enhancer-tray-{CurrentUserToken()}";
+
+    public static string ActiveConnectionPath =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "YTM Enhancer",
+            "Tray",
+            "active-browser.json"
+        );
+
+    public static void WriteActiveConnection(
+        ConnectorSource? source,
+        NativeAppLogger? logger = null
+    )
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(ActiveConnectionPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var connection = new ActiveBrowserConnection(
+                Environment.ProcessId,
+                DateTimeOffset.UtcNow,
+                source
+            );
+            File.WriteAllText(
+                ActiveConnectionPath,
+                JsonSerializer.Serialize(connection, JsonSettings.Options)
+            );
+        }
+        catch (Exception error)
+        {
+            logger?.Log($"active browser status write failed: {error.Message}");
+        }
+    }
+
+    public static ActiveBrowserConnection? ReadActiveConnection(
+        NativeAppLogger? logger = null
+    )
+    {
+        try
+        {
+            if (!File.Exists(ActiveConnectionPath)) return null;
+            var json = File.ReadAllText(ActiveConnectionPath);
+            var connection = JsonSerializer.Deserialize<ActiveBrowserConnection>(
+                json,
+                JsonSettings.Options
+            );
+            if (connection is null || !IsRunningProcess(connection.ProcessId))
+            {
+                ClearActiveConnection(logger);
+                return null;
+            }
+
+            return connection;
+        }
+        catch (Exception error)
+        {
+            logger?.Log($"active browser status read failed: {error.Message}");
+            return null;
+        }
+    }
+
+    public static void ClearActiveConnection(NativeAppLogger? logger = null)
+    {
+        try
+        {
+            if (File.Exists(ActiveConnectionPath))
+            {
+                File.Delete(ActiveConnectionPath);
+            }
+        }
+        catch (Exception error)
+        {
+            logger?.Log($"active browser status clear failed: {error.Message}");
+        }
+    }
 
     public static async Task<NamedPipeClientStream?> ConnectIfAvailableAsync(
         NativeAppLogger logger,
@@ -102,6 +182,19 @@ public static class TrayBridge
         catch
         {
             return Environment.UserName.Replace(" ", "_");
+        }
+    }
+
+    private static bool IsRunningProcess(int processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            return !process.HasExited;
+        }
+        catch
+        {
+            return false;
         }
     }
 }
@@ -197,6 +290,7 @@ public sealed class BridgeUiConnection : IConnectorConnection
                 await server.WaitForConnectionAsync(cancellationToken);
                 connectedClient = server;
                 logger.Log("bridge server accepted native host");
+                TrayBridge.WriteActiveConnection(null, logger);
                 await FlushPendingMessagesAsync(cancellationToken);
                 await ReadClientMessagesAsync(server, cancellationToken);
             }
@@ -211,6 +305,7 @@ public sealed class BridgeUiConnection : IConnectorConnection
             finally
             {
                 connectedClient = null;
+                TrayBridge.ClearActiveConnection(logger);
                 onDisconnect?.Invoke();
                 server?.Dispose();
                 server = null;
@@ -260,8 +355,13 @@ public sealed class BridgeUiConnection : IConnectorConnection
             );
             if (message is not null)
             {
+                if (message.Type == "connector.ready")
+                {
+                    TrayBridge.WriteActiveConnection(message.Source, logger);
+                }
                 onMessage?.Invoke(message);
             }
         }
     }
+
 }

@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace YTMTray.Core;
 
-public static class ConnectorProtocol
+public static partial class ConnectorProtocol
 {
     public const string HostName = "com.gormanity.ytm_enhancer.tray";
     public const string ConnectorId = "com.gormanity.ytm-enhancer.tray";
@@ -88,6 +88,29 @@ public sealed record PlaybackSeekMessage(
 
 public sealed record YtmFocusMessage(string Type, string RequestId);
 
+public sealed record ConnectorSource(
+    string Id,
+    string Name,
+    bool IsDevBuild,
+    string? ExtensionId
+)
+{
+    public string DisplayName => IsDevBuild ? $"{Name} (dev)" : Name;
+}
+
+public sealed record ConnectorErrorMessage(
+    string Type,
+    string? RequestId,
+    string Code,
+    string Message
+);
+
+public sealed record ActiveBrowserConnection(
+    int ProcessId,
+    DateTimeOffset ConnectedAt,
+    ConnectorSource? Source
+);
+
 public sealed record TrackMetadata(
     string? Title,
     string? Artist,
@@ -115,6 +138,19 @@ public sealed class HostMessage
     public string Type { get; set; } = "";
     public string? RequestId { get; set; }
     public PlaybackState? State { get; set; }
+    public ConnectorSource? Source { get; set; }
     public string? Code { get; set; }
     public string? Message { get; set; }
+}
+
+public static partial class ConnectorProtocol
+{
+    public static ConnectorErrorMessage AppBusy(ActiveBrowserConnection? connection) =>
+        new("connector.error", null, "app_busy", AppBusyMessage(connection?.Source));
+
+    private static string AppBusyMessage(ConnectorSource? source)
+    {
+        var browser = source?.DisplayName ?? "another browser";
+        return $"YTM Tray is already connected to {browser}. Disconnect that browser before connecting here.";
+    }
 }

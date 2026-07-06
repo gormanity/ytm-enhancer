@@ -31,6 +31,10 @@ Release, enable Connected Apps in YTM Enhancer, and use the tray popup or About
 window to check for updates. Release installs are signed in GitHub Actions with
 Azure Artifact Signing.
 
+YTM Tray supports one active browser connection at a time. The About window
+shows the connected browser, and other browsers report that the tray is already
+connected instead of silently failing.
+
 Packaged installs also register YTM Tray in Windows Settings > Apps, add Start
 Menu shortcuts, and install a local uninstaller script under
 `%LOCALAPPDATA%\YTM Enhancer\Tray`.

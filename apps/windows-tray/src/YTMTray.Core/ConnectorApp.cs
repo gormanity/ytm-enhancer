@@ -62,6 +62,10 @@ public sealed class ConnectorApp : IDisposable
                 ready = true;
                 ClearPlaybackStateStaleTimeout();
                 tray.UpdateConnectionStatus("Connected");
+                tray.UpdateBrowserSource(message.Source);
+                logger.Log(
+                    $"connector ready source={message.Source?.DisplayName ?? "unknown"}"
+                );
                 _ = connection.SendAsync(
                     ConnectorProtocol.SubscribePlayback(NextRequestId("subscribe"))
                 );
@@ -98,6 +102,7 @@ public sealed class ConnectorApp : IDisposable
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
         tray.UpdateConnectionStatus("Disconnected");
+        tray.UpdateBrowserSource(null);
 
         if (!disposed)
         {
@@ -152,6 +157,7 @@ public sealed class ConnectorApp : IDisposable
             lastAcceptedPlaybackState = null;
             ClearPlaybackStateRetry();
             ClearPlaybackStateStaleTimeout();
+            tray.UpdateBrowserSource(null);
         }
 
         tray.UpdateConnectionStatus(label);
@@ -235,6 +241,7 @@ public sealed class ConnectorApp : IDisposable
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
         tray.UpdateConnectionStatus(reason);
+        tray.UpdateBrowserSource(null);
         _ = connection.SendAsync(ConnectorProtocol.Hello(NextRequestId("hello")));
     }
 

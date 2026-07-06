@@ -44,6 +44,20 @@ function requestIdFrom(message: unknown): string | undefined {
   return typeof requestId === "string" ? requestId : undefined;
 }
 
+function nativeHostDiagnosticFrom(message: unknown): Error | null {
+  if (typeof message !== "object" || message === null) return null;
+  const record = message as {
+    type?: unknown;
+    code?: unknown;
+    message?: unknown;
+  };
+  if (record.type !== "connector.error") return null;
+  if (typeof record.message !== "string" || record.message.length === 0) {
+    return null;
+  }
+  return new Error(record.message);
+}
+
 function errorToOutboundMessage(
   result: Extract<ConnectorHostResult, { ok: false }>,
   requestId?: string,
@@ -120,6 +134,12 @@ export function createNativeMessagingTransport(
       safeCallback(options.onConnect);
 
       messageListener = (message: unknown) => {
+        const nativeHostDiagnostic = nativeHostDiagnosticFrom(message);
+        if (nativeHostDiagnostic) {
+          reportError(options.onError, nativeHostDiagnostic);
+          return;
+        }
+
         if (!handler) return;
         void handler(connectionId, message)
           .then((result) => {

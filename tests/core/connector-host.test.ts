@@ -191,6 +191,41 @@ describe("ConnectorHost", () => {
     expect(ytm.getPlaybackState).toHaveBeenCalledTimes(1);
   });
 
+  it("includes browser source metadata in connector ready messages", async () => {
+    const host = createConnectorHost({
+      enabled: true,
+      ytm: createMockYtmRuntimeClient(),
+      source: {
+        id: "edge",
+        name: "Microsoft Edge",
+        isDevBuild: true,
+        extensionId: "akkbieodbakphpfdibailajdknnmmoca",
+      },
+    });
+
+    const result = await host.receive("connection-1", {
+      type: "connector.hello",
+      requestId: "hello-1",
+      manifest: validManifest,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      message: {
+        type: "connector.ready",
+        requestId: "hello-1",
+        connectorId: validManifest.id,
+        protocolVersion: CONNECTOR_PROTOCOL_VERSION,
+        source: {
+          id: "edge",
+          name: "Microsoft Edge",
+          isDevBuild: true,
+          extensionId: "akkbieodbakphpfdibailajdknnmmoca",
+        },
+      },
+    });
+  });
+
   it("keeps connector registration observer failures isolated from handshakes", async () => {
     const onError = vi.fn();
     const host = createConnectorHost({

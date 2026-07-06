@@ -821,6 +821,65 @@ describe("Connected Apps popup view", () => {
     });
   });
 
+  it("shows another-browser guidance when the Windows tray is already connected", async () => {
+    const trayDefinition = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.find(
+      (definition) => definition.id === "com.gormanity.ytm-enhancer.tray",
+    )!;
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        firstPartyApps: [
+          createMenuBarConnectedApp(),
+          createFirstPartyConnectedApp(trayDefinition, {
+            availability: "error",
+            lastError:
+              "YTM Tray is already connected to Microsoft Edge. Disconnect that browser before connecting here.",
+          }),
+        ],
+        connectors: [
+          {
+            id: "com.gormanity.ytm-enhancer.tray",
+            name: "YTM Tray",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: true,
+            status: "disconnected",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const card = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLDetailsElement>(
+        '[data-app-id="com.gormanity.ytm-enhancer.tray"]',
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(
+      card.querySelector('[data-role="connected-app-status"]')?.textContent,
+    ).toContain("Already Connected");
+    expect(card.textContent).toContain(
+      "YTM Tray is already connected to Microsoft Edge.",
+    );
+    expect(card.textContent).toContain("Retry Tray");
+    expect(
+      card.querySelector<HTMLAnchorElement>(
+        '[data-role="connected-app-install-link"]',
+      ),
+    ).toBeNull();
+  });
+
   it("uses a shared action style for install and lifecycle actions", async () => {
     const client = createClient(
       createSettings({

@@ -118,6 +118,12 @@ browser-reported startup or disconnect failures mark it as missing or needing
 attention in the Connected Apps page. These diagnostics are intentionally
 transient and are not part of the connector protocol.
 
+First-party resident UI apps use a single active browser connection at a time.
+When another browser already owns the app connection, the native relay reports a
+clear startup diagnostic so the Connected Apps card can tell users which browser
+must be disconnected before the current browser can connect. Resident apps
+should also expose their active browser source in their native About surface.
+
 Future transports, such as extension runtime messaging for another extension or
 a constrained browser-local bridge, must preserve the same host validation path.
 

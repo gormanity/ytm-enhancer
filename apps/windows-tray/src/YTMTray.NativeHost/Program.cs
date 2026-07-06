@@ -9,6 +9,14 @@ await using var bridgeClient = await TrayBridge.ConnectIfAvailableAsync(
 );
 if (bridgeClient is null)
 {
+    var activeConnection = TrayBridge.ReadActiveConnection(logger);
+    if (activeConnection is not null)
+    {
+        await NativeMessagingCodec.WriteMessageAsync(
+            Console.OpenStandardOutput(),
+            ConnectorProtocol.AppBusy(activeConnection)
+        );
+    }
     logger.Log("no resident tray bridge available; exiting native host");
     return;
 }

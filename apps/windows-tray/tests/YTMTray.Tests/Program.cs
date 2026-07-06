@@ -8,6 +8,7 @@ using YTMTray.Core;
 var tests = new (string Name, Func<Task> Run)[]
 {
     ("protocol manifest uses tray connector identity", ProtocolManifest),
+    ("protocol app busy diagnostic names the active browser", ProtocolAppBusyDiagnostic),
     ("native messaging codec round trips JSON frames", NativeMessagingCodecRoundTrip),
     ("connector app handshakes and subscribes after ready", ConnectorAppHandshake),
     ("connector app queues a fresh handshake after disconnect", ConnectorAppReconnectHandshake),
@@ -58,6 +59,31 @@ static Task ProtocolManifest()
     return Task.CompletedTask;
 }
 
+static Task ProtocolAppBusyDiagnostic()
+{
+    var message = ConnectorProtocol.AppBusy(
+        new ActiveBrowserConnection(
+            Environment.ProcessId,
+            DateTimeOffset.UtcNow,
+            new ConnectorSource(
+                "edge",
+                "Microsoft Edge",
+                true,
+                "akkbieodbakphpfdibailajdknnmmoca"
+            )
+        )
+    );
+
+    var json = JsonSerializer.SerializeToElement(message, JsonSettings.Options);
+    AssertEqual("connector.error", json.GetProperty("type").GetString());
+    AssertEqual("app_busy", json.GetProperty("code").GetString());
+    AssertEqual(
+        "YTM Tray is already connected to Microsoft Edge (dev). Disconnect that browser before connecting here.",
+        json.GetProperty("message").GetString()
+    );
+    return Task.CompletedTask;
+}
+
 static async Task NativeMessagingCodecRoundTrip()
 {
     await using var stream = new MemoryStream();
@@ -86,10 +112,12 @@ static async Task ConnectorAppHandshake()
     connection.Emit(new HostMessage
     {
         Type = "connector.ready",
-        RequestId = "hello-1"
+        RequestId = "hello-1",
+        Source = new ConnectorSource("edge", "Microsoft Edge", false, "extension-id")
     });
 
     AssertEqual("Connected", tray.Status);
+    AssertEqual("Microsoft Edge", tray.BrowserSource?.DisplayName);
     AssertEqual("connector.subscribe", connection.MessageTypeAt(1));
     AssertEqual("playback.getState", connection.MessageTypeAt(2));
     await Task.CompletedTask;
@@ -566,11 +594,13 @@ sealed class FakeTrayController : ITrayController
     public Action<double>? OnSeek { get; set; }
     public Action? OnFocusYouTubeMusic { get; set; }
     public string? Status { get; private set; }
+    public ConnectorSource? BrowserSource { get; private set; }
     public PlaybackState? State { get; private set; }
     public bool UninstallRequested { get; private set; }
     public int StaleCount { get; private set; }
 
     public void UpdateConnectionStatus(string status) => Status = status;
+    public void UpdateBrowserSource(ConnectorSource? source) => BrowserSource = source;
     public void RequestUninstall() => UninstallRequested = true;
     public void SetStalePlaybackState()
     {

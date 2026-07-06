@@ -57,6 +57,13 @@ export interface ConnectorYtmStatus {
   selectedTabKnown: boolean;
 }
 
+export interface ConnectorSource {
+  id: string;
+  name: string;
+  isDevBuild: boolean;
+  extensionId?: string;
+}
+
 export interface ConnectorHelloMessage {
   type: "connector.hello";
   requestId: string;
@@ -116,6 +123,7 @@ export interface ConnectorReadyMessage {
   requestId: string;
   connectorId: string;
   protocolVersion: string;
+  source?: ConnectorSource;
 }
 
 export interface ConnectorAckMessage {

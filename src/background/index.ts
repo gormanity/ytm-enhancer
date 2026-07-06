@@ -37,7 +37,10 @@ import {
   type ConnectorStatus,
   type KnownConnector,
 } from "@/core/connectors/settings";
-import type { ConnectorManifest } from "@ytm-enhancer/connector-protocol";
+import type {
+  ConnectorManifest,
+  ConnectorSource,
+} from "@ytm-enhancer/connector-protocol";
 import { DEV_BUILD_STALE_MS } from "@/runtime-messages";
 import { findAllYTMTabs } from "@/core/tab-finder";
 import { loadModuleState, saveModuleStateValue } from "@/core/module-state";
@@ -185,7 +188,15 @@ function isMissingNativeHostError(message: string): boolean {
 }
 
 function isNativeHostExitError(message: string | null): boolean {
-  return /native host (has )?exited/i.test(message ?? "");
+  return /native host (has )?exited|native host.*disconnected|native messaging host.*disconnected/i.test(
+    message ?? "",
+  );
+}
+
+function isNativeHostBusyError(message: string | null): boolean {
+  return /already connected to .+browser|already connected to .+edge|already connected to .+chrome|already connected to .+firefox|another browser/i.test(
+    message ?? "",
+  );
 }
 
 function shouldKeepNativeHostExitDiagnostic(
@@ -193,13 +204,37 @@ function shouldKeepNativeHostExitDiagnostic(
   diagnostic: NativeHostDiagnostic,
 ): boolean {
   return (
-    firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID &&
-    isNativeHostExitError(diagnostic.lastError)
+    (firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID &&
+      isNativeHostExitError(diagnostic.lastError)) ||
+    isNativeHostBusyError(diagnostic.lastError)
   );
 }
 
 function nativeMessagingConnectionId(hostName: string): string {
   return `native:${hostName}`;
+}
+
+function browserSourceName(browser: typeof __BROWSER__): string {
+  switch (browser) {
+    case "edge":
+      return "Microsoft Edge";
+    case "firefox":
+      return "Firefox";
+    case "chrome":
+      return "Chrome";
+  }
+}
+
+function connectorSource(): ConnectorSource {
+  return {
+    id: __BROWSER__,
+    name: browserSourceName(__BROWSER__),
+    isDevBuild: __DEV__,
+    extensionId:
+      typeof chrome !== "undefined" && typeof chrome.runtime?.id === "string"
+        ? chrome.runtime.id
+        : undefined,
+  };
 }
 
 function defaultNativeHostDiagnostic(): NativeHostDiagnostic {
@@ -240,6 +275,14 @@ function recordNativeHostAvailable(
 
 function recordNativeHostError(connectorId: string, error: Error): void {
   const message = error.message || String(error);
+  const previousDiagnostic = nativeHostDiagnostic(connectorId);
+  if (
+    isNativeHostExitError(message) &&
+    isNativeHostBusyError(previousDiagnostic.lastError)
+  ) {
+    return;
+  }
+
   setNativeHostDiagnostic(connectorId, {
     availability: isMissingNativeHostError(message) ? "missing" : "error",
     lastError: message,
@@ -306,6 +349,7 @@ async function enableConnectorSupport(): Promise<void> {
   connectorHost = createConnectorHost({
     enabled: true,
     ytm,
+    source: connectorSource(),
     isConnectorAllowed(manifest) {
       return knownConnectors.get(manifest.id)?.enabled !== false;
     },

@@ -143,6 +143,33 @@ describe("native messaging connector transport", () => {
     });
   });
 
+  it("reports native-host diagnostics before connector routing", async () => {
+    const port = createPort();
+    const runtime = {
+      connectNative: vi.fn(() => port),
+    };
+    const onError = vi.fn();
+    const handler = vi.fn();
+    const transport = createNativeMessagingTransport({ runtime, onError });
+
+    transport.start(handler);
+    port.onMessage.emit({
+      type: "connector.error",
+      code: "app_busy",
+      message:
+        "YTM Tray is already connected to Microsoft Edge. Disconnect that browser before connecting here.",
+    });
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          "YTM Tray is already connected to Microsoft Edge. Disconnect that browser before connecting here.",
+      }),
+    );
+    expect(handler).not.toHaveBeenCalled();
+    expect(port.postMessage).not.toHaveBeenCalled();
+  });
+
   it("converts connector host errors into protocol error messages", async () => {
     const port = createPort();
     const runtime = {

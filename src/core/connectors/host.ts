@@ -7,6 +7,7 @@ import {
   type ConnectorOutboundMessage,
   type ConnectorPermission,
   type ConnectorPlaybackState,
+  type ConnectorSource,
   type ConnectorYtmStatus,
   type StateUpdateMessage,
 } from "@ytm-enhancer/connector-protocol";
@@ -80,6 +81,7 @@ export interface ConnectorHostOptions {
   >;
   supportedProtocolVersions?: readonly string[];
   transports?: readonly ConnectorTransport[];
+  source?: ConnectorSource;
   isConnectorAllowed?: (manifest: ConnectorManifest) => boolean;
   onConnectorSeen?: (
     manifest: ConnectorManifest,
@@ -316,6 +318,7 @@ export function createConnectorHost(
         requestId: message.requestId,
         connectorId: message.manifest.id,
         protocolVersion: message.manifest.protocolVersion,
+        ...(options.source ? { source: options.source } : {}),
       },
     };
   };

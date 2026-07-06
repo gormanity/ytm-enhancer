@@ -61,7 +61,15 @@ function isFirstPartyAppInstalled(
 }
 
 function isNativeHostExitError(firstPartyApp: FirstPartyConnectedApp): boolean {
-  return /native host (has )?exited/i.test(firstPartyApp.lastError ?? "");
+  return /native host (has )?exited|native host.*disconnected|native messaging host.*disconnected/i.test(
+    firstPartyApp.lastError ?? "",
+  );
+}
+
+function isNativeHostBusyError(firstPartyApp: FirstPartyConnectedApp): boolean {
+  return /already connected to .+browser|already connected to .+edge|already connected to .+chrome|already connected to .+firefox|another browser/i.test(
+    firstPartyApp.lastError ?? "",
+  );
 }
 
 function setStatus(
@@ -294,6 +302,9 @@ function firstPartyAppStatus(
     return { status: "blocked", label: "Disabled" };
   }
   if (firstPartyApp.availability === "error") {
+    if (isNativeHostBusyError(firstPartyApp)) {
+      return { status: "disconnected", label: "Already Connected" };
+    }
     if (isNativeHostExitError(firstPartyApp)) {
       return { status: "disconnected", label: "Disconnected" };
     }
@@ -337,6 +348,12 @@ function firstPartyAppGuidance(
     return `${firstPartyApp.name} is disabled. Enable it below when you want it to reconnect.`;
   }
   if (firstPartyApp.availability === "error") {
+    if (isNativeHostBusyError(firstPartyApp)) {
+      return (
+        firstPartyApp.lastError ??
+        `${firstPartyApp.name} is already connected to another browser.`
+      );
+    }
     if (isNativeHostExitError(firstPartyApp)) {
       if (firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID) {
         return "YTM Enhancer CLI was stopped. Reconnect it below, or reopen the extension popup after running ytme doctor.";
@@ -391,6 +408,20 @@ function firstPartyAppAction(
         firstPartyApp.id === FIRST_PARTY_MENU_BAR_CONNECTOR_ID
           ? "Update YTM Menu Bar"
           : `Update ${firstPartyApp.name}`,
+    };
+  }
+
+  if (
+    settings.enabled &&
+    firstPartyApp.availability === "error" &&
+    isNativeHostBusyError(firstPartyApp) &&
+    connector?.enabled !== false
+  ) {
+    return {
+      reconnectLabel:
+        firstPartyApp.id === FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID
+          ? "Retry Tray"
+          : `Retry ${firstPartyApp.name}`,
     };
   }
 

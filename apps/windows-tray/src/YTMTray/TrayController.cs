@@ -20,6 +20,7 @@ internal sealed class TrayController : ITrayController, IDisposable
     private ToolStripMenuItem? updateMenuItem;
     private AboutDialogForm? aboutDialog;
     private WindowsTrayUpdateCheckResult? availableUpdate;
+    private ConnectorSource? browserSource;
     private string? updateCheckError;
     private bool updateCheckInProgress;
     private bool updateCheckCompleted;
@@ -85,6 +86,15 @@ internal sealed class TrayController : ITrayController, IDisposable
             notifyIcon.Icon = idleIcon;
             notifyIcon.Text = "YTM Enhancer";
             popup.UpdateConnectionStatus(status);
+        });
+    }
+
+    public void UpdateBrowserSource(ConnectorSource? source)
+    {
+        RunOnUiThread(() =>
+        {
+            browserSource = source;
+            aboutDialog?.SetBrowserSource(source);
         });
     }
 
@@ -449,6 +459,7 @@ internal sealed class TrayController : ITrayController, IDisposable
             aboutDialog.FormClosed += (_, _) => aboutDialog = null;
         }
 
+        aboutDialog.SetBrowserSource(browserSource);
         aboutDialog.SetUpdateStatus(CurrentAboutUpdateStatus());
 
         if (!aboutDialog.Visible)
