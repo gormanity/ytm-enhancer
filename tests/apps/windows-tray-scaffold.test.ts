@@ -146,9 +146,13 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("LinearGradientBrush");
     expect(popupForm).toContain("UserSeekRequested");
     expect(popupForm).toContain("metadata scroll advanced");
-    expect(popupForm).toContain("titleLabel.SetBounds(148, 34, 244, 28)");
-    expect(popupForm).toContain("albumLabel.SetBounds(148, 65, 244, 22)");
-    expect(popupForm).toContain("artistYearLabel.SetBounds(148, 88, 244, 20)");
+    expect(popupForm).toContain("ClientSize = new Size(424, 562)");
+    expect(popupForm).toContain("currentArtwork.SetBounds(24, 24, 92, 92)");
+    expect(popupForm).toContain("titleLabel.SetBounds(140, 26, 244, 28)");
+    expect(popupForm).toContain("albumLabel.SetBounds(140, 57, 244, 22)");
+    expect(popupForm).toContain("artistYearLabel.SetBounds(140, 80, 244, 20)");
+    expect(popupForm).toContain("progressBar.SetBounds(24, 146, 376, 20)");
+    expect(popupForm).toContain("row.SetBounds(24, y, 376, 28)");
     expect(popupForm).toContain('nextSectionLabel.Text = "Up Next"');
     expect(popupForm).toContain('"Focus YouTube Music"');
     expect(popupForm).toContain('"Check for Updates"');

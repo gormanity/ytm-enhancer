@@ -105,7 +105,7 @@ internal sealed class PlaybackPopupForm : Form
         BackColor = SurfaceColor;
         ForeColor = PrimaryTextColor;
         Font = new Font("Segoe UI", 9f, FontStyle.Regular);
-        ClientSize = new Size(440, 570);
+        ClientSize = new Size(424, 562);
         DoubleBuffered = true;
 
         ConfigureCurrentTrack();
@@ -220,8 +220,8 @@ internal sealed class PlaybackPopupForm : Form
 
         e.Graphics.FillPath(surfaceBrush, surfacePath);
         e.Graphics.DrawPath(borderPen, surfacePath);
-        e.Graphics.DrawLine(dividerPen, 32, 294, ClientSize.Width - 32, 294);
-        e.Graphics.DrawLine(dividerPen, 32, 426, ClientSize.Width - 32, 426);
+        e.Graphics.DrawLine(dividerPen, 24, 286, ClientSize.Width - 24, 286);
+        e.Graphics.DrawLine(dividerPen, 24, 418, ClientSize.Width - 24, 418);
     }
 
     protected override void Dispose(bool disposing)
@@ -236,34 +236,34 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureCurrentTrack()
     {
-        currentArtwork.SetBounds(32, 32, 92, 92);
+        currentArtwork.SetBounds(24, 24, 92, 92);
 
-        statusLabel.SetBounds(316, 18, 76, 20);
+        statusLabel.SetBounds(300, 16, 76, 20);
         statusLabel.Font = new Font(Font.FontFamily, 7.5f, FontStyle.Regular);
         statusLabel.ForeColor = TertiaryTextColor;
         statusLabel.BackColor = Color.Transparent;
         statusLabel.TextAlign = ContentAlignment.MiddleRight;
         statusLabel.AutoEllipsis = true;
 
-        titleLabel.SetBounds(148, 34, 244, 28);
+        titleLabel.SetBounds(140, 26, 244, 28);
         titleLabel.Font = new Font(Font.FontFamily, 15f, FontStyle.Bold);
         titleLabel.ForeColor = PrimaryTextColor;
         titleLabel.BackColor = Color.Transparent;
         titleLabel.ScrollDiagnosticName = "title";
 
-        albumLabel.SetBounds(148, 65, 244, 22);
+        albumLabel.SetBounds(140, 57, 244, 22);
         albumLabel.Font = new Font(Font.FontFamily, 11f, FontStyle.Regular);
         albumLabel.ForeColor = SecondaryTextColor;
         albumLabel.BackColor = Color.Transparent;
         albumLabel.ScrollDiagnosticName = "album";
 
-        artistYearLabel.SetBounds(148, 88, 244, 20);
+        artistYearLabel.SetBounds(140, 80, 244, 20);
         artistYearLabel.Font = new Font(Font.FontFamily, 10f, FontStyle.Regular);
         artistYearLabel.ForeColor = TertiaryTextColor;
         artistYearLabel.BackColor = Color.Transparent;
         artistYearLabel.ScrollDiagnosticName = "artist-year";
 
-        closeButton.SetBounds(402, 16, 24, 24);
+        closeButton.SetBounds(386, 14, 24, 24);
         closeButton.Pressed += (_, _) => Hide();
         RegisterScrollDiagnostics(titleLabel, albumLabel, artistYearLabel);
 
@@ -279,7 +279,7 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureProgress()
     {
-        progressBar.SetBounds(32, 154, 376, 20);
+        progressBar.SetBounds(24, 146, 376, 20);
         progressBar.AccentColor = AccentColor;
         progressBar.UserSeekRequested += (_, _) =>
         {
@@ -288,12 +288,12 @@ internal sealed class PlaybackPopupForm : Form
             OnSeek?.Invoke(time);
         };
 
-        elapsedLabel.SetBounds(32, 178, 92, 22);
+        elapsedLabel.SetBounds(24, 170, 92, 22);
         elapsedLabel.Font = new Font(Font.FontFamily, 9.75f, FontStyle.Bold);
         elapsedLabel.ForeColor = TertiaryTextColor;
         elapsedLabel.BackColor = Color.Transparent;
 
-        durationLabel.SetBounds(316, 178, 92, 22);
+        durationLabel.SetBounds(308, 170, 92, 22);
         durationLabel.Font = new Font(Font.FontFamily, 9.75f, FontStyle.Bold);
         durationLabel.ForeColor = TertiaryTextColor;
         durationLabel.BackColor = Color.Transparent;
@@ -304,18 +304,18 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureButtons()
     {
-        controlStatus.SetBounds(32, 200, 376, 94);
+        controlStatus.SetBounds(24, 192, 376, 94);
         controlStatus.Font = new Font(Font.FontFamily, 11.5f, FontStyle.Bold);
         controlStatus.MessageColor = SecondaryTextColor;
         controlStatus.BackColor = Color.Transparent;
         controlStatus.Visible = false;
         Controls.Add(controlStatus);
 
-        ConfigureButton(shuffleButton, 78, 220, 44, () => OnShuffle?.Invoke());
-        ConfigureButton(previousButton, 145, 216, 50, () => OnPrevious?.Invoke(), true);
-        ConfigureButton(toggleButton, 207, 209, 64, () => OnTogglePlay?.Invoke(), true);
-        ConfigureButton(nextButton, 286, 216, 50, () => OnNext?.Invoke(), true);
-        ConfigureButton(repeatButton, 354, 220, 44, () => OnRepeat?.Invoke());
+        ConfigureButton(shuffleButton, 70, 212, 44, () => OnShuffle?.Invoke());
+        ConfigureButton(previousButton, 137, 208, 50, () => OnPrevious?.Invoke(), true);
+        ConfigureButton(toggleButton, 199, 201, 64, () => OnTogglePlay?.Invoke(), true);
+        ConfigureButton(nextButton, 278, 208, 50, () => OnNext?.Invoke(), true);
+        ConfigureButton(repeatButton, 346, 212, 44, () => OnRepeat?.Invoke());
     }
 
     private void ConfigureButton(
@@ -337,21 +337,21 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureNextTrack()
     {
-        nextSectionLabel.SetBounds(32, 318, 120, 22);
+        nextSectionLabel.SetBounds(24, 310, 120, 22);
         nextSectionLabel.Text = "Up Next";
         nextSectionLabel.Font = new Font(Font.FontFamily, 10.5f, FontStyle.Bold);
         nextSectionLabel.ForeColor = TertiaryTextColor;
         nextSectionLabel.BackColor = Color.Transparent;
 
-        nextArtwork.SetBounds(32, 354, 54, 54);
+        nextArtwork.SetBounds(24, 346, 54, 54);
 
-        nextTitleLabel.SetBounds(104, 348, 304, 34);
+        nextTitleLabel.SetBounds(96, 340, 304, 34);
         nextTitleLabel.Font = new Font(Font.FontFamily, 10.75f, FontStyle.Bold);
         nextTitleLabel.ForeColor = SecondaryTextColor;
         nextTitleLabel.BackColor = Color.Transparent;
         nextTitleLabel.ScrollDiagnosticName = "next-title";
 
-        nextDetailLabel.SetBounds(104, 382, 304, 28);
+        nextDetailLabel.SetBounds(96, 374, 304, 28);
         nextDetailLabel.Font = new Font(Font.FontFamily, 9.5f, FontStyle.Regular);
         nextDetailLabel.ForeColor = TertiaryTextColor;
         nextDetailLabel.BackColor = Color.Transparent;
@@ -376,15 +376,15 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureActionRows()
     {
-        ConfigureActionRow(focusRow, 446, () => OnFocusYouTubeMusic?.Invoke());
-        ConfigureActionRow(updateRow, 476, () => OnCheckForUpdates?.Invoke());
-        ConfigureActionRow(aboutRow, 506, () => OnAbout?.Invoke());
-        ConfigureActionRow(quitRow, 536, () => OnQuit?.Invoke());
+        ConfigureActionRow(focusRow, 438, () => OnFocusYouTubeMusic?.Invoke());
+        ConfigureActionRow(updateRow, 468, () => OnCheckForUpdates?.Invoke());
+        ConfigureActionRow(aboutRow, 498, () => OnAbout?.Invoke());
+        ConfigureActionRow(quitRow, 528, () => OnQuit?.Invoke());
     }
 
     private void ConfigureActionRow(PopupActionRowControl row, int y, Action action)
     {
-        row.SetBounds(32, y, 376, 28);
+        row.SetBounds(24, y, 376, 28);
         row.BackColor = Color.Transparent;
         row.Pressed += (_, _) => action();
         Controls.Add(row);
