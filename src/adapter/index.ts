@@ -8,6 +8,23 @@ import type {
 
 export { SELECTORS } from "./selectors";
 
+interface QueueItemData {
+  thumbnail?: {
+    thumbnails?: Array<{
+      url?: string;
+    }>;
+  };
+}
+
+interface QueueItemElement extends HTMLElement {
+  data?: QueueItemData;
+  __data?: {
+    data?: QueueItemData;
+  };
+}
+
+const QUEUE_ITEM_ARTWORK_ATTRIBUTE = "data-ytm-enhancer-thumbnail-url";
+
 /** Adapter layer encapsulating all YouTube Music DOM interaction. */
 export class YTMAdapter {
   /**
@@ -383,7 +400,28 @@ export class YTMAdapter {
     const thumbnail = item.querySelector<HTMLElement>(
       SELECTORS.queueItemThumbnail,
     );
-    return this.readImageUrl(thumbnail);
+    return (
+      this.normalizedImageUrl(
+        item.getAttribute(QUEUE_ITEM_ARTWORK_ATTRIBUTE),
+      ) ??
+      this.readImageUrl(thumbnail) ??
+      this.readQueueItemDataArtworkUrl(item)
+    );
+  }
+
+  private readQueueItemDataArtworkUrl(item: HTMLElement): string | null {
+    const queueItem = item as QueueItemElement;
+    const data = queueItem.data ?? queueItem.__data?.data;
+    const thumbnails = data?.thumbnail?.thumbnails;
+    if (!Array.isArray(thumbnails)) return null;
+
+    for (let index = thumbnails.length - 1; index >= 0; index -= 1) {
+      const thumbnail = thumbnails[index];
+      const url = this.normalizedImageUrl(thumbnail?.url);
+      if (url) return url;
+    }
+
+    return null;
   }
 
   private readImageUrl(element: Element | null): string | null {
@@ -492,10 +530,30 @@ export class YTMAdapter {
       const url = new URL(trimmed, document.baseURI);
       if (url.protocol !== "http:" && url.protocol !== "https:") return null;
       if (url.href === document.location.href) return null;
-      return url.href;
+      if (url.href === document.baseURI) return null;
+      if (
+        url.origin === document.location.origin &&
+        url.pathname === "/" &&
+        url.search === "" &&
+        url.hash === ""
+      ) {
+        return null;
+      }
+      return this.normalizeArtworkFormat(url).href;
     } catch {
       return null;
     }
+  }
+
+  private normalizeArtworkFormat(url: URL): URL {
+    const youtubeWebpMatch = url.pathname.match(
+      /^\/vi_webp\/([^/]+)\/([^/]+)\.webp$/i,
+    );
+    if (url.hostname === "i.ytimg.com" && youtubeWebpMatch) {
+      url.pathname = `/vi/${youtubeWebpMatch[1]}/${youtubeWebpMatch[2]}.jpg`;
+    }
+
+    return url;
   }
 
   private upscaleArtworkUrl(url: string | null): string | null {

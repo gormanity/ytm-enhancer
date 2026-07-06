@@ -24,7 +24,7 @@ export function applyChromiumCoexistenceManifestFields(
   browser: string,
   isDev: boolean,
 ): void {
-  if (browser !== "chrome") return;
+  if (browser !== "chrome" && !(browser === "edge" && isDev)) return;
 
   manifest.key = isDev ? CHROMIUM_LOCAL_DEV_KEY : CHROMIUM_LOCAL_PROD_KEY;
   if (isDev) {

@@ -13,6 +13,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("connector app queues a fresh handshake after disconnect", ConnectorAppReconnectHandshake),
     ("connector app routes uninstall requests", ConnectorAppUninstallRequest),
     ("connector app updates tray playback state", ConnectorAppPlaybackState),
+    ("connector app accepts stale progress when next artwork changes", ConnectorAppAcceptsNextArtworkUpdate),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
     ("update options use packaged release version", UpdateOptionsUsePackagedReleaseVersion),
@@ -152,6 +153,55 @@ static Task ConnectorAppPlaybackState()
 
     AssertEqual("Song", tray.State?.Title);
     AssertEqual(true, tray.State?.IsPlaying);
+    return Task.CompletedTask;
+}
+
+static Task ConnectorAppAcceptsNextArtworkUpdate()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(connection, tray);
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    var initialState = new PlaybackState(
+        "Song",
+        "Artist",
+        "Album",
+        2026,
+        "https://example.test/current.jpg",
+        new TrackMetadata("Next Song", "Next Artist", null, null, null),
+        true,
+        12,
+        60,
+        false,
+        "off"
+    );
+    var nextArtworkState = new PlaybackState(
+        "Song",
+        "Artist",
+        "Album",
+        2026,
+        "https://example.test/current.jpg",
+        new TrackMetadata(
+            "Next Song",
+            "Next Artist",
+            null,
+            null,
+            "https://example.test/next.jpg"
+        ),
+        true,
+        12,
+        60,
+        false,
+        "off"
+    );
+
+    connection.Emit(new HostMessage { Type = "playback.state", State = initialState });
+    connection.Emit(new HostMessage { Type = "playback.state", State = nextArtworkState });
+
+    AssertEqual("https://example.test/next.jpg", tray.State?.NextTrack?.ArtworkUrl);
+    AssertEqual(0, tray.StaleCount);
     return Task.CompletedTask;
 }
 
@@ -518,10 +568,15 @@ sealed class FakeTrayController : ITrayController
     public string? Status { get; private set; }
     public PlaybackState? State { get; private set; }
     public bool UninstallRequested { get; private set; }
+    public int StaleCount { get; private set; }
 
     public void UpdateConnectionStatus(string status) => Status = status;
     public void RequestUninstall() => UninstallRequested = true;
-    public void SetStalePlaybackState() => Status = "Waiting for playback updates...";
+    public void SetStalePlaybackState()
+    {
+        StaleCount += 1;
+        Status = "Waiting for playback updates...";
+    }
     public void UpdatePlayback(PlaybackState state) => State = state;
 }
 

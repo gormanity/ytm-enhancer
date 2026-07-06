@@ -106,4 +106,23 @@ describe("Chromium coexistence manifest fields", () => {
       },
     });
   });
+
+  it("uses the local dev key for Edge dev builds only", () => {
+    const edgeDevManifest: Record<string, unknown> = {};
+    const edgeProdManifest: Record<string, unknown> = {};
+
+    applyChromiumCoexistenceManifestFields(edgeDevManifest, "edge", true);
+    applyChromiumCoexistenceManifestFields(edgeProdManifest, "edge", false);
+
+    expect(edgeDevManifest).toMatchObject({
+      key: CHROMIUM_LOCAL_DEV_KEY,
+      externally_connectable: {
+        ids: [
+          CHROMIUM_LOCAL_PROD_EXTENSION_ID,
+          CHROMIUM_STORE_PROD_EXTENSION_ID,
+        ],
+      },
+    });
+    expect(edgeProdManifest).toEqual({});
+  });
 });

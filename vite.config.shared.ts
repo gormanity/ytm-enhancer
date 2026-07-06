@@ -141,6 +141,11 @@ function copyAssets(browser: string, isDev: boolean): Plugin {
         resolve(__dirname, "src/content/quality-bridge.js"),
         resolve(outDir, "quality-bridge.js"),
       );
+
+      copyFileSync(
+        resolve(__dirname, "src/content/queue-thumbnail-bridge.js"),
+        resolve(outDir, "queue-thumbnail-bridge.js"),
+      );
     },
   };
 }

@@ -5,7 +5,9 @@ describe("YTMAdapter", () => {
   let adapter: YTMAdapter;
 
   beforeEach(() => {
+    document.head.innerHTML = "";
     document.body.innerHTML = "";
+    window.history.replaceState({}, "", "/");
     Object.defineProperty(navigator, "mediaSession", {
       configurable: true,
       value: undefined,
@@ -372,6 +374,75 @@ describe("YTMAdapter", () => {
       );
     });
 
+    it("should extract next track artwork from the queue thumbnail bridge attribute", () => {
+      document.body.innerHTML = `
+        <ytmusic-player-queue>
+          <ytmusic-player-queue-item selected>
+            <yt-formatted-string class="song-title">Current Song</yt-formatted-string>
+          </ytmusic-player-queue-item>
+          <ytmusic-player-queue-item
+            data-ytm-enhancer-thumbnail-url="https://yt3.googleusercontent.com/next-from-bridge=w120-h120-l90-rj"
+          >
+            <yt-img-shadow>
+              <img
+                id="img"
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+              >
+            </yt-img-shadow>
+            <yt-formatted-string class="song-title">Next Song</yt-formatted-string>
+            <yt-formatted-string class="byline">Next Artist</yt-formatted-string>
+          </ytmusic-player-queue-item>
+        </ytmusic-player-queue>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.nextTrack?.artworkUrl).toBe(
+        "https://yt3.googleusercontent.com/next-from-bridge=w544-h544-l90-rj",
+      );
+    });
+
+    it("should extract next track artwork from queue item data when the rendered thumbnail is a placeholder", () => {
+      document.body.innerHTML = `
+        <ytmusic-player-queue>
+          <ytmusic-player-queue-item selected>
+            <yt-formatted-string class="song-title">Current Song</yt-formatted-string>
+          </ytmusic-player-queue-item>
+          <ytmusic-player-queue-item id="next-track">
+            <yt-img-shadow>
+              <img
+                id="img"
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+              >
+            </yt-img-shadow>
+            <yt-formatted-string class="song-title">Next Song</yt-formatted-string>
+            <yt-formatted-string class="byline">Next Artist</yt-formatted-string>
+          </ytmusic-player-queue-item>
+        </ytmusic-player-queue>
+      `;
+      Object.defineProperty(document.querySelector("#next-track"), "__data", {
+        configurable: true,
+        value: {
+          data: {
+            thumbnail: {
+              thumbnails: [
+                {
+                  url: "https://yt3.googleusercontent.com/next-from-data=w60-h60-l90-rj",
+                },
+                {
+                  url: "https://yt3.googleusercontent.com/next-from-data=w544-h544-l90-rj",
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      const state = adapter.getPlaybackState();
+      expect(state.nextTrack?.artworkUrl).toBe(
+        "https://yt3.googleusercontent.com/next-from-data=w544-h544-l90-rj",
+      );
+    });
+
     it("should return null next track when the queue has no following item", () => {
       document.body.innerHTML = `
         <ytmusic-player-queue>
@@ -460,6 +531,32 @@ describe("YTMAdapter", () => {
       );
     });
 
+    it("should ignore empty thumbnail sources that resolve to the document base URL", () => {
+      const rootUrl = `${window.location.origin}/`;
+      window.history.replaceState({}, "", `${rootUrl}watch?v=current`);
+      document.head.innerHTML = `<base href="${rootUrl}">`;
+      Object.defineProperty(navigator, "mediaSession", {
+        configurable: true,
+        value: {
+          metadata: {
+            artwork: [
+              { src: "https://lh3.googleusercontent.com/session=w60-h60" },
+            ],
+          },
+        },
+      });
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="">
+        </div>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe(
+        "https://lh3.googleusercontent.com/session=w544-h544-l90-rj",
+      );
+    });
+
     it("should fall back to the song art panel for current artwork", () => {
       document.body.innerHTML = `
         <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
@@ -541,6 +638,19 @@ describe("YTMAdapter", () => {
 
       const state = adapter.getPlaybackState();
       expect(state.artworkUrl).toBe("https://example.com/art.jpg");
+    });
+
+    it("should normalize YouTube WebP thumbnails to JPEG artwork URLs", () => {
+      document.body.innerHTML = `
+        <div class="thumbnail-image-wrapper style-scope ytmusic-player-bar">
+          <img class="image" src="https://i.ytimg.com/vi_webp/wtUdmUTNbO4/mqdefault.webp">
+        </div>
+      `;
+
+      const state = adapter.getPlaybackState();
+      expect(state.artworkUrl).toBe(
+        "https://i.ytimg.com/vi/wtUdmUTNbO4/mqdefault.jpg",
+      );
     });
 
     it("should read repeat mode from the current repeat icon before tooltip text", () => {

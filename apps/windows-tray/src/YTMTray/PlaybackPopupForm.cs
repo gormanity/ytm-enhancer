@@ -1028,6 +1028,7 @@ internal sealed class ArtworkBoxControl : Control
     private readonly string logName;
     private Image? artwork;
     private string? requestedArtworkUrl;
+    private string? loadingArtworkUrl;
 
     public ArtworkBoxControl(
         int cornerRadius,
@@ -1054,6 +1055,7 @@ internal sealed class ArtworkBoxControl : Control
         if (TryLoadPackagedArtwork(artworkUrl, out var packagedArtwork))
         {
             requestedArtworkUrl = artworkUrl;
+            loadingArtworkUrl = null;
             logger?.Log($"{logName} artwork loaded packaged url={artworkUrl}");
             ReplaceArtwork(packagedArtwork);
             return;
@@ -1062,15 +1064,30 @@ internal sealed class ArtworkBoxControl : Control
         if (!IsSupportedArtworkUrl(artworkUrl))
         {
             requestedArtworkUrl = null;
+            loadingArtworkUrl = null;
             ReplaceArtwork(null);
             return;
         }
 
-        if (requestedArtworkUrl == artworkUrl) return;
+        if (requestedArtworkUrl == artworkUrl)
+        {
+            StartArtworkLoadIfReady(artworkUrl);
+            return;
+        }
 
         requestedArtworkUrl = artworkUrl;
         ReplaceArtwork(null);
-        _ = LoadArtworkAsync(artworkUrl!);
+        StartArtworkLoadIfReady(artworkUrl);
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+
+        if (artwork is null && IsSupportedArtworkUrl(requestedArtworkUrl))
+        {
+            StartArtworkLoadIfReady(requestedArtworkUrl);
+        }
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -1130,6 +1147,7 @@ internal sealed class ArtworkBoxControl : Control
 
             if (IsDisposed || !IsHandleCreated)
             {
+                ClearLoadingArtworkUrl(artworkUrl);
                 nextArtwork.Dispose();
                 return;
             }
@@ -1137,6 +1155,8 @@ internal sealed class ArtworkBoxControl : Control
             BeginInvoke(
                 (MethodInvoker)(() =>
                 {
+                    ClearLoadingArtworkUrl(artworkUrl);
+
                     if (requestedArtworkUrl != artworkUrl)
                     {
                         nextArtwork.Dispose();
@@ -1160,6 +1180,8 @@ internal sealed class ArtworkBoxControl : Control
                 BeginInvoke(
                     (MethodInvoker)(() =>
                     {
+                        ClearLoadingArtworkUrl(artworkUrl);
+
                         if (requestedArtworkUrl == artworkUrl)
                         {
                             ReplaceArtwork(null);
@@ -1167,6 +1189,35 @@ internal sealed class ArtworkBoxControl : Control
                     })
                 );
             }
+            else
+            {
+                ClearLoadingArtworkUrl(artworkUrl);
+            }
+        }
+    }
+
+    private void StartArtworkLoadIfReady(string? artworkUrl)
+    {
+        if (
+            string.IsNullOrWhiteSpace(artworkUrl)
+            || artwork is not null
+            || loadingArtworkUrl == artworkUrl
+            || IsDisposed
+            || !IsHandleCreated
+        )
+        {
+            return;
+        }
+
+        loadingArtworkUrl = artworkUrl;
+        _ = LoadArtworkAsync(artworkUrl);
+    }
+
+    private void ClearLoadingArtworkUrl(string artworkUrl)
+    {
+        if (loadingArtworkUrl == artworkUrl)
+        {
+            loadingArtworkUrl = null;
         }
     }
 

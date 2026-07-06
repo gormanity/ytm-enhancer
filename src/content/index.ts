@@ -87,6 +87,8 @@ function safeSendMessage<TResponse>(
   }
 }
 
+safeSendMessage({ type: "inject-queue-thumbnail-bridge" }, () => undefined);
+
 const connectorPlaybackStatePublisher = new ConnectorPlaybackStatePublisher(
   () => adapter.getPlaybackState(),
   (state) => {

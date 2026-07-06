@@ -109,6 +109,7 @@ public sealed class ConnectorApp : IDisposable
     {
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
+        logger.Log(PlaybackStateSummary(state));
 
         if (ShouldKeepStalePlaybackState(state))
         {
@@ -251,7 +252,42 @@ public sealed class ConnectorApp : IDisposable
         && a.Artist == b.Artist
         && a.Album == b.Album
         && a.Year == b.Year
-        && a.ArtworkUrl == b.ArtworkUrl;
+        && a.ArtworkUrl == b.ArtworkUrl
+        && SameTrackMetadata(a.NextTrack, b.NextTrack);
+
+    private static bool SameTrackMetadata(TrackMetadata? a, TrackMetadata? b)
+    {
+        if (a is null || b is null) return a is null && b is null;
+
+        return a.Title == b.Title
+            && a.Artist == b.Artist
+            && a.Album == b.Album
+            && a.Year == b.Year
+            && a.ArtworkUrl == b.ArtworkUrl;
+    }
+
+    private static string PlaybackStateSummary(PlaybackState state) =>
+        string.Join(
+            " ",
+            [
+                "playback state",
+                $"title={LogValue(state.Title)}",
+                $"artist={LogValue(state.Artist)}",
+                $"album={LogValue(state.Album)}",
+                $"artwork={LogValue(state.ArtworkUrl)}",
+                $"nextTrack={LogValue(state.NextTrack?.Title)}",
+                $"nextTrackArtwork={LogValue(state.NextTrack?.ArtworkUrl)}",
+                $"year={state.Year?.ToString() ?? "nil"}",
+                $"playing={state.IsPlaying}",
+                $"progress={Math.Round(state.Progress)}",
+                $"duration={Math.Round(state.Duration)}",
+                $"shuffle={state.IsShuffling?.ToString() ?? "nil"}",
+                $"repeat={state.RepeatMode ?? "nil"}"
+            ]
+        );
+
+    private static string LogValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "nil" : value;
 
     private static bool IsConnectorAvailabilityError(string? code) =>
         code is "host_disabled" or "connector_blocked" or "unsupported_protocol";

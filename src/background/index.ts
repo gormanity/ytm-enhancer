@@ -796,6 +796,20 @@ handler.on("inject-quality-bridge", async (_message, sender) => {
   return { ok: true };
 });
 
+handler.on("inject-queue-thumbnail-bridge", async (_message, sender) => {
+  const tabId = sender?.tab?.id;
+  if (tabId === undefined) return { ok: false, error: "No tab ID" };
+  if (isYTMTabSuppressed(tabId)) {
+    return { ok: false, error: "Disabled while the dev build is active" };
+  }
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["queue-thumbnail-bridge.js"],
+    world: "MAIN",
+  });
+  return { ok: true };
+});
+
 handler.on("get-stream-quality", async () => {
   return { ok: true, data: await ytm.getStreamQuality() };
 });
