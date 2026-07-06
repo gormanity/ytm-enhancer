@@ -6,6 +6,8 @@ namespace YTMTray;
 
 internal static class TrayIconFactory
 {
+    private static readonly Color StatusIconColor = Color.FromArgb(232, 232, 238);
+
     public static Icon Create(bool isPlaying)
     {
         using var bitmap = new Bitmap(32, 32);
@@ -17,11 +19,13 @@ internal static class TrayIconFactory
         var resourceName = isPlaying
             ? StatusSvgIconRenderer.PlayingResourceName
             : StatusSvgIconRenderer.IdleResourceName;
-        var color = isPlaying
-            ? Color.FromArgb(255, 235, 82, 82)
-            : Color.FromArgb(232, 232, 238);
 
-        StatusSvgIconRenderer.Draw(graphics, resourceName, new Rectangle(2, 2, 28, 28), color);
+        StatusSvgIconRenderer.Draw(
+            graphics,
+            resourceName,
+            new Rectangle(2, 2, 28, 28),
+            StatusIconColor
+        );
 
         var handle = bitmap.GetHicon();
         try

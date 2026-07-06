@@ -215,6 +215,7 @@ describe("Windows tray connector scaffold", () => {
   });
 
   it("keeps menu bar and Windows tray shared icons in sync", () => {
+    const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
     const sharedStatusIcon = readRepo(
       "packages/connector-ui-assets/status/extension-icon-monochrome.svg",
     );
@@ -230,6 +231,11 @@ describe("Windows tray connector scaffold", () => {
 
     expect(menuBarStatusIcon).toBe(sharedStatusIcon);
     expect(menuBarPlayingStatusIcon).toBe(sharedPlayingStatusIcon);
+    expect(trayIconFactory).toContain(
+      "StatusSvgIconRenderer.PlayingResourceName",
+    );
+    expect(trayIconFactory).toContain("StatusIconColor");
+    expect(trayIconFactory).not.toContain("235, 82, 82");
   });
 
   it("captures Windows tray release screenshots from real connector playback", () => {
