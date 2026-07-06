@@ -11,6 +11,7 @@ public sealed class ConnectorApp : IDisposable
     private readonly NativeAppLogger logger;
     private int nextRequestNumber;
     private bool ready;
+    private bool disposed;
     private PlaybackState? lastAcceptedPlaybackState;
     private Timer? playbackStateRetry;
     private Timer? playbackStateStaleTimeout;
@@ -43,6 +44,7 @@ public sealed class ConnectorApp : IDisposable
 
     public void Dispose()
     {
+        disposed = true;
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
         connection.Dispose();
@@ -96,6 +98,11 @@ public sealed class ConnectorApp : IDisposable
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
         tray.UpdateConnectionStatus("Disconnected");
+
+        if (!disposed)
+        {
+            _ = connection.SendAsync(ConnectorProtocol.Hello(NextRequestId("hello")));
+        }
     }
 
     private void HandlePlaybackState(PlaybackState state)

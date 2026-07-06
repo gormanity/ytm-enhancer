@@ -10,6 +10,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("protocol manifest uses tray connector identity", ProtocolManifest),
     ("native messaging codec round trips JSON frames", NativeMessagingCodecRoundTrip),
     ("connector app handshakes and subscribes after ready", ConnectorAppHandshake),
+    ("connector app queues a fresh handshake after disconnect", ConnectorAppReconnectHandshake),
     ("connector app routes uninstall requests", ConnectorAppUninstallRequest),
     ("connector app updates tray playback state", ConnectorAppPlaybackState),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
@@ -90,6 +91,26 @@ static async Task ConnectorAppHandshake()
     AssertEqual("Connected", tray.Status);
     AssertEqual("connector.subscribe", connection.MessageTypeAt(1));
     AssertEqual("playback.getState", connection.MessageTypeAt(2));
+    await Task.CompletedTask;
+}
+
+static async Task ConnectorAppReconnectHandshake()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(connection, tray);
+
+    app.Start();
+    connection.Emit(new HostMessage
+    {
+        Type = "connector.ready",
+        RequestId = "hello-1"
+    });
+
+    connection.Disconnect();
+
+    AssertEqual("Disconnected", tray.Status);
+    AssertEqual("connector.hello", connection.MessageTypeAt(3));
     await Task.CompletedTask;
 }
 
@@ -454,11 +475,13 @@ static async Task AssertThrowsAsync<T>(Func<Task> action, string expectedMessage
 sealed class FakeConnection : IConnectorConnection
 {
     private Action<HostMessage>? onMessage;
+    private Action? onDisconnect;
     public List<object> SentMessages { get; } = [];
 
     public void Start(Action<HostMessage> onMessage, Action onDisconnect)
     {
         this.onMessage = onMessage;
+        this.onDisconnect = onDisconnect;
     }
 
     public Task SendAsync(object message, CancellationToken cancellationToken = default)
@@ -468,6 +491,7 @@ sealed class FakeConnection : IConnectorConnection
     }
 
     public void Emit(HostMessage message) => onMessage?.Invoke(message);
+    public void Disconnect() => onDisconnect?.Invoke();
 
     public string MessageTypeAt(int index)
     {

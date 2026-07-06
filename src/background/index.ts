@@ -26,6 +26,7 @@ import {
   CONNECTORS_KNOWN_STATE_KEY,
   createConnectedAppsSettings,
   FIRST_PARTY_CONNECTED_APP_DEFINITIONS,
+  FIRST_PARTY_CLI_CONNECTOR_ID,
   FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
   firstPartyConnectedAppDefinition,
   normalizeKnownConnectors,
@@ -185,6 +186,16 @@ function isMissingNativeHostError(message: string): boolean {
 
 function isNativeHostExitError(message: string | null): boolean {
   return /native host (has )?exited/i.test(message ?? "");
+}
+
+function shouldKeepNativeHostExitDiagnostic(
+  firstPartyApp: Pick<FirstPartyConnectedApp, "id">,
+  diagnostic: NativeHostDiagnostic,
+): boolean {
+  return (
+    firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID &&
+    isNativeHostExitError(diagnostic.lastError)
+  );
 }
 
 function nativeMessagingConnectionId(hostName: string): string {
@@ -387,7 +398,7 @@ function shouldRecheckNativeHostAvailability(
   if (diagnostic.availability === "available") return false;
   if (
     diagnostic.availability === "error" &&
-    isNativeHostExitError(diagnostic.lastError)
+    shouldKeepNativeHostExitDiagnostic(firstPartyApp, diagnostic)
   ) {
     return false;
   }

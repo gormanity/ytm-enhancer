@@ -104,9 +104,17 @@ describe("connector host background gating", () => {
     expect(
       functionBody("shouldRecheckNativeHostAvailability", false),
     ).toContain('diagnostic.availability === "missing"');
+    expect(functionBody("shouldKeepNativeHostExitDiagnostic", false)).toContain(
+      "isNativeHostExitError(diagnostic.lastError)",
+    );
+    expect(functionBody("shouldKeepNativeHostExitDiagnostic", false)).toContain(
+      "firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID",
+    );
     expect(
       functionBody("shouldRecheckNativeHostAvailability", false),
-    ).toContain("isNativeHostExitError(diagnostic.lastError)");
+    ).toContain(
+      "shouldKeepNativeHostExitDiagnostic(firstPartyApp, diagnostic)",
+    );
     expect(
       functionBody("recheckFirstPartyNativeHostAvailability", false),
     ).toContain("restartFirstPartyNativeHostTransport(definition)");

@@ -5,6 +5,8 @@ node_modules/
 .remote-qa.env
 apps/*/.build/
 apps/cli/build/
+apps/windows-tray/**/bin/
+apps/windows-tray/**/obj/
 dist/
 dist-dev/
 playwright-report/
