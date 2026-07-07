@@ -43,8 +43,14 @@ ssh_windows() {
 }
 
 usage() {
-  echo "Usage: $0 [--shell <powershell-script> | -- <command...>]" >&2
+  echo "Usage: $0 [--preserve-apps] [--shell <powershell-script> | -- <command...>]" >&2
 }
+
+preserve_apps="false"
+while [ "$#" -gt 0 ] && [ "${1:-}" = "--preserve-apps" ]; do
+  preserve_apps="true"
+  shift
+done
 
 if [ -z "$windows_host" ] || [ -z "$windows_user" ] || [ -z "$windows_work_root" ]; then
   echo "Windows QA target is not configured." >&2
@@ -100,6 +106,11 @@ run_direct() {
   fi
 
   target_literal="$(ps_quote "$windows_work_root")"
+  sync_cleanup_script="Remove-QaTree -Path \$target"
+  if [ "$preserve_apps" = "true" ]; then
+    sync_cleanup_script=""
+  fi
+
   sync_script="
 \$ErrorActionPreference = 'Stop'
 \$ProgressPreference = 'SilentlyContinue'
@@ -146,7 +157,7 @@ function Remove-QaTree {
     throw \"Unable to remove Windows QA work root: \$Path\"
   }
 }
-Remove-QaTree -Path \$target
+$sync_cleanup_script
 New-Item -ItemType Directory -Force -Path \$target | Out-Null
 tar -xzf - -C \$target
 "
@@ -201,6 +212,11 @@ run_macos_intermediary() {
     exit 1
   fi
 
+  preserve_option=""
+  if [ "$preserve_apps" = "true" ]; then
+    preserve_option="--preserve-apps "
+  fi
+
   remote_command='
 set -eu
 
@@ -213,7 +229,7 @@ REMOTE_QA_WINDOWS_WORK_ROOT='"$(quote "$windows_work_root")"' \
 REMOTE_QA_WINDOWS_SSH_KEY='"$(quote "$windows_ssh_key")"' \
 REMOTE_QA_WINDOWS_PNPM_NODE_LINKER='"$(quote "$windows_pnpm_node_linker")"' \
 REMOTE_QA_WINDOWS_PNPM_PACKAGE_IMPORT_METHOD='"$(quote "$windows_pnpm_package_import_method")"' \
-scripts/remote/windows-qa/run.sh --shell '"$(quote "$windows_script")"'
+scripts/remote/windows-qa/run.sh '"$preserve_option"'--shell '"$(quote "$windows_script")"'
 '
 
   "$macos_runner" --shell "$remote_command"

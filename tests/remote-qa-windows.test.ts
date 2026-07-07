@@ -30,6 +30,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-release-screenshot.ps1");
     expect(docs).toContain("scripts/windows-qa/tray-button-smoke.ps1");
+    expect(docs).toContain("scripts/windows-qa/tray-contention-smoke.ps1");
     expect(docs).toContain("install-ui-agent.ps1");
     expect(docs).toContain("WindowsQaAgent");
     expect(docs).toContain("start-ui-agent.cmd");
@@ -48,6 +49,9 @@ describe("Windows remote QA scaffold", () => {
       "scripts/remote/windows-qa/tray-release-screenshot.sh",
     );
     expect(docs).toContain("scripts/remote/windows-qa/tray-button-smoke.sh");
+    expect(docs).toContain(
+      "scripts/remote/windows-qa/tray-contention-smoke.sh",
+    );
     expect(docs).toContain("Connection timed out during banner exchange");
     expect(docs).toContain("OpenSSH-Server-In-TCP");
     expect(docs).toContain("administrators_authorized_keys");
@@ -146,6 +150,9 @@ describe("Windows remote QA scaffold", () => {
     );
     expect(runner).toContain("run_direct");
     expect(runner).toContain("run_macos_intermediary");
+    expect(runner).toContain("--preserve-apps");
+    expect(runner).toContain('preserve_apps="true"');
+    expect(runner).toContain('sync_cleanup_script=""');
     expect(runner).toContain("REMOTE_QA_CONFIG=/dev/null");
     expect(runner).toContain("REMOTE_QA_WINDOWS_HOST");
     expect(runner).toContain("REMOTE_QA_WINDOWS_PNPM_NODE_LINKER");
@@ -486,5 +493,38 @@ describe("Windows remote QA scaffold", () => {
     expect(trayE2e).toContain("YTM_TRAY_LOG_PATH");
     expect(trayE2e).toContain("requestId=focus-");
     expect(trayE2e).toContain("Microsoft Edge and Firefox");
+  });
+
+  it("automates Windows tray browser contention smoke against Firefox", () => {
+    const contentionSmoke = read(
+      "scripts/windows-qa/tray-contention-smoke.ps1",
+    );
+    const contentionSmokeShell = read(
+      "scripts/remote/windows-qa/tray-contention-smoke.sh",
+    );
+    const contentionE2e = read("tests/e2e/windows-tray-contention.spec.ts");
+
+    expect(contentionSmoke).toContain(
+      '$env:YTME_E2E_WINDOWS_TRAY_CONTENTION = "1"',
+    );
+    expect(contentionSmoke).toContain(
+      "YTME_WINDOWS_TRAY_CONTENTION_OWNER_LABEL",
+    );
+    expect(contentionSmoke).toContain("Assert-ActiveBrowserOwner");
+    expect(contentionSmoke).toContain("Assert-FirefoxNativeHostRegistered");
+    expect(contentionSmoke).toContain("playwright install firefox");
+    expect(contentionSmoke).toContain("Invoke-Pnpm run dev:build:firefox");
+    expect(contentionSmoke).toContain(
+      "playwright test tests/e2e/windows-tray-contention.spec.ts --project=firefox --workers=1",
+    );
+    expect(contentionSmokeShell).toContain("--preserve-apps");
+    expect(contentionSmokeShell).toContain(
+      "scripts\\windows-qa\\tray-contention-smoke.ps1",
+    );
+    expect(contentionE2e).toContain("YTME_E2E_WINDOWS_TRAY_CONTENTION");
+    expect(contentionE2e).toContain("YTM Tray is already connected to");
+    expect(contentionE2e).toContain("Already Connected");
+    expect(contentionE2e).toContain("Retry Tray");
+    expect(contentionE2e).toContain('testInfo.project.name !== "firefox"');
   });
 });

@@ -879,6 +879,26 @@ verifies the browser fixture receives the expected events. The browser projects
 run serially because the Windows tray process and native messaging registry
 entries are user-global resources.
 
+After one browser is connected to the tray app, run the Firefox contention smoke
+to verify that a second browser gets explicit ownership guidance:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-contention-smoke.ps1
+```
+
+Run the same smoke through the configured Windows transport:
+
+```sh
+scripts/remote/windows-qa/tray-contention-smoke.sh
+```
+
+This smoke preserves the active Windows desktop session and existing app
+processes. It expects YTM Tray to already be connected to Microsoft Edge (dev),
+then launches Firefox and verifies the Connected Apps UI reports that another
+browser owns the tray connection. Set `YTME_WINDOWS_TRAY_CONTENTION_OWNER_LABEL`
+when validating a different owning browser label.
+
 ## Connector Smokes
 
 The CLI connector stack is not always present on `main`. Run the CLI smoke only
