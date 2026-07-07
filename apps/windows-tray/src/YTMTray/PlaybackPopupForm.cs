@@ -1018,7 +1018,7 @@ internal sealed class ArtworkBoxControl : Control
 {
     private static readonly Color BackgroundColor = Color.FromArgb(28, 28, 31);
     private static readonly Color BorderColor = Color.FromArgb(68, 68, 74);
-    private static readonly Color PlaceholderColor = Color.FromArgb(138, 138, 146);
+    private static readonly Color PlaceholderColor = Color.FromArgb(174, 174, 182);
     private static readonly HttpClient HttpClient = new();
     private const string PackagedArtworkScheme = "ytm-tray-resource";
     private const string FixtureArtworkHost = "ytm-enhancer.local";
@@ -1231,69 +1231,38 @@ internal sealed class ArtworkBoxControl : Control
 
     private void DrawPlaceholder(Graphics graphics)
     {
-        using var albumBrush = new LinearGradientBrush(
-            new Rectangle(0, 0, Math.Max(1, Width), Math.Max(1, Height)),
-            Color.FromArgb(238, 151, 116),
-            Color.FromArgb(34, 86, 94),
-            LinearGradientMode.ForwardDiagonal
-        );
-        using var sunBrush = new SolidBrush(Color.FromArgb(168, 255, 183, 121));
-        using var hazeBrush = new SolidBrush(Color.FromArgb(72, 255, 255, 255));
-        using var wavePen = new Pen(Color.FromArgb(82, 255, 255, 255), Math.Max(1, Height / 42f))
+        var stemX = Width * 0.58f;
+        var stemTop = Height * 0.18f;
+        var stemBottom = Height * 0.66f;
+        var stemWidth = Math.Max(3.5f, Width / 13f);
+        var flagHeight = Height * 0.2f;
+        using var noteBrush = new SolidBrush(PlaceholderColor);
+        using var notePen = new Pen(PlaceholderColor, stemWidth)
         {
             StartCap = LineCap.Round,
-            EndCap = LineCap.Round
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round
         };
-        using var pen = new Pen(PlaceholderColor, Math.Max(2, Width / 18f))
-        {
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round
-        };
-        using var brush = new SolidBrush(Color.FromArgb(196, 240, 240, 245));
 
-        graphics.FillRectangle(albumBrush, 0, 0, Width, Height);
-        graphics.FillEllipse(
-            sunBrush,
-            Width * 0.22f,
-            Height * 0.18f,
-            Width * 0.56f,
-            Height * 0.56f
-        );
-        graphics.FillRectangle(hazeBrush, 0, Height * 0.56f, Width, Height * 0.44f);
-        graphics.DrawBezier(
-            wavePen,
-            Width * 0.08f,
-            Height * 0.66f,
-            Width * 0.28f,
-            Height * 0.56f,
-            Width * 0.52f,
-            Height * 0.74f,
-            Width * 0.92f,
-            Height * 0.61f
-        );
-        graphics.DrawBezier(
-            wavePen,
-            Width * 0.03f,
-            Height * 0.77f,
-            Width * 0.28f,
-            Height * 0.68f,
-            Width * 0.58f,
-            Height * 0.88f,
-            Width * 0.98f,
-            Height * 0.72f
+        using var flagPath = new GraphicsPath();
+        flagPath.AddPolygon(
+            new[]
+            {
+                new PointF(stemX - stemWidth / 2f, stemTop),
+                new PointF(Width * 0.78f, stemTop - Height * 0.05f),
+                new PointF(Width * 0.78f, stemTop + flagHeight * 0.55f),
+                new PointF(stemX - stemWidth / 2f, stemTop + flagHeight)
+            }
         );
 
-        var stemX = Width * 0.57f;
-        var topY = Height * 0.26f;
-        var bottomY = Height * 0.62f;
-        graphics.DrawLine(pen, stemX, topY, stemX, bottomY);
-        graphics.DrawLine(pen, stemX, topY, Width * 0.74f, topY + Height * 0.08f);
+        graphics.FillPath(noteBrush, flagPath);
+        graphics.DrawLine(notePen, stemX, stemTop, stemX, stemBottom);
         graphics.FillEllipse(
-            brush,
-            Width * 0.29f,
-            Height * 0.55f,
-            Width * 0.22f,
-            Height * 0.18f
+            noteBrush,
+            Width * 0.28f,
+            Height * 0.58f,
+            Width * 0.26f,
+            Height * 0.2f
         );
     }
 

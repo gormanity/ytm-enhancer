@@ -214,6 +214,24 @@ describe("Windows tray connector scaffold", () => {
     expect(renderer).not.toContain("PackageReference");
   });
 
+  it("uses a neutral macOS-style artwork placeholder", () => {
+    const popupForm = read("src/YTMTray/PlaybackPopupForm.cs");
+    const artworkBox = popupForm.match(
+      /internal sealed class ArtworkBoxControl[\s\S]+?private static bool IsSupportedArtworkUrl/,
+    )?.[0];
+
+    expect(artworkBox).toBeDefined();
+    expect(artworkBox).toContain("BackgroundColor");
+    expect(artworkBox).toContain("BorderColor");
+    expect(artworkBox).toContain("PlaceholderColor");
+    expect(artworkBox).toContain("DrawPlaceholder");
+    expect(artworkBox).toContain("notePen");
+    expect(artworkBox).toContain("FillEllipse");
+    expect(artworkBox).not.toContain("albumBrush");
+    expect(artworkBox).not.toContain("sunBrush");
+    expect(artworkBox).not.toContain("LinearGradientMode.ForwardDiagonal");
+  });
+
   it("keeps menu bar and Windows tray shared icons in sync", () => {
     const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
     const sharedStatusIcon = readRepo(
