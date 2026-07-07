@@ -515,6 +515,9 @@ describe("Windows remote QA scaffold", () => {
     expect(contentionSmoke).toContain("Assert-ActiveBrowserOwner");
     expect(contentionSmoke).toContain("Assert-FirefoxNativeHostRegistered");
     expect(contentionSmoke).toContain("Write-PreflightSummary");
+    expect(contentionSmoke).toContain("Write-StatusLine");
+    expect(contentionSmoke).toContain("[Console]::Out.WriteLine");
+    expect(contentionSmoke).not.toContain("Write-Host");
     expect(contentionSmoke).toContain("YTM Tray contention preflight passed.");
     expect(contentionSmoke).toContain("playwright install firefox");
     expect(contentionSmoke).toContain("Invoke-Pnpm run dev:build:firefox");

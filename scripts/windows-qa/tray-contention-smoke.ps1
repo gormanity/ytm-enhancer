@@ -36,6 +36,12 @@ function ConvertTo-PreflightJson {
   return $Summary | ConvertTo-Json -Depth 6 -Compress
 }
 
+function Write-StatusLine {
+  param([Parameter(Mandatory = $true)][string] $Message)
+
+  [Console]::Out.WriteLine($Message)
+}
+
 function Get-ActiveBrowserSummary {
   $Summary = [ordered]@{
     activeBrowserPath = $ActiveBrowserPath
@@ -92,7 +98,7 @@ function Write-PreflightSummary {
     $Summary.sourceDisplayName
   }
 
-  Write-Host (
+  Write-StatusLine (
     "YTM Tray contention preflight: expectedOwner='{0}'; activeOwner='{1}'; processId='{2}'; processRunning='{3}'; activeBrowserPath='{4}'" -f
       $ExpectedOwner,
       $ActiveOwner,
@@ -161,7 +167,7 @@ Assert-ActiveBrowserOwner -ExpectedOwner $ExpectedOwner
 Assert-FirefoxNativeHostRegistered
 
 if ($PreflightOnly) {
-  Write-Host "YTM Tray contention preflight passed."
+  Write-StatusLine "YTM Tray contention preflight passed."
   exit 0
 }
 
