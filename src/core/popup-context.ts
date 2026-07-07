@@ -97,6 +97,9 @@ export function createPopupYtmRuntimeClient(
     setStreamQuality(value) {
       return runtime.command({ type: "set-stream-quality", value });
     },
+    syncSelectedTabFaviconIndicator() {
+      return Promise.resolve();
+    },
     broadcast(message) {
       return runtime.command({ type: "ytm-broadcast", message });
     },

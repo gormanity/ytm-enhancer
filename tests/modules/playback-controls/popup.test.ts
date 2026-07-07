@@ -98,6 +98,7 @@ function createModuleContext(
       setPlaybackSpeed: vi.fn().mockResolvedValue(undefined),
       getStreamQuality: vi.fn().mockResolvedValue({ current: "2" } as never),
       setStreamQuality: vi.fn().mockResolvedValue(undefined),
+      syncSelectedTabFaviconIndicator: vi.fn().mockResolvedValue(undefined),
       broadcast: vi.fn().mockResolvedValue(undefined),
       ...ytmOverrides,
     },
@@ -162,6 +163,9 @@ describe("playback controls popup view", () => {
             return;
           case "get-volume":
             callback?.({ ok: true, data: 50 });
+            return;
+          case "get-tab-favicon-indicator-enabled":
+            callback?.({ ok: true, data: true });
             return;
           case "get-playback-speed":
             callback?.({ ok: true, data: "1" });
@@ -273,6 +277,32 @@ describe("playback controls popup view", () => {
       const firstIcon =
         container.querySelector<HTMLImageElement>(".tab-item img");
       expect(firstIcon?.src).toContain("data:image/png");
+    });
+
+    cleanup?.();
+  });
+
+  it("wires the selected tab favicon indicator toggle", async () => {
+    const view = createPlaybackControlsPopupView(createModuleContext());
+    const container = document.createElement("div");
+    const cleanup = view.render(container);
+
+    const toggle = await vi.waitFor(() => {
+      const input = container.querySelector<HTMLInputElement>(
+        '[data-role="quick-tab-favicon-indicator-toggle"]',
+      );
+      expect(input).not.toBeNull();
+      expect(input!.disabled).toBe(false);
+      return input!;
+    });
+
+    expect(toggle.checked).toBe(true);
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: "set-tab-favicon-indicator-enabled",
+      enabled: false,
     });
 
     cleanup?.();

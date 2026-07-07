@@ -26,6 +26,7 @@ function createMockYtmClient(): YtmRuntimeClient {
     setPlaybackSpeed: vi.fn(),
     getStreamQuality: vi.fn(),
     setStreamQuality: vi.fn(),
+    syncSelectedTabFaviconIndicator: vi.fn(),
     broadcast: vi.fn(),
   };
 }

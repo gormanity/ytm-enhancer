@@ -151,4 +151,48 @@ describe("YtmRuntimeClient", () => {
     expect(chrome.tabs.update).toHaveBeenCalledWith(4, { active: true });
     expect(chrome.windows.update).toHaveBeenCalledWith(11, { focused: true });
   });
+
+  it("syncs the favicon indicator only to the selected YTM tab", async () => {
+    const { client } = createClient({ getSelectedTabId: () => 2 });
+    vi.mocked(chrome.tabs.query as TabQuery).mockResolvedValue([
+      { id: 1, title: "Inactive - YouTube Music", active: false },
+      { id: 2, title: "Selected - YouTube Music", active: true },
+    ] as chrome.tabs.Tab[]);
+    vi.mocked(chrome.tabs.sendMessage as TabSendMessage).mockResolvedValue({
+      ok: true,
+    });
+
+    await client.syncSelectedTabFaviconIndicator(true);
+
+    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, {
+      type: "set-tab-favicon-indicator",
+      enabled: false,
+    });
+    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(2, {
+      type: "set-tab-favicon-indicator",
+      enabled: true,
+    });
+  });
+
+  it("restores favicon indicators on all YTM tabs when disabled", async () => {
+    const { client } = createClient({ getSelectedTabId: () => 2 });
+    vi.mocked(chrome.tabs.query as TabQuery).mockResolvedValue([
+      { id: 1, title: "Inactive - YouTube Music", active: false },
+      { id: 2, title: "Selected - YouTube Music", active: true },
+    ] as chrome.tabs.Tab[]);
+    vi.mocked(chrome.tabs.sendMessage as TabSendMessage).mockResolvedValue({
+      ok: true,
+    });
+
+    await client.syncSelectedTabFaviconIndicator(false);
+
+    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, {
+      type: "set-tab-favicon-indicator",
+      enabled: false,
+    });
+    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(2, {
+      type: "set-tab-favicon-indicator",
+      enabled: false,
+    });
+  });
 });

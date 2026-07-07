@@ -43,6 +43,7 @@ export interface YtmRuntimeClient {
   setPlaybackSpeed(rate: number): Promise<void>;
   getStreamQuality(): Promise<string | null>;
   setStreamQuality(quality: string): Promise<void>;
+  syncSelectedTabFaviconIndicator(enabled: boolean): Promise<void>;
   broadcast(message: Record<string, unknown>): Promise<void>;
 }
 
@@ -262,6 +263,30 @@ export function createYtmRuntimeClient(
 
     async setStreamQuality(quality: string): Promise<void> {
       await relayToTarget({ type: "set-stream-quality", value: quality });
+    },
+
+    async syncSelectedTabFaviconIndicator(enabled: boolean): Promise<void> {
+      const tabs = await findAllYTMTabs();
+      const currentSelectedTabId = options.getSelectedTabId();
+      const selectedTabId = resolveSelectedTabId(tabs, currentSelectedTabId);
+      if (selectedTabId !== currentSelectedTabId) {
+        await setSelectedTabId(selectedTabId);
+        options.onTabsChanged?.();
+      }
+
+      await Promise.all(
+        tabs.map(async (tab) => {
+          if (tab.id === undefined || options.isTabSuppressed(tab.id)) return;
+          try {
+            await chrome.tabs.sendMessage(tab.id, {
+              type: "set-tab-favicon-indicator",
+              enabled: enabled && tab.id === selectedTabId,
+            });
+          } catch {
+            // The tab may not have an active content runtime yet.
+          }
+        }),
+      );
     },
 
     async broadcast(message: Record<string, unknown>): Promise<void> {

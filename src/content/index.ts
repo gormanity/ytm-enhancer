@@ -16,6 +16,7 @@ import { AutoPlayController } from "./auto-play";
 import { createDevBuildRuntimeCoordinator } from "./dev-build-coordinator";
 import { installYtmTooltipDismissal } from "./ytm-tooltip-dismissal";
 import { ConnectorPlaybackStatePublisher } from "./connector-playback-state-publisher";
+import { TabFaviconIndicator } from "./tab-favicon-indicator";
 import {
   DislikeObserver,
   shouldAutoSkipDislikedChange,
@@ -98,9 +99,15 @@ const connectorPlaybackStatePublisher = new ConnectorPlaybackStatePublisher(
     );
   },
 );
+const tabFaviconIndicator = new TabFaviconIndicator();
 
 handler.on("set-connector-playback-state-streaming", async (message) => {
   connectorPlaybackStatePublisher.setEnabled(message.enabled === true);
+  return { ok: true };
+});
+
+handler.on("set-tab-favicon-indicator", async (message) => {
+  tabFaviconIndicator.setEnabled(message.enabled === true);
   return { ok: true };
 });
 
@@ -528,6 +535,7 @@ function stopContentRuntime(): void {
   audioBridge.destroy();
   qualityBridge.destroy();
   connectorPlaybackStatePublisher.stop();
+  tabFaviconIndicator.destroy();
 
   dislikeObserver?.stop();
   dislikeObserver = null;

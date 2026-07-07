@@ -6,7 +6,7 @@ import {
 } from "@/core/playback-controller";
 import { renderPopupTemplate } from "@/popup/template";
 import { createSvgIconTemplate, setButtonSvgIcon } from "@/popup/svg-icon";
-import { bindModuleRange } from "@/popup/module-ui";
+import { bindModuleRange, bindModuleToggle } from "@/popup/module-ui";
 import { createProgressBar } from "@/ui/progress-bar";
 import ytmTabFallbackIconUrl from "@/assets/ytm-logo.svg";
 import { renderPlaybackSpeedSelectControl } from "./playback-speed/popup";
@@ -202,6 +202,10 @@ export function createPlaybackControlsPopupView(
         get: async () => Math.round((await context.ytm.getVolume()) * 100),
         set: (volume) => context.ytm.setVolume(volume / 100),
         unit: "%",
+      });
+      bindModuleToggle(container, "quick-tab-favicon-indicator-toggle", {
+        getType: "get-tab-favicon-indicator-enabled",
+        setType: "set-tab-favicon-indicator-enabled",
       });
       renderPlaybackSpeedSelectControl(speedSlot, context);
       renderStreamQualitySelectControl(qualitySlot, context);

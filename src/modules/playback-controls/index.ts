@@ -1,5 +1,6 @@
 import { error } from "@/core/logger";
 import type { HotkeyHandlerRegistry } from "@/core/hotkey-registry";
+import type { ModuleHandlerRegistry } from "@/core/messaging";
 import {
   createPlaybackController,
   createYtmPlaybackDriver,
@@ -26,12 +27,28 @@ export class PlaybackControlsModule implements FeatureModule {
     "Now playing, volume, speed, quality, and tab management";
 
   private enabled = true;
+  private tabFaviconIndicatorEnabled = true;
   private hotkeyPlaybackController: PlaybackController | null = null;
+  private tabChangeContext: ModuleContext | null = null;
+  private readonly tabChangeListener = (): void => {
+    if (!this.tabChangeContext) return;
+    void this.syncTabFaviconIndicator(this.tabChangeContext);
+  };
 
-  init(): void {}
+  init(context?: ModuleContext): void {
+    if (!context) return;
+    this.tabChangeContext = context;
+    context.events.on("ytm-tabs-changed", this.tabChangeListener);
+  }
+
   destroy(): void {
     this.hotkeyPlaybackController?.destroy();
     this.hotkeyPlaybackController = null;
+    this.tabChangeContext?.events.off(
+      "ytm-tabs-changed",
+      this.tabChangeListener,
+    );
+    this.tabChangeContext = null;
   }
 
   isEnabled(): boolean {
@@ -42,8 +59,41 @@ export class PlaybackControlsModule implements FeatureModule {
     this.enabled = enabled;
   }
 
+  getTabFaviconIndicatorEnabled(): boolean {
+    return this.tabFaviconIndicatorEnabled;
+  }
+
+  setTabFaviconIndicatorEnabled(enabled: boolean): void {
+    this.tabFaviconIndicatorEnabled = enabled;
+  }
+
   getPopupViews(context: ModuleContext): PopupView[] {
     return [createPlaybackControlsPopupView(context)];
+  }
+
+  async syncContentState(context: ModuleContext): Promise<void> {
+    await this.syncTabFaviconIndicator(context);
+  }
+
+  registerHandlers(
+    registry: ModuleHandlerRegistry,
+    context: ModuleContext,
+  ): void {
+    registry.on("get-tab-favicon-indicator-enabled", async () => ({
+      ok: true,
+      data: this.getTabFaviconIndicatorEnabled(),
+    }));
+
+    registry.on("set-tab-favicon-indicator-enabled", async (message) => {
+      const enabled = message.enabled === true;
+      this.setTabFaviconIndicatorEnabled(enabled);
+      void context.state.saveValue(
+        "playback-controls.tabFaviconIndicatorEnabled",
+        enabled,
+      );
+      await this.syncTabFaviconIndicator(context);
+      return { ok: true };
+    });
   }
 
   registerHotkeys(
@@ -73,5 +123,11 @@ export class PlaybackControlsModule implements FeatureModule {
     registry.register("focus-ytm-tab", async () => {
       await context.ytm.focusTab().catch(() => undefined);
     });
+  }
+
+  private async syncTabFaviconIndicator(context: ModuleContext): Promise<void> {
+    await context.ytm.syncSelectedTabFaviconIndicator(
+      this.getTabFaviconIndicatorEnabled(),
+    );
   }
 }

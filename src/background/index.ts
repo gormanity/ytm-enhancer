@@ -139,6 +139,7 @@ function broadcastPopupMessage(message: PopupRuntimeMessage): void {
 
 function notifyYtmTabsChanged(): void {
   broadcastPopupMessage({ type: "ytm-tabs-changed" });
+  context.events.emit("ytm-tabs-changed", undefined);
 }
 
 function notifyConnectedAppsChanged(): void {
@@ -989,6 +990,9 @@ async function restoreModuleState(): Promise<void> {
   miniPlayer.setEnabled(bool("mini-player.enabled", true));
   miniPlayer.setSuppressNotificationsWhilePipOpen(
     bool("mini-player.suppressNotificationsWhilePipOpen", false),
+  );
+  playbackControls.setTabFaviconIndicatorEnabled(
+    bool("playback-controls.tabFaviconIndicatorEnabled", true),
   );
   knownConnectors = new Map(
     normalizeKnownConnectors(state[CONNECTORS_KNOWN_STATE_KEY]).map(

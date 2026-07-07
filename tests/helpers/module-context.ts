@@ -71,6 +71,7 @@ export function createMockYtmRuntimeClient(
     setPlaybackSpeed: vi.fn().mockResolvedValue(undefined),
     getStreamQuality: vi.fn().mockResolvedValue("2"),
     setStreamQuality: vi.fn().mockResolvedValue(undefined),
+    syncSelectedTabFaviconIndicator: vi.fn().mockResolvedValue(undefined),
     broadcast: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };

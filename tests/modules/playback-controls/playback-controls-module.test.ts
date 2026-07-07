@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createTestModuleContext } from "../../helpers/module-context";
 import { PlaybackControlsModule } from "@/modules/playback-controls";
 import type { ModuleContext } from "@/core/types";
+import type { MessageResponse, ModuleHandlerRegistry } from "@/core/messaging";
 
 interface TestHotkeyRegistry {
   register: ReturnType<typeof vi.fn>;
@@ -9,6 +10,26 @@ interface TestHotkeyRegistry {
 
 interface TestHotkeyModule {
   registerHotkeys?(registry: TestHotkeyRegistry, context: ModuleContext): void;
+}
+
+function createModuleHandlerRegistry() {
+  const handlers = new Map<
+    string,
+    (
+      message: Record<string, unknown>,
+      sender: chrome.runtime.MessageSender,
+    ) => Promise<MessageResponse>
+  >();
+  const registry: ModuleHandlerRegistry = {
+    on(type, handler) {
+      handlers.set(
+        type,
+        handler as typeof handlers extends Map<unknown, infer H> ? H : never,
+      );
+    },
+  };
+
+  return { handlers, registry };
 }
 
 describe("PlaybackControlsModule", () => {
@@ -48,6 +69,10 @@ describe("PlaybackControlsModule", () => {
     expect(module.isEnabled()).toBe(true);
   });
 
+  it("should show the tab favicon indicator by default", () => {
+    expect(module.getTabFaviconIndicatorEnabled()).toBe(true);
+  });
+
   it("should provide popup views", () => {
     const views = module.getPopupViews(createTestModuleContext());
     expect(views).toHaveLength(1);
@@ -57,6 +82,66 @@ describe("PlaybackControlsModule", () => {
   it("should init and destroy without errors", () => {
     expect(() => module.init()).not.toThrow();
     expect(() => module.destroy()).not.toThrow();
+  });
+
+  it("should sync tab favicon indicator state when content state is restored", async () => {
+    const syncSelectedTabFaviconIndicator = vi
+      .fn()
+      .mockResolvedValue(undefined);
+    const context = createTestModuleContext({
+      ytm: { syncSelectedTabFaviconIndicator },
+    });
+
+    module.setTabFaviconIndicatorEnabled(false);
+    await module.syncContentState!(context);
+
+    expect(syncSelectedTabFaviconIndicator).toHaveBeenCalledWith(false);
+  });
+
+  it("should persist tab favicon indicator changes and resync tabs", async () => {
+    const syncSelectedTabFaviconIndicator = vi
+      .fn()
+      .mockResolvedValue(undefined);
+    const context = createTestModuleContext({
+      ytm: { syncSelectedTabFaviconIndicator },
+    });
+    const { handlers, registry } = createModuleHandlerRegistry();
+    module.registerHandlers!(registry, context);
+
+    const getResponse = await handlers.get(
+      "get-tab-favicon-indicator-enabled",
+    )!({}, {});
+    expect(getResponse).toEqual({ ok: true, data: true });
+
+    const setResponse = await handlers.get(
+      "set-tab-favicon-indicator-enabled",
+    )!({ enabled: false }, {});
+
+    expect(setResponse).toEqual({ ok: true });
+    expect(module.getTabFaviconIndicatorEnabled()).toBe(false);
+    expect(context.state.saveValue).toHaveBeenCalledWith(
+      "playback-controls.tabFaviconIndicatorEnabled",
+      false,
+    );
+    expect(syncSelectedTabFaviconIndicator).toHaveBeenCalledWith(false);
+  });
+
+  it("should resync tab favicon indicators when YTM tab selection changes", () => {
+    const syncSelectedTabFaviconIndicator = vi.fn();
+    const context = createTestModuleContext({
+      ytm: { syncSelectedTabFaviconIndicator },
+    });
+
+    module.init(context);
+    context.events.emit("ytm-tabs-changed", undefined);
+
+    expect(syncSelectedTabFaviconIndicator).toHaveBeenCalledWith(true);
+
+    module.destroy();
+    syncSelectedTabFaviconIndicator.mockClear();
+    context.events.emit("ytm-tabs-changed", undefined);
+
+    expect(syncSelectedTabFaviconIndicator).not.toHaveBeenCalled();
   });
 
   it("should register playback command hotkeys through the module registry", async () => {
