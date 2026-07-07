@@ -1,12 +1,17 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace YTMTray;
 
 internal static class TrayIconFactory
 {
-    private static readonly Color StatusIconColor = Color.FromArgb(232, 232, 238);
+    private const string PersonalizeRegistryPath =
+        @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+    private const string SystemUsesLightThemeValueName = "SystemUsesLightTheme";
+    private static readonly Color LightThemeStatusIconColor = Color.FromArgb(32, 32, 38);
+    private static readonly Color DarkThemeStatusIconColor = Color.FromArgb(232, 232, 238);
 
     public static Icon Create(bool isPlaying)
     {
@@ -24,7 +29,7 @@ internal static class TrayIconFactory
             graphics,
             resourceName,
             new Rectangle(2, 2, 28, 28),
-            StatusIconColor
+            StatusIconColor()
         );
 
         var handle = bitmap.GetHicon();
@@ -40,4 +45,21 @@ internal static class TrayIconFactory
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool DestroyIcon(IntPtr handle);
+
+    private static Color StatusIconColor() =>
+        IsSystemLightTheme() ? LightThemeStatusIconColor : DarkThemeStatusIconColor;
+
+    private static bool IsSystemLightTheme()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(PersonalizeRegistryPath);
+            return key?.GetValue(SystemUsesLightThemeValueName) is not int value
+                || value != 0;
+        }
+        catch
+        {
+            return true;
+        }
+    }
 }

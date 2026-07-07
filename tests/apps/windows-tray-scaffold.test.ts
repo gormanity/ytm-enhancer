@@ -273,6 +273,9 @@ describe("Windows tray connector scaffold", () => {
       "StatusSvgIconRenderer.PlayingResourceName",
     );
     expect(trayIconFactory).toContain("StatusIconColor");
+    expect(trayIconFactory).toContain("SystemUsesLightTheme");
+    expect(trayIconFactory).toContain("LightThemeStatusIconColor");
+    expect(trayIconFactory).toContain("DarkThemeStatusIconColor");
     expect(trayIconFactory).not.toContain("235, 82, 82");
   });
 
