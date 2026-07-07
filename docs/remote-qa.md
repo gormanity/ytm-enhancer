@@ -893,11 +893,23 @@ Run the same smoke through the configured Windows transport:
 scripts/remote/windows-qa/tray-contention-smoke.sh
 ```
 
+Run only the preflight when you want to verify setup without launching Firefox:
+
+```sh
+YTME_WINDOWS_TRAY_CONTENTION_PREFLIGHT_ONLY=1 \
+scripts/remote/windows-qa/tray-contention-smoke.sh
+```
+
 This smoke preserves the active Windows desktop session and existing app
 processes. It expects YTM Tray to already be connected to Microsoft Edge (dev),
 then launches Firefox and verifies the Connected Apps UI reports that another
 browser owns the tray connection. Set `YTME_WINDOWS_TRAY_CONTENTION_OWNER_LABEL`
-when validating a different owning browser label.
+when validating a different owning browser label:
+
+```sh
+YTME_WINDOWS_TRAY_CONTENTION_OWNER_LABEL="Google Chrome (dev)" \
+scripts/remote/windows-qa/tray-contention-smoke.sh
+```
 
 ## Connector Smokes
 

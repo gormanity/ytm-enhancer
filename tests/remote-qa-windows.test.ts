@@ -510,14 +510,23 @@ describe("Windows remote QA scaffold", () => {
     expect(contentionSmoke).toContain(
       "YTME_WINDOWS_TRAY_CONTENTION_OWNER_LABEL",
     );
+    expect(contentionSmoke).toContain("[switch] $PreflightOnly");
+    expect(contentionSmoke).toContain("Assert-RepoRoot");
     expect(contentionSmoke).toContain("Assert-ActiveBrowserOwner");
     expect(contentionSmoke).toContain("Assert-FirefoxNativeHostRegistered");
+    expect(contentionSmoke).toContain("Write-PreflightSummary");
+    expect(contentionSmoke).toContain("YTM Tray contention preflight passed.");
     expect(contentionSmoke).toContain("playwright install firefox");
     expect(contentionSmoke).toContain("Invoke-Pnpm run dev:build:firefox");
     expect(contentionSmoke).toContain(
       "playwright test tests/e2e/windows-tray-contention.spec.ts --project=firefox --workers=1",
     );
     expect(contentionSmokeShell).toContain("--preserve-apps");
+    expect(contentionSmokeShell).toContain("ps_quote");
+    expect(contentionSmokeShell).toContain("-ExpectedOwner");
+    expect(contentionSmokeShell).toContain(
+      "YTME_WINDOWS_TRAY_CONTENTION_PREFLIGHT_ONLY",
+    );
     expect(contentionSmokeShell).toContain(
       "scripts\\windows-qa\\tray-contention-smoke.ps1",
     );

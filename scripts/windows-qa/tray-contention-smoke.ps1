@@ -3,7 +3,8 @@ param(
       $env:YTME_WINDOWS_TRAY_CONTENTION_OWNER_LABEL
     } else {
       "Microsoft Edge (dev)"
-    })
+    }),
+  [switch] $PreflightOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,28 +30,117 @@ function Get-SourceDisplayName {
   return [string] $Source.name
 }
 
+function ConvertTo-PreflightJson {
+  param([Parameter(Mandatory = $true)] $Summary)
+
+  return $Summary | ConvertTo-Json -Depth 6 -Compress
+}
+
+function Get-ActiveBrowserSummary {
+  $Summary = [ordered]@{
+    activeBrowserPath = $ActiveBrowserPath
+    connectedAt = $null
+    exists = $false
+    processId = $null
+    processRunning = $false
+    readError = $null
+    sourceDisplayName = $null
+    sourceExtensionId = $null
+    sourceIsDevBuild = $null
+    sourceName = $null
+  }
+
+  if (-not (Test-Path -LiteralPath $ActiveBrowserPath)) {
+    return [pscustomobject] $Summary
+  }
+
+  $Summary.exists = $true
+  try {
+    $Connection = Get-Content -LiteralPath $ActiveBrowserPath -Raw |
+      ConvertFrom-Json
+  } catch {
+    $Summary.readError = $_.Exception.Message
+    return [pscustomobject] $Summary
+  }
+
+  $Summary.connectedAt = $Connection.connectedAt
+  $Summary.processId = $Connection.processId
+  if ($Connection.source) {
+    $Summary.sourceDisplayName = Get-SourceDisplayName $Connection.source
+    $Summary.sourceExtensionId = $Connection.source.extensionId
+    $Summary.sourceIsDevBuild = $Connection.source.isDevBuild
+    $Summary.sourceName = $Connection.source.name
+  }
+
+  if ($Connection.processId) {
+    $Process = Get-Process -Id $Connection.processId -ErrorAction SilentlyContinue
+    $Summary.processRunning = $null -ne $Process
+  }
+
+  return [pscustomobject] $Summary
+}
+
+function Write-PreflightSummary {
+  param(
+    [Parameter(Mandatory = $true)] $Summary,
+    [Parameter(Mandatory = $true)][string] $ExpectedOwner
+  )
+
+  $ActiveOwner = if ([string]::IsNullOrWhiteSpace($Summary.sourceDisplayName)) {
+    "<none>"
+  } else {
+    $Summary.sourceDisplayName
+  }
+
+  Write-Host (
+    "YTM Tray contention preflight: expectedOwner='{0}'; activeOwner='{1}'; processId='{2}'; processRunning='{3}'; activeBrowserPath='{4}'" -f
+      $ExpectedOwner,
+      $ActiveOwner,
+      $Summary.processId,
+      $Summary.processRunning,
+      $Summary.activeBrowserPath
+  )
+}
+
+function Assert-RepoRoot {
+  $RepoRoot = (Get-Location).Path
+  $RequiredPaths = @(
+    "package.json",
+    "scripts\windows-qa\ensure-pnpm.ps1",
+    "tests\e2e\windows-tray-contention.spec.ts"
+  )
+
+  foreach ($RelativePath in $RequiredPaths) {
+    $Path = Join-Path $RepoRoot $RelativePath
+    if (-not (Test-Path -LiteralPath $Path)) {
+      throw "Run this smoke from the ytm-enhancer repository root. Missing required path: $RelativePath"
+    }
+  }
+}
+
 function Assert-ActiveBrowserOwner {
   param([Parameter(Mandatory = $true)][string] $ExpectedOwner)
 
-  if (-not (Test-Path -LiteralPath $ActiveBrowserPath)) {
-    throw "YTM Tray is not connected to a browser. Expected active browser file: $ActiveBrowserPath"
+  $Summary = Get-ActiveBrowserSummary
+  Write-PreflightSummary -Summary $Summary -ExpectedOwner $ExpectedOwner
+
+  if (-not $Summary.exists) {
+    throw "YTM Tray is not connected to a browser. Preflight summary: $(ConvertTo-PreflightJson $Summary)"
   }
 
-  $Connection = Get-Content -LiteralPath $ActiveBrowserPath -Raw | ConvertFrom-Json
-  $DisplayName = if ($Connection.source) {
-    Get-SourceDisplayName $Connection.source
-  } else {
-    $null
+  if ($Summary.readError) {
+    throw "Could not read YTM Tray active browser file. Preflight summary: $(ConvertTo-PreflightJson $Summary)"
   }
 
-  if ($DisplayName -ne $ExpectedOwner) {
-    throw "YTM Tray active browser is '$DisplayName', expected '$ExpectedOwner'. Connect the expected browser before running this smoke."
+  if ($Summary.sourceDisplayName -ne $ExpectedOwner) {
+    throw "YTM Tray active browser owner mismatch. Expected '$ExpectedOwner'. Preflight summary: $(ConvertTo-PreflightJson $Summary)"
   }
 
-  $Process = Get-Process -Id $Connection.processId -ErrorAction SilentlyContinue
-  if (-not $Process) {
-    throw "YTM Tray active browser process $($Connection.processId) is not running."
+  if (-not $Summary.processRunning) {
+    throw "YTM Tray active browser process is not running. Preflight summary: $(ConvertTo-PreflightJson $Summary)"
   }
+
+  return $Summary
 }
 
 function Assert-FirefoxNativeHostRegistered {
@@ -64,10 +154,17 @@ $env:CI = "true"
 $env:YTME_E2E_WINDOWS_TRAY_CONTENTION = "1"
 $env:YTME_WINDOWS_TRAY_CONTENTION_OWNER_LABEL = $ExpectedOwner
 
+Assert-RepoRoot
 . "$PSScriptRoot\ensure-pnpm.ps1"
 Ensure-Pnpm
 Assert-ActiveBrowserOwner -ExpectedOwner $ExpectedOwner
 Assert-FirefoxNativeHostRegistered
+
+if ($PreflightOnly) {
+  Write-Host "YTM Tray contention preflight passed."
+  exit 0
+}
+
 Invoke-Pnpm install --frozen-lockfile
 Invoke-Pnpm exec playwright install firefox
 Invoke-Pnpm run dev:build:firefox
