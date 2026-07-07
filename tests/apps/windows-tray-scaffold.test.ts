@@ -232,6 +232,26 @@ describe("Windows tray connector scaffold", () => {
     expect(artworkBox).not.toContain("LinearGradientMode.ForwardDiagonal");
   });
 
+  it("dismisses the playback popup on taskbar and outside clicks", () => {
+    const controller = read("src/YTMTray/TrayController.cs");
+    const hook = read("src/YTMTray/PopupDismissMouseHook.cs");
+
+    expect(controller).toContain("PopupDismissMouseHook");
+    expect(controller).toContain("popup.Deactivate");
+    expect(controller).toContain("popup.VisibleChanged");
+    expect(controller).toContain("InstallPopupDismissal");
+    expect(controller).toContain("HidePopupFromOutsideClick");
+    expect(controller).toContain("suppressTrayClickUntil");
+    expect(controller).toContain("ShouldSuppressTrayClick");
+
+    expect(hook).toContain("WH_MOUSE_LL");
+    expect(hook).toContain("SetWindowsHookEx");
+    expect(hook).toContain("WM_LBUTTONDOWN");
+    expect(hook).toContain("WM_RBUTTONDOWN");
+    expect(hook).toContain("!popup.Bounds.Contains(point)");
+    expect(hook).toContain("CallNextHookEx");
+  });
+
   it("keeps menu bar and Windows tray shared icons in sync", () => {
     const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
     const sharedStatusIcon = readRepo(

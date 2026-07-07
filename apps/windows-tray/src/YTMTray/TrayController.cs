@@ -9,6 +9,7 @@ internal sealed class TrayController : ITrayController, IDisposable
 {
     private const int PopupEdgePadding = 8;
     private const int TaskbarFlyoutClearance = 112;
+    private static readonly TimeSpan TrayClickSuppressWindow = TimeSpan.FromMilliseconds(350);
 
     private readonly NotifyIcon notifyIcon;
     private readonly PlaybackPopupForm popup;
@@ -22,6 +23,8 @@ internal sealed class TrayController : ITrayController, IDisposable
     private WindowsTrayUpdateCheckResult? availableUpdate;
     private ConnectorSource? browserSource;
     private string? updateCheckError;
+    private PopupDismissMouseHook? popupDismissMouseHook;
+    private DateTime suppressTrayClickUntil = DateTime.MinValue;
     private bool updateCheckInProgress;
     private bool updateCheckCompleted;
 
@@ -56,6 +59,14 @@ internal sealed class TrayController : ITrayController, IDisposable
         popup.OnCheckForUpdates = () => _ = CheckForUpdatesAsync(popup, userInitiated: true);
         popup.OnAbout = () => ShowAbout(popup);
         popup.OnQuit = () => OnQuit?.Invoke();
+        popup.Deactivate += (_, _) => HidePopupFromOutsideClick();
+        popup.VisibleChanged += (_, _) =>
+        {
+            if (!popup.Visible)
+            {
+                popupDismissMouseHook?.Uninstall();
+            }
+        };
         _ = popup.Handle;
 
         notifyIcon = new NotifyIcon
@@ -121,6 +132,7 @@ internal sealed class TrayController : ITrayController, IDisposable
     {
         updateCancellation.Cancel();
         updateCancellation.Dispose();
+        popupDismissMouseHook?.Dispose();
         notifyIcon.Visible = false;
         notifyIcon.Dispose();
         aboutDialog?.Dispose();
@@ -374,6 +386,7 @@ internal sealed class TrayController : ITrayController, IDisposable
     private void HandleTrayClick(object? sender, MouseEventArgs args)
     {
         if (args.Button != MouseButtons.Left) return;
+        if (ShouldSuppressTrayClick()) return;
 
         if (popup.Visible)
         {
@@ -395,6 +408,37 @@ internal sealed class TrayController : ITrayController, IDisposable
         );
         popup.Show();
         popup.Activate();
+        InstallPopupDismissal();
+    }
+
+    private void InstallPopupDismissal()
+    {
+        popupDismissMouseHook ??= new PopupDismissMouseHook(
+            popup,
+            () => HidePopupFromOutsideClick(suppressNextTrayClick: true),
+            logger
+        );
+        popupDismissMouseHook.Install();
+    }
+
+    private void HidePopupFromOutsideClick(bool suppressNextTrayClick = false)
+    {
+        if (!popup.Visible) return;
+
+        if (suppressNextTrayClick)
+        {
+            suppressTrayClickUntil = DateTime.UtcNow.Add(TrayClickSuppressWindow);
+        }
+
+        popup.Hide();
+    }
+
+    private bool ShouldSuppressTrayClick()
+    {
+        if (DateTime.UtcNow >= suppressTrayClickUntil) return false;
+
+        suppressTrayClickUntil = DateTime.MinValue;
+        return true;
     }
 
     private void RunOnUiThread(Action action)
