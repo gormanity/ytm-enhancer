@@ -86,6 +86,7 @@ describe("Windows remote QA scaffold", () => {
     const helper = read("scripts/windows-qa/ui-agent-client.ps1");
     const installer = read("scripts/windows-qa/install-ui-agent.ps1");
     const agent = read("scripts/windows-qa/start-ui-agent.ps1");
+    const restarter = read("scripts/windows-qa/restart-ui-agent.ps1");
     const client = read("scripts/windows-qa/invoke-ui-agent.ps1");
 
     expect(common).toContain("function Get-WindowsQaAgentPipeName");
@@ -95,7 +96,10 @@ describe("Windows remote QA scaffold", () => {
     expect(agent).toContain("Windows QA UI agent must be started");
     expect(agent).toContain("session 0");
     expect(agent).toContain("Invoke-AgentProbe");
-    expect(agent).toContain('Start-Process -FilePath "notepad.exe"');
+    expect(agent).toContain("Start-Sleep -Seconds 5");
+    expect(agent).toContain('-WindowStyle",');
+    expect(agent).toContain('"Hidden"');
+    expect(agent).not.toContain("notepad.exe");
     expect(agent).toContain("explorerSessionIds");
     expect(agent).toContain("hasExplorerInAgentSession");
     expect(agent).toContain("hasLogonUiInAgentSession");
@@ -113,10 +117,16 @@ describe("Windows remote QA scaffold", () => {
     expect(helper).toContain("invoke-ui-agent.ps1");
     expect(installer).toContain("YTM Enhancer\\WindowsQaAgent");
     expect(installer).toContain("start-ui-agent.cmd");
+    expect(installer).toContain("restart-ui-agent.ps1");
     expect(installer).toContain("Copy-Item");
+    expect(restarter).toContain("not SSH/session 0");
+    expect(restarter).toContain("-Action Shutdown");
+    expect(restarter).toContain("-WindowStyle Hidden");
+    expect(restarter).toContain("start-ui-agent.ps1");
     expect(client).toContain("NamedPipeClientStream");
     expect(client).toContain("Cannot connect to Windows QA UI agent");
-    expect(client).toContain("LaunchNotepad");
+    expect(client).toContain("LaunchProbe");
+    expect(client).not.toContain("LaunchNotepad");
     expect(client).not.toContain("Register-ScheduledTask");
   });
 

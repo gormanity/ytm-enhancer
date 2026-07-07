@@ -38,14 +38,38 @@ function Invoke-AgentProbe {
   param([Parameter(Mandatory = $true)] $Request)
 
   $AgentSessionId = (Get-Process -Id $PID).SessionId
-  $ProbeProcess = $null
   $ProbeSessionId = $null
-  if ($Request.launchNotepad) {
-    $ProbeProcess = Start-Process -FilePath "notepad.exe" -PassThru
-    Start-Sleep -Milliseconds 500
-    $StartedProbe = Get-Process -Id $ProbeProcess.Id -ErrorAction Stop
-    $ProbeSessionId = $StartedProbe.SessionId
-    Stop-Process -Id $StartedProbe.Id -Force -ErrorAction SilentlyContinue
+  if ($Request.launchProbe) {
+    $ProbeScriptPath = Join-Path $env:TEMP "YTMEnhancerWindowsQa-Probe-$PID.ps1"
+    Set-Content `
+      -LiteralPath $ProbeScriptPath `
+      -Value "Start-Sleep -Seconds 5" `
+      -Encoding UTF8
+
+    $ProbeProcess = Start-Process `
+      -FilePath "powershell.exe" `
+      -ArgumentList @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-WindowStyle",
+        "Hidden",
+        "-File",
+        $ProbeScriptPath
+      ) `
+      -WindowStyle Hidden `
+      -PassThru
+
+    try {
+      Start-Sleep -Milliseconds 500
+      $StartedProbe = Get-Process -Id $ProbeProcess.Id -ErrorAction Stop
+      $ProbeSessionId = $StartedProbe.SessionId
+      Stop-Process -Id $StartedProbe.Id -Force -ErrorAction SilentlyContinue
+    } finally {
+      if (Test-Path -LiteralPath $ProbeScriptPath) {
+        Remove-Item -LiteralPath $ProbeScriptPath -Force
+      }
+    }
   }
 
   $ExplorerSessions = @(

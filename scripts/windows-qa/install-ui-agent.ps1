@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $AgentFiles = @(
   "start-ui-agent.ps1",
+  "restart-ui-agent.ps1",
   "invoke-ui-agent.ps1",
   "ui-agent-common.ps1",
   "ui-agent-client.ps1"

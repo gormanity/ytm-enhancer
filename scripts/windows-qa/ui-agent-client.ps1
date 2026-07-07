@@ -2,13 +2,13 @@ $ErrorActionPreference = "Stop"
 
 function Invoke-WindowsQaUiAgentProbe {
   param(
-    [switch] $LaunchNotepad,
+    [switch] $LaunchProbe,
     [int] $TimeoutSeconds = 10
   )
 
   $Output = & "$PSScriptRoot\invoke-ui-agent.ps1" `
     -Action Probe `
-    -LaunchNotepad:$LaunchNotepad `
+    -LaunchProbe:$LaunchProbe `
     -TimeoutSeconds $TimeoutSeconds
   return $Output | ConvertFrom-Json
 }
@@ -36,7 +36,7 @@ function Get-WindowsQaUiAgentReadiness {
   param([int] $TimeoutSeconds = 10)
 
   $Probe = Invoke-WindowsQaUiAgentProbe `
-    -LaunchNotepad `
+    -LaunchProbe `
     -TimeoutSeconds $TimeoutSeconds
   $Message = ""
   $Ready = $true

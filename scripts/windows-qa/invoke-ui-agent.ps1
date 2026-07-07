@@ -3,7 +3,7 @@ param(
   [string] $Action = "Probe",
   [string] $PipeName = "",
   [int] $TimeoutSeconds = 10,
-  [switch] $LaunchNotepad,
+  [switch] $LaunchProbe,
   [string] $FilePath = "",
   [string[]] $Arguments = @(),
   [string] $WorkingDirectory = "",
@@ -24,7 +24,7 @@ $Request = @{
 }
 
 if ($Action -eq "Probe") {
-  $Request.launchNotepad = [bool] $LaunchNotepad
+  $Request.launchProbe = [bool] $LaunchProbe
 }
 
 if ($Action -eq "Launch") {

@@ -548,6 +548,30 @@ scripts/remote/windows-qa/run.sh --shell \
   '& .\scripts\windows-qa\install-ui-agent.ps1'
 ```
 
+If you are updating an already-running agent, restart it through the current
+desktop-session agent after installing the new files:
+
+```sh
+scripts/remote/windows-qa/run.sh --preserve-apps --shell '
+$agentRoot = Join-Path $env:LOCALAPPDATA "YTM Enhancer\WindowsQaAgent"
+$restartScriptPath = Join-Path $env:TEMP "YTMEnhancerWindowsQa-RestartAgent.ps1"
+Copy-Item `
+  -LiteralPath ".\scripts\windows-qa\restart-ui-agent.ps1" `
+  -Destination $restartScriptPath `
+  -Force
+& (Join-Path $agentRoot "invoke-ui-agent.ps1") `
+  -Action Launch `
+  -FilePath "powershell.exe" `
+  -Arguments @(
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    $restartScriptPath
+  )
+'
+```
+
 Then log into the Windows QA user's desktop and start:
 
 ```text
@@ -576,7 +600,7 @@ Probe the running agent through the configured transport:
 
 ```sh
 scripts/remote/windows-qa/run.sh --shell \
-  '& "$env:LOCALAPPDATA\YTM Enhancer\WindowsQaAgent\invoke-ui-agent.ps1" -Action Probe -LaunchNotepad'
+  '& "$env:LOCALAPPDATA\YTM Enhancer\WindowsQaAgent\invoke-ui-agent.ps1" -Action Probe -LaunchProbe'
 ```
 
 Run the Windows SSH preflight before a full Windows QA sync:
