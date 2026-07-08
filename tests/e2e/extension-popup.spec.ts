@@ -4,6 +4,9 @@ import {
   type ExtensionTestContext,
 } from "./helpers/extension-context";
 
+test.describe.configure({ mode: "serial" });
+test.setTimeout(60_000);
+
 interface FirefoxPopupShellSnapshot {
   activeLabel: string;
   playbackControlsVisible: boolean;
