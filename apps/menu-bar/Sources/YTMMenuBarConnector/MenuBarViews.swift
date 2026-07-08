@@ -8,19 +8,58 @@ private enum MenuBarStyle {
   static let currentMetadataGap: CGFloat = 16
   static let nextTrackArtworkSize: CGFloat = 34
   static let nextTrackTextGap: CGFloat = 10
-  static let card = NSColor(calibratedWhite: 0.07, alpha: 1)
-  static let cardBorder = NSColor(calibratedWhite: 0.22, alpha: 1)
-  static let primaryText = NSColor.white
-  static let secondaryText = NSColor(calibratedWhite: 0.68, alpha: 1)
-  static let tertiaryText = NSColor(calibratedWhite: 0.45, alpha: 1)
-  static let warningText = NSColor(calibratedRed: 1, green: 0.72, blue: 0.22, alpha: 1)
-  static let staleText = NSColor(calibratedRed: 1, green: 0.62, blue: 0.24, alpha: 1)
+  static let card = dynamicColor(
+    light: NSColor(calibratedWhite: 0.92, alpha: 1),
+    dark: NSColor(calibratedWhite: 0.07, alpha: 1)
+  )
+  static let cardBorder = dynamicColor(
+    light: NSColor(calibratedWhite: 0.76, alpha: 1),
+    dark: NSColor(calibratedWhite: 0.22, alpha: 1)
+  )
+  static let primaryText = NSColor.labelColor
+  static let secondaryText = NSColor.secondaryLabelColor
+  static let tertiaryText = NSColor.tertiaryLabelColor
+  static let warningText = dynamicColor(
+    light: NSColor(calibratedRed: 0.72, green: 0.32, blue: 0, alpha: 1),
+    dark: NSColor(calibratedRed: 1, green: 0.72, blue: 0.22, alpha: 1)
+  )
+  static let staleText = dynamicColor(
+    light: NSColor(calibratedRed: 0.72, green: 0.32, blue: 0, alpha: 1),
+    dark: NSColor(calibratedRed: 1, green: 0.62, blue: 0.24, alpha: 1)
+  )
   static let accent = NSColor(calibratedRed: 1, green: 0, blue: 0, alpha: 1)
-  static let controlInactiveTint = NSColor(calibratedWhite: 0.46, alpha: 1)
-  static let controlHoverBackground = NSColor(calibratedWhite: 1, alpha: 0.28)
-  static let controlPressedBackground = NSColor(calibratedWhite: 1, alpha: 0.36)
-  static let controlHoverBorder = NSColor(calibratedWhite: 1, alpha: 0.16)
-  static let controlHoverShadow = NSColor.black.withAlphaComponent(0.55)
+  static let progressTrack = dynamicColor(
+    light: NSColor(calibratedWhite: 0.76, alpha: 1),
+    dark: NSColor(calibratedWhite: 0.23, alpha: 1)
+  )
+  static let nextArtworkBackground = dynamicColor(
+    light: NSColor.black.withAlphaComponent(0.05),
+    dark: NSColor.white.withAlphaComponent(0.04)
+  )
+  static let nextArtworkBorder = dynamicColor(
+    light: NSColor.black.withAlphaComponent(0.12),
+    dark: NSColor.white.withAlphaComponent(0.08)
+  )
+  static let tooltipText = NSColor.white
+  static let tooltipBackground = NSColor.black.withAlphaComponent(0.72)
+  static let controlPrimaryTint = NSColor.labelColor
+  static let controlInactiveTint = NSColor.secondaryLabelColor
+  static let controlHoverBackground = dynamicColor(
+    light: NSColor.black.withAlphaComponent(0.09),
+    dark: NSColor.white.withAlphaComponent(0.28)
+  )
+  static let controlPressedBackground = dynamicColor(
+    light: NSColor.black.withAlphaComponent(0.15),
+    dark: NSColor.white.withAlphaComponent(0.36)
+  )
+  static let controlHoverBorder = dynamicColor(
+    light: NSColor.black.withAlphaComponent(0.12),
+    dark: NSColor.white.withAlphaComponent(0.16)
+  )
+  static let controlHoverShadow = dynamicColor(
+    light: NSColor.black.withAlphaComponent(0.22),
+    dark: NSColor.black.withAlphaComponent(0.55)
+  )
   static var fullWidthContentWidth: CGFloat {
     width - contentInset * 2
   }
@@ -35,6 +74,44 @@ private enum MenuBarStyle {
   }
   static var nextTrackTextWidth: CGFloat {
     width - nextTrackTextX - contentInset
+  }
+
+  static func cgColor(_ color: NSColor, for view: NSView) -> CGColor {
+    var resolvedColor = color.cgColor
+    view.effectiveAppearance.performAsCurrentDrawingAppearance {
+      resolvedColor = color.cgColor
+    }
+    return resolvedColor
+  }
+
+  static func cgColor(
+    _ color: NSColor,
+    alpha: CGFloat,
+    for view: NSView
+  ) -> CGColor {
+    var resolvedColor = color.withAlphaComponent(alpha).cgColor
+    view.effectiveAppearance.performAsCurrentDrawingAppearance {
+      resolvedColor = color.withAlphaComponent(alpha).cgColor
+    }
+    return resolvedColor
+  }
+
+  static func resolvedColor(_ color: NSColor, for view: NSView) -> NSColor {
+    var resolvedColor = color
+    view.effectiveAppearance.performAsCurrentDrawingAppearance {
+      resolvedColor = color
+    }
+    return resolvedColor
+  }
+
+  static func isDarkAppearance(_ appearance: NSAppearance) -> Bool {
+    appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+  }
+
+  private static func dynamicColor(light: NSColor, dark: NSColor) -> NSColor {
+    NSColor(name: nil) { appearance in
+      isDarkAppearance(appearance) ? dark : light
+    }
   }
 }
 
@@ -100,6 +177,11 @@ final class MenuBarNowPlayingView: NSView {
     window?.acceptsMouseMovedEvents = true
     installMouseEventMonitor()
     startHoverPolling()
+  }
+
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    applyTheme()
   }
 
   func updateConnectionStatus(_ status: String) {
@@ -233,6 +315,42 @@ final class MenuBarNowPlayingView: NSView {
   private func configure() {
     setAccessibilityElement(false)
 
+    applyTheme()
+
+    metadataScroller.register(titleTextView)
+    metadataScroller.register(albumTextView)
+    metadataScroller.register(artistYearTextView)
+    metadataScroller.register(nextTrackTitleTextView)
+    metadataScroller.register(nextTrackDetailTextView)
+
+    configureControlStatusIconView()
+    configureControlStatusLabel()
+
+    seekBarView.onSeek = { [weak self] fraction in
+      guard let self, self.currentDuration > 0 else { return }
+      let time = Double(fraction) * self.currentDuration
+      self.applyOptimisticSeek(time)
+      self.onSeek?(time)
+    }
+
+    addSubview(artworkView)
+    addSubview(titleTextView)
+    addSubview(albumTextView)
+    addSubview(artistYearTextView)
+    addSubview(seekBarView)
+    addSubview(elapsedLabel)
+    addSubview(durationLabel)
+    addSubview(controlsView)
+    addSubview(controlStatusIconView)
+    addSubview(controlStatusLabel)
+    addSubview(nextTrackDivider)
+    addSubview(nextTrackLabel)
+    addSubview(nextTrackArtworkView)
+    addSubview(nextTrackTitleTextView)
+    addSubview(nextTrackDetailTextView)
+  }
+
+  private func applyTheme() {
     titleTextView.configure(
       font: .systemFont(ofSize: 15, weight: .semibold),
       textColor: MenuBarStyle.primaryText
@@ -253,12 +371,6 @@ final class MenuBarNowPlayingView: NSView {
       font: .systemFont(ofSize: 11, weight: .regular),
       textColor: MenuBarStyle.tertiaryText
     )
-    metadataScroller.register(titleTextView)
-    metadataScroller.register(albumTextView)
-    metadataScroller.register(artistYearTextView)
-    metadataScroller.register(nextTrackTitleTextView)
-    metadataScroller.register(nextTrackDetailTextView)
-
     configureLabel(elapsedLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     configureLabel(durationLabel, font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     configureLabel(nextTrackLabel, font: .systemFont(ofSize: 10, weight: .semibold))
@@ -268,34 +380,14 @@ final class MenuBarNowPlayingView: NSView {
     durationLabel.alignment = .right
     nextTrackLabel.textColor = MenuBarStyle.tertiaryText
     nextTrackLabel.stringValue = "Up Next"
-    configureControlStatusIconView()
-    configureControlStatusLabel()
-
-    seekBarView.onSeek = { [weak self] fraction in
-      guard let self, self.currentDuration > 0 else { return }
-      let time = Double(fraction) * self.currentDuration
-      self.applyOptimisticSeek(time)
-      self.onSeek?(time)
-    }
     nextTrackDivider.wantsLayer = true
     nextTrackDivider.layer?.backgroundColor =
-      MenuBarStyle.cardBorder.withAlphaComponent(0.8).cgColor
-
-    addSubview(artworkView)
-    addSubview(titleTextView)
-    addSubview(albumTextView)
-    addSubview(artistYearTextView)
-    addSubview(seekBarView)
-    addSubview(elapsedLabel)
-    addSubview(durationLabel)
-    addSubview(controlsView)
-    addSubview(controlStatusIconView)
-    addSubview(controlStatusLabel)
-    addSubview(nextTrackDivider)
-    addSubview(nextTrackLabel)
-    addSubview(nextTrackArtworkView)
-    addSubview(nextTrackTitleTextView)
-    addSubview(nextTrackDetailTextView)
+      MenuBarStyle.cgColor(MenuBarStyle.cardBorder, alpha: 0.8, for: self)
+    seekBarView.applyTheme()
+    controlsView.applyTheme()
+    artworkView.applyTheme()
+    nextTrackArtworkView.applyTheme()
+    needsDisplay = true
   }
 
   private func configureLabel(_ label: NSTextField, font: NSFont) {
@@ -734,18 +826,31 @@ private final class MenuBarSeekBarView: NSView {
     layer?.masksToBounds = false
 
     progressTrack.wantsLayer = true
-    progressTrack.layer?.backgroundColor =
-      NSColor(calibratedWhite: 0.23, alpha: 1).cgColor
     progressTrack.layer?.cornerRadius = 2.5
 
     progressFill.wantsLayer = true
-    progressFill.layer?.backgroundColor = MenuBarStyle.accent.cgColor
     progressFill.layer?.cornerRadius = 2.5
 
     progressTrack.addSubview(progressFill)
     addSubview(progressTrack)
     configureSeekTooltip()
     addSubview(seekTooltipLabel)
+    applyTheme()
+  }
+
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    applyTheme()
+  }
+
+  func applyTheme() {
+    progressTrack.layer?.backgroundColor =
+      MenuBarStyle.cgColor(MenuBarStyle.progressTrack, for: self)
+    progressFill.layer?.backgroundColor =
+      MenuBarStyle.cgColor(MenuBarStyle.accent, for: self)
+    seekTooltipLabel.textColor = MenuBarStyle.tooltipText
+    seekTooltipLabel.layer?.backgroundColor =
+      MenuBarStyle.cgColor(MenuBarStyle.tooltipBackground, for: self)
   }
 
   func updateHover(from event: NSEvent) {
@@ -824,13 +929,10 @@ private final class MenuBarSeekBarView: NSView {
 
   private func configureSeekTooltip() {
     seekTooltipLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .semibold)
-    seekTooltipLabel.textColor = MenuBarStyle.primaryText
     seekTooltipLabel.alignment = .center
     seekTooltipLabel.isSelectable = false
     seekTooltipLabel.isHidden = true
     seekTooltipLabel.wantsLayer = true
-    seekTooltipLabel.layer?.backgroundColor =
-      NSColor.black.withAlphaComponent(0.72).cgColor
     seekTooltipLabel.layer?.cornerRadius = 5
   }
 
@@ -919,7 +1021,7 @@ private final class MenuBarScrollingTextView: NSView {
 
     let attributes: [NSAttributedString.Key: Any] = [
       .font: font,
-      .foregroundColor: textColor,
+      .foregroundColor: MenuBarStyle.resolvedColor(textColor, for: self),
     ]
     let lineHeight = ceil(font.ascender - font.descender + font.leading)
     let y = max(0, (bounds.height - lineHeight) / 2)
@@ -967,6 +1069,11 @@ private final class MenuBarScrollingTextView: NSView {
   private func configure() {
     wantsLayer = true
     layer?.masksToBounds = true
+  }
+
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    needsDisplay = true
   }
 
   private func measuredTextWidth() -> CGFloat {
@@ -1243,6 +1350,20 @@ final class MenuBarControlsView: NSView {
     addSubview(nextButton)
     addSubview(repeatButton)
     setPlaybackControlsEnabled(false)
+    applyTheme()
+  }
+
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    applyTheme()
+  }
+
+  func applyTheme() {
+    shuffleButton.applyTheme()
+    previousButton.applyTheme()
+    playPauseButton.applyTheme()
+    nextButton.applyTheme()
+    repeatButton.applyTheme()
   }
 
   private func repeatIcon(_ repeatMode: String?) -> MenuBarControlIcon {
@@ -1366,6 +1487,11 @@ private final class MenuBarArtworkView: NSView {
     imageView.contentTintColor = MenuBarStyle.secondaryText
   }
 
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    applyTheme()
+  }
+
   override func layout() {
     super.layout()
     imageView.frame = bounds
@@ -1373,10 +1499,8 @@ private final class MenuBarArtworkView: NSView {
 
   private func configure() {
     wantsLayer = true
-    layer?.backgroundColor = MenuBarStyle.card.cgColor
     layer?.cornerRadius = 8
     layer?.borderWidth = 1
-    layer?.borderColor = MenuBarStyle.cardBorder.cgColor
     layer?.masksToBounds = true
 
     imageView.imageScaling = .scaleProportionallyUpOrDown
@@ -1384,6 +1508,12 @@ private final class MenuBarArtworkView: NSView {
     imageView.layer?.cornerRadius = 8
     imageView.layer?.masksToBounds = true
     addSubview(imageView)
+    applyTheme()
+  }
+
+  func applyTheme() {
+    layer?.backgroundColor = MenuBarStyle.cgColor(MenuBarStyle.card, for: self)
+    layer?.borderColor = MenuBarStyle.cgColor(MenuBarStyle.cardBorder, for: self)
   }
 }
 
@@ -1465,6 +1595,11 @@ private final class MenuBarNextTrackArtworkView: NSView {
     imageView.contentTintColor = MenuBarStyle.tertiaryText
   }
 
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    applyTheme()
+  }
+
   override func layout() {
     super.layout()
     imageView.frame = bounds.insetBy(dx: 3, dy: 3)
@@ -1472,19 +1607,26 @@ private final class MenuBarNextTrackArtworkView: NSView {
 
   private func configure() {
     wantsLayer = true
-    layer?.backgroundColor = NSColor.white.withAlphaComponent(0.04).cgColor
     layer?.cornerRadius = 7
     layer?.borderWidth = 1
-    layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
     layer?.masksToBounds = true
 
-    imageView.alphaValue = 0.34
     imageView.imageScaling = .scaleProportionallyUpOrDown
     imageView.wantsLayer = true
     imageView.layer?.cornerRadius = 5
     imageView.layer?.masksToBounds = true
-    imageView.layer?.compositingFilter = "plusLighter"
     addSubview(imageView)
+    applyTheme()
+  }
+
+  func applyTheme() {
+    let isDark = MenuBarStyle.isDarkAppearance(effectiveAppearance)
+    layer?.backgroundColor =
+      MenuBarStyle.cgColor(MenuBarStyle.nextArtworkBackground, for: self)
+    layer?.borderColor =
+      MenuBarStyle.cgColor(MenuBarStyle.nextArtworkBorder, for: self)
+    imageView.alphaValue = isDark ? 0.34 : 0.48
+    imageView.layer?.compositingFilter = isDark ? "plusLighter" : nil
   }
 
   private func monochromeImage(from image: NSImage) -> NSImage? {
@@ -1542,8 +1684,6 @@ private final class MenuBarIconButton: NSButton {
     wantsLayer = true
     layer?.masksToBounds = false
     layer?.borderWidth = 0
-    layer?.borderColor = MenuBarStyle.controlHoverBorder.cgColor
-    layer?.shadowColor = MenuBarStyle.controlHoverShadow.cgColor
     layer?.shadowOffset = CGSize(width: 0, height: 2)
     layer?.shadowOpacity = 0
     layer?.shadowRadius = 8
@@ -1612,6 +1752,16 @@ private final class MenuBarIconButton: NSButton {
     needsDisplay = true
   }
 
+  func applyTheme() {
+    updateAppearance()
+    needsDisplay = true
+  }
+
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    applyTheme()
+  }
+
   override func layout() {
     super.layout()
     layer?.cornerRadius = min(bounds.width, bounds.height) / 2
@@ -1638,7 +1788,12 @@ private final class MenuBarIconButton: NSButton {
 
     switch repeatMarker {
     case .dot:
-      NSColor.white.withAlphaComponent(isEnabled ? 0.92 : 0.48).setFill()
+      MenuBarStyle.resolvedColor(
+        MenuBarStyle.controlPrimaryTint,
+        for: self
+      )
+      .withAlphaComponent(isEnabled ? 0.92 : 0.48)
+      .setFill()
       NSBezierPath(
         ovalIn: markerRect.insetBy(dx: 3.35, dy: 3.35)
       ).fill()
@@ -1662,7 +1817,7 @@ private final class MenuBarIconButton: NSButton {
     let tintColor: NSColor
     if prominent || active || hovering {
       if isEnabled {
-        tintColor = .white
+        tintColor = MenuBarStyle.controlPrimaryTint
       } else {
         tintColor = MenuBarStyle.controlInactiveTint
       }
@@ -1672,10 +1827,12 @@ private final class MenuBarIconButton: NSButton {
 
     alphaValue = isEnabled ? 1 : 0.35
     contentTintColor = tintColor
-    layer?.backgroundColor = background.cgColor
+    layer?.backgroundColor = MenuBarStyle.cgColor(background, for: self)
     layer?.borderWidth = showsHoverChrome ? 1 : 0
-    layer?.borderColor = MenuBarStyle.controlHoverBorder.cgColor
-    layer?.shadowColor = MenuBarStyle.controlHoverShadow.cgColor
+    layer?.borderColor =
+      MenuBarStyle.cgColor(MenuBarStyle.controlHoverBorder, for: self)
+    layer?.shadowColor =
+      MenuBarStyle.cgColor(MenuBarStyle.controlHoverShadow, for: self)
     layer?.shadowOpacity = shadowOpacity
     layer?.shadowRadius = isHighlighted ? 12 : 10
   }

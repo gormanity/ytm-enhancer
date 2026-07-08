@@ -86,7 +86,6 @@ final class MenuBarController: NSObject {
       onSeek: { [weak self] time in self?.seek(time) }
     )
 
-    menu.appearance = NSAppearance(named: .darkAqua)
     menu.addItem(nowPlayingItem)
     menu.addItem(.separator())
     menu.addItem(focusItem)

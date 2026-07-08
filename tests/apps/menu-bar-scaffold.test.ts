@@ -273,11 +273,38 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("setActive(");
     expect(sources).toContain("MenuBarStyle.controlHoverBackground");
     expect(sources).toContain("background = .clear");
-    expect(sources).toContain("tintColor = .white");
+    expect(sources).toContain("tintColor = MenuBarStyle.controlPrimaryTint");
     expect(sources).not.toContain("badgeLabel");
     expect(sources).not.toContain('"Playing"');
     expect(sources).not.toContain('"Paused"');
     expect(sources).not.toContain("MenuBarStyle.accentMuted");
+  });
+
+  it("adapts the menu bar popover colors to the macOS appearance", () => {
+    const controllerSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarController.swift",
+    );
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+    const nowPlayingThemeSource = viewSource.match(
+      /private func applyTheme\(\) \{[\s\S]+?private func configureLabel/,
+    )?.[0];
+
+    expect(controllerSource).not.toContain(".darkAqua");
+    expect(nowPlayingThemeSource).toBeDefined();
+    expect(nowPlayingThemeSource).not.toContain("metadataScroller.register");
+    expect(viewSource).toContain("private enum MenuBarStyle");
+    expect(viewSource).toContain("private static func dynamicColor");
+    expect(viewSource).toContain("NSColor.labelColor");
+    expect(viewSource).toContain("NSColor.secondaryLabelColor");
+    expect(viewSource).toContain("NSColor.tertiaryLabelColor");
+    expect(viewSource).toContain("static let controlPrimaryTint");
+    expect(viewSource).toContain("static let progressTrack = dynamicColor");
+    expect(viewSource).toContain("static let nextArtworkBackground");
+    expect(viewSource).toContain("bestMatch(from: [.aqua, .darkAqua])");
+    expect(viewSource).toContain("viewDidChangeEffectiveAppearance");
+    expect(viewSource).toContain("MenuBarStyle.resolvedColor");
+    expect(viewSource).toContain("MenuBarStyle.cgColor(");
+    expect(viewSource).toContain("imageView.alphaValue = isDark ? 0.34 : 0.48");
   });
 
   it("reuses shared SVG playback control icons in the menu bar view", () => {
@@ -497,9 +524,11 @@ describe("menu bar connector app scaffold", () => {
     expect(nextTrackArtworkSource).toContain("loadingArtworkUrl");
     expect(nextTrackArtworkSource).toContain("displayedArtworkUrl");
     expect(nextTrackArtworkSource).toContain("CIPhotoEffectMono");
-    expect(nextTrackArtworkSource).toContain("alphaValue = 0.34");
     expect(nextTrackArtworkSource).toContain(
-      'imageView.layer?.compositingFilter = "plusLighter"',
+      "imageView.alphaValue = isDark ? 0.34 : 0.48",
+    );
+    expect(nextTrackArtworkSource).toContain(
+      'imageView.layer?.compositingFilter = isDark ? "plusLighter" : nil',
     );
     expect(nextTrackArtworkSource).toContain("layer?.borderColor");
     expect(nextTrackArtworkSource).toContain("showPlaceholder()");
@@ -530,10 +559,10 @@ describe("menu bar connector app scaffold", () => {
     expect(iconButtonSource).toContain("isHighlighted ? 0.42 : 0.34");
     expect(iconButtonSource).toContain("layer?.borderWidth =");
     expect(iconButtonSource).toContain(
-      "layer?.borderColor = MenuBarStyle.controlHoverBorder.cgColor",
+      "MenuBarStyle.cgColor(MenuBarStyle.controlHoverBorder, for: self)",
     );
     expect(iconButtonSource).toContain(
-      "MenuBarStyle.controlHoverShadow.cgColor",
+      "MenuBarStyle.cgColor(MenuBarStyle.controlHoverShadow, for: self)",
     );
   });
 
