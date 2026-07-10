@@ -59,6 +59,7 @@ internal sealed class TrayController : ITrayController, IDisposable
         popup.OnCheckForUpdates = () => _ = CheckForUpdatesAsync(popup, userInitiated: true);
         popup.OnAbout = () => ShowAbout(popup);
         popup.OnQuit = () => OnQuit?.Invoke();
+        popup.ThemeChanged += (_, _) => aboutDialog?.ApplyTheme();
         popup.Deactivate += (_, _) => HidePopupFromOutsideClick();
         popup.VisibleChanged += (_, _) =>
         {

@@ -71,34 +71,31 @@ internal sealed record WindowsTrayAboutUpdateStatus(
 
 internal sealed class AboutDialogForm : Form
 {
-    private static readonly Color SurfaceColor = Color.FromArgb(14, 14, 16);
-    private static readonly Color PanelColor = Color.FromArgb(24, 24, 27);
-    private static readonly Color PrimaryTextColor = Color.White;
-    private static readonly Color SecondaryTextColor = Color.FromArgb(210, 210, 216);
-    private static readonly Color MutedTextColor = Color.FromArgb(150, 150, 158);
-    private static readonly Color AccentColor = Color.FromArgb(255, 32, 18);
-    private static readonly Color WarningColor = Color.FromArgb(255, 158, 61);
-    private static readonly Color SuccessColor = Color.FromArgb(90, 210, 135);
-
-    private readonly Icon appIcon;
-    private readonly Image appIconImage;
+    private Icon appIcon;
+    private Image appIconImage;
+    private readonly PictureBox appIconBox = new();
     private readonly Label connectionSummaryLabel = new();
     private readonly Label connectionDetailLabel = new();
     private readonly Label updateSummaryLabel = new();
     private readonly Label updateDetailLabel = new();
     private readonly Button updateButton = new();
     private readonly Button closeButton = new();
+    private readonly List<Action<TrayTheme>> themeBindings = [];
+    private ConnectorSource? currentBrowserSource;
+    private WindowsTrayAboutUpdateStatus currentUpdateStatus =
+        WindowsTrayAboutUpdateStatus.Idle();
 
     public AboutDialogForm()
     {
-        appIcon = TrayIconFactory.Create(isPlaying: false);
+        var theme = TrayTheme.CurrentApp;
+        appIcon = TrayIconFactory.Create(isPlaying: false, theme.StatusIconPaintColor);
         appIconImage = appIcon.ToBitmap();
 
         Text = "About YTM Tray";
         AccessibleName = "About YTM Tray";
         Icon = appIcon;
-        BackColor = SurfaceColor;
-        ForeColor = PrimaryTextColor;
+        BackColor = theme.AboutSurfaceColor;
+        ForeColor = theme.PrimaryTextColor;
         Font = new Font("Segoe UI", 9f, FontStyle.Regular);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -117,33 +114,76 @@ internal sealed class AboutDialogForm : Form
 
     public void SetBrowserSource(ConnectorSource? source)
     {
-        if (source is null)
-        {
-            connectionSummaryLabel.Text = "Not connected to a browser.";
-            connectionDetailLabel.Text =
-                "Open one supported browser with YTM Enhancer enabled. YTM Tray supports one active browser connection at a time.";
-            connectionSummaryLabel.ForeColor = WarningColor;
-            return;
-        }
-
-        connectionSummaryLabel.Text = $"Connected to {source.DisplayName}.";
-        connectionDetailLabel.Text =
-            "YTM Tray is using this browser for playback info and controls. Disconnect this browser before connecting from another browser.";
-        connectionSummaryLabel.ForeColor = SuccessColor;
+        currentBrowserSource = source;
+        ApplyBrowserSource(TrayTheme.CurrentApp);
     }
 
     public void SetUpdateStatus(WindowsTrayAboutUpdateStatus status)
     {
-        updateSummaryLabel.Text = status.Summary;
-        updateSummaryLabel.ForeColor = status.Kind switch
+        currentUpdateStatus = status;
+        ApplyUpdateStatus(TrayTheme.CurrentApp);
+    }
+
+    public void ApplyTheme()
+    {
+        var theme = TrayTheme.CurrentApp;
+
+        BackColor = theme.AboutSurfaceColor;
+        ForeColor = theme.PrimaryTextColor;
+        foreach (var applyTheme in themeBindings)
         {
-            WindowsTrayAboutUpdateStatusKind.UpdateAvailable => SuccessColor,
-            WindowsTrayAboutUpdateStatusKind.Failed => WarningColor,
-            _ => PrimaryTextColor
+            applyTheme(theme);
+        }
+
+        RefreshAppIcon(theme);
+        ApplyBrowserSource(theme);
+        ApplyUpdateStatus(theme);
+        Invalidate(true);
+    }
+
+    private void ApplyBrowserSource(TrayTheme theme)
+    {
+        if (currentBrowserSource is null)
+        {
+            connectionSummaryLabel.Text = "Not connected to a browser.";
+            connectionDetailLabel.Text =
+                "Open one supported browser with YTM Enhancer enabled. YTM Tray supports one active browser connection at a time.";
+            connectionSummaryLabel.ForeColor = theme.WarningColor;
+            return;
+        }
+
+        connectionSummaryLabel.Text = $"Connected to {currentBrowserSource.DisplayName}.";
+        connectionDetailLabel.Text =
+            "YTM Tray is using this browser for playback info and controls. Disconnect this browser before connecting from another browser.";
+        connectionSummaryLabel.ForeColor = theme.SuccessColor;
+    }
+
+    private void ApplyUpdateStatus(TrayTheme theme)
+    {
+        updateSummaryLabel.Text = currentUpdateStatus.Summary;
+        updateSummaryLabel.ForeColor = currentUpdateStatus.Kind switch
+        {
+            WindowsTrayAboutUpdateStatusKind.UpdateAvailable => theme.SuccessColor,
+            WindowsTrayAboutUpdateStatusKind.Failed => theme.WarningColor,
+            _ => theme.PrimaryTextColor
         };
-        updateDetailLabel.Text = status.Detail;
-        updateButton.Text = status.ButtonText;
-        updateButton.Enabled = status.ButtonEnabled;
+        updateDetailLabel.Text = currentUpdateStatus.Detail;
+        updateButton.Text = currentUpdateStatus.ButtonText;
+        updateButton.Enabled = currentUpdateStatus.ButtonEnabled;
+    }
+
+    private void RefreshAppIcon(TrayTheme theme)
+    {
+        var previousIcon = appIcon;
+        var previousImage = appIconImage;
+
+        appIcon = TrayIconFactory.Create(isPlaying: false, theme.StatusIconPaintColor);
+        appIconImage = appIcon.ToBitmap();
+        Icon = appIcon;
+        appIconBox.Image = appIconImage;
+
+        previousImage.Dispose();
+        previousIcon.Dispose();
     }
 
     protected override void Dispose(bool disposing)
@@ -159,14 +199,16 @@ internal sealed class AboutDialogForm : Form
 
     private Control BuildLayout()
     {
-        var layout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = SurfaceColor,
-            Padding = new Padding(24),
-            ColumnCount = 1,
-            RowCount = 9
-        };
+        var layout = BindTheme(
+            new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(24),
+                ColumnCount = 1,
+                RowCount = 9
+            },
+            static (control, theme) => control.BackColor = theme.AboutSurfaceColor
+        );
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -187,43 +229,50 @@ internal sealed class AboutDialogForm : Form
 
     private Control BuildHeader()
     {
-        var header = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            BackColor = SurfaceColor,
-            ColumnCount = 2,
-            RowCount = 1
-        };
+        var header = BindTheme(
+            new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ColumnCount = 2,
+                RowCount = 1
+            },
+            static (control, theme) => control.BackColor = theme.AboutSurfaceColor
+        );
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        var iconBox = new PictureBox
-        {
-            Image = appIconImage,
-            SizeMode = PictureBoxSizeMode.Zoom,
-            Size = new Size(56, 56),
-            Margin = new Padding(0, 0, 16, 0)
-        };
+        appIconBox.Image = appIconImage;
+        appIconBox.SizeMode = PictureBoxSizeMode.Zoom;
+        appIconBox.Size = new Size(56, 56);
+        appIconBox.Margin = new Padding(0, 0, 16, 0);
 
-        var textStack = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Dock = DockStyle.Top,
-            BackColor = SurfaceColor,
-            Margin = new Padding(0)
-        };
+        var textStack = BindTheme(
+            new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0)
+            },
+            static (control, theme) => control.BackColor = theme.AboutSurfaceColor
+        );
         textStack.Controls.Add(
-            MakeLabel("YTM Tray", 17f, FontStyle.Bold, PrimaryTextColor, maxWidth: 380)
+            MakeLabel(
+                "YTM Tray",
+                17f,
+                FontStyle.Bold,
+                static theme => theme.PrimaryTextColor,
+                maxWidth: 380
+            )
         );
         textStack.Controls.Add(
             MakeLabel(
                 $"Version {ConnectorProtocol.ConnectorVersion} - {RuntimeInformation.RuntimeIdentifier}",
                 9f,
                 FontStyle.Regular,
-                SecondaryTextColor,
+                static theme => theme.SecondaryTextColor,
                 maxWidth: 380
             )
         );
@@ -233,12 +282,12 @@ internal sealed class AboutDialogForm : Form
                 "First-party Windows tray controls for YTM Enhancer connected apps.",
                 9f,
                 FontStyle.Regular,
-                MutedTextColor,
+                static theme => theme.TertiaryTextColor,
                 maxWidth: 380
             )
         );
 
-        header.Controls.Add(iconBox, 0, 0);
+        header.Controls.Add(appIconBox, 0, 0);
         header.Controls.Add(textStack, 1, 0);
         return header;
     }
@@ -249,7 +298,7 @@ internal sealed class AboutDialogForm : Form
             "Beta connected app",
             8f,
             FontStyle.Bold,
-            WarningColor,
+            static theme => theme.WarningColor,
             maxWidth: 180
         );
         label.Margin = new Padding(0, 6, 0, 5);
@@ -270,7 +319,10 @@ internal sealed class AboutDialogForm : Form
         updateSummaryLabel.Margin = new Padding(0, 6, 0, 0);
 
         updateDetailLabel.Font = new Font(Font.FontFamily, 9f, FontStyle.Regular);
-        updateDetailLabel.ForeColor = MutedTextColor;
+        BindTheme(
+            updateDetailLabel,
+            static (control, theme) => control.ForeColor = theme.TertiaryTextColor
+        );
         updateDetailLabel.AutoSize = true;
         updateDetailLabel.MaximumSize = new Size(424, 0);
         updateDetailLabel.Margin = new Padding(0, 4, 0, 0);
@@ -279,22 +331,30 @@ internal sealed class AboutDialogForm : Form
 
     private Control BuildUpdateButtonRow()
     {
-        var row = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            Dock = DockStyle.Top,
-            BackColor = PanelColor,
-            Margin = new Padding(0, 14, 0, 0)
-        };
+        var row = BindTheme(
+            new FlowLayoutPanel
+            {
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 14, 0, 0)
+            },
+            static (control, theme) => control.BackColor = theme.AboutPanelColor
+        );
 
         updateButton.AutoSize = false;
         updateButton.Width = 170;
         updateButton.Height = 34;
         updateButton.FlatStyle = FlatStyle.Flat;
-        updateButton.FlatAppearance.BorderColor = AccentColor;
         updateButton.FlatAppearance.BorderSize = 1;
-        updateButton.BackColor = AccentColor;
-        updateButton.ForeColor = Color.White;
+        BindTheme(
+            updateButton,
+            static (control, theme) =>
+            {
+                control.FlatAppearance.BorderColor = theme.AccentColor;
+                control.BackColor = theme.AccentColor;
+                control.ForeColor = Color.White;
+            }
+        );
         updateButton.Font = new Font(Font.FontFamily, 9f, FontStyle.Bold);
         updateButton.Cursor = Cursors.Hand;
         updateButton.Click += (_, _) => OnCheckForUpdates?.Invoke();
@@ -316,7 +376,10 @@ internal sealed class AboutDialogForm : Form
         connectionSummaryLabel.Margin = new Padding(0, 6, 0, 0);
 
         connectionDetailLabel.Font = new Font(Font.FontFamily, 9f, FontStyle.Regular);
-        connectionDetailLabel.ForeColor = MutedTextColor;
+        BindTheme(
+            connectionDetailLabel,
+            static (control, theme) => control.ForeColor = theme.TertiaryTextColor
+        );
         connectionDetailLabel.AutoSize = true;
         connectionDetailLabel.MaximumSize = new Size(424, 0);
         connectionDetailLabel.Margin = new Padding(0, 4, 0, 0);
@@ -332,7 +395,7 @@ internal sealed class AboutDialogForm : Form
                 "YTM Tray checks the component-scoped GitHub release manifest, downloads the matching package for this Windows runtime, verifies the SHA-256 checksum, and then runs the local installer.",
                 9f,
                 FontStyle.Regular,
-                SecondaryTextColor,
+                static theme => theme.SecondaryTextColor,
                 maxWidth: 424
             ),
             0,
@@ -343,7 +406,7 @@ internal sealed class AboutDialogForm : Form
                 "The installer replaces files in %LOCALAPPDATA%\\YTM Enhancer\\Tray and refreshes browser native messaging host registration.",
                 9f,
                 FontStyle.Regular,
-                SecondaryTextColor,
+                static theme => theme.SecondaryTextColor,
                 maxWidth: 424
             ),
             0,
@@ -354,7 +417,7 @@ internal sealed class AboutDialogForm : Form
                 "Beta builds are signed and delivered as GitHub release zips while the Windows install experience is finalized.",
                 8.5f,
                 FontStyle.Regular,
-                MutedTextColor,
+                static theme => theme.TertiaryTextColor,
                 maxWidth: 424
             ),
             0,
@@ -365,29 +428,33 @@ internal sealed class AboutDialogForm : Form
 
     private TableLayoutPanel BuildPanel()
     {
-        var panel = new TableLayoutPanel
-        {
-            AutoSize = true,
-            Dock = DockStyle.Top,
-            BackColor = PanelColor,
-            Padding = new Padding(18),
-            ColumnCount = 1,
-            RowCount = 4
-        };
+        var panel = BindTheme(
+            new TableLayoutPanel
+            {
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Padding = new Padding(18),
+                ColumnCount = 1,
+                RowCount = 4
+            },
+            static (control, theme) => control.BackColor = theme.AboutPanelColor
+        );
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         return panel;
     }
 
     private Control BuildFooter()
     {
-        var row = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            Dock = DockStyle.Top,
-            BackColor = SurfaceColor,
-            FlowDirection = FlowDirection.RightToLeft,
-            Margin = new Padding(0)
-        };
+        var row = BindTheme(
+            new FlowLayoutPanel
+            {
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                FlowDirection = FlowDirection.RightToLeft,
+                Margin = new Padding(0)
+            },
+            static (control, theme) => control.BackColor = theme.AboutSurfaceColor
+        );
 
         closeButton.Text = "Close";
         closeButton.AccessibleName = "Close";
@@ -395,10 +462,16 @@ internal sealed class AboutDialogForm : Form
         closeButton.Width = 96;
         closeButton.Height = 32;
         closeButton.FlatStyle = FlatStyle.Flat;
-        closeButton.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
         closeButton.FlatAppearance.BorderSize = 1;
-        closeButton.BackColor = Color.FromArgb(32, 32, 36);
-        closeButton.ForeColor = PrimaryTextColor;
+        BindTheme(
+            closeButton,
+            static (control, theme) =>
+            {
+                control.FlatAppearance.BorderColor = theme.DialogButtonBorderColor;
+                control.BackColor = theme.DialogButtonBackgroundColor;
+                control.ForeColor = theme.PrimaryTextColor;
+            }
+        );
         closeButton.Font = new Font(Font.FontFamily, 9f, FontStyle.Regular);
         closeButton.Cursor = Cursors.Hand;
         closeButton.Click += (_, _) => Close();
@@ -409,23 +482,40 @@ internal sealed class AboutDialogForm : Form
     }
 
     private Label MakeSectionLabel(string text) =>
-        MakeLabel(text, 8.5f, FontStyle.Bold, MutedTextColor, maxWidth: 424);
+        MakeLabel(
+            text,
+            8.5f,
+            FontStyle.Bold,
+            static theme => theme.TertiaryTextColor,
+            maxWidth: 424
+        );
 
     private Label MakeLabel(
         string text,
         float size,
         FontStyle style,
-        Color color,
+        Func<TrayTheme, Color> color,
         int maxWidth
-    ) =>
-        new()
+    )
+    {
+        var label = new Label
         {
             Text = text,
             AutoSize = true,
             MaximumSize = new Size(maxWidth, 0),
             Font = new Font(Font.FontFamily, size, style),
-            ForeColor = color,
             BackColor = Color.Transparent,
             Margin = new Padding(0, 2, 0, 0)
         };
+
+        return BindTheme(label, (control, theme) => control.ForeColor = color(theme));
+    }
+
+    private T BindTheme<T>(T control, Action<T, TrayTheme> applyTheme)
+        where T : Control
+    {
+        applyTheme(control, TrayTheme.CurrentApp);
+        themeBindings.Add(theme => applyTheme(control, theme));
+        return control;
+    }
 }

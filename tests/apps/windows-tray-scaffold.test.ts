@@ -170,7 +170,9 @@ describe("Windows tray connector scaffold", () => {
       "ShowControlStatus(status, ControlStatusTextColor(status), !isNeutral)",
     );
     expect(popupForm).toContain('artistYearLabel.Text = ""');
-    expect(popupForm).toContain('statusLabel.Text = "Updating"');
+    expect(popupForm).toContain(
+      'SetStatusLabel("Updating", usesWarningColor: true)',
+    );
     expect(popupForm).toContain("if (hasPlayableTrack)");
     expect(popupForm).toContain("SetControlsEnabled(true)");
     expect(popupForm).toContain("SetPlaybackButtonsVisible(false)");
@@ -252,8 +254,71 @@ describe("Windows tray connector scaffold", () => {
     expect(hook).toContain("CallNextHookEx");
   });
 
+  it("adapts Windows tray surfaces to the Windows app theme", () => {
+    const theme = read("src/YTMTray/TrayTheme.cs");
+    const popup = read("src/YTMTray/PlaybackPopupForm.cs");
+    const aboutDialog = read("src/YTMTray/AboutDialogForm.cs");
+    const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
+    const trayController = read("src/YTMTray/TrayController.cs");
+
+    expect(theme).toContain("AppsUseLightTheme");
+    expect(theme).toContain("CurrentApp");
+    expect(theme).toContain("PopupSurfaceColor");
+    expect(theme).toContain("AboutSurfaceColor");
+    expect(theme).toContain("ControlHoverColor");
+    expect(theme).toContain("ArtworkPlaceholderColor");
+    expect(theme).toContain("DialogButtonBackgroundColor");
+    expect(theme).toContain("StatusIconPaintColor");
+    expect(theme).toContain("Registry.CurrentUser.OpenSubKey");
+
+    expect(popup).toContain("TrayTheme.CurrentApp");
+    expect(popup).toContain("ApplyTheme()");
+    expect(popup).toContain("ThemeChanged");
+    expect(popup).toContain("OnSystemColorsChanged");
+    expect(popup).toContain("WmSettingChange");
+    expect(popup).toContain("theme.PopupSurfaceTopColor");
+    expect(popup).toContain("theme.ControlDisabledIconColor");
+    expect(popup).toContain("theme.ArtworkPlaceholderColor");
+    expect(popup).toContain("statusLabelUsesWarningColor");
+    expect(popup).toContain(
+      'SetStatusLabel("Updating", usesWarningColor: true)',
+    );
+    expect(popup).toContain("ApplyStatusLabelTheme(theme)");
+    expect(popup).not.toContain("private static readonly Color SurfaceColor");
+
+    expect(aboutDialog).toContain("TrayTheme.CurrentApp");
+    expect(aboutDialog).toContain("public void ApplyTheme()");
+    expect(aboutDialog).toContain("themeBindings");
+    expect(aboutDialog).toContain("currentBrowserSource");
+    expect(aboutDialog).toContain("currentUpdateStatus");
+    expect(aboutDialog).toContain("currentBrowserSource = source");
+    expect(aboutDialog).toContain("currentUpdateStatus = status");
+    expect(aboutDialog).toContain("ApplyBrowserSource(theme)");
+    expect(aboutDialog).toContain("ApplyUpdateStatus(theme)");
+    expect(aboutDialog).toContain("RefreshAppIcon(theme)");
+    expect(aboutDialog).toContain("previousImage.Dispose()");
+    expect(aboutDialog).toContain("previousIcon.Dispose()");
+    expect(aboutDialog).toContain("theme.AboutSurfaceColor");
+    expect(aboutDialog).toContain("theme.AboutPanelColor");
+    expect(aboutDialog).toContain("theme.DialogButtonBackgroundColor");
+    expect(aboutDialog).toContain(
+      "TrayIconFactory.Create(isPlaying: false, theme.StatusIconPaintColor)",
+    );
+    expect(aboutDialog).not.toContain(
+      "private static readonly Color SurfaceColor",
+    );
+
+    expect(trayIconFactory).toContain(
+      "Create(bool isPlaying, Color paintColor)",
+    );
+    expect(trayIconFactory).toContain("paintColor");
+    expect(trayController).toContain("aboutDialog?.ApplyTheme()");
+    expect(trayIconFactory).not.toContain("Registry.CurrentUser.OpenSubKey");
+  });
+
   it("keeps menu bar and Windows tray shared icons in sync", () => {
     const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
+    const theme = read("src/YTMTray/TrayTheme.cs");
     const sharedStatusIcon = readRepo(
       "packages/connector-ui-assets/status/extension-icon-monochrome.svg",
     );
@@ -272,10 +337,9 @@ describe("Windows tray connector scaffold", () => {
     expect(trayIconFactory).toContain(
       "StatusSvgIconRenderer.PlayingResourceName",
     );
-    expect(trayIconFactory).toContain("StatusIconColor");
-    expect(trayIconFactory).toContain("SystemUsesLightTheme");
-    expect(trayIconFactory).toContain("LightThemeStatusIconColor");
-    expect(trayIconFactory).toContain("DarkThemeStatusIconColor");
+    expect(trayIconFactory).toContain("TrayTheme.StatusIconColor()");
+    expect(theme).toContain("SystemUsesLightTheme");
+    expect(theme).toContain("StatusIconPaintColor");
     expect(trayIconFactory).not.toContain("235, 82, 82");
   });
 

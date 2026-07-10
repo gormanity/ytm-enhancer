@@ -9,15 +9,7 @@ namespace YTMTray;
 
 internal sealed class PlaybackPopupForm : Form
 {
-    private static readonly Color SurfaceColor = Color.FromArgb(8, 8, 9);
-    private static readonly Color BorderColor = Color.FromArgb(88, 88, 94);
-    private static readonly Color DividerColor = Color.FromArgb(58, 58, 62);
-    private static readonly Color PrimaryTextColor = Color.White;
-    private static readonly Color SecondaryTextColor = Color.FromArgb(202, 202, 208);
-    private static readonly Color TertiaryTextColor = Color.FromArgb(145, 145, 152);
-    private static readonly Color AccentColor = Color.FromArgb(255, 32, 18);
-    private static readonly Color WarningColor = Color.FromArgb(255, 158, 61);
-    private static readonly Color SurfaceTopColor = Color.FromArgb(18, 18, 20);
+    private const int WmSettingChange = 0x001A;
 
     private readonly ArtworkBoxControl currentArtwork;
     private readonly Label statusLabel = new();
@@ -56,6 +48,7 @@ internal sealed class PlaybackPopupForm : Form
     private readonly bool scrollDiagnosticsEnabled;
     private double currentDuration;
     private bool hasPlayableTrack;
+    private bool statusLabelUsesWarningColor;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? OnShuffle { get; set; }
@@ -87,6 +80,8 @@ internal sealed class PlaybackPopupForm : Form
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? OnQuit { get; set; }
 
+    public event EventHandler? ThemeChanged;
+
     public PlaybackPopupForm(NativeAppLogger? logger = null)
     {
         this.logger = logger;
@@ -102,8 +97,8 @@ internal sealed class PlaybackPopupForm : Form
         StartPosition = FormStartPosition.Manual;
         Text = "YTM Tray";
         AccessibleName = "YTM Tray";
-        BackColor = SurfaceColor;
-        ForeColor = PrimaryTextColor;
+        BackColor = TrayTheme.CurrentApp.PopupSurfaceColor;
+        ForeColor = TrayTheme.CurrentApp.PrimaryTextColor;
         Font = new Font("Segoe UI", 9f, FontStyle.Regular);
         ClientSize = new Size(424, 562);
         DoubleBuffered = true;
@@ -113,18 +108,20 @@ internal sealed class PlaybackPopupForm : Form
         ConfigureButtons();
         ConfigureNextTrack();
         ConfigureActionRows();
+        ApplyTheme();
         UpdateWindowRegion();
     }
 
     public void UpdateConnectionStatus(string status)
     {
         var isNeutral = IsNeutralConnectionStatus(status);
-        statusLabel.Text = isNeutral ? CompactStatus(status) : "";
-        statusLabel.ForeColor = TertiaryTextColor;
+        var theme = TrayTheme.CurrentApp;
+        var compactStatus = isNeutral ? CompactStatus(status) : "";
+        SetStatusLabel(compactStatus);
         titleLabel.Text = "YTM Enhancer";
         albumLabel.Text = "";
         artistYearLabel.Text = "";
-        artistYearLabel.ForeColor = TertiaryTextColor;
+        artistYearLabel.ForeColor = theme.TertiaryTextColor;
         currentArtwork.SetArtworkUrl(null);
         currentDuration = 0;
         hasPlayableTrack = false;
@@ -136,30 +133,30 @@ internal sealed class PlaybackPopupForm : Form
 
     public void SetStalePlaybackState()
     {
-        statusLabel.Text = "";
-        statusLabel.ForeColor = WarningColor;
+        var theme = TrayTheme.CurrentApp;
         if (hasPlayableTrack)
         {
-            statusLabel.Text = "Updating";
+            SetStatusLabel("Updating", usesWarningColor: true);
             HideControlStatus();
             SetControlsEnabled(true);
             return;
         }
 
-        ShowControlStatus("Waiting for playback updates...", WarningColor, true);
+        SetStatusLabel("");
+        ShowControlStatus("Waiting for playback updates...", theme.WarningColor, true);
         SetControlsEnabled(false);
     }
 
     public void UpdatePlayback(PlaybackState state)
     {
         var hasTrack = !string.IsNullOrWhiteSpace(state.Title);
+        var theme = TrayTheme.CurrentApp;
 
-        statusLabel.Text = state.IsPlaying ? "Playing" : "Paused";
-        statusLabel.ForeColor = TertiaryTextColor;
+        SetStatusLabel(state.IsPlaying ? "Playing" : "Paused");
         titleLabel.Text = hasTrack ? state.Title! : "No track loaded";
         albumLabel.Text = state.Album ?? "";
         artistYearLabel.Text = FormatArtistYearLine(state);
-        artistYearLabel.ForeColor = TertiaryTextColor;
+        artistYearLabel.ForeColor = theme.TertiaryTextColor;
         currentArtwork.SetArtworkUrl(state.ArtworkUrl);
         toggleButton.ButtonIcon = state.IsPlaying
             ? PlaybackButtonIcon.Pause
@@ -179,7 +176,7 @@ internal sealed class PlaybackPopupForm : Form
         }
         else
         {
-            ShowControlStatus("No track loaded", SecondaryTextColor);
+            ShowControlStatus("No track loaded", theme.SecondaryTextColor);
         }
         SetControlsEnabled(hasTrack);
     }
@@ -200,19 +197,26 @@ internal sealed class PlaybackPopupForm : Form
         Invalidate();
     }
 
+    protected override void OnSystemColorsChanged(EventArgs e)
+    {
+        base.OnSystemColorsChanged(e);
+        ApplyThemeFromSystemChange();
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var theme = TrayTheme.CurrentApp;
 
         using var surfaceBrush = new LinearGradientBrush(
             ClientRectangle,
-            SurfaceTopColor,
-            SurfaceColor,
+            theme.PopupSurfaceTopColor,
+            theme.PopupSurfaceColor,
             LinearGradientMode.Vertical
         );
-        using var borderPen = new Pen(BorderColor);
-        using var dividerPen = new Pen(DividerColor);
+        using var borderPen = new Pen(theme.PopupBorderColor);
+        using var dividerPen = new Pen(theme.PopupDividerColor);
         using var surfacePath = RoundedRectangle(
             new Rectangle(0, 0, ClientSize.Width - 1, ClientSize.Height - 1),
             18
@@ -222,6 +226,16 @@ internal sealed class PlaybackPopupForm : Form
         e.Graphics.DrawPath(borderPen, surfacePath);
         e.Graphics.DrawLine(dividerPen, 24, 286, ClientSize.Width - 24, 286);
         e.Graphics.DrawLine(dividerPen, 24, 418, ClientSize.Width - 24, 418);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        base.WndProc(ref m);
+
+        if (m.Msg == WmSettingChange)
+        {
+            ApplyThemeFromSystemChange();
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -236,30 +250,31 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureCurrentTrack()
     {
+        var theme = TrayTheme.CurrentApp;
         currentArtwork.SetBounds(24, 24, 92, 92);
 
         statusLabel.SetBounds(300, 16, 76, 20);
         statusLabel.Font = new Font(Font.FontFamily, 7.5f, FontStyle.Regular);
-        statusLabel.ForeColor = TertiaryTextColor;
+        statusLabel.ForeColor = theme.TertiaryTextColor;
         statusLabel.BackColor = Color.Transparent;
         statusLabel.TextAlign = ContentAlignment.MiddleRight;
         statusLabel.AutoEllipsis = true;
 
         titleLabel.SetBounds(140, 26, 244, 28);
         titleLabel.Font = new Font(Font.FontFamily, 15f, FontStyle.Bold);
-        titleLabel.ForeColor = PrimaryTextColor;
+        titleLabel.ForeColor = theme.PrimaryTextColor;
         titleLabel.BackColor = Color.Transparent;
         titleLabel.ScrollDiagnosticName = "title";
 
         albumLabel.SetBounds(140, 57, 244, 22);
         albumLabel.Font = new Font(Font.FontFamily, 11f, FontStyle.Regular);
-        albumLabel.ForeColor = SecondaryTextColor;
+        albumLabel.ForeColor = theme.SecondaryTextColor;
         albumLabel.BackColor = Color.Transparent;
         albumLabel.ScrollDiagnosticName = "album";
 
         artistYearLabel.SetBounds(140, 80, 244, 20);
         artistYearLabel.Font = new Font(Font.FontFamily, 10f, FontStyle.Regular);
-        artistYearLabel.ForeColor = TertiaryTextColor;
+        artistYearLabel.ForeColor = theme.TertiaryTextColor;
         artistYearLabel.BackColor = Color.Transparent;
         artistYearLabel.ScrollDiagnosticName = "artist-year";
 
@@ -279,8 +294,9 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureProgress()
     {
+        var theme = TrayTheme.CurrentApp;
         progressBar.SetBounds(24, 146, 376, 20);
-        progressBar.AccentColor = AccentColor;
+        progressBar.AccentColor = theme.AccentColor;
         progressBar.UserSeekRequested += (_, _) =>
         {
             if (currentDuration <= 0) return;
@@ -290,12 +306,12 @@ internal sealed class PlaybackPopupForm : Form
 
         elapsedLabel.SetBounds(24, 170, 92, 22);
         elapsedLabel.Font = new Font(Font.FontFamily, 9.75f, FontStyle.Bold);
-        elapsedLabel.ForeColor = TertiaryTextColor;
+        elapsedLabel.ForeColor = theme.TertiaryTextColor;
         elapsedLabel.BackColor = Color.Transparent;
 
         durationLabel.SetBounds(308, 170, 92, 22);
         durationLabel.Font = new Font(Font.FontFamily, 9.75f, FontStyle.Bold);
-        durationLabel.ForeColor = TertiaryTextColor;
+        durationLabel.ForeColor = theme.TertiaryTextColor;
         durationLabel.BackColor = Color.Transparent;
         durationLabel.TextAlign = ContentAlignment.MiddleRight;
 
@@ -306,7 +322,7 @@ internal sealed class PlaybackPopupForm : Form
     {
         controlStatus.SetBounds(24, 192, 376, 94);
         controlStatus.Font = new Font(Font.FontFamily, 11.5f, FontStyle.Bold);
-        controlStatus.MessageColor = SecondaryTextColor;
+        controlStatus.MessageColor = TrayTheme.CurrentApp.SecondaryTextColor;
         controlStatus.BackColor = Color.Transparent;
         controlStatus.Visible = false;
         Controls.Add(controlStatus);
@@ -337,23 +353,24 @@ internal sealed class PlaybackPopupForm : Form
 
     private void ConfigureNextTrack()
     {
+        var theme = TrayTheme.CurrentApp;
         nextSectionLabel.SetBounds(24, 310, 120, 22);
         nextSectionLabel.Text = "Up Next";
         nextSectionLabel.Font = new Font(Font.FontFamily, 10.5f, FontStyle.Bold);
-        nextSectionLabel.ForeColor = TertiaryTextColor;
+        nextSectionLabel.ForeColor = theme.TertiaryTextColor;
         nextSectionLabel.BackColor = Color.Transparent;
 
         nextArtwork.SetBounds(24, 346, 54, 54);
 
         nextTitleLabel.SetBounds(96, 340, 304, 34);
         nextTitleLabel.Font = new Font(Font.FontFamily, 10.75f, FontStyle.Bold);
-        nextTitleLabel.ForeColor = SecondaryTextColor;
+        nextTitleLabel.ForeColor = theme.SecondaryTextColor;
         nextTitleLabel.BackColor = Color.Transparent;
         nextTitleLabel.ScrollDiagnosticName = "next-title";
 
         nextDetailLabel.SetBounds(96, 374, 304, 28);
         nextDetailLabel.Font = new Font(Font.FontFamily, 9.5f, FontStyle.Regular);
-        nextDetailLabel.ForeColor = TertiaryTextColor;
+        nextDetailLabel.ForeColor = theme.TertiaryTextColor;
         nextDetailLabel.BackColor = Color.Transparent;
         nextDetailLabel.ScrollDiagnosticName = "next-detail";
         RegisterScrollDiagnostics(nextTitleLabel, nextDetailLabel);
@@ -380,6 +397,75 @@ internal sealed class PlaybackPopupForm : Form
         ConfigureActionRow(updateRow, 468, () => OnCheckForUpdates?.Invoke());
         ConfigureActionRow(aboutRow, 498, () => OnAbout?.Invoke());
         ConfigureActionRow(quitRow, 528, () => OnQuit?.Invoke());
+    }
+
+    private void ApplyTheme()
+    {
+        var theme = TrayTheme.CurrentApp;
+
+        BackColor = theme.PopupSurfaceColor;
+        ForeColor = theme.PrimaryTextColor;
+        ApplyStatusLabelTheme(theme);
+        titleLabel.ForeColor = theme.PrimaryTextColor;
+        albumLabel.ForeColor = theme.SecondaryTextColor;
+        artistYearLabel.ForeColor = theme.TertiaryTextColor;
+        elapsedLabel.ForeColor = theme.TertiaryTextColor;
+        durationLabel.ForeColor = theme.TertiaryTextColor;
+        nextSectionLabel.ForeColor = theme.TertiaryTextColor;
+        nextTitleLabel.ForeColor = theme.SecondaryTextColor;
+        nextDetailLabel.ForeColor = theme.TertiaryTextColor;
+        progressBar.AccentColor = theme.AccentColor;
+        if (controlStatus.Visible)
+        {
+            controlStatus.MessageColor = controlStatus.ShowWarningIcon
+                ? theme.WarningColor
+                : theme.SecondaryTextColor;
+        }
+
+        closeButton.ApplyTheme();
+        controlStatus.ApplyTheme();
+        currentArtwork.ApplyTheme();
+        nextArtwork.ApplyTheme();
+        progressBar.ApplyTheme();
+
+        foreach (var button in new[]
+                 {
+                     shuffleButton,
+                     previousButton,
+                     toggleButton,
+                     nextButton,
+                     repeatButton
+                 })
+        {
+            button.ApplyTheme();
+        }
+
+        foreach (var row in new[] { focusRow, updateRow, aboutRow, quitRow })
+        {
+            row.ApplyTheme();
+        }
+
+        Invalidate(true);
+    }
+
+    private void SetStatusLabel(string text, bool usesWarningColor = false)
+    {
+        statusLabel.Text = text;
+        statusLabelUsesWarningColor = usesWarningColor;
+        ApplyStatusLabelTheme(TrayTheme.CurrentApp);
+    }
+
+    private void ApplyStatusLabelTheme(TrayTheme theme)
+    {
+        statusLabel.ForeColor = statusLabelUsesWarningColor
+            ? theme.WarningColor
+            : theme.TertiaryTextColor;
+    }
+
+    private void ApplyThemeFromSystemChange()
+    {
+        ApplyTheme();
+        ThemeChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void ConfigureActionRow(PopupActionRowControl row, int y, Action action)
@@ -504,7 +590,9 @@ internal sealed class PlaybackPopupForm : Form
         repeatMode == "one" ? PlaybackButtonIcon.RepeatOne : PlaybackButtonIcon.Repeat;
 
     private static Color ControlStatusTextColor(string status) =>
-        IsNeutralConnectionStatus(status) ? SecondaryTextColor : WarningColor;
+        IsNeutralConnectionStatus(status)
+            ? TrayTheme.CurrentApp.SecondaryTextColor
+            : TrayTheme.CurrentApp.WarningColor;
 
     private static bool IsNeutralConnectionStatus(string status) =>
         status == "Connecting" || status == "Connected";
@@ -547,10 +635,6 @@ internal sealed class PlaybackPopupForm : Form
 
 internal sealed class CloseButtonControl : Control
 {
-    private static readonly Color IconColor = Color.FromArgb(166, 166, 174);
-    private static readonly Color HoverColor = Color.FromArgb(34, 255, 255, 255);
-    private static readonly Color PressedColor = Color.FromArgb(48, 255, 255, 255);
-
     private bool hovering;
     private bool pressing;
 
@@ -573,6 +657,8 @@ internal sealed class CloseButtonControl : Control
     }
 
     public event EventHandler? Pressed;
+
+    public void ApplyTheme() => Invalidate();
 
     protected override void OnMouseEnter(EventArgs e)
     {
@@ -618,11 +704,14 @@ internal sealed class CloseButtonControl : Control
 
         if (hovering || pressing)
         {
-            using var backgroundBrush = new SolidBrush(pressing ? PressedColor : HoverColor);
+            var theme = TrayTheme.CurrentApp;
+            using var backgroundBrush = new SolidBrush(
+                pressing ? theme.ControlPressedColor : theme.ControlHoverColor
+            );
             e.Graphics.FillEllipse(backgroundBrush, 1, 1, Width - 2, Height - 2);
         }
 
-        using var pen = new Pen(IconColor, 1.4f)
+        using var pen = new Pen(TrayTheme.CurrentApp.CloseIconColor, 1.4f)
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round
@@ -634,9 +723,8 @@ internal sealed class CloseButtonControl : Control
 
 internal sealed class StatusMessageControl : Control
 {
-    private static readonly Color IconInteriorColor = Color.FromArgb(8, 8, 9);
     private string message = "";
-    private Color messageColor = Color.FromArgb(202, 202, 208);
+    private Color messageColor = TrayTheme.CurrentApp.SecondaryTextColor;
     private bool showWarningIcon;
 
     public StatusMessageControl()
@@ -691,6 +779,8 @@ internal sealed class StatusMessageControl : Control
             Invalidate();
         }
     }
+
+    public void ApplyTheme() => Invalidate();
 
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -754,13 +844,14 @@ internal sealed class StatusMessageControl : Control
             new PointF(bounds.Left + 1, bounds.Bottom - 1)
         };
 
+        var iconInteriorColor = TrayTheme.CurrentApp.PopupSurfaceColor;
         using var fillBrush = new SolidBrush(messageColor);
-        using var interiorPen = new Pen(IconInteriorColor, 1.6f)
+        using var interiorPen = new Pen(iconInteriorColor, 1.6f)
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round
         };
-        using var interiorBrush = new SolidBrush(IconInteriorColor);
+        using var interiorBrush = new SolidBrush(iconInteriorColor);
 
         graphics.FillPolygon(fillBrush, points);
         graphics.DrawLine(
@@ -1016,9 +1107,6 @@ internal sealed class ScrollingLabelControl : Control
 
 internal sealed class ArtworkBoxControl : Control
 {
-    private static readonly Color BackgroundColor = Color.FromArgb(28, 28, 31);
-    private static readonly Color BorderColor = Color.FromArgb(68, 68, 74);
-    private static readonly Color PlaceholderColor = Color.FromArgb(174, 174, 182);
     private static readonly HttpClient HttpClient = new();
     private const string PackagedArtworkScheme = "ytm-tray-resource";
     private const string FixtureArtworkHost = "ytm-enhancer.local";
@@ -1080,6 +1168,8 @@ internal sealed class ArtworkBoxControl : Control
         StartArtworkLoadIfReady(artworkUrl);
     }
 
+    public void ApplyTheme() => Invalidate();
+
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
@@ -1094,9 +1184,10 @@ internal sealed class ArtworkBoxControl : Control
     {
         base.OnPaint(e);
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var theme = TrayTheme.CurrentApp;
 
-        using var backgroundBrush = new SolidBrush(BackgroundColor);
-        using var borderPen = new Pen(BorderColor);
+        using var backgroundBrush = new SolidBrush(theme.ArtworkBackgroundColor);
+        using var borderPen = new Pen(theme.ArtworkBorderColor);
         using var boundsPath = PlaybackPopupForm.RoundedRectangle(
             new Rectangle(0, 0, Width - 1, Height - 1),
             cornerRadius
@@ -1236,8 +1327,9 @@ internal sealed class ArtworkBoxControl : Control
         var stemBottom = Height * 0.66f;
         var stemWidth = Math.Max(3.5f, Width / 13f);
         var flagHeight = Height * 0.2f;
-        using var noteBrush = new SolidBrush(PlaceholderColor);
-        using var notePen = new Pen(PlaceholderColor, stemWidth)
+        var theme = TrayTheme.CurrentApp;
+        using var noteBrush = new SolidBrush(theme.ArtworkPlaceholderColor);
+        using var notePen = new Pen(theme.ArtworkPlaceholderColor, stemWidth)
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
@@ -1350,11 +1442,6 @@ internal enum PlaybackButtonIcon
 
 internal sealed class PlaybackButtonControl : Control
 {
-    private static readonly Color HoverColor = Color.FromArgb(42, 255, 255, 255);
-    private static readonly Color PressedColor = Color.FromArgb(58, 255, 255, 255);
-    private static readonly Color IconColor = Color.White;
-    private static readonly Color IconInactiveColor = Color.FromArgb(132, 132, 138);
-    private static readonly Color IconDisabledColor = Color.FromArgb(92, 92, 98);
     private const float PlaybackIconDisplayScale = 1.16f;
 
     private bool hovering;
@@ -1437,6 +1524,8 @@ internal sealed class PlaybackButtonControl : Control
         }
     }
 
+    public void ApplyTheme() => Invalidate();
+
     protected override void OnMouseEnter(EventArgs e)
     {
         base.OnMouseEnter(e);
@@ -1491,7 +1580,10 @@ internal sealed class PlaybackButtonControl : Control
 
         if (hovering || pressing)
         {
-            using var backgroundBrush = new SolidBrush(pressing ? PressedColor : HoverColor);
+            var theme = TrayTheme.CurrentApp;
+            using var backgroundBrush = new SolidBrush(
+                pressing ? theme.ControlPressedColor : theme.ControlHoverColor
+            );
             e.Graphics.FillEllipse(backgroundBrush, 2, 2, Width - 4, Height - 4);
         }
 
@@ -1504,9 +1596,10 @@ internal sealed class PlaybackButtonControl : Control
 
     private Color IconPaintColor()
     {
-        if (!playbackEnabled) return IconDisabledColor;
-        if (prominent || active) return IconColor;
-        return IconInactiveColor;
+        var theme = TrayTheme.CurrentApp;
+        if (!playbackEnabled) return theme.ControlDisabledIconColor;
+        if (prominent || active) return theme.ControlIconColor;
+        return theme.ControlInactiveIconColor;
     }
 
     private Rectangle CenteredIconBounds(Size iconSize) =>
@@ -1552,11 +1645,6 @@ internal enum PopupActionIcon
 
 internal sealed class PopupActionRowControl : Control
 {
-    private static readonly Color TextColor = Color.FromArgb(224, 224, 230);
-    private static readonly Color IconColor = Color.FromArgb(224, 224, 230);
-    private static readonly Color HoverColor = Color.FromArgb(30, 255, 255, 255);
-    private static readonly Color PressedColor = Color.FromArgb(45, 255, 255, 255);
-
     private readonly PopupActionIcon icon;
     private bool hovering;
     private bool pressing;
@@ -1582,6 +1670,8 @@ internal sealed class PopupActionRowControl : Control
     }
 
     public event EventHandler? Pressed;
+
+    public void ApplyTheme() => Invalidate();
 
     protected override void OnMouseEnter(EventArgs e)
     {
@@ -1636,7 +1726,10 @@ internal sealed class PopupActionRowControl : Control
 
         if (hovering || pressing)
         {
-            using var backgroundBrush = new SolidBrush(pressing ? PressedColor : HoverColor);
+            var theme = TrayTheme.CurrentApp;
+            using var backgroundBrush = new SolidBrush(
+                pressing ? theme.ControlPressedColor : theme.ControlHoverColor
+            );
             using var backgroundPath = PlaybackPopupForm.RoundedRectangle(
                 new Rectangle(0, 0, Width, Height),
                 7
@@ -1645,19 +1738,20 @@ internal sealed class PopupActionRowControl : Control
         }
 
         using var font = new Font(Font.FontFamily, 10.75f, FontStyle.Bold);
+        var currentTheme = TrayTheme.CurrentApp;
 
         PopupActionSvgIconRenderer.Draw(
             e.Graphics,
             icon,
             new Rectangle(2, 5, 18, 18),
-            IconColor
+            currentTheme.ActionIconColor
         );
         TextRenderer.DrawText(
             e.Graphics,
             Text,
             font,
             new Rectangle(34, 0, Width - 34, Height),
-            TextColor,
+            currentTheme.ActionTextColor,
             TextFormatFlags.Left
                 | TextFormatFlags.VerticalCenter
                 | TextFormatFlags.EndEllipsis
@@ -1686,10 +1780,6 @@ internal sealed class PopupActionRowControl : Control
 
 internal sealed class SeekBarControl : Control
 {
-    private static readonly Color TrackColor = Color.FromArgb(76, 76, 80);
-    private static readonly Color DisabledTrackColor = Color.FromArgb(42, 42, 48);
-    private static readonly Color DisabledFillColor = Color.FromArgb(88, 88, 96);
-
     private bool dragging;
     private int value;
 
@@ -1735,6 +1825,8 @@ internal sealed class SeekBarControl : Control
             Invalidate();
         }
     }
+
+    public void ApplyTheme() => Invalidate();
 
     protected override void OnEnabledChanged(EventArgs e)
     {
@@ -1782,9 +1874,14 @@ internal sealed class SeekBarControl : Control
 
         var fillWidth = (int)Math.Round(trackBounds.Width * ProgressFraction());
         var fillBounds = new Rectangle(trackBounds.X, trackBounds.Y, fillWidth, trackBounds.Height);
+        var theme = TrayTheme.CurrentApp;
 
-        using var trackBrush = new SolidBrush(Enabled ? TrackColor : DisabledTrackColor);
-        using var fillBrush = new SolidBrush(Enabled ? AccentColor : DisabledFillColor);
+        using var trackBrush = new SolidBrush(
+            Enabled ? theme.ProgressTrackColor : theme.ProgressDisabledTrackColor
+        );
+        using var fillBrush = new SolidBrush(
+            Enabled ? AccentColor : theme.ProgressDisabledFillColor
+        );
         using var trackPath = PlaybackPopupForm.RoundedRectangle(trackBounds, 3);
 
         e.Graphics.FillPath(trackBrush, trackPath);
