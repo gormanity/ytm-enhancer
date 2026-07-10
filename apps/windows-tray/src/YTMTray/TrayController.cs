@@ -13,8 +13,8 @@ internal sealed class TrayController : ITrayController, IDisposable
 
     private readonly NotifyIcon notifyIcon;
     private readonly PlaybackPopupForm popup;
-    private readonly Icon idleIcon;
-    private readonly Icon playingIcon;
+    private Icon idleIcon;
+    private Icon playingIcon;
     private readonly WindowsTrayUpdateService updateService;
     private readonly NativeAppLogger? logger;
     private readonly CancellationTokenSource updateCancellation = new();
@@ -25,6 +25,7 @@ internal sealed class TrayController : ITrayController, IDisposable
     private string? updateCheckError;
     private PopupDismissMouseHook? popupDismissMouseHook;
     private DateTime suppressTrayClickUntil = DateTime.MinValue;
+    private bool isPlaying;
     private bool updateCheckInProgress;
     private bool updateCheckCompleted;
 
@@ -60,6 +61,7 @@ internal sealed class TrayController : ITrayController, IDisposable
         popup.OnAbout = () => ShowAbout(popup);
         popup.OnQuit = () => OnQuit?.Invoke();
         popup.ThemeChanged += (_, _) => aboutDialog?.ApplyTheme();
+        popup.ThemeChanged += (_, _) => RefreshTrayIcons();
         popup.Deactivate += (_, _) => HidePopupFromOutsideClick();
         popup.VisibleChanged += (_, _) =>
         {
@@ -95,6 +97,7 @@ internal sealed class TrayController : ITrayController, IDisposable
     {
         RunOnUiThread(() =>
         {
+            isPlaying = false;
             notifyIcon.Icon = idleIcon;
             notifyIcon.Text = "YTM Enhancer";
             popup.UpdateConnectionStatus(status);
@@ -124,7 +127,8 @@ internal sealed class TrayController : ITrayController, IDisposable
     {
         RunOnUiThread(() =>
         {
-            notifyIcon.Icon = state.IsPlaying ? playingIcon : idleIcon;
+            isPlaying = state.IsPlaying;
+            notifyIcon.Icon = isPlaying ? playingIcon : idleIcon;
             popup.UpdatePlayback(state);
         });
     }
@@ -157,6 +161,17 @@ internal sealed class TrayController : ITrayController, IDisposable
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Quit", null, (_, _) => OnQuit?.Invoke());
         return menu;
+    }
+
+    private void RefreshTrayIcons()
+    {
+        var previousIdleIcon = idleIcon;
+        var previousPlayingIcon = playingIcon;
+        idleIcon = TrayIconFactory.Create(isPlaying: false);
+        playingIcon = TrayIconFactory.Create(isPlaying: true);
+        notifyIcon.Icon = isPlaying ? playingIcon : idleIcon;
+        previousIdleIcon.Dispose();
+        previousPlayingIcon.Dispose();
     }
 
     private async Task CheckForUpdatesAsync(IWin32Window? owner, bool userInitiated)

@@ -316,6 +316,28 @@ describe("Windows tray connector scaffold", () => {
     expect(trayIconFactory).not.toContain("Registry.CurrentUser.OpenSubKey");
   });
 
+  it("refreshes tray icons when Windows theme settings change", () => {
+    const popup = read("src/YTMTray/PlaybackPopupForm.cs");
+    const trayController = read("src/YTMTray/TrayController.cs");
+    const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
+    const theme = read("src/YTMTray/TrayTheme.cs");
+
+    expect(popup).toContain("ThemeChanged?.Invoke");
+    expect(popup).toContain("ApplyThemeFromSystemChange");
+    expect(theme).toContain("SystemUsesLightTheme");
+    expect(theme).toContain("StatusIconColor()");
+    expect(trayIconFactory).toContain("TrayTheme.StatusIconColor()");
+    expect(trayController).toContain("popup.ThemeChanged");
+    expect(trayController).toContain("RefreshTrayIcons");
+    expect(trayController).toContain("previousIdleIcon.Dispose()");
+    expect(trayController).toContain("previousPlayingIcon.Dispose()");
+    expect(trayController).toContain(
+      "notifyIcon.Icon = isPlaying ? playingIcon : idleIcon",
+    );
+    expect(trayController).not.toContain("private readonly Icon idleIcon");
+    expect(trayController).not.toContain("private readonly Icon playingIcon");
+  });
+
   it("keeps menu bar and Windows tray shared icons in sync", () => {
     const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
     const theme = read("src/YTMTray/TrayTheme.cs");
