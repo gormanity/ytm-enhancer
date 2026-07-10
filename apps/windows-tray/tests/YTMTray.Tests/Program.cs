@@ -3,6 +3,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Drawing;
 using YTMTray.Core;
 
 var tests = new (string Name, Func<Task> Run)[]
@@ -15,6 +16,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("connector app routes uninstall requests", ConnectorAppUninstallRequest),
     ("connector app updates tray playback state", ConnectorAppPlaybackState),
     ("connector app accepts stale progress when next artwork changes", ConnectorAppAcceptsNextArtworkUpdate),
+    ("popup placement stays attached to tray anchors", PopupPlacementStaysAttachedToTrayAnchors),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
     ("update options use packaged release version", UpdateOptionsUsePackagedReleaseVersion),
@@ -230,6 +232,51 @@ static Task ConnectorAppAcceptsNextArtworkUpdate()
 
     AssertEqual("https://example.test/next.jpg", tray.State?.NextTrack?.ArtworkUrl);
     AssertEqual(0, tray.StaleCount);
+    return Task.CompletedTask;
+}
+
+static Task PopupPlacementStaysAttachedToTrayAnchors()
+{
+    var primaryWorkingArea = new Rectangle(0, 0, 1920, 1080);
+    var popupSize = new Size(424, 562);
+
+    AssertEqual(
+        new Point(1488, 488),
+        TrayPopupPlacement.Calculate(primaryWorkingArea, popupSize, new Point(1900, 1060))
+    );
+    AssertEqual(
+        new Point(8, 488),
+        TrayPopupPlacement.Calculate(primaryWorkingArea, popupSize, new Point(10, 1060))
+    );
+    AssertEqual(
+        new Point(1488, 8),
+        TrayPopupPlacement.Calculate(primaryWorkingArea, popupSize, new Point(1900, 20))
+    );
+    AssertEqual(
+        new Point(1488, 508),
+        TrayPopupPlacement.Calculate(primaryWorkingArea, popupSize)
+    );
+
+    var taskbarWorkingArea = new Rectangle(0, 0, 1920, 1040);
+    AssertEqual(
+        new Point(1488, 468),
+        TrayPopupPlacement.Calculate(
+            taskbarWorkingArea,
+            popupSize,
+            new Point(1900, 1060)
+        )
+    );
+
+    var leftMonitorWorkingArea = new Rectangle(-1920, 0, 1920, 1080);
+    AssertEqual(
+        new Point(-432, 488),
+        TrayPopupPlacement.Calculate(
+            leftMonitorWorkingArea,
+            popupSize,
+            new Point(-20, 1060)
+        )
+    );
+
     return Task.CompletedTask;
 }
 

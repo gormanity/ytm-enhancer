@@ -7,8 +7,6 @@ namespace YTMTray;
 
 internal sealed class TrayController : ITrayController, IDisposable
 {
-    private const int PopupEdgePadding = 8;
-    private const int TaskbarFlyoutClearance = 112;
     private static readonly TimeSpan TrayClickSuppressWindow = TimeSpan.FromMilliseconds(350);
 
     private readonly NotifyIcon notifyIcon;
@@ -90,7 +88,7 @@ internal sealed class TrayController : ITrayController, IDisposable
 
     public void OpenPopupForTest()
     {
-        RunOnUiThread(() => ShowPopup(Screen.PrimaryScreen?.WorkingArea));
+        RunOnUiThread(() => ShowPopup(Screen.PrimaryScreen?.WorkingArea, anchorPoint: null));
     }
 
     public void UpdateConnectionStatus(string status)
@@ -410,18 +408,13 @@ internal sealed class TrayController : ITrayController, IDisposable
             return;
         }
 
-        ShowPopup(Screen.FromPoint(Cursor.Position).WorkingArea);
+        ShowPopup(Screen.FromPoint(Cursor.Position).WorkingArea, Cursor.Position);
     }
 
-    private void ShowPopup(Rectangle? bounds)
+    private void ShowPopup(Rectangle? bounds, Point? anchorPoint)
     {
         var workingArea = bounds ?? Screen.PrimaryScreen?.WorkingArea ?? Screen.GetWorkingArea(popup);
-        var x = Math.Min(Cursor.Position.X, workingArea.Right - popup.Width);
-        var y = workingArea.Bottom - popup.Height - TaskbarFlyoutClearance;
-        popup.Location = new Point(
-            Math.Max(workingArea.Left, x),
-            Math.Max(workingArea.Top + PopupEdgePadding, y)
-        );
+        popup.Location = TrayPopupPlacement.Calculate(workingArea, popup.Size, anchorPoint);
         popup.Show();
         popup.Activate();
         InstallPopupDismissal();

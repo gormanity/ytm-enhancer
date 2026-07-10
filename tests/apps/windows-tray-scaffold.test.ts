@@ -83,13 +83,25 @@ describe("Windows tray connector scaffold", () => {
     expect(sources).toContain("no resident tray bridge available");
   });
 
-  it("keeps the playback popup clear of the hidden-icons flyout", () => {
+  it("anchors the playback popup near the clicked tray icon", () => {
     const trayController = read("src/YTMTray/TrayController.cs");
+    const placement = read("src/YTMTray.Core/TrayPopupPlacement.cs");
+    const nativeTests = read("tests/YTMTray.Tests/Program.cs");
 
-    expect(trayController).toContain("TaskbarFlyoutClearance = 112");
+    expect(placement).toContain("AnchorGap = 10");
+    expect(placement).toContain("AnchorHorizontalInset = 24");
+    expect(placement).toContain("Point? anchorPoint = null");
+    expect(placement).toContain("workingArea.Left + EdgePadding");
     expect(trayController).toContain(
-      "workingArea.Bottom - popup.Height - TaskbarFlyoutClearance",
+      "ShowPopup(Screen.FromPoint(Cursor.Position).WorkingArea, Cursor.Position)",
     );
+    expect(trayController).toContain(
+      "TrayPopupPlacement.Calculate(workingArea, popup.Size, anchorPoint)",
+    );
+    expect(nativeTests).toContain("PopupPlacementStaysAttachedToTrayAnchors");
+    expect(nativeTests).toContain("new Rectangle(-1920, 0, 1920, 1080)");
+    expect(nativeTests).toContain("new Rectangle(0, 0, 1920, 1040)");
+    expect(trayController).not.toContain("TaskbarFlyoutClearance");
     expect(trayController).toContain("popup.OnAbout = () => ShowAbout(popup)");
     expect(trayController).toContain("IWin32Window? owner");
     expect(trayController).toContain("AboutDialogForm? aboutDialog");
