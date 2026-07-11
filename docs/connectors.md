@@ -90,8 +90,8 @@ subsystem rather than a `FeatureModule`.
 Use "Connected Apps" for user-facing copy. Keep "connector" for protocol,
 source, and architecture docs where the stable public API boundary matters. The
 popup keeps the first-party YTM Menu Bar app discoverable even before it is
-registered, and treats the registered connector list as the approval and
-lifecycle control surface.
+registered, and treats the registered connector list as the per-app lifecycle
+control surface.
 
 ## Transport
 
@@ -112,11 +112,12 @@ enabled. When connector support is disabled, the host is not created and the
 native messaging connection is not opened.
 
 Browsers do not expose a native-host installation query. The extension infers
-first-party install state from the native messaging startup path instead:
-successful `connectNative()` startup marks a first-party app as available, and
-browser-reported startup or disconnect failures mark it as missing or needing
-attention in the Connected Apps page. These diagnostics are intentionally
-transient and are not part of the connector protocol.
+first-party install state from the native messaging startup path instead. After
+the extension opens a native messaging port and sends `connector.bootstrap`, the
+first non-diagnostic host message marks the app as available. Browser-reported
+startup or disconnect failures mark it as missing or needing attention in the
+Connected Apps page. These diagnostics are intentionally transient and are not
+part of the connector protocol.
 
 First-party resident UI apps use a single active browser connection at a time.
 When another browser already owns the app connection, the native relay reports a
@@ -132,11 +133,12 @@ a constrained browser-local bridge, must preserve the same host validation path.
 Connected Apps support depends on the browser extension, the browser's native
 messaging implementation, and the first-party app installer.
 
-| App              | Platform    | Supported Browsers                               | Automated Connector Smoke           |
-| ---------------- | ----------- | ------------------------------------------------ | ----------------------------------- |
-| YTM Menu Bar     | macOS       | Chrome, Chromium, Microsoft Edge, Firefox        | Chromium, Edge, and Firefox buttons |
-| YTM Enhancer CLI | macOS/Linux | Chrome, Chromium, Microsoft Edge, Firefox, Brave | Chromium and Firefox                |
-| YTM Tray         | Windows     | Chrome, Microsoft Edge, Firefox                  | Microsoft Edge and Firefox          |
+- YTM Menu Bar on macOS supports Chrome, Chromium, Microsoft Edge, and Firefox.
+  Automated connector smoke covers buttons in Chromium, Edge, and Firefox.
+- YTM Enhancer CLI on macOS and Linux supports Chrome, Chromium, Microsoft Edge,
+  Firefox, and Brave. Automated connector smoke covers Chromium and Firefox.
+- YTM Tray on Windows supports Chrome, Microsoft Edge, and Firefox. Automated
+  connector smoke covers Edge and Firefox.
 
 Firefox native messaging support is implemented for macOS and Linux installers
 through `allowed_extensions` manifests for `ytm-enhancer@gormanity`, with
@@ -167,7 +169,7 @@ docs/
 The existing extension still lives under `src/`. Moving it to an `extension/`
 package would be a larger monorepo refactor and is not part of this slice.
 
-## Menu Bar Connector Next Steps
+## Menu Bar Connector
 
 The first-party macOS menu bar connector lives in `apps/menu-bar`. It is a
 native Swift/AppKit executable that communicates with the extension through
@@ -292,9 +294,14 @@ The local installer publishes a self-contained `YTMTray.exe` plus
 native-host relay under `%LOCALAPPDATA%\YTM Enhancer\Tray`, and registers
 user-level native messaging keys for Google Chrome, Microsoft Edge, and Firefox.
 
-Remaining work before a public connector release:
+## Release Status
 
-1. Publish the `gormanity/homebrew-tap` cask repository.
-2. Add a clearer approval flow for newly seen connectors.
-3. Add connector-facing diagnostics for protocol mismatches and permission
-   denials.
+YTM Menu Bar and YTM Tray use independent component release channels and do not
+replace the browser extension as GitHub's repository-wide latest release. Their
+install pages, update metadata, package checks, and browser connector smoke
+tests are part of the release workflow. The CLI remains locally installable
+while its public packaging and release automation are still planned separately.
+
+New connector work should preserve the global opt-in, independent per-app
+enablement, actionable protocol and permission diagnostics, and connection
+lifecycle controls in the Connected Apps page.

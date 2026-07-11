@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: March 8, 2026
+Last updated: July 11, 2026
 
 YTM Enhancer is built with a privacy-first model:
 
@@ -37,6 +37,7 @@ Depending on which modules you enable, locally stored settings may include:
 - Notification field visibility preferences
 - Audio Visualizer style/configuration options
 - Playback Controls and popup view preferences
+- Connected Apps activation, discovery, and per-app enablement state
 
 YTM Enhancer does not store your Google account password, payment data, or full
 YouTube Music history for the developer.
@@ -59,6 +60,24 @@ YTM Enhancer is scoped to YouTube Music and related artwork resources:
 
 No project-operated servers are contacted.
 
+## Connected Apps and Native Messaging
+
+Connected Apps are optional and disabled by default. If you enable this feature
+and install a supported first-party companion app, the extension uses your
+browser's `nativeMessaging` API to communicate with that app on your device.
+
+Depending on the permissions shown in Connected Apps, the extension can send
+current playback state and track metadata to the companion app. The companion
+app can send playback, seeking, and YouTube Music tab-focus commands back to the
+extension. This communication stays between the browser and the native app on
+your device; it is not routed through project-operated servers.
+
+You can disable an individual app or all Connected Apps at any time. Disabling
+access closes the corresponding native messaging connection and stops new
+playback data and commands for that app. Companion apps are installed,
+uninstalled, and updated separately from the extension through their documented
+distribution channels.
+
 ## What Is Never Transmitted Off-Device
 
 YTM Enhancer does not transmit the following to project infrastructure because
@@ -77,6 +96,9 @@ no project infrastructure for data collection exists:
 - `alarms` used for scheduled/background tasks, including Sleep Timer behavior.
 - `notifications` used to show native desktop notifications for track and
   playback events.
+- `nativeMessaging` used only when Connected Apps is enabled to exchange
+  playback state, track metadata, and user-requested commands with enabled
+  first-party companion apps on your device.
 - `scripting` used to inject extension scripts on YouTube Music pages so
   features can work in-page.
 - `storage` used to save module settings and preferences in browser extension
