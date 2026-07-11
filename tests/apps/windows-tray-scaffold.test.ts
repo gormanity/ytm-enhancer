@@ -141,7 +141,7 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("ScrollingLabelControl : Control");
     expect(popupForm).toContain("StatusMessageControl : Control");
     expect(popupForm).toContain("CloseButtonControl : Control");
-    expect(popupForm).toContain("SeekBarControl : Control");
+    expect(popupForm).toContain("SeekBarControl : TrackBar");
     expect(popupForm).toContain("PlaybackButtonControl : Control");
     expect(popupForm).toContain("PopupActionRowControl : Control");
     expect(popupForm).toContain("PlaybackButtonIcon.Shuffle");
@@ -157,6 +157,13 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("ControlStyles.OptimizedDoubleBuffer");
     expect(popupForm).toContain("LinearGradientBrush");
     expect(popupForm).toContain("UserSeekRequested");
+    expect(popupForm).toContain("PendingSeekTracker pendingSeek");
+    expect(popupForm).toContain("PlaybackItemIdentity? currentPlaybackItem");
+    expect(popupForm).toContain("PlaybackItemIdentity.From(state)");
+    expect(popupForm).toContain(
+      "pendingSeek.Begin(time, currentDuration, playbackItem)",
+    );
+    expect(popupForm).toContain("pendingSeek.DisplayProgress");
     expect(popupForm).toContain("metadata scroll advanced");
     expect(popupForm).toContain("ClientSize = new Size(424, 562)");
     expect(popupForm).toContain("currentArtwork.SetBounds(24, 24, 92, 92)");
@@ -172,6 +179,8 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain('"About YTM Tray"');
     expect(popupForm).toContain("ToolTip controlTips");
     expect(popupForm).toContain("private bool hasPlayableTrack");
+    expect(popupForm).toContain("HasPlayableState(state)");
+    expect(popupForm).toContain('"Unknown track"');
     expect(popupForm).toContain("PackagedArtworkScheme");
     expect(popupForm).toContain("FixtureArtworkHost");
     expect(popupForm).toContain("TryLoadPackagedArtwork");
@@ -194,8 +203,9 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("DrawWarningIcon");
     expect(popupForm).not.toContain("DrawShuffleIcon");
     expect(popupForm).not.toContain("DrawRepeatIcon");
-    expect(popupForm).not.toContain("TrackBar progressBar");
-    expect(popupForm).not.toContain("TickStyle.None");
+    expect(popupForm).toContain("TickStyle = TickStyle.None");
+    expect(popupForm).toContain("SmallChange = 1");
+    expect(popupForm).toContain("LargeChange = 50");
   });
 
   it("embeds shared connector playback SVG assets", () => {
@@ -497,6 +507,12 @@ describe("Windows tray connector scaffold", () => {
     expect(popup).toContain("owner.PerformPress()");
     expect(popup).toContain("ControlStyles.Selectable");
     expect(popup).toContain("TabStop = true");
+    expect(popup).toContain("AccessibleRole.CheckButton");
+    expect(popup).toContain('"Repeat off"');
+    expect(popup).toContain('"Repeat all"');
+    expect(popup).toContain('"Repeat one"');
+    expect(popup).toContain("AccessibleStates.Checked");
+    expect(popup).toContain("public override string? Value");
   });
 
   it("installs Edge, Chrome, and Firefox native messaging registration under HKCU", () => {
@@ -529,11 +545,19 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(installScript).toContain("allowed_origins");
     expect(installScript).toContain("allowed_extensions");
+    expect(installScript).toContain(
+      "[Microsoft.Win32.RegistryView]::Registry64",
+    );
+    expect(installScript).toContain("Set-FirefoxRegistry64Value");
     expect(installScript).toContain("bilcedjabgiedoamakekncokccabdccp");
     expect(installScript).toContain("gamefnibdabclmkngggcjghpbhjmajkm");
     expect(installScript).toContain("ytm-enhancer@gormanity");
     expect(uninstallScript).toContain("Remove-Item");
     expect(uninstallScript).toContain("HKCU:\\Software\\Mozilla");
+    expect(uninstallScript).toContain(
+      "[Microsoft.Win32.RegistryView]::Registry64",
+    );
+    expect(uninstallScript).toContain("Remove-FirefoxRegistry64Key");
     expect(uninstallScript).toContain("Remove-StartMenuShortcuts");
     expect(uninstallScript).toContain("Unregister-UninstallEntry");
     expect(uninstallScript).toContain(
@@ -541,6 +565,28 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(uninstallScript).toContain("YTMTray");
     expect(uninstallScript).toContain("YTMTray.NativeHost");
+  });
+
+  it("validates tray parity and browser contention through live Windows smoke coverage", () => {
+    const connectorSmoke = readRepo("tests/e2e/windows-tray-connector.spec.ts");
+    const contentionSmoke = readRepo(
+      "scripts/windows-qa/tray-contention-smoke.ps1",
+    );
+
+    expect(connectorSmoke).toContain("ValuePattern");
+    expect(connectorSmoke).not.toContain("RangeValuePattern");
+    expect(connectorSmoke).toContain("TogglePattern");
+    expect(connectorSmoke).toContain("publishPartialPlaybackMetadata");
+    expect(connectorSmoke).toContain("setWindowsTrayLifecycleEnabled");
+    expect(connectorSmoke).toContain('"No YouTube Music tab"');
+    expect(connectorSmoke).toContain('"Not connected to a browser."');
+    expect(contentionSmoke).toContain("YTME_WINDOWS_TRAY_HOLD_RELEASE_PATH");
+    expect(contentionSmoke).toContain("Wait-ActiveBrowserOwner");
+    expect(contentionSmoke).toContain("--project=edge");
+    expect(contentionSmoke).toContain("--project=firefox");
+    expect(contentionSmoke).toContain(
+      "[Microsoft.Win32.RegistryView]::Registry64",
+    );
   });
 
   it("provides dependency-free .NET tray tests", () => {
@@ -551,6 +597,20 @@ describe("Windows tray connector scaffold", () => {
     expect(testProject).not.toContain("PackageReference");
     expect(testRunner).toContain("NativeMessagingCodecRoundTrip");
     expect(testRunner).toContain("ConnectorAppHandshake");
+    expect(testRunner).toContain("ConnectorAppAcceptsImmediateDuplicate");
+    expect(testRunner).toContain(
+      "ConnectorAppRejectsDuplicateAfterStaleTimeout",
+    );
+    expect(testRunner).toContain("ConnectorAppAcceptsNextArtworkUpdate");
+    expect(testRunner).toContain(
+      "ConnectorAppAcceptsShuffleUpdateAfterStaleTimeout",
+    );
+    expect(testRunner).toContain(
+      "ConnectorAppAcceptsRepeatUpdateAfterStaleTimeout",
+    );
+    expect(testRunner).toContain("PendingSeekHoldsOptimisticProgress");
+    expect(testRunner).toContain("PendingSeekClearsOnPlaybackItemChange");
+    expect(testRunner).toContain("PendingSeekSurvivesMetadataEnrichment");
   });
 
   it("keeps release metadata separate from the browser extension version", () => {
@@ -592,10 +652,21 @@ describe("Windows tray connector scaffold", () => {
       "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH",
     );
     expect(packageScript).toContain("YTM_WINDOWS_TRAY_CODESIGN_REQUIRED");
+    expect(packageScript).toContain("YTM_WINDOWS_TRAY_POWERSHELL");
+    expect(packageScript).toContain('process.platform === "win32"');
+    expect(packageScript).toContain('"powershell.exe"');
+    expect(packageScript).not.toContain('run("pwsh"');
     expect(packageScript).toContain(
       "Windows tray signing is required, but YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_PATH is not set.",
     );
     expect(packageScript).toContain("sign-release-payload.ps1");
+    expect(signingScript).toContain(
+      "$PreviousErrorActionPreference = $ErrorActionPreference",
+    );
+    expect(signingScript).toContain('$ErrorActionPreference = "Continue"');
+    expect(signingScript).toContain(
+      "$ErrorActionPreference = $PreviousErrorActionPreference",
+    );
     expect(packageScript).toContain("buildReleasePayload");
     expect(packageScript).toContain("archiveReleasePayload");
     expect(packageScript).toContain('argValue("stage", "package")');
@@ -986,6 +1057,5 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(connectorsDocs).toContain("com.gormanity.ytm_enhancer.tray");
     expect(connectorsDocs).toContain("verify the runtime package checksum");
-    expect(connectorsDocs).toContain("Chrome, Microsoft Edge, Firefox");
   });
 });

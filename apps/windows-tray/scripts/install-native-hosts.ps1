@@ -78,6 +78,72 @@ $RegistryKeys = @(
   "HKCU:\Software\Mozilla\NativeMessagingHosts\$HostName"
 )
 $RegistryBackup = @{}
+$FirefoxRegistry64Backup = @{ exists = $false }
+$FirefoxRegistrySubKey = "Software\Mozilla\NativeMessagingHosts\$HostName"
+
+function Open-CurrentUserRegistry64 {
+  return [Microsoft.Win32.RegistryKey]::OpenBaseKey(
+    [Microsoft.Win32.RegistryHive]::CurrentUser,
+    [Microsoft.Win32.RegistryView]::Registry64
+  )
+}
+
+function Save-FirefoxRegistry64Backup {
+  $BaseKey = Open-CurrentUserRegistry64
+  try {
+    $Key = $BaseKey.OpenSubKey($FirefoxRegistrySubKey)
+    if ($Key) {
+      try {
+        $script:FirefoxRegistry64Backup = @{
+          exists = $true
+          value = $Key.GetValue("")
+        }
+      } finally {
+        $Key.Dispose()
+      }
+    }
+  } finally {
+    $BaseKey.Dispose()
+  }
+}
+
+function Set-FirefoxRegistry64Value {
+  param([Parameter(Mandatory = $true)][string] $Value)
+
+  $BaseKey = Open-CurrentUserRegistry64
+  try {
+    $Key = $BaseKey.CreateSubKey($FirefoxRegistrySubKey, $true)
+    try {
+      $Key.SetValue("", $Value, [Microsoft.Win32.RegistryValueKind]::String)
+    } finally {
+      $Key.Dispose()
+    }
+  } finally {
+    $BaseKey.Dispose()
+  }
+}
+
+function Restore-FirefoxRegistry64Backup {
+  $BaseKey = Open-CurrentUserRegistry64
+  try {
+    if ($FirefoxRegistry64Backup.exists) {
+      $Key = $BaseKey.CreateSubKey($FirefoxRegistrySubKey, $true)
+      try {
+        $Key.SetValue(
+          "",
+          $FirefoxRegistry64Backup.value,
+          [Microsoft.Win32.RegistryValueKind]::String
+        )
+      } finally {
+        $Key.Dispose()
+      }
+    } else {
+      $BaseKey.DeleteSubKeyTree($FirefoxRegistrySubKey, $false)
+    }
+  } finally {
+    $BaseKey.Dispose()
+  }
+}
 
 function Invoke-Native {
   param(
@@ -326,6 +392,7 @@ function Save-RegistryBackup {
       $RegistryBackup[$RegistryKey] = @{ exists = $false }
     }
   }
+  Save-FirefoxRegistry64Backup
 }
 
 function Restore-InstallBackup {
@@ -351,6 +418,7 @@ function Restore-RegistryBackup {
       Remove-Item -LiteralPath $RegistryKey -Recurse -Force
     }
   }
+  Restore-FirefoxRegistry64Backup
 }
 
 function Install-Shortcut {
@@ -492,6 +560,7 @@ try {
     Set-Item -Path $RegistryKey -Value $RegistryValue
     Write-Output "Installed $RegistryKey -> $RegistryValue"
   }
+  Set-FirefoxRegistry64Value -Value $FirefoxManifestPath
 
   Write-UninstallCommand
   Install-StartMenuShortcuts

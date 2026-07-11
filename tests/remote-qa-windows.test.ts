@@ -532,6 +532,21 @@ describe("Windows remote QA scaffold", () => {
     expect(contentionSmoke).toContain("playwright install firefox");
     expect(contentionSmoke).toContain("Invoke-Pnpm run dev:build:firefox");
     expect(contentionSmoke).toContain(
+      '$EdgeOutputPath = Join-Path $env:TEMP "ytme-own-$RunId"',
+    );
+    expect(contentionSmoke).toContain(
+      '$FirefoxOutputPath = Join-Path $env:TEMP "ytme-con-$RunId"',
+    );
+    expect(contentionSmoke).toContain("--output $EdgeOutputLiteral");
+    expect(contentionSmoke).toContain("--output $FirefoxOutputPath");
+    expect(contentionSmoke).toContain("$EdgeProcess.WaitForExit(240000)");
+    expect(contentionSmoke).toContain("$EdgeExitCodePath");
+    expect(contentionSmoke).toContain(
+      "[IO.File]::WriteAllText($EdgeExitCodeLiteral",
+    );
+    expect(contentionSmoke).toContain("[int]::TryParse");
+    expect(contentionSmoke).not.toContain("Wait-Process -Id $EdgeProcess.Id");
+    expect(contentionSmoke).toContain(
       "playwright test tests/e2e/windows-tray-contention.spec.ts --project=firefox --workers=1",
     );
     expect(contentionSmokeShell).toContain("--preserve-apps");

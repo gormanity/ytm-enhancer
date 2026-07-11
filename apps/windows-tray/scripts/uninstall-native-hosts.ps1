@@ -12,6 +12,19 @@ $RegistryKeys = @(
   "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName",
   "HKCU:\Software\Mozilla\NativeMessagingHosts\$HostName"
 )
+$FirefoxRegistrySubKey = "Software\Mozilla\NativeMessagingHosts\$HostName"
+
+function Remove-FirefoxRegistry64Key {
+  $BaseKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey(
+    [Microsoft.Win32.RegistryHive]::CurrentUser,
+    [Microsoft.Win32.RegistryView]::Registry64
+  )
+  try {
+    $BaseKey.DeleteSubKeyTree($FirefoxRegistrySubKey, $false)
+  } finally {
+    $BaseKey.Dispose()
+  }
+}
 
 if ([string]::IsNullOrWhiteSpace($InstallRoot)) {
   $InstallRoot = Join-Path $env:LOCALAPPDATA "YTM Enhancer\Tray"
@@ -57,6 +70,7 @@ foreach ($RegistryKey in $RegistryKeys) {
     Write-Status "Removed $RegistryKey"
   }
 }
+Remove-FirefoxRegistry64Key
 
 Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
   Stop-Process -Force -ErrorAction SilentlyContinue

@@ -33,6 +33,13 @@ function fileVersion(metadata) {
   return `${metadata.version}.${metadata.buildNumber}`;
 }
 
+function powershellCommand() {
+  const configured = process.env.YTM_WINDOWS_TRAY_POWERSHELL?.trim();
+  if (configured) return configured;
+
+  return process.platform === "win32" ? "powershell.exe" : "pwsh";
+}
+
 function publishProject({ project, outputDirectory, runtime, metadata }) {
   run("dotnet", [
     "publish",
@@ -68,7 +75,7 @@ function maybeSignPayload(payloadRoot) {
     return;
   }
 
-  run("pwsh", [
+  run(powershellCommand(), [
     "-NoLogo",
     "-NoProfile",
     "-ExecutionPolicy",

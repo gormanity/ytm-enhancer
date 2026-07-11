@@ -15,7 +15,17 @@ var tests = new (string Name, Func<Task> Run)[]
     ("connector app queues a fresh handshake after disconnect", ConnectorAppReconnectHandshake),
     ("connector app routes uninstall requests", ConnectorAppUninstallRequest),
     ("connector app updates tray playback state", ConnectorAppPlaybackState),
+    ("connector app accepts immediate duplicate playing state", ConnectorAppAcceptsImmediateDuplicate),
+    ("connector app rejects duplicate only after stale timeout", ConnectorAppRejectsDuplicateAfterStaleTimeout),
+    ("connector app accepts duration updates after stale timeout", ConnectorAppAcceptsDurationUpdateAfterStaleTimeout),
     ("connector app accepts stale progress when next artwork changes", ConnectorAppAcceptsNextArtworkUpdate),
+    ("connector app accepts shuffle updates after stale timeout", ConnectorAppAcceptsShuffleUpdateAfterStaleTimeout),
+    ("connector app accepts repeat updates after stale timeout", ConnectorAppAcceptsRepeatUpdateAfterStaleTimeout),
+    ("connector app normalizes missing tab errors", ConnectorAppNormalizesMissingTabError),
+    ("pending seek holds optimistic progress until confirmed", PendingSeekHoldsOptimisticProgress),
+    ("pending seek expires back to reported progress", PendingSeekExpires),
+    ("pending seek clears optimistic progress when the track changes", PendingSeekClearsOnPlaybackItemChange),
+    ("pending seek survives same-track metadata enrichment", PendingSeekSurvivesMetadataEnrichment),
     ("popup placement stays attached to tray anchors", PopupPlacementStaysAttachedToTrayAnchors),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
@@ -186,11 +196,213 @@ static Task ConnectorAppPlaybackState()
     return Task.CompletedTask;
 }
 
-static Task ConnectorAppAcceptsNextArtworkUpdate()
+static Task ConnectorAppAcceptsImmediateDuplicate()
 {
     var connection = new FakeConnection();
     var tray = new FakeTrayController();
     using var app = new ConnectorApp(connection, tray);
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    var state = PlaybackStateFixture(progress: 12);
+    connection.Emit(new HostMessage { Type = "playback.state", State = state });
+    connection.Emit(new HostMessage { Type = "playback.state", State = state });
+
+    AssertEqual(2, tray.UpdateCount);
+    AssertEqual(0, tray.StaleCount);
+    return Task.CompletedTask;
+}
+
+static async Task ConnectorAppRejectsDuplicateAfterStaleTimeout()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(
+        connection,
+        tray,
+        playbackStateStaleTimeout: TimeSpan.FromMilliseconds(20)
+    );
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    var state = PlaybackStateFixture(progress: 12);
+    connection.Emit(new HostMessage { Type = "playback.state", State = state });
+    await WaitUntilAsync(() => tray.StaleCount == 1, TimeSpan.FromSeconds(1));
+    connection.Emit(new HostMessage { Type = "playback.state", State = state });
+
+    AssertEqual(1, tray.UpdateCount);
+    AssertEqual(2, tray.StaleCount);
+}
+
+static async Task ConnectorAppAcceptsDurationUpdateAfterStaleTimeout()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(
+        connection,
+        tray,
+        playbackStateStaleTimeout: TimeSpan.FromMilliseconds(20)
+    );
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    connection.Emit(new HostMessage
+    {
+        Type = "playback.state",
+        State = PlaybackStateFixture(progress: 12, duration: 60)
+    });
+    await WaitUntilAsync(() => tray.StaleCount == 1, TimeSpan.FromSeconds(1));
+    connection.Emit(new HostMessage
+    {
+        Type = "playback.state",
+        State = PlaybackStateFixture(progress: 12, duration: 90)
+    });
+
+    AssertEqual(2, tray.UpdateCount);
+    AssertEqual(90d, tray.State?.Duration);
+}
+
+static Task ConnectorAppNormalizesMissingTabError()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(connection, tray);
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+    connection.Emit(new HostMessage
+    {
+        Type = "connector.error",
+        RequestId = "state-3",
+        Code = "route_failed",
+        Message = "Could not establish connection. Receiving end does not exist."
+    });
+
+    AssertEqual("No YouTube Music tab", tray.Status);
+    return Task.CompletedTask;
+}
+
+static Task PendingSeekHoldsOptimisticProgress()
+{
+    var clock = new ManualTimeProvider();
+    var pendingSeek = new PendingSeekTracker(clock);
+    var item = PlaybackItemIdentityFixture();
+    pendingSeek.Begin(42, 100, item);
+
+    AssertEqual(42d, pendingSeek.DisplayProgress(10, 100, item));
+    AssertEqual(42.5d, pendingSeek.DisplayProgress(42.5, 100, item));
+    AssertEqual(43d, pendingSeek.DisplayProgress(43, 100, item));
+    return Task.CompletedTask;
+}
+
+static Task PendingSeekExpires()
+{
+    var clock = new ManualTimeProvider();
+    var pendingSeek = new PendingSeekTracker(clock);
+    var item = PlaybackItemIdentityFixture();
+    pendingSeek.Begin(42, 100, item);
+    clock.Advance(TimeSpan.FromSeconds(1.6));
+
+    AssertEqual(10d, pendingSeek.DisplayProgress(10, 100, item));
+    return Task.CompletedTask;
+}
+
+static Task PendingSeekClearsOnPlaybackItemChange()
+{
+    var clock = new ManualTimeProvider();
+    var pendingSeek = new PendingSeekTracker(clock);
+    var firstTrack = new PlaybackItemIdentity(
+        "First Song",
+        "Artist",
+        "Album",
+        100
+    );
+    var secondTrack = firstTrack with
+    {
+        Title = "Second Song"
+    };
+    pendingSeek.Begin(42, 100, firstTrack);
+
+    AssertEqual(42d, pendingSeek.DisplayProgress(10, 100, firstTrack));
+    AssertEqual(3d, pendingSeek.DisplayProgress(3, 100, secondTrack));
+    AssertEqual(4d, pendingSeek.DisplayProgress(4, 100, firstTrack));
+    return Task.CompletedTask;
+}
+
+static Task PendingSeekSurvivesMetadataEnrichment()
+{
+    var clock = new ManualTimeProvider();
+    var pendingSeek = new PendingSeekTracker(clock);
+    var initialState = new PlaybackState(
+        " Song ",
+        "Artist",
+        "Album",
+        null,
+        null,
+        null,
+        true,
+        10,
+        100.4,
+        false,
+        "off"
+    );
+    var enrichedState = initialState with
+    {
+        Title = "Song",
+        Year = 2026,
+        ArtworkUrl = "https://example.test/current.jpg",
+        Progress = 11,
+        Duration = 100.49
+    };
+    pendingSeek.Begin(42, initialState.Duration, PlaybackItemIdentity.From(initialState));
+
+    AssertEqual(
+        42d,
+        pendingSeek.DisplayProgress(
+            enrichedState.Progress,
+            enrichedState.Duration,
+            PlaybackItemIdentity.From(enrichedState)
+        )
+    );
+    return Task.CompletedTask;
+}
+
+static PlaybackItemIdentity PlaybackItemIdentityFixture() =>
+    new(
+        "Song",
+        "Artist",
+        "Album",
+        100
+    );
+
+static PlaybackState PlaybackStateFixture(
+    double progress,
+    double duration = 60,
+    bool? isShuffling = false,
+    string? repeatMode = "off"
+) =>
+    new(
+        "Song",
+        "Artist",
+        "Album",
+        2026,
+        null,
+        null,
+        true,
+        progress,
+        duration,
+        isShuffling,
+        repeatMode
+    );
+
+static async Task ConnectorAppAcceptsNextArtworkUpdate()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(
+        connection,
+        tray,
+        playbackStateStaleTimeout: TimeSpan.FromMilliseconds(20)
+    );
     app.Start();
     connection.Emit(new HostMessage { Type = "connector.ready" });
 
@@ -228,11 +440,70 @@ static Task ConnectorAppAcceptsNextArtworkUpdate()
     );
 
     connection.Emit(new HostMessage { Type = "playback.state", State = initialState });
+    await WaitUntilAsync(() => tray.StaleCount == 1, TimeSpan.FromSeconds(1));
     connection.Emit(new HostMessage { Type = "playback.state", State = nextArtworkState });
 
     AssertEqual("https://example.test/next.jpg", tray.State?.NextTrack?.ArtworkUrl);
-    AssertEqual(0, tray.StaleCount);
-    return Task.CompletedTask;
+    AssertEqual(2, tray.UpdateCount);
+    AssertEqual(1, tray.StaleCount);
+}
+
+static async Task ConnectorAppAcceptsShuffleUpdateAfterStaleTimeout()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(
+        connection,
+        tray,
+        playbackStateStaleTimeout: TimeSpan.FromMilliseconds(20)
+    );
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    connection.Emit(new HostMessage
+    {
+        Type = "playback.state",
+        State = PlaybackStateFixture(progress: 12, isShuffling: false)
+    });
+    await WaitUntilAsync(() => tray.StaleCount == 1, TimeSpan.FromSeconds(1));
+    connection.Emit(new HostMessage
+    {
+        Type = "playback.state",
+        State = PlaybackStateFixture(progress: 12, isShuffling: true)
+    });
+
+    AssertEqual(true, tray.State?.IsShuffling);
+    AssertEqual(2, tray.UpdateCount);
+    AssertEqual(1, tray.StaleCount);
+}
+
+static async Task ConnectorAppAcceptsRepeatUpdateAfterStaleTimeout()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(
+        connection,
+        tray,
+        playbackStateStaleTimeout: TimeSpan.FromMilliseconds(20)
+    );
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    connection.Emit(new HostMessage
+    {
+        Type = "playback.state",
+        State = PlaybackStateFixture(progress: 12, repeatMode: "off")
+    });
+    await WaitUntilAsync(() => tray.StaleCount == 1, TimeSpan.FromSeconds(1));
+    connection.Emit(new HostMessage
+    {
+        Type = "playback.state",
+        State = PlaybackStateFixture(progress: 12, repeatMode: "all")
+    });
+
+    AssertEqual("all", tray.State?.RepeatMode);
+    AssertEqual(2, tray.UpdateCount);
+    AssertEqual(1, tray.StaleCount);
 }
 
 static Task PopupPlacementStaysAttachedToTrayAnchors()
@@ -597,6 +868,19 @@ static async Task AssertThrowsAsync<T>(Func<Task> action, string expectedMessage
     throw new InvalidOperationException($"expected {typeof(T).Name} containing {expectedMessage}");
 }
 
+static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
+{
+    var deadline = DateTime.UtcNow + timeout;
+    while (!condition())
+    {
+        if (DateTime.UtcNow >= deadline)
+        {
+            throw new TimeoutException("condition was not met before timeout");
+        }
+        await Task.Delay(5);
+    }
+}
+
 sealed class FakeConnection : IConnectorConnection
 {
     private Action<HostMessage>? onMessage;
@@ -645,6 +929,7 @@ sealed class FakeTrayController : ITrayController
     public PlaybackState? State { get; private set; }
     public bool UninstallRequested { get; private set; }
     public int StaleCount { get; private set; }
+    public int UpdateCount { get; private set; }
 
     public void UpdateConnectionStatus(string status) => Status = status;
     public void UpdateBrowserSource(ConnectorSource? source) => BrowserSource = source;
@@ -654,7 +939,20 @@ sealed class FakeTrayController : ITrayController
         StaleCount += 1;
         Status = "Waiting for playback updates...";
     }
-    public void UpdatePlayback(PlaybackState state) => State = state;
+    public void UpdatePlayback(PlaybackState state)
+    {
+        State = state;
+        UpdateCount += 1;
+    }
+}
+
+sealed class ManualTimeProvider : TimeProvider
+{
+    private DateTimeOffset now = DateTimeOffset.UnixEpoch;
+
+    public override DateTimeOffset GetUtcNow() => now;
+
+    public void Advance(TimeSpan duration) => now += duration;
 }
 
 sealed class FakeHttpHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler

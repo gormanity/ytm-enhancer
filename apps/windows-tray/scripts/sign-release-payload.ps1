@@ -24,11 +24,15 @@ function Find-SignTool {
       [string] $Path
     )
 
+    $PreviousErrorActionPreference = $ErrorActionPreference
     try {
+      $ErrorActionPreference = "Continue"
       & $Path sign /? *> $null
       return $LASTEXITCODE -eq 0
     } catch {
       return $false
+    } finally {
+      $ErrorActionPreference = $PreviousErrorActionPreference
     }
   }
 

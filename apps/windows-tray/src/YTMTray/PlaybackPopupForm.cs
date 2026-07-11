@@ -19,6 +19,7 @@ internal sealed class PlaybackPopupForm : Form
     private readonly Label elapsedLabel = new();
     private readonly Label durationLabel = new();
     private readonly SeekBarControl progressBar = new();
+    private readonly PendingSeekTracker pendingSeek = new();
     private readonly ToolTip controlTips = new();
     private readonly StatusMessageControl controlStatus = new();
     private readonly CloseButtonControl closeButton = new();
@@ -47,6 +48,7 @@ internal sealed class PlaybackPopupForm : Form
     private readonly NativeAppLogger? logger;
     private readonly bool scrollDiagnosticsEnabled;
     private double currentDuration;
+    private PlaybackItemIdentity? currentPlaybackItem;
     private bool hasPlayableTrack;
     private bool statusLabelUsesWarningColor;
 
@@ -124,7 +126,9 @@ internal sealed class PlaybackPopupForm : Form
         artistYearLabel.ForeColor = theme.TertiaryTextColor;
         currentArtwork.SetArtworkUrl(null);
         currentDuration = 0;
+        currentPlaybackItem = null;
         hasPlayableTrack = false;
+        pendingSeek.Clear();
         UpdateProgress(0, 0);
         UpdateNextTrack(null);
         ShowControlStatus(status, ControlStatusTextColor(status), !isNeutral);
@@ -149,11 +153,17 @@ internal sealed class PlaybackPopupForm : Form
 
     public void UpdatePlayback(PlaybackState state)
     {
-        var hasTrack = !string.IsNullOrWhiteSpace(state.Title);
+        var hasTitle = !string.IsNullOrWhiteSpace(state.Title);
+        var hasPlayableState = HasPlayableState(state);
+        var playbackItem = hasPlayableState ? PlaybackItemIdentity.From(state) : null;
         var theme = TrayTheme.CurrentApp;
 
         SetStatusLabel(state.IsPlaying ? "Playing" : "Paused");
-        titleLabel.Text = hasTrack ? state.Title! : "No track loaded";
+        titleLabel.Text = hasTitle
+            ? state.Title!
+            : hasPlayableState
+                ? "Unknown track"
+                : "No track loaded";
         albumLabel.Text = state.Album ?? "";
         artistYearLabel.Text = FormatArtistYearLine(state);
         artistYearLabel.ForeColor = theme.TertiaryTextColor;
@@ -166,11 +176,22 @@ internal sealed class PlaybackPopupForm : Form
         shuffleButton.Active = state.IsShuffling == true;
         repeatButton.ButtonIcon = RepeatButtonIcon(state.RepeatMode);
         repeatButton.Active = (state.RepeatMode ?? "off") != "off";
+        var repeatAccessibilityName = RepeatAccessibilityName(state.RepeatMode);
+        repeatButton.SetAccessibility(repeatAccessibilityName, state.RepeatMode ?? "off");
+        controlTips.SetToolTip(repeatButton, repeatAccessibilityName);
         currentDuration = Math.Max(0, state.Duration);
-        hasPlayableTrack = hasTrack;
-        UpdateProgress(state.Progress, state.Duration);
+        currentPlaybackItem = playbackItem;
+        hasPlayableTrack = hasPlayableState;
+        if (!hasPlayableState)
+        {
+            pendingSeek.Clear();
+        }
+        var displayProgress = playbackItem is null
+            ? state.Progress
+            : pendingSeek.DisplayProgress(state.Progress, state.Duration, playbackItem);
+        UpdateProgress(displayProgress, state.Duration);
         UpdateNextTrack(state.NextTrack);
-        if (hasTrack)
+        if (hasPlayableState)
         {
             HideControlStatus();
         }
@@ -178,7 +199,7 @@ internal sealed class PlaybackPopupForm : Form
         {
             ShowControlStatus("No track loaded", theme.SecondaryTextColor);
         }
-        SetControlsEnabled(hasTrack);
+        SetControlsEnabled(hasPlayableState);
     }
 
     public void SetUpdateAvailable(string? version)
@@ -299,8 +320,10 @@ internal sealed class PlaybackPopupForm : Form
         progressBar.AccentColor = theme.AccentColor;
         progressBar.UserSeekRequested += (_, _) =>
         {
-            if (currentDuration <= 0) return;
+            if (currentDuration <= 0 || currentPlaybackItem is not { } playbackItem) return;
             var time = currentDuration * progressBar.Value / progressBar.Maximum;
+            pendingSeek.Begin(time, currentDuration, playbackItem);
+            UpdateProgress(time, currentDuration);
             OnSeek?.Invoke(time);
         };
 
@@ -327,6 +350,7 @@ internal sealed class PlaybackPopupForm : Form
         controlStatus.Visible = false;
         Controls.Add(controlStatus);
 
+        repeatButton.AccessibleRole = AccessibleRole.CheckButton;
         ConfigureButton(shuffleButton, 70, 212, 44, () => OnShuffle?.Invoke());
         ConfigureButton(previousButton, 137, 208, 50, () => OnPrevious?.Invoke(), true);
         ConfigureButton(toggleButton, 199, 201, 64, () => OnTogglePlay?.Invoke(), true);
@@ -478,15 +502,10 @@ internal sealed class PlaybackPopupForm : Form
 
     private void SetControlsEnabled(bool enabled)
     {
+        progressBar.Enabled = enabled && currentDuration > 0;
+
         foreach (var control in new Control[]
-                 {
-                     progressBar,
-                     shuffleButton,
-                     previousButton,
-                     toggleButton,
-                     nextButton,
-                     repeatButton
-                 })
+                 { shuffleButton, previousButton, toggleButton, nextButton, repeatButton })
         {
             control.Enabled = enabled;
         }
@@ -544,7 +563,7 @@ internal sealed class PlaybackPopupForm : Form
     private void UpdateProgress(double progress, double duration)
     {
         var value = duration <= 0 ? 0 : (int)Math.Round(progress / duration * progressBar.Maximum);
-        progressBar.Value = Math.Clamp(value, progressBar.Minimum, progressBar.Maximum);
+        progressBar.SetPlaybackValue(value);
         elapsedLabel.Text = duration <= 0 ? "" : FormatTime(progress);
         durationLabel.Text = duration <= 0 ? "" : FormatTime(duration);
     }
@@ -588,6 +607,24 @@ internal sealed class PlaybackPopupForm : Form
 
     private static PlaybackButtonIcon RepeatButtonIcon(string? repeatMode) =>
         repeatMode == "one" ? PlaybackButtonIcon.RepeatOne : PlaybackButtonIcon.Repeat;
+
+    private static string RepeatAccessibilityName(string? repeatMode) =>
+        repeatMode switch
+        {
+            "one" => "Repeat one",
+            "all" => "Repeat all",
+            _ => "Repeat off"
+        };
+
+    private static bool HasPlayableState(PlaybackState state)
+    {
+        var hasMetadata =
+            !string.IsNullOrWhiteSpace(state.Title)
+            || !string.IsNullOrWhiteSpace(state.Artist)
+            || !string.IsNullOrWhiteSpace(state.Album)
+            || !string.IsNullOrWhiteSpace(state.ArtworkUrl);
+        return hasMetadata || state.Duration > 0;
+    }
 
     private static Color ControlStatusTextColor(string status) =>
         IsNeutralConnectionStatus(status)
@@ -1450,6 +1487,7 @@ internal sealed class PlaybackButtonControl : Control
     private bool playbackEnabled;
     private bool prominent;
     private bool active;
+    private string? accessibleValue;
 
     public PlaybackButtonControl(PlaybackButtonIcon buttonIcon, string accessibleName)
     {
@@ -1520,8 +1558,19 @@ internal sealed class PlaybackButtonControl : Control
         {
             if (active == value) return;
             active = value;
+            AccessibilityNotifyClients(AccessibleEvents.StateChange, -1);
             Invalidate();
         }
+    }
+
+    public void SetAccessibility(string name, string value)
+    {
+        AccessibleName = name;
+        AccessibleDescription = name;
+        accessibleValue = value;
+        AccessibilityNotifyClients(AccessibleEvents.NameChange, -1);
+        AccessibilityNotifyClients(AccessibleEvents.DescriptionChange, -1);
+        AccessibilityNotifyClients(AccessibleEvents.ValueChange, -1);
     }
 
     public void ApplyTheme() => Invalidate();
@@ -1627,6 +1676,15 @@ internal sealed class PlaybackButtonControl : Control
         }
 
         public override string? DefaultAction => "Press";
+
+        public override AccessibleStates State =>
+            owner.Active ? base.State | AccessibleStates.Checked : base.State;
+
+        public override string? Value
+        {
+            get => owner.accessibleValue ?? base.Value;
+            set { }
+        }
 
         public override void DoDefaultAction()
         {
@@ -1778,10 +1836,10 @@ internal sealed class PopupActionRowControl : Control
     }
 }
 
-internal sealed class SeekBarControl : Control
+internal sealed class SeekBarControl : TrackBar
 {
     private bool dragging;
-    private int value;
+    private bool settingPlaybackValue;
 
     public SeekBarControl()
     {
@@ -1794,35 +1852,33 @@ internal sealed class SeekBarControl : Control
             true
         );
         BackColor = Color.Transparent;
+        AutoSize = false;
         Cursor = Cursors.Hand;
         AccessibleName = "Playback progress";
         AccessibleRole = AccessibleRole.Slider;
         Minimum = 0;
         Maximum = 1000;
+        SmallChange = 1;
+        LargeChange = 50;
+        TickStyle = TickStyle.None;
         Height = 20;
     }
 
     public event EventHandler? UserSeekRequested;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public int Minimum { get; set; }
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public int Maximum { get; set; }
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color AccentColor { get; set; } = Color.Red;
 
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public int Value
+    public void SetPlaybackValue(int value)
     {
-        get => value;
-        set
+        settingPlaybackValue = true;
+        try
         {
-            var clampedValue = Math.Clamp(value, Minimum, Maximum);
-            if (this.value == clampedValue) return;
-            this.value = clampedValue;
-            Invalidate();
+            Value = Math.Clamp(value, Minimum, Maximum);
+        }
+        finally
+        {
+            settingPlaybackValue = false;
         }
     }
 
@@ -1843,7 +1899,6 @@ internal sealed class SeekBarControl : Control
         dragging = true;
         Capture = true;
         SetValueFromPointer(e.X);
-        UserSeekRequested?.Invoke(this, EventArgs.Empty);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -1852,7 +1907,6 @@ internal sealed class SeekBarControl : Control
         if (!dragging) return;
 
         SetValueFromPointer(e.X);
-        UserSeekRequested?.Invoke(this, EventArgs.Empty);
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
@@ -1862,6 +1916,16 @@ internal sealed class SeekBarControl : Control
 
         dragging = false;
         Capture = false;
+    }
+
+    protected override void OnValueChanged(EventArgs e)
+    {
+        base.OnValueChanged(e);
+        Invalidate();
+        if (!settingPlaybackValue)
+        {
+            UserSeekRequested?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     protected override void OnPaint(PaintEventArgs e)

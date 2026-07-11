@@ -2,16 +2,19 @@ namespace YTMTray.Core;
 
 public sealed class ConnectorApp : IDisposable
 {
-    private static readonly TimeSpan PlaybackStateRetryDelay = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan PlaybackStateStaleTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan DefaultPlaybackStateRetryDelay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan DefaultPlaybackStateStaleTimeout = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan StaleProgressTolerance = TimeSpan.FromSeconds(0.25);
 
     private readonly IConnectorConnection connection;
     private readonly ITrayController tray;
     private readonly NativeAppLogger logger;
+    private readonly TimeSpan playbackStateRetryDelay;
+    private readonly TimeSpan playbackStateStaleDelay;
     private int nextRequestNumber;
     private bool ready;
     private bool disposed;
+    private volatile bool playbackStateStale;
     private PlaybackState? lastAcceptedPlaybackState;
     private Timer? playbackStateRetry;
     private Timer? playbackStateStaleTimeout;
@@ -19,12 +22,18 @@ public sealed class ConnectorApp : IDisposable
     public ConnectorApp(
         IConnectorConnection connection,
         ITrayController tray,
-        NativeAppLogger? logger = null
+        NativeAppLogger? logger = null,
+        TimeSpan? playbackStateRetryDelay = null,
+        TimeSpan? playbackStateStaleTimeout = null
     )
     {
         this.connection = connection;
         this.tray = tray;
         this.logger = logger ?? new NativeAppLogger();
+        this.playbackStateRetryDelay =
+            playbackStateRetryDelay ?? DefaultPlaybackStateRetryDelay;
+        playbackStateStaleDelay =
+            playbackStateStaleTimeout ?? DefaultPlaybackStateStaleTimeout;
     }
 
     public void Start()
@@ -60,6 +69,7 @@ public sealed class ConnectorApp : IDisposable
         {
             case "connector.ready":
                 ready = true;
+                playbackStateStale = false;
                 ClearPlaybackStateStaleTimeout();
                 tray.UpdateConnectionStatus("Connected");
                 tray.UpdateBrowserSource(message.Source);
@@ -98,6 +108,7 @@ public sealed class ConnectorApp : IDisposable
     {
         logger.Log("connector disconnected");
         ready = false;
+        playbackStateStale = false;
         lastAcceptedPlaybackState = null;
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
@@ -125,6 +136,7 @@ public sealed class ConnectorApp : IDisposable
         }
 
         lastAcceptedPlaybackState = state;
+        playbackStateStale = false;
         tray.UpdatePlayback(state);
 
         if (state.IsPlaying)
@@ -154,6 +166,7 @@ public sealed class ConnectorApp : IDisposable
         if (IsConnectorAvailabilityError(message.Code))
         {
             ready = false;
+            playbackStateStale = false;
             lastAcceptedPlaybackState = null;
             ClearPlaybackStateRetry();
             ClearPlaybackStateStaleTimeout();
@@ -202,11 +215,7 @@ public sealed class ConnectorApp : IDisposable
 
     private bool IsPlaybackStateRequestError(HostMessage message) =>
         message.RequestId?.StartsWith("state-", StringComparison.Ordinal) == true
-        && (
-            message.Message?.Contains("Receiving end does not exist") == true
-            || message.Message?.Contains("No active YouTube Music tab") == true
-            || message.Message?.Contains("No YouTube Music tab") == true
-        );
+        && IsMissingYouTubeMusicTabMessage(message.Message);
 
     private void SchedulePlaybackStateRetry()
     {
@@ -214,7 +223,7 @@ public sealed class ConnectorApp : IDisposable
         playbackStateRetry = new Timer(
             _ => RequestPlaybackState(),
             null,
-            PlaybackStateRetryDelay,
+            playbackStateRetryDelay,
             Timeout.InfiniteTimeSpan
         );
     }
@@ -225,11 +234,12 @@ public sealed class ConnectorApp : IDisposable
         playbackStateStaleTimeout = new Timer(
             _ =>
             {
+                playbackStateStale = true;
                 tray.SetStalePlaybackState();
                 RequestPlaybackState();
             },
             null,
-            PlaybackStateStaleTimeout,
+            playbackStateStaleDelay,
             Timeout.InfiniteTimeSpan
         );
     }
@@ -237,6 +247,7 @@ public sealed class ConnectorApp : IDisposable
     private void RestartHandshake(string reason)
     {
         ready = false;
+        playbackStateStale = false;
         lastAcceptedPlaybackState = null;
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
@@ -247,7 +258,9 @@ public sealed class ConnectorApp : IDisposable
 
     private bool ShouldKeepStalePlaybackState(PlaybackState state)
     {
+        if (!playbackStateStale) return false;
         if (lastAcceptedPlaybackState is null) return false;
+        if (state.Duration <= 0) return false;
         if (!lastAcceptedPlaybackState.IsPlaying || !state.IsPlaying) return false;
         if (!SamePlaybackItem(lastAcceptedPlaybackState, state)) return false;
         return Math.Abs(state.Progress - lastAcceptedPlaybackState.Progress)
@@ -260,6 +273,9 @@ public sealed class ConnectorApp : IDisposable
         && a.Album == b.Album
         && a.Year == b.Year
         && a.ArtworkUrl == b.ArtworkUrl
+        && a.IsShuffling == b.IsShuffling
+        && a.RepeatMode == b.RepeatMode
+        && Math.Abs(a.Duration - b.Duration) <= StaleProgressTolerance.TotalSeconds
         && SameTrackMetadata(a.NextTrack, b.NextTrack);
 
     private static bool SameTrackMetadata(TrackMetadata? a, TrackMetadata? b)
@@ -299,6 +315,18 @@ public sealed class ConnectorApp : IDisposable
     private static bool IsConnectorAvailabilityError(string? code) =>
         code is "host_disabled" or "connector_blocked" or "unsupported_protocol";
 
+    private static bool IsMissingYouTubeMusicTabMessage(string? message) =>
+        message?.Contains("Receiving end does not exist", StringComparison.OrdinalIgnoreCase)
+            == true
+        || message?.Contains(
+                "No active YouTube Music tab",
+                StringComparison.OrdinalIgnoreCase
+            )
+            == true
+        || message?.Contains("No YouTube Music tab", StringComparison.OrdinalIgnoreCase)
+            == true
+        || message?.Contains("No YTM tab", StringComparison.OrdinalIgnoreCase) == true;
+
     private static string UserFacingStatus(string? code, string? message) =>
         code switch
         {
@@ -306,10 +334,7 @@ public sealed class ConnectorApp : IDisposable
             "connector_blocked" => "Connector disabled",
             "unsupported_protocol" => "Update required",
             "connector_not_registered" => "Reconnecting...",
-            _ when message?.Contains("No active YouTube Music tab") == true =>
-                "No YouTube Music tab",
-            _ when message?.Contains("No YouTube Music tab") == true =>
-                "No YouTube Music tab",
+            _ when IsMissingYouTubeMusicTabMessage(message) => "No YouTube Music tab",
             _ => string.IsNullOrWhiteSpace(message) ? "Unavailable" : message
         };
 

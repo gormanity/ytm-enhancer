@@ -15,6 +15,16 @@ import {
 const execFile = promisify(execFileCallback);
 const SCREENSHOT_PATH_ENV = "YTME_WINDOWS_TRAY_SCREENSHOT_PATH";
 const SCREENSHOT_PLAYBACK_URL_ENV = "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL";
+const HOLD_RELEASE_PATH_ENV = "YTME_WINDOWS_TRAY_HOLD_RELEASE_PATH";
+const HOLD_TIMEOUT_ENV = "YTME_WINDOWS_TRAY_HOLD_TIMEOUT_SECONDS";
+
+interface TrayElementSnapshot {
+  enabled: boolean;
+  helpText: string;
+  name: string;
+  toggleState: string | null;
+  value: string;
+}
 
 function windowsTraySmokeEnabled(): boolean {
   return process.env.YTME_E2E_WINDOWS_TRAY === "1";
@@ -541,6 +551,72 @@ async function runTrayUiAction(
   );
 }
 
+async function readTrayPopupElement(
+  name: string,
+  resultPath: string,
+  elementName: string,
+): Promise<TrayElementSnapshot> {
+  const output = await runPowerShell(
+    interactiveScript(name, resultPath, [
+      TRAY_UIA_HELPERS,
+      "$PopupWindow = Open-TrayPopup",
+      "Activate-Window $PopupWindow",
+      `$Element = Wait-ElementByName $PopupWindow ${psLiteral(elementName)}`,
+      'if ($null -eq $Element) { throw "Popup element was not found. Visible elements: $((Get-VisibleElementNames) -join ", ")" }',
+      "$TogglePattern = $null",
+      "$ToggleState = $null",
+      "if ($Element.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern, [ref]$TogglePattern)) {",
+      "  $ToggleState = $TogglePattern.Current.ToggleState.ToString()",
+      "}",
+      "$ValuePattern = $null",
+      '$Value = ""',
+      "if ($Element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$ValuePattern)) {",
+      "  $Value = $ValuePattern.Current.Value",
+      "}",
+      "$Payload = @{",
+      "  ok = $true",
+      "  enabled = $Element.Current.IsEnabled",
+      "  helpText = $Element.Current.HelpText",
+      "  name = $Element.Current.Name",
+      "  toggleState = $ToggleState",
+      "  value = $Value",
+      "}",
+    ]),
+    60_000,
+  );
+  return JSON.parse(output.trim()) as TrayElementSnapshot;
+}
+
+function trayProgressPercent(snapshot: TrayElementSnapshot): number {
+  const percent = Number(snapshot.value.trim());
+  if (!Number.isFinite(percent)) {
+    throw new Error(
+      `Playback progress ValuePattern returned a non-numeric value: ${snapshot.value}`,
+    );
+  }
+  return percent;
+}
+
+async function holdTrayConnectionIfRequested(): Promise<void> {
+  const releasePath = process.env[HOLD_RELEASE_PATH_ENV]?.trim();
+  if (!releasePath) return;
+
+  const configuredTimeout = Number(process.env[HOLD_TIMEOUT_ENV] ?? "240");
+  const timeout = Number.isFinite(configuredTimeout)
+    ? Math.max(30, configuredTimeout) * 1000
+    : 240_000;
+  await expect
+    .poll(
+      () =>
+        runPowerShell(
+          `if (Test-Path -LiteralPath ${psLiteral(releasePath)}) { "released" }`,
+          15_000,
+        ),
+      { timeout },
+    )
+    .toContain("released");
+}
+
 async function clickTrayPopupElement(
   name: string,
   resultPath: string,
@@ -602,12 +678,15 @@ async function captureLiveTrayPromoScreenshot(
   }
 }
 
-async function clickAboutAndClose(resultPath: string): Promise<void> {
+async function clickAboutAndClose(
+  resultPath: string,
+  expectedConnectionSummary: string,
+): Promise<void> {
   await runTrayUiAction("about", resultPath, [
     'Click-PopupElementByName "About YTM Tray"',
     '$Dialog = Wait-WindowByName "About YTM Tray" 8000',
     "if ($null -eq $Dialog) { throw \"About dialog was not shown. Visible windows: $((Get-VisibleWindowNames) -join ', ')\" }",
-    '$ExpectedAboutText = @("Beta connected app", "Updates", "How updates work")',
+    `$ExpectedAboutText = @("Beta connected app", "Updates", "How updates work", ${psLiteral(expectedConnectionSummary)})`,
     "foreach ($Name in $ExpectedAboutText) {",
     "  if ($null -eq (Find-ElementByName $Dialog $Name)) {",
     "    throw \"About dialog text '$Name' was not found. Visible elements: $((Get-VisibleElementNames) -join ', ')\"",
@@ -712,6 +791,66 @@ async function enableConnectedApps(
   await extension.popup.getByLabel("Enable Connected Apps").check();
 }
 
+async function setWindowsTrayLifecycleEnabled(
+  extension: ExtensionTestContext,
+  enabled: boolean,
+): Promise<void> {
+  if (extension.firefox) {
+    throw new Error(
+      "The Windows tray lifecycle UI smoke currently requires Chromium popup control.",
+    );
+  }
+
+  await extension.popup
+    .locator(".nav-item", { hasText: "Connected Apps" })
+    .click();
+  const card = extension.popup.locator(
+    `[data-app-id="${FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID}"]`,
+  );
+  if (
+    !(await card.evaluate((element) => (element as HTMLDetailsElement).open))
+  ) {
+    await card.locator("summary").click();
+  }
+
+  const lifecycleButton = card.locator(
+    '[data-role="connected-app-lifecycle-button"]',
+  );
+  await expect(lifecycleButton).toHaveText(
+    enabled ? "Enable App" : "Disable App",
+  );
+  await lifecycleButton.click();
+  await expect
+    .poll(async () => {
+      const settings = await readConnectedAppsSettings(extension);
+      return settings.connectors.find(
+        (connector) => connector.id === FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID,
+      )?.enabled;
+    })
+    .toBe(enabled);
+}
+
+async function publishPartialPlaybackMetadata(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const title = document.querySelector<HTMLElement>(
+      "yt-formatted-string.title.style-scope.ytmusic-player-bar",
+    );
+    const progress = document.querySelector<HTMLInputElement>("#progress-bar");
+    const timeInfo = document.querySelector<HTMLElement>("#time-info");
+    const video = document.querySelector<HTMLVideoElement>(
+      "video.html5-main-video",
+    );
+    if (!title || !progress || !timeInfo || !video) {
+      throw new Error("Playback fixture is missing partial-metadata controls.");
+    }
+
+    title.textContent = "";
+    progress.value = "91";
+    timeInfo.textContent = "1:31 / 4:56";
+    video.dispatchEvent(new Event("timeupdate"));
+  });
+}
+
 async function expectWindowsTrayConnected(
   extension: ExtensionTestContext,
 ): Promise<void> {
@@ -784,6 +923,30 @@ test("routes Windows tray buttons through the browser native messaging host", as
     await expectWindowsTrayConnected(extension);
     await ytmPage.bringToFront();
     await ytmPage.waitForTimeout(2500);
+    await holdTrayConnectionIfRequested();
+
+    const initialRepeat = await readTrayPopupElement(
+      "repeat-off-state",
+      testInfo.outputPath("tray-repeat-off-state.json"),
+      "Repeat off",
+    );
+    expect(initialRepeat).toMatchObject({
+      enabled: true,
+      name: "Repeat off",
+      toggleState: "Off",
+      value: "off",
+    });
+    const initialProgress = await readTrayPopupElement(
+      "progress-state",
+      testInfo.outputPath("tray-progress-state.json"),
+      "Playback progress",
+    );
+    expect(initialProgress).toMatchObject({
+      enabled: true,
+      name: "Playback progress",
+    });
+    expect(trayProgressPercent(initialProgress)).toBeGreaterThan(25);
+    expect(trayProgressPercent(initialProgress)).toBeLessThan(32);
 
     await clickTrayPopupElement(
       "play",
@@ -816,9 +979,25 @@ test("routes Windows tray buttons through the browser native messaging host", as
     await clickTrayPopupElement(
       "repeat",
       testInfo.outputPath("tray-repeat.json"),
-      "Repeat",
+      "Repeat off",
     );
     await expectFixtureEvent(ytmPage, "repeat-clicked");
+    await expect
+      .poll(
+        () =>
+          readTrayPopupElement(
+            "repeat-all-state",
+            testInfo.outputPath("tray-repeat-all-state.json"),
+            "Repeat all",
+          ),
+        { timeout: 15_000 },
+      )
+      .toMatchObject({
+        enabled: true,
+        name: "Repeat all",
+        toggleState: "On",
+        value: "all",
+      });
 
     await clickTrayPopupElement(
       "seek",
@@ -827,6 +1006,13 @@ test("routes Windows tray buttons through the browser native messaging host", as
       0.72,
     );
     await expectFixtureEventPrefix(ytmPage, "seek-change:");
+    const soughtProgress = await readTrayPopupElement(
+      "progress-after-seek",
+      testInfo.outputPath("tray-progress-after-seek.json"),
+      "Playback progress",
+    );
+    expect(trayProgressPercent(soughtProgress)).toBeGreaterThan(68);
+    expect(trayProgressPercent(soughtProgress)).toBeLessThan(76);
 
     await clickTrayPopupElement(
       "focus",
@@ -835,7 +1021,14 @@ test("routes Windows tray buttons through the browser native messaging host", as
     );
     await expectTrayLogContains(trayLogPath, "requestId=focus-");
 
-    await clickAboutAndClose(testInfo.outputPath("tray-about.json"));
+    const browserSource =
+      testInfo.project.name === "firefox"
+        ? "Connected to Firefox (dev)."
+        : "Connected to Microsoft Edge (dev).";
+    await clickAboutAndClose(
+      testInfo.outputPath("tray-about.json"),
+      browserSource,
+    );
     if (promoScreenshotPath && testInfo.project.name === "edge") {
       await captureLiveTrayPromoScreenshot(
         extension,
@@ -844,6 +1037,77 @@ test("routes Windows tray buttons through the browser native messaging host", as
         trayLogPath,
       );
     }
+
+    await publishPartialPlaybackMetadata(ytmPage);
+    await expect
+      .poll(
+        () =>
+          readTrayPopupElement(
+            "partial-metadata",
+            testInfo.outputPath("tray-partial-metadata.json"),
+            "Unknown track",
+          ),
+        { timeout: 15_000 },
+      )
+      .toMatchObject({ enabled: true, name: "Unknown track" });
+    const partialMetadataToggle = await readTrayPopupElement(
+      "partial-metadata-toggle",
+      testInfo.outputPath("tray-partial-metadata-toggle.json"),
+      "Pause",
+    );
+    expect(partialMetadataToggle.enabled).toBe(true);
+
+    if (testInfo.project.name === "edge") {
+      await setWindowsTrayLifecycleEnabled(extension, false);
+      await expect
+        .poll(
+          () =>
+            readTrayPopupElement(
+              "disabled-status",
+              testInfo.outputPath("tray-disabled-status.json"),
+              "Disconnected",
+            ),
+          { timeout: 20_000 },
+        )
+        .toMatchObject({ name: "Disconnected" });
+      const disabledProgress = await readTrayPopupElement(
+        "disabled-progress",
+        testInfo.outputPath("tray-disabled-progress.json"),
+        "Playback progress",
+      );
+      expect(disabledProgress.enabled).toBe(false);
+      await clickAboutAndClose(
+        testInfo.outputPath("tray-about-disabled.json"),
+        "Not connected to a browser.",
+      );
+
+      await setWindowsTrayLifecycleEnabled(extension, true);
+      await expectWindowsTrayConnected(extension);
+      await expect
+        .poll(
+          () =>
+            readTrayPopupElement(
+              "reenabled-playback",
+              testInfo.outputPath("tray-reenabled-playback.json"),
+              "Unknown track",
+            ),
+          { timeout: 20_000 },
+        )
+        .toMatchObject({ enabled: true, name: "Unknown track" });
+    }
+
+    await ytmPage.close();
+    await expect
+      .poll(
+        () =>
+          readTrayPopupElement(
+            "missing-tab-status",
+            testInfo.outputPath("tray-missing-tab-status.json"),
+            "No YouTube Music tab",
+          ),
+        { timeout: 25_000 },
+      )
+      .toMatchObject({ name: "No YouTube Music tab" });
 
     await clickTrayPopupElement(
       "quit",
