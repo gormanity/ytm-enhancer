@@ -59,7 +59,7 @@ function createClient(
       };
     }),
     reconnectFirstPartyApp: vi.fn(async () => undefined),
-    requestMenuBarUninstall: vi.fn(async () => undefined),
+    requestConnectedAppUninstall: vi.fn(async () => undefined),
     subscribeChanged: vi.fn(() => () => undefined),
   };
 }
@@ -352,7 +352,9 @@ describe("Connected Apps popup view", () => {
     expect(uninstallButton.textContent).toContain("Uninstall App");
     uninstallButton.click();
 
-    expect(client.requestMenuBarUninstall).toHaveBeenCalled();
+    expect(client.requestConnectedAppUninstall).toHaveBeenCalledWith(
+      "com.gormanity.ytm-enhancer.menu-bar",
+    );
     await vi.waitFor(() => {
       expect(container.textContent).toContain(
         "Check YTM Menu Bar to confirm uninstall.",
@@ -381,7 +383,7 @@ describe("Connected Apps popup view", () => {
         menuBarApp: { availability: "available" },
       }),
     );
-    vi.mocked(client.requestMenuBarUninstall).mockRejectedValueOnce(
+    vi.mocked(client.requestConnectedAppUninstall).mockRejectedValueOnce(
       new Error("Open YTM Menu Bar before requesting uninstall."),
     );
     const view = createConnectedAppsPopupView(
@@ -404,6 +406,61 @@ describe("Connected Apps popup view", () => {
     await vi.waitFor(() => {
       expect(container.textContent).toContain(
         "Open YTM Menu Bar before requesting uninstall.",
+      );
+    });
+  });
+
+  it("exposes native uninstall for an installed Windows tray app", async () => {
+    const trayId = "com.gormanity.ytm-enhancer.tray";
+    const client = createClient(
+      createSettings({
+        enabled: true,
+        firstPartyApps: FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map(
+          (definition) =>
+            createFirstPartyConnectedApp(definition, {
+              availability: definition.id === trayId ? "available" : "unknown",
+            }),
+        ),
+        connectors: [
+          {
+            id: trayId,
+            name: "YTM Tray",
+            version: "0.1.0",
+            protocolVersion: "1.0.0",
+            permissions: ["playback:read"],
+            enabled: false,
+            status: "blocked",
+            lastSeenAt: null,
+            lastConnectedAt: null,
+          },
+        ],
+      }),
+    );
+    const view = createConnectedAppsPopupView(
+      createTestModuleContext(),
+      client,
+    );
+    const container = document.createElement("div");
+
+    view.render(container);
+
+    const trayCard = await vi.waitFor(() => {
+      const element = container.querySelector<HTMLDetailsElement>(
+        `[data-app-id="${trayId}"]`,
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    const uninstallButton = trayCard.querySelector<HTMLButtonElement>(
+      '[data-role="connected-app-uninstall-button"]',
+    );
+    expect(uninstallButton).not.toBeNull();
+    uninstallButton!.click();
+
+    expect(client.requestConnectedAppUninstall).toHaveBeenCalledWith(trayId);
+    await vi.waitFor(() => {
+      expect(trayCard.textContent).toContain(
+        "Check YTM Tray to confirm uninstall.",
       );
     });
   });
@@ -542,7 +599,7 @@ describe("Connected Apps popup view", () => {
     ).toBeNull();
   });
 
-  it("does not offer to re-enable stale disabled menu bar connector records", async () => {
+  it("offers to re-enable a persisted disabled menu bar connector", async () => {
     const client = createClient(
       createSettings({
         enabled: true,
@@ -571,14 +628,17 @@ describe("Connected Apps popup view", () => {
     view.render(container);
 
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("Not Detected");
-      expect(container.textContent).toContain("Download for macOS");
-      expect(container.textContent).not.toContain("Disabled");
-      expect(container.textContent).not.toContain("Enable App");
+      expect(container.textContent).toContain("Disabled");
+      expect(container.textContent).toContain(
+        "YTM Menu Bar is disabled. Enable it below when you want it to reconnect.",
+      );
+      expect(container.textContent).toContain("Enable App");
+      expect(container.textContent).not.toContain("Not Detected");
+      expect(container.textContent).not.toContain("Download for macOS");
     });
     expect(
       container.querySelector('[data-role="connected-app-lifecycle-button"]'),
-    ).toBeNull();
+    ).not.toBeNull();
   });
 
   it("shows first-party menu bar install options before it is registered", async () => {
@@ -879,6 +939,71 @@ describe("Connected Apps popup view", () => {
       ),
     ).toBeNull();
   });
+
+  it.each([
+    {
+      appId: "com.gormanity.ytm-enhancer.menu-bar",
+      appName: "YTM Menu Bar",
+      browserName: "Chrome",
+    },
+    {
+      appId: "com.gormanity.ytm-enhancer.cli",
+      appName: "YTM Enhancer CLI",
+      browserName: "Firefox",
+    },
+  ])(
+    "shows exact-owner contention guidance for $browserName",
+    async ({ appId, appName, browserName }) => {
+      const definition = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.find(
+        (candidate) => candidate.id === appId,
+      )!;
+      const error = `${appName} is already connected to ${browserName}.`;
+      const client = createClient(
+        createSettings({
+          enabled: true,
+          firstPartyApps: [
+            createFirstPartyConnectedApp(definition, {
+              availability: "error",
+              lastError: error,
+            }),
+          ],
+          connectors: [
+            {
+              id: appId,
+              name: appName,
+              version: "0.1.0",
+              protocolVersion: "1.0.0",
+              permissions: ["playback:read"],
+              enabled: true,
+              status: "disconnected",
+              lastSeenAt: null,
+              lastConnectedAt: null,
+            },
+          ],
+        }),
+      );
+      const view = createConnectedAppsPopupView(
+        createTestModuleContext(),
+        client,
+      );
+      const container = document.createElement("div");
+
+      view.render(container);
+
+      const card = await vi.waitFor(() => {
+        const element = container.querySelector<HTMLDetailsElement>(
+          `[data-app-id="${appId}"]`,
+        );
+        expect(element).not.toBeNull();
+        return element!;
+      });
+      expect(
+        card.querySelector('[data-role="connected-app-status"]')?.textContent,
+      ).toContain("Already Connected");
+      expect(card.textContent).toContain(error);
+      expect(card.textContent).toContain(`Retry ${appName}`);
+    },
+  );
 
   it("uses a shared action style for install and lifecycle actions", async () => {
     const client = createClient(

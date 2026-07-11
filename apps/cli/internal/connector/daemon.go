@@ -188,6 +188,7 @@ func (daemon *Daemon) handleNativeMessage(message protocol.HostMessage) {
 		daemon.ready = true
 		daemon.lastError = ""
 		daemon.activeProtocol = message.ProtocolVersion
+		daemon.playbackState = nil
 		daemon.mu.Unlock()
 		daemon.resolvePending(message)
 		daemon.sendSubscription()
@@ -195,7 +196,11 @@ func (daemon *Daemon) handleNativeMessage(message protocol.HostMessage) {
 	case "connector.ack":
 		daemon.resolvePending(message)
 	case "connector.error":
-		daemon.recordError(message.Message)
+		if invalidatesConnectorState(message.Code) {
+			daemon.invalidateConnectorState(message)
+		} else {
+			daemon.recordError(message.Message)
+		}
 		daemon.resolvePending(message)
 	case "playback.state":
 		if message.State != nil {
@@ -226,6 +231,9 @@ func (daemon *Daemon) refreshPlaybackState() {
 }
 
 func (daemon *Daemon) currentPlaybackState(ctx context.Context) (*protocol.PlaybackState, error) {
+	if !daemon.isReady() {
+		return nil, daemon.notReadyError()
+	}
 	if state := daemon.cachedPlaybackState(); state != nil {
 		return state, nil
 	}
@@ -393,6 +401,24 @@ func (daemon *Daemon) recordError(message string) {
 	daemon.mu.Unlock()
 }
 
+func (daemon *Daemon) invalidateConnectorState(message protocol.HostMessage) {
+	daemon.mu.Lock()
+	daemon.ready = false
+	daemon.lastError = message.Message
+	daemon.activeProtocol = ""
+	daemon.playbackState = nil
+	pending := daemon.pending
+	daemon.pending = make(map[string]chan protocol.HostMessage)
+	daemon.mu.Unlock()
+
+	for _, responsec := range pending {
+		select {
+		case responsec <- message:
+		default:
+		}
+	}
+}
+
 func (daemon *Daemon) notReadyError() error {
 	if lastError := daemon.lastConnectorError(); lastError != "" {
 		return fmt.Errorf("YTM Enhancer connector is not ready: %s", lastError)
@@ -414,6 +440,15 @@ func (daemon *Daemon) logf(format string, args ...any) {
 func isAllowedAction(action string) bool {
 	switch action {
 	case "play", "pause", "togglePlay", "next", "previous", "shuffle", "repeat":
+		return true
+	default:
+		return false
+	}
+}
+
+func invalidatesConnectorState(code string) bool {
+	switch code {
+	case "host_disabled", "connector_blocked", "unsupported_protocol", "connector_not_registered":
 		return true
 	default:
 		return false

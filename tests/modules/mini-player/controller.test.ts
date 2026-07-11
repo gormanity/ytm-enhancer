@@ -602,7 +602,7 @@ describe("MiniPlayerController", () => {
     );
     const executeSpy = vi
       .spyOn(YTMAdapter.prototype, "executeAction")
-      .mockImplementation(() => undefined);
+      .mockImplementation(() => true);
 
     controller = new MiniPlayerController(undefined, runtime);
     await controller.init();

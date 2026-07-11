@@ -40,13 +40,11 @@ handler.on("playback-action", async (message) => {
     if (typeof message.time !== "number") {
       return { ok: false, error: "Invalid seek time" };
     }
-    adapter.seekTo(message.time);
-    return { ok: true };
+    return { ok: true, data: adapter.seekTo(message.time) };
   }
 
   const action = message.action as PlaybackAction;
-  adapter.executeAction(action);
-  return { ok: true };
+  return { ok: true, data: adapter.executeAction(action) };
 });
 
 handler.on("get-playback-state", async () => {

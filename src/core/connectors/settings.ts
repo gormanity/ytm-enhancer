@@ -131,7 +131,7 @@ export const FIRST_PARTY_CONNECTED_APP_DEFINITIONS: FirstPartyConnectedAppDefini
       installUrl: WINDOWS_TRAY_INSTALL_URL,
       installLabel: "Install for Windows",
       access: ["playback:read", "track:read", "playback:control", "ytm:focus"],
-      supportsUninstallRequest: false,
+      supportsUninstallRequest: true,
     },
   ];
 

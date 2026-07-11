@@ -75,6 +75,9 @@ describe("connector host background gating", () => {
     expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
       "firstPartyNativeHostTransportsList",
     );
+    expect(functionBody("firstPartyNativeHostTransports", false)).toContain(
+      "isNativeHostConnectorEnabled(knownConnectors, definition.id)",
+    );
     expect(functionBody("enableConnectorSupport")).toContain(
       "connectorHost.start();",
     );
@@ -116,6 +119,11 @@ describe("connector host background gating", () => {
       "shouldKeepNativeHostExitDiagnostic(firstPartyApp, diagnostic)",
     );
     expect(
+      functionBody("shouldRecheckNativeHostAvailability", false),
+    ).toContain(
+      "isNativeHostConnectorEnabled(knownConnectors, firstPartyApp.id)",
+    );
+    expect(
       functionBody("recheckFirstPartyNativeHostAvailability", false),
     ).toContain("restartFirstPartyNativeHostTransport(definition)");
     expect(
@@ -134,7 +142,13 @@ describe("connector host background gating", () => {
       "firstPartyConnectedAppDefinition(connectorId)",
     );
     expect(functionBody("reconnectFirstPartyConnectedApp")).toContain(
-      "await restartConnectorSupport();",
+      "isNativeHostConnectorEnabled(knownConnectors, connectorId)",
+    );
+    expect(functionBody("reconnectFirstPartyConnectedApp")).toContain(
+      "restartFirstPartyNativeHostTransport(definition);",
+    );
+    expect(functionBody("reconnectFirstPartyConnectedApp")).not.toContain(
+      "restartConnectorSupport",
     );
   });
 
@@ -182,42 +196,46 @@ describe("connector host background gating", () => {
     expect(functionBody("setConnectorSupportEnabled")).toContain(
       "await startConnectorSupportIfAvailable();",
     );
-    expect(functionBody("restartConnectorSupport")).toContain(
-      "await startConnectorSupportIfAvailable();",
-    );
     expect(functionBody("notifyDevBuildConflictStatusChanged")).toContain(
       "await syncConnectorSupportForDevBuildConflict();",
     );
   });
 
-  it("routes menu bar uninstall requests through the connected first-party session", () => {
-    expect(functionBody("requestMenuBarUninstall")).toContain(
+  it("routes uninstall requests through the selected first-party session", () => {
+    expect(functionBody("requestConnectedAppUninstall")).toContain(
       "connectorHost?.requestUninstall",
     );
-    expect(functionBody("requestMenuBarUninstall")).toContain(
-      "FIRST_PARTY_MENU_BAR_CONNECTOR_ID",
+    expect(functionBody("requestConnectedAppUninstall")).toContain(
+      "connectorId",
     );
-    expect(handlerBody("request-menu-bar-uninstall")).toContain(
-      "await requestMenuBarUninstall()",
+    expect(handlerBody("request-connected-app-uninstall")).toContain(
+      "await requestConnectedAppUninstall(message.connectorId)",
     );
-    expect(handlerBody("request-menu-bar-uninstall")).toContain(
-      "Open YTM Menu Bar before requesting uninstall.",
+    expect(handlerBody("request-connected-app-uninstall")).toContain(
+      "app?.supportsUninstallRequest",
     );
   });
 
-  it("restarts connector support when a known connector is re-enabled", () => {
-    expect(functionBody("restartConnectorSupport")).toContain(
-      "connectorSupportEnabled",
+  it("restarts only the selected first-party transport when a connector is re-enabled", () => {
+    expect(handlerBody("set-connector-enabled")).toContain(
+      "restartFirstPartyNativeHostTransport(definition);",
     );
-    expect(functionBody("restartConnectorSupport")).toContain(
-      "disableConnectorSupport()",
+    expect(handlerBody("set-connector-enabled")).not.toContain(
+      "restartConnectorSupport",
     );
-    expect(functionBody("restartConnectorSupport")).toContain(
-      "startConnectorSupport()",
+  });
+
+  it("notifies and stops only the selected transport when a connector is disabled", () => {
+    expect(handlerBody("set-connector-enabled")).toContain(
+      "connectorHost?.disconnectConnector(message.connectorId",
     );
     expect(handlerBody("set-connector-enabled")).toContain(
-      "await restartConnectorSupport();",
+      'code: "connector_blocked"',
     );
+    expect(handlerBody("set-connector-enabled")).toContain(
+      ".get(definition.id)",
+    );
+    expect(handlerBody("set-connector-enabled")).toContain("?.stop();");
   });
 
   it("publishes module playback state events to connector sessions", () => {

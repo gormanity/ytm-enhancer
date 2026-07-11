@@ -131,11 +131,42 @@ export interface ConnectorAckMessage {
   requestId: string;
 }
 
+export interface ConnectorBootstrapMessage {
+  type: "connector.bootstrap";
+}
+
 export interface ConnectorErrorMessage {
   type: "connector.error";
   requestId?: string;
   code: string;
   message: string;
+}
+
+export const CONNECTOR_APP_BUSY_ERROR_CODE = "app_busy";
+
+export interface ConnectorAppBusyErrorMessage extends ConnectorErrorMessage {
+  code: typeof CONNECTOR_APP_BUSY_ERROR_CODE;
+}
+
+export function isConnectorErrorMessage(
+  value: unknown,
+): value is ConnectorErrorMessage {
+  if (!isRecord(value)) return false;
+  return (
+    value.type === "connector.error" &&
+    (value.requestId === undefined || isNonEmptyString(value.requestId)) &&
+    isNonEmptyString(value.code) &&
+    isNonEmptyString(value.message)
+  );
+}
+
+export function isConnectorAppBusyErrorMessage(
+  value: unknown,
+): value is ConnectorAppBusyErrorMessage {
+  return (
+    isConnectorErrorMessage(value) &&
+    value.code === CONNECTOR_APP_BUSY_ERROR_CODE
+  );
 }
 
 export interface StateUpdateMessage {
@@ -155,6 +186,7 @@ export interface YtmStatusMessage {
 }
 
 export type ConnectorOutboundMessage =
+  | ConnectorBootstrapMessage
   | ConnectorReadyMessage
   | ConnectorAckMessage
   | ConnectorErrorMessage

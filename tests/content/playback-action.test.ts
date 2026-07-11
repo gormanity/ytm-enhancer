@@ -140,7 +140,9 @@ describe("content playback action handler", () => {
   beforeEach(async () => {
     vi.resetModules();
     executeActionMock.mockClear();
+    executeActionMock.mockReturnValue(true);
     seekToMock.mockClear();
+    seekToMock.mockReturnValue(true);
     runtimeListeners = [];
 
     vi.stubGlobal("chrome", {
@@ -213,7 +215,7 @@ describe("content playback action handler", () => {
   it("seeks directly when playback action includes a seek time", async () => {
     const response = await sendPlaybackAction({ action: "seekTo", time: 87.5 });
 
-    expect(response).toEqual({ ok: true });
+    expect(response).toEqual({ ok: true, data: true });
     expect(seekToMock).toHaveBeenCalledWith(87.5);
     expect(executeActionMock).not.toHaveBeenCalled();
   });
@@ -223,6 +225,23 @@ describe("content playback action handler", () => {
 
     expect(response).toEqual({ ok: false, error: "Invalid seek time" });
     expect(seekToMock).not.toHaveBeenCalled();
+  });
+
+  it("propagates seek activation failures", async () => {
+    seekToMock.mockReturnValueOnce(false);
+
+    const response = await sendPlaybackAction({ action: "seekTo", time: 87.5 });
+
+    expect(response).toEqual({ ok: true, data: false });
+    expect(seekToMock).toHaveBeenCalledWith(87.5);
+  });
+
+  it("propagates playback activation failures", async () => {
+    executeActionMock.mockReturnValueOnce(false);
+
+    const response = await sendPlaybackAction({ action: "next" });
+
+    expect(response).toEqual({ ok: true, data: false });
   });
 
   it("stops the previous content runtime when content is reinjected", async () => {
@@ -235,7 +254,7 @@ describe("content playback action handler", () => {
 
     const responses = await broadcastPlaybackAction({ action: "next" });
 
-    expect(responses).toEqual([{ ok: true }]);
+    expect(responses).toEqual([{ ok: true, data: true }]);
     expect(executeActionMock).toHaveBeenCalledTimes(1);
     expect(executeActionMock).toHaveBeenCalledWith("next");
   });

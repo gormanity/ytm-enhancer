@@ -278,6 +278,11 @@ func (app App) doctor(verbose bool) int {
 		app.errorf(response.Error)
 		return 1
 	}
+	ready := boolValue(response.Data["ready"])
+	exitCode := 0
+	if !ready {
+		exitCode = 1
+	}
 
 	app.printf("YTM Enhancer CLI Doctor\n")
 	app.printDoctorLine(connectorStatusLine(response.Data))
@@ -286,12 +291,12 @@ func (app App) doctor(verbose bool) int {
 	app.printDoctorLine(versionStatusLine(response.Data))
 	lastError := stringValue(response.Data["lastError"])
 	printedLastError := false
-	if lastError != "" && !boolValue(response.Data["ready"]) {
+	if lastError != "" && !ready {
 		app.printDoctorLine(fmt.Sprintf("ERROR Last error: %s", lastError))
 		printedLastError = true
 	}
 	if !verbose {
-		return 0
+		return exitCode
 	}
 
 	app.printf("Connector ID: %s\n", stringValue(response.Data["connectorId"]))
@@ -306,7 +311,7 @@ func (app App) doctor(verbose bool) int {
 	if tabStatusError := stringValue(response.Data["ytmTabStatusError"]); tabStatusError != "" {
 		app.printf("YTM tab status error: %s\n", tabStatusError)
 	}
-	return 0
+	return exitCode
 }
 
 func (app App) daemon(args []string) int {

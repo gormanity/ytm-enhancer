@@ -317,6 +317,50 @@ describe("ConnectorHost", () => {
     expect(ytm.executePlaybackAction).toHaveBeenCalledWith("next");
   });
 
+  it("reports when a playback control cannot be activated", async () => {
+    const ytm = createMockYtmRuntimeClient({
+      executePlaybackAction: vi.fn().mockResolvedValue(false),
+    });
+    const host = createConnectorHost({ enabled: true, ytm });
+    await connect(host);
+
+    const result = await host.receive("connection-1", {
+      type: "playback.action",
+      requestId: "action-1",
+      action: "next",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "action_unavailable",
+        message: "YouTube Music did not expose a control for next",
+      },
+    });
+  });
+
+  it("reports when a seek control cannot be activated", async () => {
+    const ytm = createMockYtmRuntimeClient({
+      seekTo: vi.fn().mockResolvedValue(false),
+    });
+    const host = createConnectorHost({ enabled: true, ytm });
+    await connect(host);
+
+    const result = await host.receive("connection-1", {
+      type: "playback.seek",
+      requestId: "seek-1",
+      time: 30,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "action_unavailable",
+        message: "YouTube Music did not expose a seek control",
+      },
+    });
+  });
+
   it("publishes immediate and delayed playback updates after connector playback actions", async () => {
     vi.useFakeTimers();
     const send = vi.fn().mockResolvedValue(undefined);
@@ -546,6 +590,45 @@ describe("ConnectorHost", () => {
       false,
     );
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("notifies and disconnects only the selected app", async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const host = createConnectorHost({
+      enabled: true,
+      ytm: createMockYtmRuntimeClient(),
+      transports: [{ start: vi.fn(), stop: vi.fn(), send }],
+    });
+    await connect(host);
+    await host.receive("connection-2", {
+      type: "connector.hello",
+      requestId: "hello-2",
+      manifest: {
+        ...validManifest,
+        id: "com.example.cli",
+        name: "CLI",
+      },
+    });
+
+    await expect(
+      host.disconnectConnector(validManifest.id, {
+        code: "connector_blocked",
+        message: `Connector ${validManifest.id} is disabled`,
+      }),
+    ).resolves.toBe(true);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith("connection-1", {
+      type: "connector.error",
+      code: "connector_blocked",
+      message: `Connector ${validManifest.id} is disabled`,
+    });
+    expect(host.listSessions()).toEqual([
+      expect.objectContaining({
+        connectionId: "connection-2",
+        manifest: expect.objectContaining({ id: "com.example.cli" }),
+      }),
+    ]);
   });
 
   it("notifies when playback state subscribers become active and inactive", async () => {

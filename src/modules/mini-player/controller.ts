@@ -259,7 +259,9 @@ export class MiniPlayerController {
         getPlaybackState: () => this.adapter.getPlaybackState(),
         executePlaybackAction: (action) =>
           this.executePipPlaybackAction(action),
-        seekTo: (time) => this.adapter.seekTo(time),
+        seekTo: (time) => {
+          this.adapter.seekTo(time);
+        },
         subscribeToStateChanges: (listener) =>
           this.subscribeToMediaRefreshEvents(listener),
       },

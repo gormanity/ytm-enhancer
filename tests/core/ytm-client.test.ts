@@ -90,12 +90,28 @@ describe("YtmRuntimeClient", () => {
       ok: true,
     });
 
-    await client.executePlaybackAction("next", { kind: "any" });
+    await expect(
+      client.executePlaybackAction("next", { kind: "any" }),
+    ).resolves.toBe(true);
 
     expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(7, {
       type: "playback-action",
       action: "next",
     });
+  });
+
+  it("propagates a control activation failure from the content runtime", async () => {
+    const { client } = createClient();
+    vi.mocked(chrome.tabs.query as TabQuery).mockResolvedValue([
+      { id: 7, title: "YouTube Music" },
+    ] as chrome.tabs.Tab[]);
+    vi.mocked(chrome.tabs.sendMessage as TabSendMessage).mockResolvedValue({
+      ok: true,
+      data: false,
+    });
+
+    await expect(client.executePlaybackAction("next")).resolves.toBe(false);
+    await expect(client.seekTo(30)).resolves.toBe(false);
   });
 
   it("returns the existing disabled error when the target tab is suppressed", async () => {

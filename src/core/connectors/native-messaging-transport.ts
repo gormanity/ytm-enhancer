@@ -1,4 +1,7 @@
-import type { ConnectorOutboundMessage } from "@ytm-enhancer/connector-protocol";
+import {
+  isConnectorErrorMessage,
+  type ConnectorOutboundMessage,
+} from "@ytm-enhancer/connector-protocol";
 import type {
   ConnectorHostResult,
   ConnectorTransport,
@@ -45,17 +48,8 @@ function requestIdFrom(message: unknown): string | undefined {
 }
 
 function nativeHostDiagnosticFrom(message: unknown): Error | null {
-  if (typeof message !== "object" || message === null) return null;
-  const record = message as {
-    type?: unknown;
-    code?: unknown;
-    message?: unknown;
-  };
-  if (record.type !== "connector.error") return null;
-  if (typeof record.message !== "string" || record.message.length === 0) {
-    return null;
-  }
-  return new Error(record.message);
+  if (!isConnectorErrorMessage(message)) return null;
+  return new Error(message.message);
 }
 
 function errorToOutboundMessage(
@@ -101,6 +95,7 @@ export function createNativeMessagingTransport(
   let handler: ConnectorTransportMessageHandler | null = null;
   let messageListener: ((message: unknown) => void) | null = null;
   let disconnectListener: (() => void) | null = null;
+  let connectionReported = false;
 
   const sendToPort = (message: ConnectorOutboundMessage): void => {
     if (!port) return;
@@ -131,13 +126,17 @@ export function createNativeMessagingTransport(
         port = null;
         return;
       }
-      safeCallback(options.onConnect);
 
       messageListener = (message: unknown) => {
         const nativeHostDiagnostic = nativeHostDiagnosticFrom(message);
         if (nativeHostDiagnostic) {
           reportError(options.onError, nativeHostDiagnostic);
           return;
+        }
+
+        if (!connectionReported) {
+          connectionReported = true;
+          safeCallback(options.onConnect);
         }
 
         if (!handler) return;
@@ -164,11 +163,13 @@ export function createNativeMessagingTransport(
         const message = runtime.lastError?.message;
         if (message) reportError(options.onError, new Error(message));
         safeCallback(options.onDisconnect);
+        connectionReported = false;
         port = null;
       };
 
       port.onMessage.addListener(messageListener);
       port.onDisconnect.addListener(disconnectListener);
+      sendToPort({ type: "connector.bootstrap" });
     },
 
     stop(): void {
@@ -182,6 +183,7 @@ export function createNativeMessagingTransport(
       handler = null;
       messageListener = null;
       disconnectListener = null;
+      connectionReported = false;
       activePort.disconnect();
     },
 

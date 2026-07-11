@@ -17,6 +17,10 @@ import {
   type FirstPartyConnectedApp,
 } from "./settings";
 import templateHtml from "./popup.html?raw";
+import {
+  isNativeHostBusyError,
+  isNativeHostExitError,
+} from "./native-host-policy";
 
 export type { ConnectedAppsClient, ConnectedAppsSettings } from "./client";
 
@@ -58,18 +62,6 @@ function isFirstPartyAppInstalled(
 ): boolean {
   if (availability === "available") return true;
   return false;
-}
-
-function isNativeHostExitError(firstPartyApp: FirstPartyConnectedApp): boolean {
-  return /native host (has )?exited|native host.*disconnected|native messaging host.*disconnected/i.test(
-    firstPartyApp.lastError ?? "",
-  );
-}
-
-function isNativeHostBusyError(firstPartyApp: FirstPartyConnectedApp): boolean {
-  return /already connected to .+browser|already connected to .+edge|already connected to .+chrome|already connected to .+firefox|another browser/i.test(
-    firstPartyApp.lastError ?? "",
-  );
 }
 
 function setStatus(
@@ -217,17 +209,16 @@ function createConnectedAppCard(
       uninstallButton.textContent = "Requesting...";
       uninstallStatus.classList.add("is-hidden");
       void client
-        .requestMenuBarUninstall()
+        .requestConnectedAppUninstall(app.id)
         .then(() => {
-          uninstallStatus.textContent =
-            "Check YTM Menu Bar to confirm uninstall.";
+          uninstallStatus.textContent = `Check ${app.name} to confirm uninstall.`;
           uninstallStatus.classList.remove("is-hidden");
         })
         .catch((error: unknown) => {
           uninstallStatus.textContent =
             error instanceof Error
               ? error.message
-              : "YTM Menu Bar could not be asked to uninstall.";
+              : `${app.name} could not be asked to uninstall.`;
           uninstallStatus.classList.remove("is-hidden");
         })
         .finally(() => {
@@ -295,17 +286,14 @@ function firstPartyAppStatus(
   if (!settings.enabled && connector !== undefined) {
     return { status: "disconnected", label: "Off" };
   }
-  if (
-    connector?.status === "blocked" &&
-    firstPartyApp.availability === "available"
-  ) {
+  if (connector?.status === "blocked") {
     return { status: "blocked", label: "Disabled" };
   }
   if (firstPartyApp.availability === "error") {
-    if (isNativeHostBusyError(firstPartyApp)) {
+    if (isNativeHostBusyError(firstPartyApp.lastError)) {
       return { status: "disconnected", label: "Already Connected" };
     }
-    if (isNativeHostExitError(firstPartyApp)) {
+    if (isNativeHostExitError(firstPartyApp.lastError)) {
       return { status: "disconnected", label: "Disconnected" };
     }
     return { status: "incompatible", label: "Needs Attention" };
@@ -341,20 +329,17 @@ function firstPartyAppGuidance(
   if (!settings.enabled) {
     return `Install ${firstPartyApp.name}, then enable Connected Apps to allow it to connect.`;
   }
-  if (
-    connector?.status === "blocked" &&
-    firstPartyApp.availability === "available"
-  ) {
+  if (connector?.status === "blocked") {
     return `${firstPartyApp.name} is disabled. Enable it below when you want it to reconnect.`;
   }
   if (firstPartyApp.availability === "error") {
-    if (isNativeHostBusyError(firstPartyApp)) {
+    if (isNativeHostBusyError(firstPartyApp.lastError)) {
       return (
         firstPartyApp.lastError ??
         `${firstPartyApp.name} is already connected to another browser.`
       );
     }
-    if (isNativeHostExitError(firstPartyApp)) {
+    if (isNativeHostExitError(firstPartyApp.lastError)) {
       if (firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID) {
         return "YTM Enhancer CLI was stopped. Reconnect it below, or reopen the extension popup after running ytme doctor.";
       }
@@ -412,9 +397,16 @@ function firstPartyAppAction(
   }
 
   if (
+    connector?.status === "blocked" &&
+    !isFirstPartyAppInstalled(firstPartyApp.availability)
+  ) {
+    return {};
+  }
+
+  if (
     settings.enabled &&
     firstPartyApp.availability === "error" &&
-    isNativeHostBusyError(firstPartyApp) &&
+    isNativeHostBusyError(firstPartyApp.lastError) &&
     connector?.enabled !== false
   ) {
     return {
@@ -430,7 +422,7 @@ function firstPartyAppAction(
     (firstPartyApp.id === FIRST_PARTY_CLI_CONNECTOR_ID ||
       firstPartyApp.id === FIRST_PARTY_WINDOWS_TRAY_CONNECTOR_ID) &&
     firstPartyApp.availability === "error" &&
-    isNativeHostExitError(firstPartyApp) &&
+    isNativeHostExitError(firstPartyApp.lastError) &&
     connector?.enabled !== false
   ) {
     return {
@@ -491,7 +483,9 @@ function createFirstPartyAppCardModel(
     reconnectLabel: action.reconnectLabel,
     showUninstallRequest: action.showUninstallRequest,
     showLifecycleControl:
-      firstPartyApp.availability === "available" && connector !== undefined,
+      connector !== undefined &&
+      (firstPartyApp.availability === "available" ||
+        connector.status === "blocked"),
   };
 }
 

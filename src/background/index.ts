@@ -22,6 +22,11 @@ import {
 } from "@/core/connectors";
 import { createNativeMessagingTransport } from "@/core/connectors/native-messaging-transport";
 import {
+  isNativeHostBusyError,
+  isNativeHostConnectorEnabled,
+  isNativeHostExitError,
+} from "@/core/connectors/native-host-policy";
+import {
   CONNECTORS_ENABLED_STATE_KEY,
   CONNECTORS_KNOWN_STATE_KEY,
   createConnectedAppsSettings,
@@ -188,18 +193,6 @@ function isMissingNativeHostError(message: string): boolean {
   );
 }
 
-function isNativeHostExitError(message: string | null): boolean {
-  return /native host (has )?exited|native host.*disconnected|native messaging host.*disconnected/i.test(
-    message ?? "",
-  );
-}
-
-function isNativeHostBusyError(message: string | null): boolean {
-  return /already connected to .+browser|already connected to .+edge|already connected to .+chrome|already connected to .+firefox|another browser/i.test(
-    message ?? "",
-  );
-}
-
 function shouldKeepNativeHostExitDiagnostic(
   firstPartyApp: Pick<FirstPartyConnectedApp, "id">,
   diagnostic: NativeHostDiagnostic,
@@ -309,7 +302,9 @@ function createFirstPartyNativeHostTransport(
 }
 
 function firstPartyNativeHostTransports() {
-  const entries = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.map(
+  const entries = FIRST_PARTY_CONNECTED_APP_DEFINITIONS.filter((definition) =>
+    isNativeHostConnectorEnabled(knownConnectors, definition.id),
+  ).map(
     (definition) =>
       [definition.id, createFirstPartyNativeHostTransport(definition)] as const,
   );
@@ -323,8 +318,16 @@ function firstPartyNativeHostTransports() {
 function restartFirstPartyNativeHostTransport(
   definition: (typeof FIRST_PARTY_CONNECTED_APP_DEFINITIONS)[number],
 ): void {
-  if (!connectorHost?.isEnabled()) return;
+  if (
+    !connectorHost?.isEnabled() ||
+    !isNativeHostConnectorEnabled(knownConnectors, definition.id)
+  ) {
+    return;
+  }
 
+  connectorHost.disconnect(
+    nativeMessagingConnectionId(definition.nativeHostName),
+  );
   const previousTransport = firstPartyNativeHostTransportsByConnectorId.get(
     definition.id,
   );
@@ -352,7 +355,7 @@ async function enableConnectorSupport(): Promise<void> {
     ytm,
     source: connectorSource(),
     isConnectorAllowed(manifest) {
-      return knownConnectors.get(manifest.id)?.enabled !== false;
+      return isNativeHostConnectorEnabled(knownConnectors, manifest.id);
     },
     onConnectorSeen: rememberConnector,
     onPlaybackStateSubscriptionChanged: setConnectorPlaybackStateStreaming,
@@ -407,13 +410,6 @@ async function syncConnectorSupportForDevBuildConflict(): Promise<void> {
   await startConnectorSupport();
 }
 
-async function restartConnectorSupport(): Promise<void> {
-  if (!connectorSupportEnabled) return;
-
-  disableConnectorSupport();
-  await startConnectorSupportIfAvailable();
-}
-
 async function reconnectFirstPartyConnectedApp(
   connectorId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -424,13 +420,16 @@ async function reconnectFirstPartyConnectedApp(
   if (!connectorSupportEnabled) {
     return { ok: false, error: "Connected Apps is off" };
   }
+  if (!isNativeHostConnectorEnabled(knownConnectors, connectorId)) {
+    return { ok: false, error: "Connected app is disabled" };
+  }
 
   setNativeHostDiagnostic(connectorId, {
     availability: "unknown",
     lastError: null,
     lastCheckedAt: Date.now(),
   });
-  await restartConnectorSupport();
+  restartFirstPartyNativeHostTransport(definition);
   notifyConnectedAppsChanged();
   return { ok: true };
 }
@@ -440,6 +439,9 @@ function shouldRecheckNativeHostAvailability(
 ): boolean {
   const diagnostic = nativeHostDiagnostic(firstPartyApp.id);
   if (!connectorSupportEnabled) return false;
+  if (!isNativeHostConnectorEnabled(knownConnectors, firstPartyApp.id)) {
+    return false;
+  }
   if (diagnostic.availability === "available") return false;
   if (
     diagnostic.availability === "error" &&
@@ -496,20 +498,10 @@ async function saveKnownConnectors(): Promise<void> {
   );
 }
 
-function disconnectConnector(connectorId: string): void {
-  for (const session of connectorHost?.listSessions() ?? []) {
-    if (session.manifest.id === connectorId) {
-      connectorHost?.disconnect(session.connectionId);
-    }
-  }
-}
-
-async function requestMenuBarUninstall(): Promise<boolean> {
-  return (
-    (await connectorHost?.requestUninstall(
-      FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
-    )) ?? false
-  );
+async function requestConnectedAppUninstall(
+  connectorId: string,
+): Promise<boolean> {
+  return (await connectorHost?.requestUninstall(connectorId)) ?? false;
 }
 
 function rememberConnector(
@@ -784,10 +776,24 @@ handler.on("set-connector-enabled", async (message) => {
   if (!next) return { ok: false, error: "Unknown connector" };
 
   knownConnectors = next;
+  const definition = firstPartyConnectedAppDefinition(message.connectorId);
   if (message.enabled) {
-    await restartConnectorSupport();
+    if (definition) {
+      setNativeHostDiagnostic(message.connectorId, {
+        availability: "unknown",
+        lastError: null,
+        lastCheckedAt: Date.now(),
+      });
+      restartFirstPartyNativeHostTransport(definition);
+    }
   } else {
-    disconnectConnector(message.connectorId);
+    await connectorHost?.disconnectConnector(message.connectorId, {
+      code: "connector_blocked",
+      message: `Connector ${message.connectorId} is disabled`,
+    });
+    if (definition) {
+      firstPartyNativeHostTransportsByConnectorId.get(definition.id)?.stop();
+    }
   }
   await saveKnownConnectors();
   notifyConnectedAppsChanged();
@@ -802,12 +808,22 @@ handler.on("reconnect-first-party-connected-app", async (message) => {
   return reconnectFirstPartyConnectedApp(message.connectorId);
 });
 
-handler.on("request-menu-bar-uninstall", async () => {
-  const requested = await requestMenuBarUninstall();
+handler.on("request-connected-app-uninstall", async (message) => {
+  if (typeof message.connectorId !== "string") {
+    return { ok: false, error: "Invalid connector ID" };
+  }
+  const app = firstPartyConnectedAppDefinition(message.connectorId);
+  if (!app?.supportsUninstallRequest) {
+    return {
+      ok: false,
+      error: "This connected app cannot be uninstalled here.",
+    };
+  }
+  const requested = await requestConnectedAppUninstall(message.connectorId);
   if (!requested) {
     return {
       ok: false,
-      error: "Open YTM Menu Bar before requesting uninstall.",
+      error: `Open ${app.name} before requesting uninstall.`,
     };
   }
   return { ok: true };

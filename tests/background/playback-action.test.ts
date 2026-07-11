@@ -9,8 +9,8 @@ function createYtmClient(): YtmRuntimeClient {
     focusTab: vi.fn(),
     getTabArtwork: vi.fn(),
     getPlaybackState: vi.fn(),
-    executePlaybackAction: vi.fn().mockResolvedValue(undefined),
-    seekTo: vi.fn().mockResolvedValue(undefined),
+    executePlaybackAction: vi.fn().mockResolvedValue(true),
+    seekTo: vi.fn().mockResolvedValue(true),
     getVolume: vi.fn(),
     setVolume: vi.fn(),
     getPlaybackSpeed: vi.fn(),
@@ -81,5 +81,37 @@ describe("handlePlaybackActionMessage", () => {
 
     expect(response).toEqual({ ok: false, error: "Invalid seek time" });
     expect(ytm.seekTo).not.toHaveBeenCalled();
+  });
+
+  it("reports when a playback control cannot be activated", async () => {
+    const ytm = createYtmClient();
+    vi.mocked(ytm.executePlaybackAction).mockResolvedValueOnce(false);
+
+    const response = await handlePlaybackActionMessage(
+      { type: "playback-action", action: "next" },
+      {} as chrome.runtime.MessageSender,
+      ytm,
+    );
+
+    expect(response).toEqual({
+      ok: false,
+      error: "YouTube Music did not expose a control for next",
+    });
+  });
+
+  it("reports when a seek control cannot be activated", async () => {
+    const ytm = createYtmClient();
+    vi.mocked(ytm.seekTo).mockResolvedValueOnce(false);
+
+    const response = await handlePlaybackActionMessage(
+      { type: "playback-action", action: "seekTo", time: 91 },
+      {} as chrome.runtime.MessageSender,
+      ytm,
+    );
+
+    expect(response).toEqual({
+      ok: false,
+      error: "YouTube Music did not expose a seek control",
+    });
   });
 });

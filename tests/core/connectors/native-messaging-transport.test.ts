@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ConnectorOutboundMessage } from "@ytm-enhancer/connector-protocol";
+import {
+  CONNECTOR_APP_BUSY_ERROR_CODE,
+  type ConnectorOutboundMessage,
+} from "@ytm-enhancer/connector-protocol";
 import type { ConnectorHostResult } from "@/core/connectors/host";
 import {
   createNativeMessagingTransport,
@@ -46,17 +49,44 @@ describe("native messaging connector transport", () => {
     expect(runtime.connectNative).toHaveBeenCalledWith(
       NATIVE_MESSAGING_HOST_NAME,
     );
+    expect(port.postMessage).toHaveBeenCalledWith({
+      type: "connector.bootstrap",
+    });
   });
 
-  it("reports successful native host startup", () => {
+  it("posts the bootstrap only after both port listeners are attached", () => {
+    const port = createPort();
+    const runtime = {
+      connectNative: vi.fn(() => port),
+    };
+    const transport = createNativeMessagingTransport({ runtime });
+
+    transport.start(vi.fn());
+
+    const bootstrapCall = port.postMessage.mock.invocationCallOrder[0]!;
+    expect(port.onMessage.addListener.mock.invocationCallOrder[0]).toBeLessThan(
+      bootstrapCall,
+    );
+    expect(
+      port.onDisconnect.addListener.mock.invocationCallOrder[0],
+    ).toBeLessThan(bootstrapCall);
+  });
+
+  it("reports successful native host startup after its first message", () => {
     const port = createPort();
     const runtime = {
       connectNative: vi.fn(() => port),
     };
     const onConnect = vi.fn();
     const transport = createNativeMessagingTransport({ runtime, onConnect });
+    const handler = vi.fn().mockResolvedValue({ ok: true });
 
-    transport.start(vi.fn());
+    transport.start(handler);
+
+    expect(onConnect).not.toHaveBeenCalled();
+
+    port.onMessage.emit({ type: "connector.hello", requestId: "hello-1" });
+    port.onMessage.emit({ type: "connector.hello", requestId: "hello-2" });
 
     expect(onConnect).toHaveBeenCalledTimes(1);
   });
@@ -149,13 +179,18 @@ describe("native messaging connector transport", () => {
       connectNative: vi.fn(() => port),
     };
     const onError = vi.fn();
+    const onConnect = vi.fn();
     const handler = vi.fn();
-    const transport = createNativeMessagingTransport({ runtime, onError });
+    const transport = createNativeMessagingTransport({
+      runtime,
+      onConnect,
+      onError,
+    });
 
     transport.start(handler);
     port.onMessage.emit({
       type: "connector.error",
-      code: "app_busy",
+      code: CONNECTOR_APP_BUSY_ERROR_CODE,
       message:
         "YTM Tray is already connected to Microsoft Edge. Disconnect that browser before connecting here.",
     });
@@ -166,8 +201,12 @@ describe("native messaging connector transport", () => {
           "YTM Tray is already connected to Microsoft Edge. Disconnect that browser before connecting here.",
       }),
     );
+    expect(onConnect).not.toHaveBeenCalled();
     expect(handler).not.toHaveBeenCalled();
-    expect(port.postMessage).not.toHaveBeenCalled();
+    expect(port.postMessage).toHaveBeenCalledTimes(1);
+    expect(port.postMessage).toHaveBeenCalledWith({
+      type: "connector.bootstrap",
+    });
   });
 
   it("converts connector host errors into protocol error messages", async () => {

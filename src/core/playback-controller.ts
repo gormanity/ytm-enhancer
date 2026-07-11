@@ -181,7 +181,17 @@ export function createYtmPlaybackDriver(
 ): PlaybackControlDriver {
   return {
     getPlaybackState: () => ytm.getPlaybackState(),
-    executePlaybackAction: (action) => ytm.executePlaybackAction(action),
-    seekTo: (time) => ytm.seekTo(time),
+    executePlaybackAction: async (action) => {
+      const activated = await ytm.executePlaybackAction(action);
+      if (activated === false) {
+        throw new Error(`YouTube Music did not expose a control for ${action}`);
+      }
+    },
+    seekTo: async (time) => {
+      const activated = await ytm.seekTo(time);
+      if (activated === false) {
+        throw new Error("YouTube Music did not expose a seek control");
+      }
+    },
   };
 }

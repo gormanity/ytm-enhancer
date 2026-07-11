@@ -179,6 +179,45 @@ func TestDoctorPrintsLocalDiagnosticsWhenDaemonIsUnavailable(t *testing.T) {
 	}
 }
 
+func TestDoctorFailsWhenDaemonReportsConnectorNotReady(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := App{
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Request: func(request ipc.Request) (ipc.Response, error) {
+			return ipc.Response{
+				OK: true,
+				Data: map[string]any{
+					"connectorId":      "com.gormanity.ytm-enhancer.cli",
+					"connectorVersion": "0.1.0",
+					"hostName":         "com.gormanity.ytm_enhancer.cli",
+					"protocolVersion":  "1.0.0",
+					"ready":            false,
+					"hasState":         false,
+					"lastError":        "Connector com.gormanity.ytm-enhancer.cli is disabled",
+				},
+			}, nil
+		},
+	}.Run([]string{"doctor"})
+
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1", code)
+	}
+	for _, expected := range []string{
+		"WARN  Connector: native host is running, but the connector is not ready",
+		"ERROR Last error: Connector com.gormanity.ytm-enhancer.cli is disabled",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("stdout = %q, missing %q", stdout.String(), expected)
+		}
+	}
+	if stderr.String() != "" {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
 func TestDoctorVerbosePrintsUnavailableDaemonDetail(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

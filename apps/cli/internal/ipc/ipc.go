@@ -8,10 +8,12 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 const socketName = "ytme-cli.sock"
+const runtimeDirEnvironmentVariable = "YTME_RUNTIME_DIR"
 
 type Request struct {
 	Command string         `json:"command"`
@@ -28,7 +30,16 @@ type Response struct {
 type Handler func(context.Context, Request) Response
 
 func SocketPath() (string, error) {
-	root := filepath.Join(os.TempDir(), fmt.Sprintf("ytm-enhancer-%d", os.Getuid()))
+	root := strings.TrimSpace(os.Getenv(runtimeDirEnvironmentVariable))
+	if root == "" {
+		root = filepath.Join(os.TempDir(), fmt.Sprintf("ytm-enhancer-%d", os.Getuid()))
+	} else if !filepath.IsAbs(root) {
+		absoluteRoot, err := filepath.Abs(root)
+		if err != nil {
+			return "", err
+		}
+		root = absoluteRoot
+	}
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return "", err
 	}

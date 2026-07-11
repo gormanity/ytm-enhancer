@@ -64,20 +64,22 @@ export function createPopupYtmRuntimeClient(
         ...targetPayload(target),
       });
     },
-    executePlaybackAction(action: PlaybackAction, target) {
-      return runtime.command({
+    async executePlaybackAction(action: PlaybackAction, target) {
+      await runtime.command({
         type: "playback-action",
         action,
         ...targetPayload(target),
       });
+      return true;
     },
-    seekTo(time, target) {
-      return runtime.command({
+    async seekTo(time, target) {
+      await runtime.command({
         type: "playback-action",
         action: "seekTo",
         time,
         ...targetPayload(target),
       });
+      return true;
     },
     getVolume() {
       return runtime.request<number>({ type: "get-volume" });

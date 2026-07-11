@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,6 +168,71 @@ func TestConnectorReadyStoresActiveProtocolVersion(t *testing.T) {
 		ProtocolVersion: "1.0.0",
 	})
 
+	if daemon.activeProtocolVersion() != "1.0.0" {
+		t.Fatalf("active protocol = %q, want 1.0.0", daemon.activeProtocolVersion())
+	}
+}
+
+func TestConnectorLifecycleErrorImmediatelyInvalidatesReadyState(t *testing.T) {
+	title := "Song"
+	pendingResponse := make(chan protocol.HostMessage, 1)
+	daemon := &Daemon{
+		ready:          true,
+		activeProtocol: "1.0.0",
+		playbackState: &protocol.PlaybackState{
+			Title: &title,
+		},
+		pending: map[string]chan protocol.HostMessage{
+			"action-1": pendingResponse,
+		},
+	}
+
+	daemon.handleNativeMessage(protocol.HostMessage{
+		Type:    "connector.error",
+		Code:    "connector_blocked",
+		Message: "Connector com.gormanity.ytm-enhancer.cli is disabled",
+	})
+
+	if daemon.isReady() {
+		t.Fatal("daemon remained ready after connector disable")
+	}
+	if daemon.activeProtocolVersion() != "" {
+		t.Fatalf("active protocol = %q, want empty", daemon.activeProtocolVersion())
+	}
+	if daemon.cachedPlaybackState() != nil {
+		t.Fatal("cached playback state survived connector disable")
+	}
+	select {
+	case response := <-pendingResponse:
+		if response.Code != "connector_blocked" {
+			t.Fatalf("pending response code = %q, want connector_blocked", response.Code)
+		}
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("pending request was not failed by connector disable")
+	}
+	_, err := daemon.currentPlaybackState(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "is disabled") {
+		t.Fatalf("currentPlaybackState error = %v, want disable diagnostic", err)
+	}
+}
+
+func TestRequestErrorDoesNotInvalidateConnectorReadyState(t *testing.T) {
+	daemon := &Daemon{
+		ready:          true,
+		activeProtocol: "1.0.0",
+		pending:        make(map[string]chan protocol.HostMessage),
+	}
+
+	daemon.handleNativeMessage(protocol.HostMessage{
+		Type:      "connector.error",
+		RequestID: "action-1",
+		Code:      "action_unavailable",
+		Message:   "YouTube Music did not expose a control for next",
+	})
+
+	if !daemon.isReady() {
+		t.Fatal("request-scoped action error invalidated ready state")
+	}
 	if daemon.activeProtocolVersion() != "1.0.0" {
 		t.Fatalf("active protocol = %q, want 1.0.0", daemon.activeProtocolVersion())
 	}

@@ -122,61 +122,61 @@ export class YTMAdapter {
     return renderer?.getAttribute("like-status") === "LIKE";
   }
 
-  seekTo(time: number): void {
+  seekTo(time: number): boolean {
     const seekTime = Number.isFinite(time) ? Math.max(0, time) : 0;
     const progressBar = document.querySelector<HTMLElement>(
       SELECTORS.progressBar,
     );
     if (progressBar) {
-      this.updateSeekProgressControl(progressBar, seekTime);
-      return;
+      const reason = this.getNotClickableReason(progressBar);
+      if (reason === null) {
+        this.updateSeekProgressControl(progressBar, seekTime);
+        return true;
+      }
+      debug("PlaybackAction: progress bar is not seekable", { reason });
     }
 
     const video = document.querySelector<HTMLVideoElement>(
       SELECTORS.videoElement,
     );
-    if (video) {
+    if (video && Number.isFinite(video.duration) && video.duration > 0) {
       video.currentTime = seekTime;
+      return true;
     }
+
+    return false;
   }
 
-  executeAction(action: PlaybackAction): void {
+  executeAction(action: PlaybackAction): boolean {
     switch (action) {
       case "togglePlay":
-        if (!this.clickLoadedPlayerBarPlayPause()) {
-          this.clickFirstPlayButtonWhenPlayerBarClosed();
-        }
-        break;
+        return (
+          this.clickLoadedPlayerBarPlayPause() ||
+          this.clickFirstPlayButtonWhenPlayerBarClosed()
+        );
 
       case "play":
-        if (!this.isPlaying()) {
-          if (!this.clickLoadedPlayerBarPlayPause()) {
-            this.clickFirstPlayButtonWhenPlayerBarClosed();
-          }
-        }
-        break;
+        if (this.isPlaying()) return true;
+        return (
+          this.clickLoadedPlayerBarPlayPause() ||
+          this.clickFirstPlayButtonWhenPlayerBarClosed()
+        );
 
       case "pause":
-        if (this.isPlaying()) {
-          this.clickButton(SELECTORS.playPauseButton);
-        }
-        break;
+        if (!this.isPlaying()) return this.hasLoadedPlayerBarTrack();
+        return this.clickButton(SELECTORS.playPauseButton);
 
       case "next":
-        this.clickButton(SELECTORS.nextButton);
-        break;
+        return this.clickButton(SELECTORS.nextButton);
 
       case "previous":
-        this.clickButton(SELECTORS.previousButton);
-        break;
+        return this.clickButton(SELECTORS.previousButton);
 
       case "shuffle":
-        this.toggleShuffleMode();
-        break;
+        return this.toggleShuffleMode();
 
       case "repeat":
-        this.advanceRepeatMode();
-        break;
+        return this.advanceRepeatMode();
     }
   }
 
@@ -259,8 +259,7 @@ export class YTMAdapter {
         className: candidate.className,
         text: candidate.textContent?.trim().slice(0, 80),
       });
-      this.activateClick(candidate);
-      return true;
+      if (this.activateClick(candidate)) return true;
     }
 
     return false;
@@ -704,8 +703,7 @@ export class YTMAdapter {
       });
       return false;
     }
-    this.activateClick(el);
-    return true;
+    return this.activateClick(el);
   }
 
   private clickNativeButton(selector: string): boolean {
@@ -717,43 +715,47 @@ export class YTMAdapter {
       });
       return false;
     }
-    this.findActivationTarget(el).click();
+    const target = this.findActivationTarget(el);
+    if (!target) return false;
+    target.click();
     return true;
   }
 
-  private toggleShuffleMode(): void {
+  private toggleShuffleMode(): boolean {
     const el = this.findClickableElement(SELECTORS.shuffleButton);
     if (!el) {
       debug("PlaybackAction: no clickable element found", {
         selector: SELECTORS.shuffleButton,
         matches: document.querySelectorAll(SELECTORS.shuffleButton).length,
       });
-      return;
+      return false;
     }
 
     const target = this.findActivationTarget(el);
+    if (!target) return false;
     if (this.isToggleActiveByColor(el)) {
-      this.activateClick(target);
-      return;
+      return this.activateClick(target);
     }
 
     target.click();
+    return true;
   }
 
-  private advanceRepeatMode(): void {
+  private advanceRepeatMode(): boolean {
     const initialMode = this.readCurrentRepeatMode();
     const targetMode = this.nextRepeatMode(initialMode);
 
-    if (!this.clickButton(SELECTORS.repeatButton)) return;
+    if (!this.clickButton(SELECTORS.repeatButton)) return false;
 
     let currentMode = this.readCurrentRepeatMode();
-    if (currentMode === targetMode || currentMode === initialMode) return;
+    if (currentMode === targetMode || currentMode === initialMode) return true;
 
     for (let attempts = 1; attempts < 3; attempts += 1) {
-      if (!this.clickButton(SELECTORS.repeatButton)) return;
+      if (!this.clickButton(SELECTORS.repeatButton)) return true;
       currentMode = this.readCurrentRepeatMode();
-      if (currentMode === targetMode) return;
+      if (currentMode === targetMode) return true;
     }
+    return true;
   }
 
   private readCurrentRepeatMode(): "off" | "all" | "one" {
@@ -787,8 +789,7 @@ export class YTMAdapter {
       return false;
     }
 
-    this.activateClick(el);
-    return true;
+    return this.activateClick(el);
   }
 
   toggleLike(): void {
@@ -960,14 +961,20 @@ export class YTMAdapter {
     const elements = document.querySelectorAll<HTMLElement>(selector);
 
     for (const el of elements) {
-      if (!this.getNotClickableReason(el)) return el;
+      if (
+        !this.getNotClickableReason(el) &&
+        this.findActivationTarget(el) !== null
+      ) {
+        return el;
+      }
     }
 
     return null;
   }
 
-  private activateClick(el: HTMLElement): void {
+  private activateClick(el: HTMLElement): boolean {
     const target = this.findActivationTarget(el);
+    if (!target) return false;
     const view = target.ownerDocument.defaultView ?? window;
 
     for (const type of ["pointerdown", "mousedown", "mouseup", "click"]) {
@@ -979,29 +986,37 @@ export class YTMAdapter {
         }),
       );
     }
+    return true;
   }
 
-  private findActivationTarget(el: HTMLElement): HTMLElement {
-    const nested = el.querySelector<HTMLElement>(
-      [
-        "button",
-        '[role="button"]',
-        "yt-icon-button",
-        "tp-yt-paper-icon-button",
-        "paper-icon-button-light",
-        'button[aria-label^="Play" i]',
-        'button[title^="Play" i]',
-        '[role="button"][aria-label^="Play" i]',
-        '[role="button"][title^="Play" i]',
-        'yt-icon-button[aria-label^="Play" i]',
-        'yt-icon-button[title^="Play" i]',
-        'tp-yt-paper-icon-button[aria-label^="Play" i]',
-        'tp-yt-paper-icon-button[title^="Play" i]',
-        "a.play-all",
-      ].join(","),
+  private findActivationTarget(el: HTMLElement): HTMLElement | null {
+    const nested = Array.from(
+      el.querySelectorAll<HTMLElement>(
+        [
+          "button",
+          '[role="button"]',
+          "yt-icon-button",
+          "tp-yt-paper-icon-button",
+          "paper-icon-button-light",
+          'button[aria-label^="Play" i]',
+          'button[title^="Play" i]',
+          '[role="button"][aria-label^="Play" i]',
+          '[role="button"][title^="Play" i]',
+          'yt-icon-button[aria-label^="Play" i]',
+          'yt-icon-button[title^="Play" i]',
+          'tp-yt-paper-icon-button[aria-label^="Play" i]',
+          'tp-yt-paper-icon-button[title^="Play" i]',
+          "a.play-all",
+        ].join(","),
+      ),
     );
 
-    if (nested && !this.getNotClickableReason(nested)) return nested;
+    if (nested.length > 0) {
+      return (
+        nested.find((candidate) => !this.getNotClickableReason(candidate)) ??
+        null
+      );
+    }
 
     return el;
   }

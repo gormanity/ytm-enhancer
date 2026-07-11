@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { validateConnectorMessage } from "@ytm-enhancer/connector-protocol";
+import {
+  CONNECTOR_APP_BUSY_ERROR_CODE,
+  isConnectorAppBusyErrorMessage,
+  isConnectorErrorMessage,
+  validateConnectorMessage,
+} from "@ytm-enhancer/connector-protocol";
 
 function readFixture(name: string): unknown {
   return JSON.parse(
@@ -47,5 +52,29 @@ describe("connector protocol fixtures", () => {
         requestId: "ytm-status-1",
       },
     });
+  });
+
+  it("recognizes app ownership diagnostics without a request ID", () => {
+    const message = {
+      type: "connector.error",
+      code: CONNECTOR_APP_BUSY_ERROR_CODE,
+      message:
+        "YTM Menu Bar is already connected to Chrome. Disconnect that browser before connecting here.",
+    };
+
+    expect(isConnectorErrorMessage(message)).toBe(true);
+    expect(isConnectorAppBusyErrorMessage(message)).toBe(true);
+  });
+
+  it("keeps request-scoped connector errors distinguishable", () => {
+    const message = {
+      type: "connector.error",
+      requestId: "action-1",
+      code: "action_unavailable",
+      message: "YouTube Music did not expose a control for next",
+    };
+
+    expect(isConnectorErrorMessage(message)).toBe(true);
+    expect(isConnectorAppBusyErrorMessage(message)).toBe(false);
   });
 });

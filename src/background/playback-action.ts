@@ -29,10 +29,22 @@ export async function handlePlaybackActionMessage(
     if (typeof message.time !== "number") {
       return { ok: false, error: "Invalid seek time" };
     }
-    await ytm.seekTo(message.time, target);
+    const activated = await ytm.seekTo(message.time, target);
+    if (!activated) {
+      return {
+        ok: false,
+        error: "YouTube Music did not expose a seek control",
+      };
+    }
     return { ok: true };
   }
 
-  await ytm.executePlaybackAction(action, target);
+  const activated = await ytm.executePlaybackAction(action, target);
+  if (!activated) {
+    return {
+      ok: false,
+      error: `YouTube Music did not expose a control for ${action}`,
+    };
+  }
   return { ok: true };
 }

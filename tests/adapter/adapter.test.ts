@@ -896,6 +896,42 @@ describe("YTMAdapter", () => {
       expect(button.click).not.toHaveBeenCalled();
     });
 
+    it("should accept pause as a no-op for a loaded paused track", () => {
+      const button = document.createElement("tp-yt-paper-icon-button");
+      button.id = "play-pause-button";
+      button.setAttribute("title", "Play");
+      button.click = vi.fn();
+      makeVisible(button);
+      document.body.appendChild(button);
+
+      const trackTitle = document.createElement("yt-formatted-string");
+      trackTitle.className = "title style-scope ytmusic-player-bar";
+      trackTitle.textContent = "Loaded Track";
+      document.body.appendChild(trackTitle);
+
+      expect(adapter.executeAction("pause")).toBe(true);
+      expect(button.click).not.toHaveBeenCalled();
+    });
+
+    it("should reject pause when no track or playback control is loaded", () => {
+      document.body.innerHTML = "";
+
+      expect(adapter.executeAction("pause")).toBe(false);
+    });
+
+    it("should click pause for a playing track", () => {
+      const button = document.createElement("tp-yt-paper-icon-button");
+      button.id = "play-pause-button";
+      button.setAttribute("title", "Pause");
+      const click = vi.fn();
+      button.addEventListener("click", click);
+      makeVisible(button);
+      document.body.appendChild(button);
+
+      expect(adapter.executeAction("pause")).toBe(true);
+      expect(click).toHaveBeenCalledTimes(1);
+    });
+
     it("should click the next button for next", () => {
       const button = document.createElement("tp-yt-paper-icon-button");
       button.className = "next-button";
@@ -1049,6 +1085,30 @@ describe("YTMAdapter", () => {
       adapter.executeAction("repeat");
       expect(adapter.getPlaybackState().repeatMode).toBe("off");
     });
+
+    it.each([
+      ["next", "next-button"],
+      ["previous", "previous-button"],
+      ["shuffle", "shuffle"],
+      ["repeat", "repeat"],
+    ] as const)(
+      "should reject %s when only a disabled nested control is present",
+      (action, className) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = className;
+        makeVisible(wrapper);
+
+        const button = document.createElement("button");
+        button.setAttribute("aria-disabled", "true");
+        button.click = vi.fn();
+        makeVisible(button);
+        wrapper.appendChild(button);
+        document.body.appendChild(wrapper);
+
+        expect(adapter.executeAction(action)).toBe(false);
+        expect(button.click).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("getPlaybackSpeed", () => {
@@ -1406,6 +1466,12 @@ describe("YTMAdapter", () => {
   });
 
   describe("seekTo", () => {
+    function makeVisible(el: HTMLElement): void {
+      vi.spyOn(el, "getClientRects").mockReturnValue([
+        new DOMRect(0, 0, 24, 24),
+      ] as unknown as DOMRectList);
+    }
+
     it("should seek through the YouTube Music progress bar when available", () => {
       document.body.innerHTML = `
         <input id="progress-bar" type="range" min="0" max="163" value="65" />
@@ -1414,6 +1480,7 @@ describe("YTMAdapter", () => {
       `;
       const progressBar =
         document.querySelector<HTMLInputElement>("#progress-bar")!;
+      makeVisible(progressBar);
       const video = document.querySelector("video") as HTMLVideoElement;
       Object.defineProperty(video, "currentTime", {
         configurable: true,
@@ -1425,7 +1492,7 @@ describe("YTMAdapter", () => {
       progressBar.addEventListener("input", input);
       progressBar.addEventListener("change", change);
 
-      adapter.seekTo(90);
+      expect(adapter.seekTo(90)).toBe(true);
 
       expect(progressBar.value).toBe("90");
       expect(input).toHaveBeenCalledTimes(1);
@@ -1436,16 +1503,38 @@ describe("YTMAdapter", () => {
     it("should set video currentTime", () => {
       document.body.innerHTML = `<video class="html5-main-video"></video>`;
       const video = document.querySelector("video") as HTMLVideoElement;
+      Object.defineProperty(video, "duration", { value: 211 });
 
-      adapter.seekTo(83.5);
+      expect(adapter.seekTo(83.5)).toBe(true);
 
       expect(video.currentTime).toBe(83.5);
     });
 
-    it("should do nothing when video element is missing", () => {
+    it.each([
+      ["disabled", '<input id="progress-bar" type="range" disabled />'],
+      [
+        "aria-disabled",
+        '<input id="progress-bar" type="range" aria-disabled="true" />',
+      ],
+      ["hidden", '<input id="progress-bar" type="range" hidden />'],
+    ])("should reject an unusable %s progress bar", (_state, markup) => {
+      document.body.innerHTML = markup;
+      const progressBar = document.querySelector<HTMLElement>("#progress-bar")!;
+      if (_state !== "hidden") makeVisible(progressBar);
+
+      expect(adapter.seekTo(50)).toBe(false);
+    });
+
+    it("should reject an unloaded video fallback", () => {
+      document.body.innerHTML = `<video class="html5-main-video"></video>`;
+
+      expect(adapter.seekTo(50)).toBe(false);
+    });
+
+    it("should report when no seek control is available", () => {
       document.body.innerHTML = "";
 
-      expect(() => adapter.seekTo(50)).not.toThrow();
+      expect(adapter.seekTo(50)).toBe(false);
     });
   });
 });

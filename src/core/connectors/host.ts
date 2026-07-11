@@ -24,6 +24,7 @@ export type ConnectorHostErrorCode =
   | "connector_blocked"
   | "connector_not_registered"
   | "permission_denied"
+  | "action_unavailable"
   | "route_failed";
 
 export interface ConnectorHostError {
@@ -66,6 +67,10 @@ export interface ConnectorHost {
   hasPlaybackStateSubscribers(): boolean;
   listSessions(): ConnectorSessionSnapshot[];
   disconnect(connectionId: string): void;
+  disconnectConnector(
+    connectorId: string,
+    error?: ConnectorHostError,
+  ): Promise<boolean>;
   requestUninstall(connectorId: string): Promise<boolean>;
 }
 
@@ -365,12 +370,19 @@ export function createConnectorHost(
           "playback:control",
         );
         if (missingPermission) return missingPermission;
+        let activated: boolean;
         try {
-          await options.ytm.executePlaybackAction(
+          activated = await options.ytm.executePlaybackAction(
             message.action as PlaybackAction,
           );
         } finally {
           refreshPlaybackStateAfterMutation();
+        }
+        if (!activated) {
+          return errorResult(
+            "action_unavailable",
+            `YouTube Music did not expose a control for ${message.action}`,
+          );
         }
         return ack(message.requestId);
       }
@@ -380,10 +392,17 @@ export function createConnectorHost(
           "playback:control",
         );
         if (missingPermission) return missingPermission;
+        let activated: boolean;
         try {
-          await options.ytm.seekTo(message.time);
+          activated = await options.ytm.seekTo(message.time);
         } finally {
           refreshPlaybackStateAfterMutation();
+        }
+        if (!activated) {
+          return errorResult(
+            "action_unavailable",
+            "YouTube Music did not expose a seek control",
+          );
         }
         return ack(message.requestId);
       }
@@ -497,6 +516,33 @@ export function createConnectorHost(
     disconnect(connectionId: string) {
       sessions.delete(connectionId);
       notifyPlaybackStateSubscriptionChanged();
+    },
+
+    async disconnectConnector(
+      connectorId: string,
+      disconnectError?: ConnectorHostError,
+    ): Promise<boolean> {
+      const matchingSessions = Array.from(sessions.values()).filter(
+        (session) => session.manifest.id === connectorId,
+      );
+      if (matchingSessions.length === 0) return false;
+
+      if (disconnectError) {
+        await Promise.allSettled(
+          matchingSessions.map((session) =>
+            deliver(session.connectionId, {
+              type: "connector.error",
+              code: disconnectError.code,
+              message: disconnectError.message,
+            }),
+          ),
+        );
+      }
+      for (const session of matchingSessions) {
+        sessions.delete(session.connectionId);
+      }
+      notifyPlaybackStateSubscriptionChanged();
+      return true;
     },
 
     async requestUninstall(connectorId: string): Promise<boolean> {

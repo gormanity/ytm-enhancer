@@ -35,8 +35,8 @@ export interface YtmRuntimeClient {
   executePlaybackAction(
     action: PlaybackAction,
     target?: YtmTarget,
-  ): Promise<void>;
-  seekTo(time: number, target?: YtmTarget): Promise<void>;
+  ): Promise<boolean>;
+  seekTo(time: number, target?: YtmTarget): Promise<boolean>;
   getVolume(): Promise<number>;
   setVolume(volume: number): Promise<void>;
   getPlaybackSpeed(): Promise<number>;
@@ -141,15 +141,15 @@ export function createYtmRuntimeClient(
     }
   };
 
-  const relayToTarget = async (
+  const relayToTarget = async <TData = unknown>(
     message: Record<string, unknown>,
     target?: YtmTarget,
-  ): Promise<void> => {
+  ): Promise<TData> => {
     const startedAt = performance.now();
     const tab = await resolveTargetTab(target);
 
     try {
-      await sendToTab(tab.id!, message);
+      return await sendToTab<TData>(tab.id!, message);
     } catch (err) {
       debug("YTMClient: relay failed", {
         type: message.type,
@@ -227,15 +227,20 @@ export function createYtmRuntimeClient(
     async executePlaybackAction(
       action: PlaybackAction,
       target?: YtmTarget,
-    ): Promise<void> {
-      await relayToTarget({ type: "playback-action", action }, target);
+    ): Promise<boolean> {
+      const activated = await relayToTarget<boolean | undefined>(
+        { type: "playback-action", action },
+        target,
+      );
+      return activated !== false;
     },
 
-    async seekTo(time: number, target?: YtmTarget): Promise<void> {
-      await relayToTarget(
+    async seekTo(time: number, target?: YtmTarget): Promise<boolean> {
+      const activated = await relayToTarget<boolean | undefined>(
         { type: "playback-action", action: "seekTo", time },
         target,
       );
+      return activated !== false;
     },
 
     async getVolume(): Promise<number> {
