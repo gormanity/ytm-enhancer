@@ -1,4 +1,8 @@
-import { execFile as execFileCallback } from "node:child_process";
+import {
+  execFile as execFileCallback,
+  spawn,
+  type ChildProcessWithoutNullStreams,
+} from "node:child_process";
 import { promisify } from "node:util";
 import { expect, test, type Page } from "playwright/test";
 import { FIRST_PARTY_MENU_BAR_CONNECTOR_ID } from "../../src/core/connectors/settings";
@@ -14,6 +18,10 @@ import {
 } from "./helpers/fixtures";
 
 const execFile = promisify(execFileCallback);
+const CHROME_EXTENSION_ORIGIN =
+  "chrome-extension://bilcedjabgiedoamakekncokccabdccp/";
+const EDGE_EXTENSION_ORIGIN =
+  "chrome-extension://gamefnibdabclmkngggcjghpbhjmajkm/";
 
 function menuBarSmokeEnabled(): boolean {
   return process.env.YTME_E2E_MENU_BAR === "1";
@@ -334,6 +342,52 @@ on playbackControlPoint(targetLabel)
   error "Playback controls view was not found"
 end playbackControlPoint
 
+on seekPoint(targetFraction)
+  set processName to my findMenuBarProcessName()
+  tell application "System Events"
+    tell application process processName
+      repeat with menuBarRef in menu bars
+        repeat with itemRef in menu bar items of menuBarRef
+          try
+            set menuItems to menu items of menu 1 of itemRef
+          on error
+            set menuItems to {}
+          end try
+          repeat with menuItemRef in menuItems
+            try
+              set itemSize to size of menuItemRef
+              if (count of itemSize) is 2 then
+                set itemWidth to item 1 of itemSize
+                set itemHeight to item 2 of itemSize
+                if itemWidth > 300 and itemHeight > 180 then
+                  set itemPosition to position of menuItemRef
+                  set menuX to item 1 of itemPosition
+                  set menuY to item 2 of itemPosition
+                  set seekWidth to itemWidth - 36
+                  set clickX to menuX + 18 + (seekWidth * targetFraction)
+                  set clickY to menuY + 84
+                  return (clickX as text) & "," & (clickY as text)
+                end if
+              end if
+            end try
+          end repeat
+        end repeat
+      end repeat
+
+      set upNextPoint to my descendantPointContaining(it, "Up Next", 8)
+      if upNextPoint is not missing value then
+        set anchorX to item 1 of upNextPoint
+        set anchorY to item 2 of upNextPoint
+        set clickX to anchorX + (292 * targetFraction)
+        set clickY to anchorY - 95
+        return (clickX as text) & "," & (clickY as text)
+      end if
+    end tell
+  end tell
+
+  error "Seek bar was not found"
+end seekPoint
+
 on openYtmMenu()
   set processName to my findMenuBarProcessName()
   tell application "System Events"
@@ -507,10 +561,65 @@ exit(1)
 `;
 }
 
+function seekPointFromWindowScript(fraction: number): string {
+  return `
+import CoreGraphics
+import Foundation
+
+func numberValue(_ value: Any?) -> Double? {
+  if let number = value as? NSNumber {
+    return number.doubleValue
+  }
+  if let double = value as? Double {
+    return double
+  }
+  if let int = value as? Int {
+    return Double(int)
+  }
+  return nil
+}
+
+let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+let windows = (
+  CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
+) ?? []
+let ownerNeedles = ["YTM Menu Bar", "YTMMenuBarConnector"]
+var diagnostics: [String] = []
+
+for window in windows {
+  guard
+    let ownerName = window[kCGWindowOwnerName as String] as? String,
+    ownerNeedles.contains(where: { ownerName.contains($0) }),
+    let bounds = window[kCGWindowBounds as String] as? [String: Any],
+    let x = numberValue(bounds["X"]),
+    let y = numberValue(bounds["Y"]),
+    let width = numberValue(bounds["Width"]),
+    let height = numberValue(bounds["Height"])
+  else {
+    continue
+  }
+
+  diagnostics.append("\\(ownerName) \\(Int(width))x\\(Int(height))@\\(Int(x)),\\(Int(y))")
+
+  if width > 300 && height > 180 {
+    let seekWidth = width - 36
+    let clickX = x + 18 + (seekWidth * ${fraction})
+    let clickY = y + 84
+    print("\\(clickX),\\(clickY)")
+    exit(0)
+  }
+}
+
+fputs("YTM Menu Bar seek window was not found. Windows: \\(diagnostics.joined(separator: "; "))\\n", stderr)
+exit(1)
+`;
+}
+
 async function installMenuBarApp(
   localAppPath: string,
   extensionId: string,
-  extraChromiumManifestDir: string,
+  profileManifestDir: string,
+  projectName: string,
 ): Promise<void> {
   await runShell(
     `
@@ -520,7 +629,10 @@ YTM_ENHANCER_EXTENSION_ORIGINS=${shLiteral(
       `chrome-extension://${extensionId}/`,
     )} \
 YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS=${shLiteral(
-      extraChromiumManifestDir,
+      projectName === "firefox" ? "" : profileManifestDir,
+    )} \
+YTM_ENHANCER_EXTRA_FIREFOX_MANIFEST_DIRS=${shLiteral(
+      projectName === "firefox" ? profileManifestDir : "",
     )} \
   apps/menu-bar/scripts/install-native-hosts.sh
 `,
@@ -585,7 +697,9 @@ else
 fi
 deadline=$((SECONDS + 20))
 while [ "$SECONDS" -lt "$deadline" ]; do
-  if pgrep -f ${shLiteral(executablePath)} >/dev/null 2>&1; then
+  if pgrep -f ${shLiteral(executablePath)} >/dev/null 2>&1 && \
+    [ -f ${shLiteral(logPath)} ] && \
+    grep -Fq "bridge server listening" ${shLiteral(logPath)}; then
     exit 0
   fi
   sleep 0.5
@@ -597,10 +711,148 @@ exit 1
   );
 }
 
-async function clickMenuBarElement(label: string): Promise<void> {
+function launchNativeHost(
+  executablePath: string,
+  extensionOrigin: string,
+  logPath: string,
+): ChildProcessWithoutNullStreams {
+  return spawn(executablePath, [extensionOrigin], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      YTM_MENU_BAR_LOG_PATH: logPath,
+    },
+    stdio: "pipe",
+  });
+}
+
+async function readNativeHostMessage(
+  child: ChildProcessWithoutNullStreams,
+  timeout = 10_000,
+): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    let buffered = Buffer.alloc(0);
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out waiting for a native host message."));
+    }, timeout);
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      child.stdout.off("data", onData);
+      child.off("exit", onExit);
+      child.off("error", onError);
+    };
+    const onData = (chunk: Buffer) => {
+      buffered = Buffer.concat([buffered, chunk]);
+      if (buffered.length < 4) return;
+
+      const payloadLength = buffered.readUInt32LE(0);
+      if (buffered.length < payloadLength + 4) return;
+
+      cleanup();
+      try {
+        resolve(
+          JSON.parse(
+            buffered.subarray(4, payloadLength + 4).toString("utf8"),
+          ) as Record<string, unknown>,
+        );
+      } catch (error) {
+        reject(error);
+      }
+    };
+    const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+      cleanup();
+      reject(
+        new Error(
+          `Native host exited before sending a message (code=${String(code)}, signal=${String(signal)}).`,
+        ),
+      );
+    };
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+
+    child.stdout.on("data", onData);
+    child.once("exit", onExit);
+    child.once("error", onError);
+  });
+}
+
+async function waitForNativeHostExit(
+  child: ChildProcessWithoutNullStreams,
+  timeout = 10_000,
+): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out waiting for the native host to exit."));
+    }, timeout);
+    const cleanup = () => {
+      clearTimeout(timer);
+      child.off("exit", onExit);
+      child.off("error", onError);
+    };
+    const onExit = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+
+    child.once("exit", onExit);
+    child.once("error", onError);
+  });
+}
+
+async function stopNativeHost(
+  child: ChildProcessWithoutNullStreams | undefined,
+): Promise<void> {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+
+  child.stdin.end();
+  try {
+    await waitForNativeHostExit(child);
+  } catch {
+    child.kill("SIGKILL");
+    await waitForNativeHostExit(child).catch(() => undefined);
+  }
+}
+
+async function menuBarProcessIds(executablePath: string): Promise<number[]> {
+  const { stdout } = await execFile("/bin/ps", ["-axo", "pid=,command="], {
+    cwd: process.cwd(),
+    timeout: 15_000,
+  });
+
+  return stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.includes(executablePath))
+    .map((line) => Number(line.split(/\s+/, 1)[0]))
+    .filter(Number.isFinite);
+}
+
+async function clickMenuBarElement(
+  label: string,
+  logPath?: string,
+): Promise<void> {
   const isPlaybackControl = PLAYBACK_CONTROL_LABELS.has(label);
   const diagnostic = isPlaybackControl
-    ? await clickPlaybackControl(label)
+    ? await clickPlaybackControl(
+        label,
+        logPath ??
+          (() => {
+            throw new Error(
+              `A menu bar log path is required to click ${label}.`,
+            );
+          })(),
+      )
     : await runAppleScript(`
 ${MENU_BAR_APPLESCRIPT_HELPERS}
 my openYtmMenu()
@@ -613,39 +865,97 @@ return clickResult
   }
 }
 
-async function clickPlaybackControl(label: string): Promise<string> {
+function playbackActionLogMarker(label: string): string {
+  switch (label) {
+    case "Play":
+    case "Pause":
+      return "sending playback action togglePlay";
+    case "Next":
+      return "sending playback action next";
+    case "Previous":
+      return "sending playback action previous";
+    case "Shuffle":
+      return "sending playback action shuffle";
+    case "Repeat":
+      return "sending playback action repeat";
+    default:
+      throw new Error(`Unsupported playback control: ${label}`);
+  }
+}
+
+async function menuBarLogOccurrenceCount(
+  logPath: string,
+  marker: string,
+): Promise<number> {
+  const contents = await runShell(
+    `
+if [ -f ${shLiteral(logPath)} ]; then
+  cat ${shLiteral(logPath)}
+fi
+`,
+    15_000,
+  );
+  return contents.split(marker).length - 1;
+}
+
+async function expectPlaybackActionLogged(
+  logPath: string,
+  marker: string,
+  previousCount: number,
+  timeout: number,
+): Promise<void> {
+  await expect
+    .poll(() => menuBarLogOccurrenceCount(logPath, marker), { timeout })
+    .toBeGreaterThan(previousCount);
+}
+
+async function clickPlaybackControl(
+  label: string,
+  logPath: string,
+): Promise<string> {
+  const marker = playbackActionLogMarker(label);
+  const previousCount = await menuBarLogOccurrenceCount(logPath, marker);
+  let coordinateMessage: string;
+
   try {
-    return await clickPlaybackControlByCoordinate(label);
+    const coordinateDiagnostic = await clickPlaybackControlByCoordinate(label);
+    try {
+      await expectPlaybackActionLogged(logPath, marker, previousCount, 2_000);
+      return coordinateDiagnostic;
+    } catch {
+      coordinateMessage = `${coordinateDiagnostic}; no matching app action was logged`;
+    }
   } catch (coordinateError) {
-    const coordinateMessage =
+    coordinateMessage =
       coordinateError instanceof Error
         ? coordinateError.message
         : String(coordinateError);
+  }
 
-    await runAppleScript(`
+  await runAppleScript(`
 ${MENU_BAR_APPLESCRIPT_HELPERS}
 my closeOpenMenu()
 `).catch(() => undefined);
 
-    try {
-      const accessibilityDiagnostic = await runAppleScript(`
+  try {
+    const accessibilityDiagnostic = await runAppleScript(`
 ${MENU_BAR_APPLESCRIPT_HELPERS}
 my openYtmMenu()
 set clickResult to my clickVisibleElement(${appleScriptString(label)})
 my closeOpenMenu()
 return clickResult
 `);
-      return `${accessibilityDiagnostic}; coordinate fallback failed before accessibility click: ${coordinateMessage}`;
-    } catch (accessibilityError) {
-      const accessibilityMessage =
-        accessibilityError instanceof Error
-          ? accessibilityError.message
-          : String(accessibilityError);
-      throw new Error(
-        `Unable to click ${label} playback control.\nCoordinate: ${coordinateMessage}\nAccessibility: ${accessibilityMessage}`,
-        { cause: accessibilityError },
-      );
-    }
+    await expectPlaybackActionLogged(logPath, marker, previousCount, 5_000);
+    return `${accessibilityDiagnostic}; coordinate fallback: ${coordinateMessage}`;
+  } catch (accessibilityError) {
+    const accessibilityMessage =
+      accessibilityError instanceof Error
+        ? accessibilityError.message
+        : String(accessibilityError);
+    throw new Error(
+      `Unable to click ${label} playback control.\nCoordinate: ${coordinateMessage}\nAccessibility: ${accessibilityMessage}`,
+      { cause: accessibilityError },
+    );
   }
 }
 
@@ -701,6 +1011,62 @@ my openYtmMenu()
   }
 }
 
+async function clickMenuBarSeek(
+  fraction: number,
+  logPath: string,
+): Promise<void> {
+  if (fraction < 0 || fraction > 1) {
+    throw new Error(`Invalid menu bar seek fraction: ${fraction}`);
+  }
+
+  const marker = "sending playback seek time=";
+  const previousCount = await menuBarLogOccurrenceCount(logPath, marker);
+  const pointText = await seekPointText(fraction);
+  const [x, y] = pointText
+    .trim()
+    .split(",")
+    .map((part) => Number(part));
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    throw new Error(`Invalid seek point: ${pointText}`);
+  }
+
+  const diagnostic = await runSwift(postMouseClickScript(x, y));
+  await expectPlaybackActionLogged(logPath, marker, previousCount, 5_000);
+  if (process.env.YTME_E2E_MENU_BAR_DEBUG === "1" && diagnostic.trim()) {
+    console.warn(`Menu bar seek: ${diagnostic.trim()}`);
+  }
+}
+
+async function seekPointText(fraction: number): Promise<string> {
+  try {
+    return await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my openYtmMenu()
+return my seekPoint(${fraction})
+`);
+  } catch (error) {
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my closeOpenMenu()
+my openYtmMenu()
+`).catch(() => undefined);
+
+    try {
+      return await runSwift(seekPointFromWindowScript(fraction));
+    } catch (fallbackError) {
+      const pointError = error instanceof Error ? error.message : String(error);
+      const windowError =
+        fallbackError instanceof Error
+          ? fallbackError.message
+          : String(fallbackError);
+      throw new Error(
+        `Unable to resolve menu bar seek point. AppleScript: ${pointError}\nCoreGraphics: ${windowError}`,
+        { cause: fallbackError },
+      );
+    }
+  }
+}
+
 async function clickMenuBarElementWithoutClosing(label: string): Promise<void> {
   const diagnostic = await runAppleScript(`
 ${MENU_BAR_APPLESCRIPT_HELPERS}
@@ -712,11 +1078,48 @@ return my clickVisibleElement(${appleScriptString(label)})
   }
 }
 
+async function menuBarProcessText(): Promise<string> {
+  return runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+set processName to my findMenuBarProcessName()
+set visibleText to {}
+tell application "System Events"
+  tell application process processName
+    set allElements to entire contents
+  end tell
+end tell
+repeat with elementRef in allElements
+  set labelText to my elementText(elementRef)
+  if labelText is not "" then set end of visibleText to labelText
+end repeat
+return my joinTextList(visibleText)
+`);
+}
+
+async function closeAboutWindow(): Promise<void> {
+  await runAppleScript(
+    'tell application "System Events" to keystroke "w" using command down',
+  );
+}
+
 async function expectFixtureEvent(
   page: Page,
   eventName: string,
 ): Promise<void> {
   await expect.poll(() => readFixtureEvents(page)).toContain(eventName);
+}
+
+async function expectFixtureEventPrefix(
+  page: Page,
+  eventPrefix: string,
+): Promise<void> {
+  await expect
+    .poll(async () =>
+      (await readFixtureEvents(page)).some((event) =>
+        event.startsWith(eventPrefix),
+      ),
+    )
+    .toBe(true);
 }
 
 async function expectMenuBarLogContains(
@@ -803,6 +1206,40 @@ async function setConnectedAppsEnabled(
   }
 }
 
+async function setMenuBarConnectorEnabled(
+  extension: ExtensionTestContext,
+  enabled: boolean,
+): Promise<void> {
+  const message = {
+    type: "set-connector-enabled",
+    connectorId: FIRST_PARTY_MENU_BAR_CONNECTOR_ID,
+    enabled,
+  };
+  const response = extension.firefox
+    ? await extension.firefox.sendRuntimeMessage<
+        { ok: true } | { ok: false; error: string }
+      >(message)
+    : await extension.popup.evaluate(
+        (nextMessage) =>
+          chrome.runtime.sendMessage(nextMessage) as Promise<
+            { ok: true } | { ok: false; error: string }
+          >,
+        message,
+      );
+  if (!response.ok) throw new Error(response.error);
+}
+
+function expectedBrowserSource(projectName: string): string {
+  switch (projectName) {
+    case "edge":
+      return "Microsoft Edge (dev)";
+    case "firefox":
+      return "Firefox (dev)";
+    default:
+      return "Chrome (dev)";
+  }
+}
+
 async function menuBarConnectionDiagnostic(
   extension: ExtensionTestContext,
 ): Promise<string> {
@@ -874,7 +1311,7 @@ test("routes macOS menu bar buttons through the browser native messaging host", 
 
   const localAppPath = testInfo.outputPath("YTM Menu Bar.app");
   const menuBarLogPath = testInfo.outputPath("menu-bar.log");
-  const chromiumProfileManifestDir = `${extensionUserDataDir(testInfo)}/NativeMessagingHosts`;
+  const profileManifestDir = `${extensionUserDataDir(testInfo)}/NativeMessagingHosts`;
   let extension: Awaited<ReturnType<typeof launchExtensionContext>> | undefined;
 
   try {
@@ -882,7 +1319,8 @@ test("routes macOS menu bar buttons through the browser native messaging host", 
     await installMenuBarApp(
       localAppPath,
       extensionId,
-      chromiumProfileManifestDir,
+      profileManifestDir,
+      testInfo.project.name,
     );
     extension = await launchExtensionContext(testInfo, {
       env: {
@@ -926,24 +1364,66 @@ test("routes macOS menu bar buttons through the browser native messaging host", 
     await ytmPage.waitForTimeout(2500);
     await expectMenuBarScrollAdvanced(menuBarLogPath);
 
-    await clickMenuBarElement("Play");
+    await clickMenuBarElementWithoutClosing("About YTM Menu Bar");
+    await expect
+      .poll(() => menuBarProcessText())
+      .toContain(
+        `Connected to ${expectedBrowserSource(testInfo.project.name)}.`,
+      );
+    await closeAboutWindow();
+
+    try {
+      await clickMenuBarSeek(0.72, menuBarLogPath);
+      await expectFixtureEventPrefix(ytmPage, "seek-change:");
+      await expect.poll(() => menuBarProcessText()).toContain("3:33");
+    } finally {
+      await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my closeOpenMenu()
+`).catch(() => undefined);
+    }
+
+    await clickMenuBarElement("Play", menuBarLogPath);
     await expectFixtureEvent(ytmPage, "player-play-clicked");
     await expectFixtureEvent(ytmPage, "player-play-pause-clicked");
 
-    await clickMenuBarElement("Next");
+    await clickMenuBarElement("Next", menuBarLogPath);
     await expectFixtureEvent(ytmPage, "next-clicked");
 
-    await clickMenuBarElement("Previous");
+    await clickMenuBarElement("Previous", menuBarLogPath);
     await expectFixtureEvent(ytmPage, "previous-clicked");
 
-    await clickMenuBarElement("Shuffle");
+    await clickMenuBarElement("Shuffle", menuBarLogPath);
     await expectFixtureEvent(ytmPage, "shuffle-clicked");
 
-    await clickMenuBarElement("Repeat");
+    await clickMenuBarElement("Repeat", menuBarLogPath);
     await expectFixtureEvent(ytmPage, "repeat-clicked");
 
     await clickMenuBarElement("Focus YouTube Music");
     await expectMenuBarLogContains(menuBarLogPath, "requestId=focus-");
+
+    await setMenuBarConnectorEnabled(extension, false);
+    await expectMenuBarLogContains(
+      menuBarLogPath,
+      "connector error Connector disabled",
+    );
+    await expectMenuBarLogContains(menuBarLogPath, "connector disconnected");
+
+    await clickMenuBarElementWithoutClosing("About YTM Menu Bar");
+    await expect
+      .poll(() => menuBarProcessText())
+      .toContain("Not connected to a browser.");
+    await closeAboutWindow();
+
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my openYtmMenu()
+`);
+    await expect.poll(() => menuBarProcessText()).toContain("Disconnected");
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my closeOpenMenu()
+`);
 
     await clickMenuBarElementWithoutClosing("Quit");
     await expect
@@ -960,6 +1440,81 @@ test("routes macOS menu bar buttons through the browser native messaging host", 
       .toBe("");
   } finally {
     await extension?.context.close().catch(() => undefined);
+    await uninstallMenuBarApp(localAppPath).catch(() => undefined);
+  }
+});
+
+// Playwright requires the first callback parameter to be a destructured fixture object.
+// eslint-disable-next-line no-empty-pattern
+test("keeps the first macOS menu bar browser owner under native host contention", async ({}, testInfo) => {
+  test.setTimeout(180_000);
+  test.skip(
+    !menuBarSmokeEnabled(),
+    "Set YTME_E2E_MENU_BAR=1 to run the macOS menu bar connector smoke.",
+  );
+  test.skip(
+    process.platform !== "darwin",
+    "The macOS menu bar contention smoke requires the macOS native host.",
+  );
+  test.skip(
+    testInfo.project.name !== "chromium",
+    "The macOS menu bar contention smoke runs once in the Chromium project.",
+  );
+
+  const localAppPath = testInfo.outputPath("YTM Menu Bar.app");
+  const executablePath = `${localAppPath}/Contents/MacOS/YTMMenuBarConnector`;
+  const profileManifestDir = testInfo.outputPath("NativeMessagingHosts");
+  const ownerLogPath = testInfo.outputPath("owner.log");
+  const contenderLogPath = testInfo.outputPath("contender.log");
+  let owner: ChildProcessWithoutNullStreams | undefined;
+  let contender: ChildProcessWithoutNullStreams | undefined;
+
+  try {
+    await installMenuBarApp(
+      localAppPath,
+      CHROME_EXTENSION_ORIGIN.slice("chrome-extension://".length, -1),
+      profileManifestDir,
+      "chromium",
+    );
+
+    owner = launchNativeHost(
+      executablePath,
+      CHROME_EXTENSION_ORIGIN,
+      ownerLogPath,
+    );
+    await expectMenuBarLogContains(
+      ownerLogPath,
+      "bridge server reserved owner=Chrome",
+    );
+    await expect
+      .poll(() => menuBarProcessIds(executablePath))
+      .toEqual([owner.pid]);
+
+    contender = launchNativeHost(
+      executablePath,
+      EDGE_EXTENSION_ORIGIN,
+      contenderLogPath,
+    );
+    await expect(readNativeHostMessage(contender)).resolves.toEqual({
+      type: "connector.error",
+      code: "app_busy",
+      message:
+        "YTM Menu Bar is already connected to Chrome. Disconnect that browser before connecting here.",
+    });
+    await waitForNativeHostExit(contender);
+
+    expect(owner.exitCode).toBeNull();
+    expect(owner.signalCode).toBeNull();
+    await expect
+      .poll(() => menuBarProcessIds(executablePath))
+      .toEqual([owner.pid]);
+    await expectMenuBarLogContains(
+      ownerLogPath,
+      "bridge server rejected native host owner=Microsoft Edge activeOwner=Chrome",
+    );
+  } finally {
+    await stopNativeHost(contender);
+    await stopNativeHost(owner);
     await uninstallMenuBarApp(localAppPath).catch(() => undefined);
   }
 });

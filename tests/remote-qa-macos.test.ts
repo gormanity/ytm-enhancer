@@ -34,6 +34,7 @@ describe("macOS remote QA scaffold", () => {
     );
 
     expect(packageSmoke).toContain("SPARKLE_PUBLIC_ED_KEY");
+    expect(packageSmoke).toContain("pnpm run menu-bar:test");
     expect(packageSmoke).toContain("menu-bar:package:direct");
     expect(packageSmoke).toContain("pkgutil");
     expect(packageSmoke).toContain("YTM-Menu-Bar-.+\\.pkg");
@@ -62,8 +63,10 @@ describe("macOS remote QA scaffold", () => {
     );
     expect(localButtonSmoke).toContain('pnpm run "$build_command"');
     expect(localButtonSmoke).toContain(
-      'playwright test tests/e2e/menu-bar-connector.spec.ts --project="$project"',
+      "playwright test tests/e2e/menu-bar-connector.spec.ts",
     );
+    expect(localButtonSmoke).toContain('--project="$project"');
+    expect(localButtonSmoke).toContain("--workers=1");
     expect(menuBarE2e).toContain("player-loaded-long-metadata");
     expect(menuBarE2e).toContain("YTM_MENU_BAR_SCROLL_QA");
     expect(menuBarE2e).toContain("metadata scroll advanced");

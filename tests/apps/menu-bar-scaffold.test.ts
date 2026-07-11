@@ -112,6 +112,45 @@ describe("menu bar connector app scaffold", () => {
     expect(relaySource).toContain("bridgeClient.send");
   });
 
+  it("preserves the first browser owner and rejects later bridge claims", () => {
+    const bridgeSource = read(
+      "Sources/YTMMenuBarConnector/MenuBarBridge.swift",
+    );
+    const launchSource = read(
+      "Sources/YTMMenuBarConnector/NativeMessagingLaunch.swift",
+    );
+    const nativeConnectionSource = read(
+      "Sources/YTMMenuBarConnector/NativeMessagingConnection.swift",
+    );
+    const protocolSource = read(
+      "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
+    );
+    const mainSource = read("Sources/YTMMenuBarConnector/main.swift");
+
+    expect(bridgeSource).toContain('"bridge.claim"');
+    expect(bridgeSource).toContain('"bridge.accepted"');
+    expect(bridgeSource).toContain('"bridge.busy"');
+    expect(bridgeSource).toContain("activeOwnerName");
+    expect(bridgeSource).toContain("reserve(ownerName:");
+    expect(bridgeSource).toContain("clientHandle != nil");
+    expect(bridgeSource).toContain("hasBridgeOwnership");
+    expect(bridgeSource).not.toContain(
+      "clientHandle?.closeFile()\n    let handle",
+    );
+    expect(launchSource).toContain("browserSourceHint");
+    expect(nativeConnectionSource).toContain("sendImmediately");
+    expect(protocolSource).toContain('"code": "app_busy"');
+    expect(protocolSource).toContain(
+      "Disconnect that browser before connecting here.",
+    );
+    expect(mainSource).toContain("emitAppBusy");
+    expect(mainSource).toContain("reservation.reserve(ownerName:");
+    expect(mainSource).toContain("NSApplication.shared.terminate(nil)");
+    expect(mainSource).toContain(
+      "bridge UI startup lost ownership; terminating duplicate menu",
+    );
+  });
+
   it("writes local debug logs for connector diagnostics", () => {
     const sources = listFiles("Sources/YTMMenuBarConnector")
       .map(read)
@@ -124,6 +163,7 @@ describe("menu bar connector app scaffold", () => {
     expect(sources).toContain("sending message");
     expect(sources).toContain("playback state");
     expect(sources).toContain('"repeat=\\(state.repeatMode ?? "nil")"');
+    expect(sources).toContain('case "connector.bootstrap"');
   });
 
   it("can add Chromium manifest directories for browser-profile QA", () => {
@@ -132,6 +172,33 @@ describe("menu bar connector app scaffold", () => {
     expect(installer).toContain("YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS");
     expect(installer).toContain("EXTRA_CHROMIUM_MANIFEST_DIRS");
     expect(installer).toContain('write_chromium_manifest "$manifest_dir"');
+  });
+
+  it("can add Firefox manifests to browser-profile QA directories", () => {
+    const installer = read("scripts/install-native-hosts.sh");
+    const smoke = read("../../scripts/macos-qa/menu-bar-button-smoke.sh");
+    const e2e = read("../../tests/e2e/menu-bar-connector.spec.ts");
+
+    expect(installer).toContain("YTM_ENHANCER_EXTRA_FIREFOX_MANIFEST_DIRS");
+    expect(installer).toContain("EXTRA_FIREFOX_MANIFEST_DIRS");
+    expect(installer).toContain('write_firefox_manifest "$manifest_dir"');
+    expect(e2e).toContain("YTM_ENHANCER_EXTRA_FIREFOX_MANIFEST_DIRS");
+    expect(e2e).toContain('projectName === "firefox"');
+    expect(smoke).toContain('project="${YTME_MENU_BAR_E2E_PROJECT');
+  });
+
+  it("restores pre-existing menu bar QA state after every smoke", () => {
+    const smoke = read("../../scripts/macos-qa/menu-bar-button-smoke.sh");
+
+    expect(smoke).toContain("snapshot_existing_state");
+    expect(smoke).toContain("restore_existing_state");
+    expect(smoke).toContain("trap restore_existing_state EXIT");
+    expect(smoke).toContain("NativeMessagingHosts");
+    expect(smoke).toContain("preexisting-apps");
+    expect(smoke).toContain("qa-pids");
+    expect(smoke).toContain("kill -KILL");
+    expect(smoke).toContain('open -n "$app_path"');
+    expect(smoke).toContain("--workers=1");
   });
 
   it("retries transient startup playback state errors", () => {
@@ -199,6 +266,15 @@ describe("menu bar connector app scaffold", () => {
     expect(viewSource).toContain("mouseDown");
     expect(viewSource).toContain("mouseDragged");
     expect(viewSource).toContain("setSeekEnabled");
+  });
+
+  it("drives seek through the desktop menu bar smoke", () => {
+    const e2e = read("../../tests/e2e/menu-bar-connector.spec.ts");
+
+    expect(e2e).toContain("clickMenuBarSeek");
+    expect(e2e).toContain("expectFixtureEventPrefix");
+    expect(e2e).toContain('"seek-change:"');
+    expect(e2e).toContain('toContain("3:33")');
   });
 
   it("adds a menu action for focusing YouTube Music", () => {
@@ -1399,6 +1475,38 @@ describe("menu bar connector app scaffold", () => {
     expect(aboutSource).toContain("Uninstaller Did Not Complete");
   });
 
+  it("shows the active connector.ready browser source in About", () => {
+    const protocolSource = read(
+      "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
+    );
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+    const aboutSource = read(
+      "Sources/YTMMenuBarConnector/AboutWindowController.swift",
+    );
+    const mainSource = read("Sources/YTMMenuBarConnector/main.swift");
+
+    expect(protocolSource).toContain("struct ConnectorSource");
+    expect(protocolSource).toContain("let source: ConnectorSource?");
+    expect(appSource).toContain("onSourceChanged");
+    expect(appSource).toContain("message.source");
+    expect(appSource).toContain("setSource(nil)");
+    expect(aboutSource).toContain("browserSourceLabel");
+    expect(aboutSource).toContain("updateBrowserSource");
+    expect(aboutSource).toContain("Connected to");
+    expect(aboutSource).toContain("Not connected to a browser");
+    expect(mainSource).toContain("aboutWindow.updateBrowserSource");
+    expect(mainSource).toContain("updateActiveOwner");
+  });
+
+  it("clears ready/source state when the extension disables the app", () => {
+    const appSource = read("Sources/YTMMenuBarConnector/ConnectorApp.swift");
+
+    expect(appSource).toContain('case "host_disabled", "connector_blocked"');
+    expect(appSource).toContain("setSource(nil)");
+    expect(appSource).toContain('return "Connected Apps disabled"');
+    expect(appSource).toContain('return "Connector disabled"');
+  });
+
   it("can request uninstall through the connector protocol", () => {
     const protocolSource = read(
       "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
@@ -1627,9 +1735,6 @@ describe("menu bar connector app scaffold", () => {
     expect(connectorDocs).toContain("YTM Menu Bar");
     expect(connectorDocs).toContain("YTM Enhancer CLI");
     expect(connectorDocs).toContain("YTM Tray");
-    expect(connectorDocs).toContain("Chromium, Edge, and Firefox buttons");
-    expect(connectorDocs).toContain("Chromium and Firefox");
-    expect(connectorDocs).toContain("Microsoft Edge and Firefox");
     expect(packageJson.scripts["site:build"]).toBe(
       "node apps/menu-bar/scripts/generate-appcast.mjs --site-only",
     );
@@ -2215,6 +2320,31 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain(
       'echo "YTM_MENU_BAR_BUILD_NUMBER=$build_number"',
     );
+  });
+
+  it("runs Swift unit tests from macOS release gates", () => {
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
+    ) as { scripts: Record<string, string> };
+    const releaseWorkflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
+      "utf-8",
+    );
+    const updateWorkflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-update-path.yml"),
+      "utf-8",
+    );
+    const releaseDocs = readFileSync(
+      resolve(process.cwd(), "docs/menu-bar-release.md"),
+      "utf-8",
+    );
+
+    expect(packageJson.scripts["menu-bar:test"]).toBe(
+      "swift test --package-path apps/menu-bar",
+    );
+    expect(releaseWorkflow).toContain("pnpm run menu-bar:test");
+    expect(updateWorkflow).toContain("pnpm run menu-bar:test");
+    expect(releaseDocs).toContain("pnpm run menu-bar:test");
   });
 
   it("signs Sparkle appcasts from the decoded CI key file", () => {

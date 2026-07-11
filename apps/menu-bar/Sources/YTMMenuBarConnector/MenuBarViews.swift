@@ -119,6 +119,24 @@ final class MenuBarNowPlayingView: NSView {
   private static let pendingSeekHoldSeconds: TimeInterval = 1.5
   private static let pendingSeekToleranceSeconds: Double = 1.25
 
+  private struct PlaybackIdentity: Equatable {
+    let title: String
+    let artist: String
+    let album: String
+    let durationSeconds: Int
+
+    init(state: PlaybackState) {
+      title = Self.normalize(state.title)
+      artist = Self.normalize(state.artist)
+      album = Self.normalize(state.album)
+      durationSeconds = Int(state.duration.rounded())
+    }
+
+    private static func normalize(_ value: String?) -> String {
+      value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+  }
+
   private let artworkView = MenuBarArtworkView()
   private let titleTextView = MenuBarScrollingTextView()
   private let albumTextView = MenuBarScrollingTextView()
@@ -136,8 +154,10 @@ final class MenuBarNowPlayingView: NSView {
   private let nextTrackDetailTextView = MenuBarScrollingTextView()
   private let metadataScroller = MenuBarMetadataScroller()
   private var currentDuration: Double = 0
+  private var currentPlaybackIdentity: PlaybackIdentity?
   private var pendingSeekTime: Double?
   private var pendingSeekExpirationDate: Date?
+  private var pendingSeekPlaybackIdentity: PlaybackIdentity?
   private var onSeek: ((Double) -> Void)?
   private var mouseEventMonitor: Any?
   private var hoverPollTimer: Timer?
@@ -191,6 +211,7 @@ final class MenuBarNowPlayingView: NSView {
     albumTextView.stringValue = ""
     artistYearTextView.stringValue = ""
     currentDuration = 0
+    currentPlaybackIdentity = nil
     clearPendingSeek()
     seekBarView.setProgress(0)
     seekBarView.setDuration(0)
@@ -231,6 +252,7 @@ final class MenuBarNowPlayingView: NSView {
       albumTextView.stringValue = ""
       artistYearTextView.stringValue = ""
       currentDuration = 0
+      currentPlaybackIdentity = nil
       clearPendingSeek()
       seekBarView.setProgress(0)
       seekBarView.setDuration(0)
@@ -263,6 +285,7 @@ final class MenuBarNowPlayingView: NSView {
     seekBarView.setSeekEnabled(state.duration > 0)
     seekBarView.setDimmed(false)
     let displayProgress = displayProgress(for: state)
+    currentPlaybackIdentity = PlaybackIdentity(state: state)
     updateProgressDisplay(progress: displayProgress, duration: state.duration)
     artworkView.update(artworkUrl: state.artworkUrl)
     controlsView.updatePlayback(
@@ -531,23 +554,31 @@ final class MenuBarNowPlayingView: NSView {
     return CGFloat(max(0, min(1, progress / duration)))
   }
 
-  private func applyOptimisticSeek(_ time: Double) {
-    guard currentDuration > 0 else { return }
+  func applyOptimisticSeek(_ time: Double) {
+    guard currentDuration > 0, let currentPlaybackIdentity else {
+      clearPendingSeek()
+      return
+    }
     let clampedTime = max(0, min(time, currentDuration))
     pendingSeekTime = clampedTime
     pendingSeekExpirationDate = Date().addingTimeInterval(Self.pendingSeekHoldSeconds)
+    pendingSeekPlaybackIdentity = currentPlaybackIdentity
     updateProgressDisplay(progress: clampedTime, duration: currentDuration)
   }
 
-  private func displayProgress(for state: PlaybackState) -> Double {
+  func displayProgress(for state: PlaybackState) -> Double {
     guard
       let pendingSeekTime,
-      let pendingSeekExpirationDate
+      let pendingSeekExpirationDate,
+      let pendingSeekPlaybackIdentity
     else {
       return state.progress
     }
 
-    if state.duration <= 0 || Date() > pendingSeekExpirationDate {
+    if PlaybackIdentity(state: state) != pendingSeekPlaybackIdentity
+      || state.duration <= 0
+      || Date() > pendingSeekExpirationDate
+    {
       clearPendingSeek()
       return state.progress
     }
@@ -563,6 +594,7 @@ final class MenuBarNowPlayingView: NSView {
   private func clearPendingSeek() {
     pendingSeekTime = nil
     pendingSeekExpirationDate = nil
+    pendingSeekPlaybackIdentity = nil
   }
 
   private func isUnavailablePlaybackState(_ state: PlaybackState) -> Bool {

@@ -15,7 +15,10 @@ final class ConnectorApp {
   private var playbackStateStaleTimeout: DispatchWorkItem?
   private var lastAcceptedPlaybackState: PlaybackState?
   private var isPlaybackStateStale = false
+  private var currentSource: ConnectorSource?
   var onRequestUninstall: (() -> Void)?
+  var onSourceChanged: ((ConnectorSource?) -> Void)?
+  var onDisconnected: (() -> Void)?
 
   init(
     connection: ConnectorConnection,
@@ -44,11 +47,13 @@ final class ConnectorApp {
       onDisconnect: { [weak self] in
         self?.logger.log("connector disconnected")
         self?.isReady = false
+        self?.setSource(nil)
         self?.isPlaybackStateStale = false
         self?.lastAcceptedPlaybackState = nil
         self?.clearPlaybackStateRetry()
         self?.clearPlaybackStateStaleTimeout()
         self?.menu.updateConnectionStatus("Disconnected")
+        self?.onDisconnected?()
       }
     )
 
@@ -67,11 +72,16 @@ final class ConnectorApp {
     )
 
     switch message.type {
+    case "connector.bootstrap":
+      logger.log("connector bootstrap received")
     case "connector.ready":
       isReady = true
+      setSource(message.source)
       clearPlaybackStateStaleTimeout()
       menu.updateConnectionStatus("Connected")
-      logger.log("connector ready; subscribing to playback state")
+      logger.log(
+        "connector ready source=\(message.source?.displayName ?? "unknown"); subscribing to playback state"
+      )
       connection.send(
         ConnectorProtocol.subscribePlayback(
           requestId: nextRequestId("subscribe")
@@ -99,6 +109,7 @@ final class ConnectorApp {
       }
       if isConnectorAvailabilityError(message.code) {
         isReady = false
+        setSource(nil)
         isPlaybackStateStale = false
         lastAcceptedPlaybackState = nil
         clearPlaybackStateRetry()
@@ -261,6 +272,7 @@ final class ConnectorApp {
 
   private func restartHandshake(reason: String) {
     isReady = false
+    setSource(nil)
     isPlaybackStateStale = false
     lastAcceptedPlaybackState = nil
     clearPlaybackStateRetry()
@@ -280,6 +292,12 @@ final class ConnectorApp {
     playbackStateStaleTimeout = nil
   }
 
+  private func setSource(_ source: ConnectorSource?) {
+    guard source != currentSource else { return }
+    currentSource = source
+    onSourceChanged?(source)
+  }
+
   private func isConnectorAvailabilityError(_ code: String?) -> Bool {
     switch code {
     case "host_disabled", "connector_blocked", "unsupported_protocol":
@@ -295,7 +313,8 @@ final class ConnectorApp {
       state.isPlaying,
       state.duration > 0,
       let previous = lastAcceptedPlaybackState,
-      samePlaybackItem(previous, state)
+      previous.isPlaying,
+      Self.samePlaybackItem(previous, state)
     else {
       return false
     }
@@ -303,14 +322,41 @@ final class ConnectorApp {
     return abs(state.progress - previous.progress) <= Self.staleProgressToleranceSeconds
   }
 
-  private func samePlaybackItem(_ lhs: PlaybackState, _ rhs: PlaybackState) -> Bool {
+  static func samePlaybackItem(_ lhs: PlaybackState, _ rhs: PlaybackState) -> Bool {
     normalizedPlaybackValue(lhs.title) == normalizedPlaybackValue(rhs.title)
       && normalizedPlaybackValue(lhs.artist) == normalizedPlaybackValue(rhs.artist)
       && normalizedPlaybackValue(lhs.album) == normalizedPlaybackValue(rhs.album)
+      && lhs.year == rhs.year
+      && normalizedPlaybackValue(lhs.artworkUrl)
+        == normalizedPlaybackValue(rhs.artworkUrl)
+      && lhs.isPlaying == rhs.isPlaying
       && abs(lhs.duration - rhs.duration) <= Self.staleProgressToleranceSeconds
+      && lhs.isShuffling == rhs.isShuffling
+      && normalizedPlaybackValue(lhs.repeatMode)
+        == normalizedPlaybackValue(rhs.repeatMode)
+      && sameTrackMetadata(lhs.nextTrack, rhs.nextTrack)
   }
 
-  private func normalizedPlaybackValue(_ value: String?) -> String {
+  private static func sameTrackMetadata(
+    _ lhs: TrackMetadata?,
+    _ rhs: TrackMetadata?
+  ) -> Bool {
+    guard let lhs, let rhs else {
+      return lhs == nil && rhs == nil
+    }
+
+    return normalizedPlaybackValue(lhs.title)
+      == normalizedPlaybackValue(rhs.title)
+      && normalizedPlaybackValue(lhs.artist)
+        == normalizedPlaybackValue(rhs.artist)
+      && normalizedPlaybackValue(lhs.album)
+        == normalizedPlaybackValue(rhs.album)
+      && lhs.year == rhs.year
+      && normalizedPlaybackValue(lhs.artworkUrl)
+        == normalizedPlaybackValue(rhs.artworkUrl)
+  }
+
+  private static func normalizedPlaybackValue(_ value: String?) -> String {
     value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
   }
 

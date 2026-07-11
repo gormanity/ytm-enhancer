@@ -37,6 +37,10 @@ let package = Package(
       linkerSettings: [
         .linkedFramework("AppKit")
       ]
+    ),
+    .testTarget(
+      name: "YTMMenuBarConnectorTests",
+      dependencies: ["YTMMenuBarConnector"]
     )
   ]
 )

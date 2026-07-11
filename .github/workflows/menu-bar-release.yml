@@ -65,7 +65,9 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Run menu bar tests
-        run: pnpm exec vitest run tests/apps/menu-bar-scaffold.test.ts
+        run: |
+          pnpm exec vitest run tests/apps/menu-bar-scaffold.test.ts
+          pnpm run menu-bar:test
 
       - name: Import Developer ID certificates
         env:

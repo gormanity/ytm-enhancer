@@ -65,6 +65,25 @@ enum ConnectorProtocol {
       "requestId": requestId,
     ]
   }
+
+  static func appBusy(ownerName: String) -> [String: Any] {
+    [
+      "type": "connector.error",
+      "code": "app_busy",
+      "message": "YTM Menu Bar is already connected to \(ownerName). Disconnect that browser before connecting here.",
+    ]
+  }
+}
+
+struct ConnectorSource: Decodable, Equatable {
+  let id: String
+  let name: String
+  let isDevBuild: Bool
+  let extensionId: String?
+
+  var displayName: String {
+    isDevBuild ? "\(name) (dev)" : name
+  }
 }
 
 struct TrackMetadata: Decodable {
@@ -95,6 +114,7 @@ struct HostMessage {
   let state: PlaybackState?
   let code: String?
   let message: String?
+  let source: ConnectorSource?
 
   init?(json: [String: Any]) {
     guard let type = json["type"] as? String else { return nil }
@@ -102,6 +122,15 @@ struct HostMessage {
     self.requestId = json["requestId"] as? String
     self.code = json["code"] as? String
     self.message = json["message"] as? String
+
+    if let sourceObject = json["source"] {
+      self.source = try? JSONDecoder().decode(
+        ConnectorSource.self,
+        from: JSONSerialization.data(withJSONObject: sourceObject)
+      )
+    } else {
+      self.source = nil
+    }
 
     if let stateObject = json["state"] {
       self.state = try? JSONDecoder().decode(

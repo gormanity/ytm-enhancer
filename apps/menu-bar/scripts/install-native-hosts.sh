@@ -34,6 +34,11 @@ if [[ -n "${YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS:-}" ]]; then
   IFS=":" read -r -a EXTRA_CHROMIUM_MANIFEST_DIRS <<<"$YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS"
 fi
 
+EXTRA_FIREFOX_MANIFEST_DIRS=()
+if [[ -n "${YTM_ENHANCER_EXTRA_FIREFOX_MANIFEST_DIRS:-}" ]]; then
+  IFS=":" read -r -a EXTRA_FIREFOX_MANIFEST_DIRS <<<"$YTM_ENHANCER_EXTRA_FIREFOX_MANIFEST_DIRS"
+fi
+
 json_escape() {
   local value="$1"
   value="${value//\\/\\\\}"
@@ -135,3 +140,10 @@ if ((${#EXTRA_CHROMIUM_MANIFEST_DIRS[@]} > 0)); then
 fi
 write_firefox_manifest \
   "$HOME/Library/Application Support/Mozilla/NativeMessagingHosts"
+if ((${#EXTRA_FIREFOX_MANIFEST_DIRS[@]} > 0)); then
+  for manifest_dir in "${EXTRA_FIREFOX_MANIFEST_DIRS[@]}"; do
+    if [[ -n "$manifest_dir" ]]; then
+      write_firefox_manifest "$manifest_dir"
+    fi
+  done
+fi

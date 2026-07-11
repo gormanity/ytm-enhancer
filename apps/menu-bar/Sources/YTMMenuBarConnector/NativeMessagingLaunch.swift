@@ -21,4 +21,41 @@ enum NativeMessagingLaunch {
         app.processIdentifier != processIdentifier && !app.isTerminated
       }
   }
+
+  static func browserSourceHint(
+    arguments: [String] = CommandLine.arguments,
+    parentProcessIdentifier: pid_t = getppid()
+  ) -> String {
+    if let bundleIdentifier = NSRunningApplication(
+      processIdentifier: parentProcessIdentifier
+    )?.bundleIdentifier?.lowercased() {
+      if bundleIdentifier.contains("edgemac") {
+        return "Microsoft Edge"
+      }
+      if bundleIdentifier.contains("chromium") {
+        return "Chromium"
+      }
+      if bundleIdentifier.contains("chrome") {
+        return "Chrome"
+      }
+      if bundleIdentifier.contains("firefox") {
+        return "Firefox"
+      }
+    }
+
+    let launchValue = arguments.dropFirst().joined(separator: " ").lowercased()
+    if launchValue.contains("gamefnibdabclmkngggcjghpbhjmajkm") {
+      return "Microsoft Edge"
+    }
+    if launchValue.contains("ytm-enhancer@gormanity") {
+      return "Firefox"
+    }
+    if launchValue.contains("bilcedjabgiedoamakekncokccabdccp")
+      || launchValue.contains("pggblbpjleekkobiinobaeeefnimgljh")
+      || launchValue.contains("akkbieodbakphpfdibailajdknnmmoca")
+    {
+      return "Chrome"
+    }
+    return "another browser"
+  }
 }

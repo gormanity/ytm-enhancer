@@ -279,6 +279,7 @@ Homebrew CI:
 ```sh
 pnpm exec vitest run tests/apps/menu-bar-scaffold.test.ts
 pnpm exec vitest run tests/core/connectors/connected-apps-popup.test.ts
+pnpm run menu-bar:test
 swift build --package-path apps/menu-bar -c release
 ```
 

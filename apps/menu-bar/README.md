@@ -18,17 +18,15 @@ Implemented:
   playback actions.
 - Local development native host installer for Chrome, Chromium, Edge, and
   Firefox.
-- Release scaffolding for Developer ID signed and notarized app bundles and
-  packages, Sparkle appcasts, and Homebrew cask generation.
-
-Deferred:
-
-- Publishing `menu-bar-v*` releases.
-- Publishing the external `gormanity/homebrew-tap` repository.
+- Component-scoped `menu-bar-v*` releases with Developer ID signed and notarized
+  direct and Homebrew packages.
+- Sparkle appcasts for direct installs and Homebrew cask updates through
+  `gormanity/homebrew-tap`.
 
 ## Development Build
 
 ```sh
+pnpm run menu-bar:test
 swift build --package-path apps/menu-bar -c release
 ```
 
@@ -83,6 +81,14 @@ folder, add colon-separated manifest directories:
 
 ```sh
 YTM_ENHANCER_EXTRA_CHROMIUM_MANIFEST_DIRS="/path/to/profile/NativeMessagingHosts" \
+  apps/menu-bar/scripts/install-native-hosts.sh
+```
+
+Use the Firefox-specific override when its QA profile needs an explicit native
+messaging manifest:
+
+```sh
+YTM_ENHANCER_EXTRA_FIREFOX_MANIFEST_DIRS="/path/to/profile/NativeMessagingHosts" \
   apps/menu-bar/scripts/install-native-hosts.sh
 ```
 

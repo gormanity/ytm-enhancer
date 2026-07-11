@@ -22,6 +22,7 @@ final class AboutWindowController: NSObject {
   private let updateButton = NSButton(title: "", target: nil, action: nil)
   private let updateProgressIndicator = NSProgressIndicator()
   private let updateCheckmarkImageView = NSImageView()
+  private let browserSourceLabel = NSTextField(wrappingLabelWithString: "")
 
   private var updateAction: AboutUpdateAction = .none
   private var onShowUpdateInterface: (() -> Void)?
@@ -113,6 +114,17 @@ final class AboutWindowController: NSObject {
       updateAction = .checkAgain
     }
 
+    window.contentView?.layoutSubtreeIfNeeded()
+  }
+
+  func updateBrowserSource(_ source: ConnectorSource?) {
+    if let source {
+      browserSourceLabel.stringValue = "Connected to \(source.displayName)."
+      browserSourceLabel.textColor = .labelColor
+    } else {
+      browserSourceLabel.stringValue = "Not connected to a browser."
+      browserSourceLabel.textColor = .secondaryLabelColor
+    }
     window.contentView?.layoutSubtreeIfNeeded()
   }
 
@@ -304,6 +316,10 @@ final class AboutWindowController: NSObject {
 
     let stack = makePanelStack()
     let titleLabel = makeSectionLabel("Browser Extension")
+    browserSourceLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+    browserSourceLabel.maximumNumberOfLines = 0
+    browserSourceLabel.preferredMaxLayoutWidth = Self.panelContentWidth
+    updateBrowserSource(nil)
     let detailLabel = makeBodyLabel(
       "Install YTM Enhancer and enable Connected Apps before using the menu bar app."
     )
@@ -323,6 +339,7 @@ final class AboutWindowController: NSObject {
     )
 
     stack.addArrangedSubview(titleLabel)
+    stack.addArrangedSubview(browserSourceLabel)
     stack.addArrangedSubview(detailLabel)
     stack.addArrangedSubview(row)
     panel.addSubview(stack)

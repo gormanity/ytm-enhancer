@@ -69,11 +69,28 @@ final class NativeMessagingConnection: ConnectorConnection {
   }
 
   func send(_ message: [String: Any]) {
+    guard let payload = payload(for: message) else { return }
+
+    writeQueue.async { [output, logger] in
+      Self.write(payload, to: output)
+      logger.log("sent message bytes=\(payload.count)")
+    }
+  }
+
+  func sendImmediately(_ message: [String: Any]) {
+    guard let payload = payload(for: message) else { return }
+    writeQueue.sync { [output, logger] in
+      Self.write(payload, to: output)
+      logger.log("sent message bytes=\(payload.count)")
+    }
+  }
+
+  private func payload(for message: [String: Any]) -> Data? {
     guard JSONSerialization.isValidJSONObject(message) else {
       logger.log(
         "sending message failed invalidJson type=\(messageType(message)) requestId=\(requestId(message))"
       )
-      return
+      return nil
     }
     guard
       let payload = try? JSONSerialization.data(withJSONObject: message)
@@ -81,23 +98,23 @@ final class NativeMessagingConnection: ConnectorConnection {
       logger.log(
         "sending message failed serialization type=\(messageType(message)) requestId=\(requestId(message))"
       )
-      return
+      return nil
     }
 
     logger.log(
       "sending message type=\(messageType(message)) requestId=\(requestId(message)) bytes=\(payload.count)"
     )
+    return payload
+  }
 
-    writeQueue.async { [output, logger] in
-      var length = UInt32(payload.count).littleEndian
-      let lengthData = Data(
-        bytes: &length,
-        count: MemoryLayout<UInt32>.size
-      )
-      output.write(lengthData)
-      output.write(payload)
-      logger.log("sent message bytes=\(payload.count)")
-    }
+  private static func write(_ payload: Data, to output: FileHandle) {
+    var length = UInt32(payload.count).littleEndian
+    let lengthData = Data(
+      bytes: &length,
+      count: MemoryLayout<UInt32>.size
+    )
+    output.write(lengthData)
+    output.write(payload)
   }
 
   private func readMessageLength() -> UInt32? {

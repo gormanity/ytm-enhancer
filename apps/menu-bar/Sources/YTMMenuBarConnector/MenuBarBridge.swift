@@ -70,32 +70,87 @@ private enum MenuBarBridgeProtocol {
 final class MenuBarBridgeServer {
   private let logger: NativeAppLogger
   private let writeQueue = DispatchQueue(label: "ytm-enhancer.menu-bar.bridge.server.write")
+  private let stateLock = NSLock()
   private var serverDescriptor: Int32 = -1
+  private var lockDescriptor: Int32 = -1
   private var clientHandle: FileHandle?
+  private var activeOwnerName: String?
+  private var reservedOwnerName: String?
   private var isRunning = false
   private var onHostConnected: (() -> Void)?
   private var onMessage: (([String: Any]) -> Void)?
   private var onHostDisconnected: (() -> Void)?
 
+  private static let lockPath = "\(MenuBarBridgeProtocol.socketPath).lock"
+
   init(logger: NativeAppLogger = NativeAppLogger()) {
     self.logger = logger
   }
 
+  deinit {
+    stop()
+  }
+
+  @discardableResult
   func start(
     onHostConnected: @escaping () -> Void,
     onMessage: @escaping ([String: Any]) -> Void,
     onHostDisconnected: @escaping () -> Void
-  ) {
-    guard !isRunning else { return }
+  ) -> Bool {
+    guard !isRunning else { return true }
     self.onHostConnected = onHostConnected
     self.onMessage = onMessage
     self.onHostDisconnected = onHostDisconnected
+
+    return startListening()
+  }
+
+  @discardableResult
+  func reserve(ownerName: String) -> Bool {
+    guard !isRunning else { return false }
+    reservedOwnerName = ownerName
+    activeOwnerName = ownerName
+    guard startListening() else {
+      reservedOwnerName = nil
+      activeOwnerName = nil
+      return false
+    }
+    logger.log("bridge server reserved owner=\(ownerName)")
+    return true
+  }
+
+  func updateActiveOwner(_ ownerName: String?) {
+    stateLock.lock()
+    activeOwnerName = ownerName ?? reservedOwnerName
+    if reservedOwnerName != nil, let ownerName {
+      reservedOwnerName = ownerName
+    }
+    stateLock.unlock()
+  }
+
+  private func startListening() -> Bool {
+    let nextLockDescriptor = open(
+      Self.lockPath,
+      O_CREAT | O_RDWR,
+      S_IRUSR | S_IWUSR
+    )
+    guard nextLockDescriptor >= 0 else {
+      logger.log("bridge server lock open failed errno=\(errno)")
+      return false
+    }
+    guard flock(nextLockDescriptor, LOCK_EX | LOCK_NB) == 0 else {
+      logger.log("bridge server ownership lock busy errno=\(errno)")
+      close(nextLockDescriptor)
+      return false
+    }
+    lockDescriptor = nextLockDescriptor
 
     unlink(MenuBarBridgeProtocol.socketPath)
     let descriptor = socket(AF_UNIX, SOCK_STREAM, 0)
     guard descriptor >= 0 else {
       logger.log("bridge server socket failed errno=\(errno)")
-      return
+      releaseOwnershipLock()
+      return false
     }
 
     let bindResult = MenuBarBridgeProtocol.socketAddress(
@@ -106,13 +161,16 @@ final class MenuBarBridgeServer {
     guard bindResult == 0 else {
       logger.log("bridge server bind failed errno=\(errno)")
       close(descriptor)
-      return
+      releaseOwnershipLock()
+      return false
     }
 
     guard listen(descriptor, 1) == 0 else {
       logger.log("bridge server listen failed errno=\(errno)")
       close(descriptor)
-      return
+      unlink(MenuBarBridgeProtocol.socketPath)
+      releaseOwnershipLock()
+      return false
     }
 
     serverDescriptor = descriptor
@@ -122,23 +180,33 @@ final class MenuBarBridgeServer {
     DispatchQueue.global(qos: .userInitiated).async { [weak self] in
       self?.acceptLoop()
     }
+    return true
   }
 
   func stop() {
+    stateLock.lock()
     isRunning = false
     if serverDescriptor >= 0 {
       close(serverDescriptor)
       serverDescriptor = -1
     }
-    clientHandle?.closeFile()
+    let previousClient = clientHandle
     clientHandle = nil
+    activeOwnerName = nil
+    reservedOwnerName = nil
+    stateLock.unlock()
+    previousClient?.closeFile()
     unlink(MenuBarBridgeProtocol.socketPath)
+    releaseOwnershipLock()
   }
 
   func send(_ message: [String: Any]) -> Bool {
-    guard let clientHandle else { return false }
+    stateLock.lock()
+    let activeClient = clientHandle
+    stateLock.unlock()
+    guard let activeClient else { return false }
     writeQueue.async {
-      MenuBarBridgeProtocol.writeMessage(message, to: clientHandle)
+      MenuBarBridgeProtocol.writeMessage(message, to: activeClient)
     }
     return true
   }
@@ -153,18 +221,50 @@ final class MenuBarBridgeServer {
         continue
       }
 
-      DispatchQueue.main.async { [weak self] in
-        self?.acceptClient(clientDescriptor)
-      }
+      acceptClient(clientDescriptor)
     }
   }
 
   private func acceptClient(_ descriptor: Int32) {
-    clientHandle?.closeFile()
     let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+    guard
+      let claim = MenuBarBridgeProtocol.readMessage(from: handle),
+      claim["type"] as? String == "bridge.claim"
+    else {
+      logger.log("bridge server rejected invalid claim")
+      handle.closeFile()
+      return
+    }
+    let requestedOwnerName =
+      (claim["ownerName"] as? String)?.trimmingCharacters(
+        in: .whitespacesAndNewlines
+      ) ?? "another browser"
+
+    stateLock.lock()
+    if clientHandle != nil || reservedOwnerName != nil {
+      let currentOwnerName = activeOwnerName ?? "another browser"
+      stateLock.unlock()
+      MenuBarBridgeProtocol.writeMessage(
+        ["type": "bridge.busy", "ownerName": currentOwnerName],
+        to: handle
+      )
+      logger.log(
+        "bridge server rejected native host owner=\(requestedOwnerName) activeOwner=\(currentOwnerName)"
+      )
+      handle.closeFile()
+      return
+    }
     clientHandle = handle
-    logger.log("bridge server accepted native host")
-    onHostConnected?()
+    activeOwnerName = requestedOwnerName
+    stateLock.unlock()
+    MenuBarBridgeProtocol.writeMessage(
+      ["type": "bridge.accepted"],
+      to: handle
+    )
+    logger.log("bridge server accepted native host owner=\(requestedOwnerName)")
+    DispatchQueue.main.async { [weak self] in
+      self?.onHostConnected?()
+    }
 
     DispatchQueue.global(qos: .userInitiated).async { [weak self, weak handle] in
       guard let handle else { return }
@@ -175,13 +275,33 @@ final class MenuBarBridgeServer {
       }
 
       DispatchQueue.main.async { [weak self, weak handle] in
-        guard let self, self.clientHandle === handle else { return }
+        guard let self, let handle else { return }
+        self.stateLock.lock()
+        guard self.clientHandle === handle else {
+          self.stateLock.unlock()
+          return
+        }
         self.clientHandle = nil
+        self.activeOwnerName = nil
+        self.stateLock.unlock()
         self.logger.log("bridge server native host disconnected")
         self.onHostDisconnected?()
       }
     }
   }
+
+  private func releaseOwnershipLock() {
+    guard lockDescriptor >= 0 else { return }
+    _ = flock(lockDescriptor, LOCK_UN)
+    close(lockDescriptor)
+    lockDescriptor = -1
+  }
+}
+
+enum MenuBarBridgeConnectionResult {
+  case connected(MenuBarBridgeClient)
+  case busy(ownerName: String)
+  case unavailable
 }
 
 final class MenuBarBridgeClient {
@@ -196,12 +316,13 @@ final class MenuBarBridgeClient {
   }
 
   static func connectIfAvailable(
+    ownerName: String,
     logger: NativeAppLogger = NativeAppLogger()
-  ) -> MenuBarBridgeClient? {
+  ) -> MenuBarBridgeConnectionResult {
     let descriptor = socket(AF_UNIX, SOCK_STREAM, 0)
     guard descriptor >= 0 else {
       logger.log("bridge client socket failed errno=\(errno)")
-      return nil
+      return .unavailable
     }
 
     let connectResult = MenuBarBridgeProtocol.socketAddress(
@@ -212,14 +333,36 @@ final class MenuBarBridgeClient {
 
     guard connectResult == 0 else {
       close(descriptor)
-      return nil
+      return .unavailable
     }
 
-    logger.log("bridge client connected path=\(MenuBarBridgeProtocol.socketPath)")
-    return MenuBarBridgeClient(
-      handle: FileHandle(fileDescriptor: descriptor, closeOnDealloc: true),
-      logger: logger
+    let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+    MenuBarBridgeProtocol.writeMessage(
+      ["type": "bridge.claim", "ownerName": ownerName],
+      to: handle
     )
+    guard let response = MenuBarBridgeProtocol.readMessage(from: handle) else {
+      logger.log("bridge client claim response missing")
+      handle.closeFile()
+      return .unavailable
+    }
+
+    switch response["type"] as? String {
+    case "bridge.accepted":
+      logger.log(
+        "bridge client connected path=\(MenuBarBridgeProtocol.socketPath) owner=\(ownerName)"
+      )
+      return .connected(MenuBarBridgeClient(handle: handle, logger: logger))
+    case "bridge.busy":
+      let activeOwnerName = response["ownerName"] as? String ?? "another browser"
+      logger.log("bridge client rejected activeOwner=\(activeOwnerName)")
+      handle.closeFile()
+      return .busy(ownerName: activeOwnerName)
+    default:
+      logger.log("bridge client claim response invalid")
+      handle.closeFile()
+      return .unavailable
+    }
   }
 
   func start(
@@ -262,6 +405,7 @@ final class BridgeUiConnection: ConnectorConnection {
   private var isHostConnected = false
   private var pendingMessages: [[String: Any]] = []
   private var lastHelloMessage: [String: Any]?
+  private(set) var hasBridgeOwnership = false
 
   init(
     server: MenuBarBridgeServer = MenuBarBridgeServer(),
@@ -275,7 +419,7 @@ final class BridgeUiConnection: ConnectorConnection {
     onMessage: @escaping ([String: Any]) -> Void,
     onDisconnect: @escaping () -> Void
   ) {
-    server.start(
+    hasBridgeOwnership = server.start(
       onHostConnected: { [weak self] in
         self?.logger.log("bridge UI native host connected")
         self?.isHostConnected = true
@@ -291,6 +435,10 @@ final class BridgeUiConnection: ConnectorConnection {
 
   func stop() {
     server.stop()
+  }
+
+  func updateActiveOwner(_ source: ConnectorSource?) {
+    server.updateActiveOwner(source?.displayName)
   }
 
   func send(_ message: [String: Any]) {

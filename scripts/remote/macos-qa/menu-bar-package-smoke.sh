@@ -11,6 +11,7 @@ script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
   pnpm install --frozen-lockfile
   pnpm exec vitest run tests/apps/menu-bar-scaffold.test.ts
+  pnpm run menu-bar:test
   pnpm run menu-bar:package:direct
 
   node --input-type=module <<'"'"'NODE'"'"'
