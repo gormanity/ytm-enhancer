@@ -791,14 +791,14 @@ candidate and keep it in place for manual testing:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-operational-smoke.ps1 `
-  -Version 0.1.4 `
+  -Version 0.1.5 `
   -UiReadyTimeoutSeconds 60
 ```
 
 Run the same smoke through the configured Windows transport:
 
 ```sh
-scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.4
+scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.5
 ```
 
 This downloads the published release zip, installs it to the real user-level

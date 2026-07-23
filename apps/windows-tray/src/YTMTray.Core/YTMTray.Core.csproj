@@ -4,9 +4,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <Version>0.1.4</Version>
-    <AssemblyVersion>0.1.4.1004</AssemblyVersion>
-    <FileVersion>0.1.4.1004</FileVersion>
-    <InformationalVersion>0.1.4</InformationalVersion>
+    <Version>0.1.5</Version>
+    <AssemblyVersion>0.1.5.1005</AssemblyVersion>
+    <FileVersion>0.1.5.1005</FileVersion>
+    <InformationalVersion>0.1.5</InformationalVersion>
   </PropertyGroup>
 </Project>
