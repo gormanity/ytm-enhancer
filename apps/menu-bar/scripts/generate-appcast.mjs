@@ -642,8 +642,8 @@ function writeSitePages({ metadata, outputPath }) {
   const cliProtocolVersion = readCliProtocolVersion();
   const windowsTrayMetadata = readWindowsTrayMetadata();
   const stores = extensionStoreUrls();
-  const windowsReleaseListUrl =
-    "https://github.com/gormanity/ytm-enhancer/releases?q=windows-tray-v&expanded=true";
+  const windowsTrayTag = `${windowsTrayMetadata.githubReleaseTagPrefix}${windowsTrayMetadata.version}`;
+  const windowsReleaseUrl = releasePageUrl(windowsTrayTag);
   const windowsTrayScreenshotSourcePath = resolve(
     repoRoot,
     "apps/windows-tray/release/windows-tray-screenshot.png",
@@ -925,7 +925,7 @@ function writeSitePages({ metadata, outputPath }) {
               YouTube Music.
             </p>
             <div class="actions" aria-label="Install YTM Tray">
-              <a class="button button-primary" href="${escapeHtml(windowsReleaseListUrl)}">Download for Windows</a>
+              <a class="button button-primary" href="${escapeHtml(windowsReleaseUrl)}">Download for Windows</a>
               <a class="button" href="../connected-apps/">Connected Apps Beta</a>
               <a class="button" href="#uninstall">Uninstall</a>
             </div>
