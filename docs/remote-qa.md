@@ -862,13 +862,15 @@ file, requires valid Authenticode signatures on `YTMTray.exe`,
 `YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe`, and captures Code Integrity
 and AppLocker event-log cursors. It then launches the marked native setup
 through the logged-in desktop agent, validates the installed files and registry
-entries, confirms that no CMD or PowerShell scripts were installed, runs the
-installed native uninstaller, and verifies cleanup. The smoke fails if new
-blocking events identify setup, CMD, or PowerShell.
+entries, and confirms that no CMD or PowerShell scripts were installed. It
+starts the installed tray and native host in the desktop session, requires a
+real native-host-to-tray bridge handshake, runs the installed native
+uninstaller, and verifies cleanup. The smoke fails if new blocking events
+identify any release executable, CMD, or PowerShell.
 
 Set `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS` to control the desktop readiness
 wait. Set `YTM_WINDOWS_TRAY_SAC_OPERATION_TIMEOUT_SECONDS` to control install
-and uninstall waits.
+runtime, and uninstall waits.
 
 Run the Windows tray visual smoke from an active Windows desktop session:
 

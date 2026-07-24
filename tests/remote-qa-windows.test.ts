@@ -486,6 +486,11 @@ describe("Windows remote QA scaffold", () => {
     expect(sacSmoke).toContain("-FilePath $SetupPath");
     expect(sacSmoke).toContain("-Wait");
     expect(sacSmoke).toContain("$Process.ExitCode");
+    expect(sacSmoke).toContain("Invoke-InstalledRuntimeThroughUiAgent");
+    expect(sacSmoke).toContain("RedirectStandardInput = $true");
+    expect(sacSmoke).toContain("bridge server accepted native host");
+    expect(sacSmoke).toContain("native messaging relay starting");
+    expect(sacSmoke).toContain("YTMTray(?:\\.NativeHost|\\.Setup)?(?:\\.exe)?");
     expect(sacSmoke).toContain("Microsoft-Windows-CodeIntegrity/Operational");
     expect(sacSmoke).toContain("Microsoft-Windows-AppLocker/MSI and Script");
     expect(sacSmoke).toContain('".cmd", ".ps1"');
@@ -494,6 +499,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/remote/windows-qa/tray-sac-smoke.sh");
     expect(docs).toContain("windows-tray-signed-candidate");
     expect(docs).toContain("Smart App Control enforcement");
+    expect(docs).toContain("starts the installed tray and native host");
   });
 
   it("automates Windows tray release signing smoke with a disposable certificate", () => {

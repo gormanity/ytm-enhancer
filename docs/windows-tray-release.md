@@ -109,9 +109,10 @@ gh run download RUN_ID \
   --name windows-tray-signed-candidate
 ```
 
-Use the signed candidate for pre-tag install, uninstall, and Smart App Control
-QA. Its update manifest points to the future release URLs, so validate live
-updater downloads after publishing the component release.
+Use the signed candidate for pre-tag install, tray/native-host runtime,
+uninstall, and Smart App Control QA. Its update manifest points to the future
+release URLs, so validate live updater downloads after publishing the component
+release.
 
 Local package generation remains unsigned by default so development and dry-run
 package smokes do not need production signing material. Set
@@ -251,7 +252,8 @@ scripts/remote/windows-qa/tray-operational-smoke.sh X.Y.Z
 - playback controls, seeking, focus, About, and Quit still work
 - Windows Settings > Apps > Installed apps shows YTM Tray
 - uninstall removes registry keys, Start Menu shortcuts, and app files
-- Smart App Control permits install and uninstall from an Internet-marked zip
+- Smart App Control permits setup, tray/native-host bridge operation, and
+  uninstall from an Internet-marked zip
 
 For operational testing where a developer needs to keep using the installed
 candidate, run `scripts/remote/windows-qa/tray-operational-smoke.sh` instead of

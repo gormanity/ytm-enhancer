@@ -22,9 +22,12 @@ $TrayShortcutPath = Join-Path $StartMenuFolder "YTM Tray.lnk"
 $UninstallShortcutPath = Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk"
 $ExtractRoot = Join-Path $WorkRoot "extract"
 $InstallResultPath = Join-Path $WorkRoot "install-result.json"
+$RuntimeResultPath = Join-Path $WorkRoot "runtime-result.json"
 $UninstallResultPath = Join-Path $WorkRoot "uninstall-result.json"
+$TrayRuntimeLogPath = Join-Path $WorkRoot "tray-runtime.log"
+$NativeHostRuntimeLogPath = Join-Path $WorkRoot "native-host-runtime.log"
 $ProtectedProcessPattern =
-  "(?i)(YTMTray\.Setup(?:\.exe)?|cmd\.exe|powershell\.exe|pwsh\.exe)"
+  "(?i)(YTMTray(?:\.NativeHost|\.Setup)?(?:\.exe)?|cmd\.exe|powershell\.exe|pwsh\.exe)"
 $BlockingEventLogs = @(
   [pscustomobject] @{
     Name = "Microsoft-Windows-CodeIntegrity/Operational"
@@ -235,6 +238,26 @@ function Get-NewProtectedProcessBlocks {
   return $BlockingEvents
 }
 
+function Wait-ForNewProtectedProcessBlocks {
+  param(
+    [Parameter(Mandatory = $true)]
+    [hashtable] $Cursors,
+    [int] $TimeoutSeconds = 8
+  )
+
+  $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  do {
+    $Events = @(Get-NewProtectedProcessBlocks -Cursors $Cursors)
+    if ($Events.Count -gt 0) {
+      return $Events
+    }
+
+    Start-Sleep -Seconds 1
+  } while ((Get-Date) -lt $Deadline)
+
+  return @()
+}
+
 function Format-BlockingEvents {
   param([Parameter(Mandatory = $true)][object[]] $Events)
 
@@ -291,6 +314,170 @@ function Invoke-SetupThroughUiAgent {
     -ScriptLines $ScriptLines `
     -ResultPath $ResultPath `
     -TimeoutSeconds $OperationTimeoutSeconds | Out-Null
+}
+
+function Invoke-InstalledRuntimeThroughUiAgent {
+  $ScriptLines = @(
+    '$ErrorActionPreference = "Stop"',
+    "`$InstallRoot = $(ConvertTo-PowerShellLiteral $InstallRoot)",
+    "`$ResultPath = $(ConvertTo-PowerShellLiteral $RuntimeResultPath)",
+    "`$TrayLogPath = $(ConvertTo-PowerShellLiteral $TrayRuntimeLogPath)",
+    "`$NativeHostLogPath = $(ConvertTo-PowerShellLiteral $NativeHostRuntimeLogPath)",
+    '$TrayPath = Join-Path $InstallRoot "YTMTray.exe"',
+    '$NativeHostPath = Join-Path $InstallRoot "YTMTray.NativeHost.exe"',
+    '$TrayProcess = $null',
+    '$NativeHostProcess = $null',
+    '$Payload = $null',
+    '$CleanupErrors = @()',
+    "function Wait-ForRuntimeLog {",
+    "  param(",
+    '    [Parameter(Mandatory = $true)][string] $Label,',
+    '    [Parameter(Mandatory = $true)][string] $LogPath,',
+    '    [Parameter(Mandatory = $true)][string[]] $Markers,',
+    '    [Parameter(Mandatory = $true)]',
+    '    [System.Diagnostics.Process] $Process,',
+    '    [Parameter(Mandatory = $true)][datetime] $Deadline',
+    "  )",
+    "  while ((Get-Date) -lt `$Deadline) {",
+    "    `$Process.Refresh()",
+    "    if (`$Process.HasExited) {",
+    '      throw "$Label exited with code $($Process.ExitCode)."',
+    "    }",
+    '    $Contents = if (Test-Path -LiteralPath $LogPath) {',
+    "      Get-Content -LiteralPath `$LogPath -Raw",
+    "    } else {",
+    '      ""',
+    "    }",
+    '    $MissingMarkers = @(',
+    "      `$Markers | Where-Object { -not `$Contents.Contains(`$_) }",
+    "    )",
+    "    if (`$MissingMarkers.Count -eq 0) {",
+    "      return",
+    "    }",
+    "    Start-Sleep -Milliseconds 100",
+    "  }",
+    '  throw "$Label did not log: $($MissingMarkers -join '', '')."',
+    "}",
+    "try {",
+    '  Remove-Item `',
+    '    -LiteralPath $TrayLogPath, $NativeHostLogPath `',
+    '    -Force `',
+    '    -ErrorAction SilentlyContinue',
+    '  $env:YTM_TRAY_LOG_PATH = $TrayLogPath',
+    '  $TrayProcess = Start-Process -FilePath $TrayPath -PassThru',
+    '  $Deadline = (Get-Date).AddSeconds(' +
+      "$OperationTimeoutSeconds)",
+    '  Wait-ForRuntimeLog `',
+    '    -Label "tray" `',
+    '    -LogPath $TrayLogPath `',
+    '    -Markers @(',
+    '      "starting YTM Tray",',
+    '      "bridge server listening pipe="',
+    '    ) `',
+    '    -Process $TrayProcess `',
+    '    -Deadline $Deadline',
+    '  $NativeHostStartInfo = [System.Diagnostics.ProcessStartInfo]::new()',
+    '  $NativeHostStartInfo.FileName = $NativeHostPath',
+    '  $NativeHostStartInfo.UseShellExecute = $false',
+    '  $NativeHostStartInfo.CreateNoWindow = $true',
+    '  $NativeHostStartInfo.RedirectStandardInput = $true',
+    '  $NativeHostStartInfo.RedirectStandardOutput = $true',
+    '  $NativeHostStartInfo.RedirectStandardError = $true',
+    '  $NativeHostStartInfo.EnvironmentVariables["YTM_TRAY_LOG_PATH"] = `',
+    '    $NativeHostLogPath',
+    '  $NativeHostProcess = [System.Diagnostics.Process]::new()',
+    '  $NativeHostProcess.StartInfo = $NativeHostStartInfo',
+    '  if (-not $NativeHostProcess.Start()) {',
+    '    throw "Could not start $NativeHostPath."',
+    "  }",
+    '  Wait-ForRuntimeLog `',
+    '    -Label "native host" `',
+    '    -LogPath $NativeHostLogPath `',
+    '    -Markers @(',
+    '      "starting YTM Tray native host",',
+    '      "bridge client connected pipe=",',
+    '      "native messaging relay starting"',
+    '    ) `',
+    '    -Process $NativeHostProcess `',
+    '    -Deadline $Deadline',
+    '  Wait-ForRuntimeLog `',
+    '    -Label "tray bridge" `',
+    '    -LogPath $TrayLogPath `',
+    '    -Markers @("bridge server accepted native host") `',
+    '    -Process $TrayProcess `',
+    '    -Deadline $Deadline',
+    '  $TrayProcess.Refresh()',
+    '  $NativeHostProcess.Refresh()',
+    '  if ($TrayProcess.HasExited -or $NativeHostProcess.HasExited) {',
+    '    throw "Installed runtime did not remain active after the handshake."',
+    "  }",
+    '  $Payload = @{',
+    '    ok = $true',
+    '    trayPid = $TrayProcess.Id',
+    '    traySessionId = $TrayProcess.SessionId',
+    '    nativeHostPid = $NativeHostProcess.Id',
+    '    nativeHostSessionId = $NativeHostProcess.SessionId',
+    "  }",
+    "} catch {",
+    '  $Payload = @{',
+    '    ok = $false',
+    '    error = $_.Exception.ToString()',
+    '    scriptStack = $_.ScriptStackTrace',
+    "  }",
+    "} finally {",
+    '  if ($null -ne $NativeHostProcess) {',
+    "    try {",
+    '      try { $NativeHostProcess.StandardInput.Close() } catch {}',
+    '      $NativeHostProcess.Refresh()',
+    '      if (-not $NativeHostProcess.HasExited) {',
+    '        $NativeHostProcess.Kill()',
+    '        if (-not $NativeHostProcess.WaitForExit(5000)) {',
+    '          throw "Native host did not stop after the runtime probe."',
+    "        }",
+    "      }",
+    "    } catch {",
+    '      $CleanupErrors += $_.Exception.Message',
+    "    } finally {",
+    '      $NativeHostProcess.Dispose()',
+    "    }",
+    "  }",
+    '  if ($null -ne $TrayProcess) {',
+    "    try {",
+    '      $TrayProcess.Refresh()',
+    '      if (-not $TrayProcess.HasExited) {',
+    '        $TrayProcess.Kill()',
+    '        if (-not $TrayProcess.WaitForExit(5000)) {',
+    '          throw "Tray app did not stop after the runtime probe."',
+    "        }",
+    "      }",
+    "    } catch {",
+    '      $CleanupErrors += $_.Exception.Message',
+    "    } finally {",
+    '      $TrayProcess.Dispose()',
+    "    }",
+    "  }",
+    '  if ($CleanupErrors.Count -gt 0) {',
+    '    $CleanupMessage = $CleanupErrors -join "; "',
+    '    if ($Payload.ok) {',
+    '      $Payload = @{',
+    '        ok = $false',
+    '        error = "Runtime cleanup failed: $CleanupMessage"',
+    '        scriptStack = ""',
+    "      }",
+    "    } else {",
+    '      $Payload.error += " Runtime cleanup failed: $CleanupMessage"',
+    "    }",
+    "  }",
+    "}",
+    '$Json = $Payload | ConvertTo-Json -Depth 8 -Compress',
+    '[IO.File]::WriteAllText($ResultPath, $Json)'
+  )
+
+  return Invoke-InteractivePowerShell `
+    -Name "TraySacRuntime" `
+    -ScriptLines $ScriptLines `
+    -ResultPath $RuntimeResultPath `
+    -TimeoutSeconds ($OperationTimeoutSeconds + 15)
 }
 
 function Wait-ForCleanInstallState {
@@ -446,6 +633,17 @@ try {
     -ResultPath $InstallResultPath
   Assert-InstalledRelease -ExpectedVersion $PackageMetadata.version
 
+  Write-SmokeStep "Starting the installed tray and native host."
+  $RuntimeResult = Invoke-InstalledRuntimeThroughUiAgent
+  Assert-Equal `
+    $UiAgent.sessionId `
+    $RuntimeResult.traySessionId `
+    "tray runtime session"
+  Assert-Equal `
+    $UiAgent.sessionId `
+    $RuntimeResult.nativeHostSessionId `
+    "native host runtime session"
+
   Write-SmokeStep "Launching the installed native uninstaller."
   Invoke-SetupThroughUiAgent `
     -Action "uninstall" `
@@ -471,9 +669,8 @@ try {
   }
 
   if ($null -ne $EventLogCursors) {
-    Start-Sleep -Seconds 2
     $BlockingEvents = @(
-      Get-NewProtectedProcessBlocks -Cursors $EventLogCursors
+      Wait-ForNewProtectedProcessBlocks -Cursors $EventLogCursors
     )
   }
 
@@ -489,7 +686,7 @@ try {
 }
 
 if ($BlockingEvents.Count -gt 0) {
-  throw "Smart App Control or App Control blocked a protected setup process: $(Format-BlockingEvents -Events $BlockingEvents)"
+  throw "Smart App Control or App Control blocked a protected release process: $(Format-BlockingEvents -Events $BlockingEvents)"
 }
 if ($null -ne $PrimaryError) {
   throw $PrimaryError
@@ -498,4 +695,4 @@ if ($null -ne $CleanupError) {
   throw $CleanupError
 }
 
-Write-SmokeStep "Smart App Control install and uninstall smoke passed."
+Write-SmokeStep "Smart App Control setup, runtime bridge, and uninstall smoke passed."
