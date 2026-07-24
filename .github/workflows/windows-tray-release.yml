@@ -111,6 +111,16 @@ jobs:
           pnpm run windows-tray:archive:win-arm64
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $version = $env:YTM_WINDOWS_TRAY_VERSION
+          & powershell.exe -NoLogo -NoProfile -STA -ExecutionPolicy Bypass `
+            -File scripts/windows-qa/assert-explorer-archive-compatible.ps1 `
+            -ArchivePath "apps/windows-tray/.build/packages/YTM-Tray-$version-win-x64.zip" `
+            -PayloadRoot "apps/windows-tray/.build/package-work/win-x64/payload"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & powershell.exe -NoLogo -NoProfile -STA -ExecutionPolicy Bypass `
+            -File scripts/windows-qa/assert-explorer-archive-compatible.ps1 `
+            -ArchivePath "apps/windows-tray/.build/packages/YTM-Tray-$version-win-arm64.zip" `
+            -PayloadRoot "apps/windows-tray/.build/package-work/win-arm64/payload"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm run windows-tray:update-manifest -- `
             "--package=apps/windows-tray/.build/packages/YTM-Tray-$version-win-x64.zip" `
             "--package=apps/windows-tray/.build/packages/YTM-Tray-$version-win-arm64.zip"

@@ -95,6 +95,8 @@ $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
 }
 $PackageScript = "windows-tray:package:$RuntimeIdentifier"
 $ArchivePath = "apps/windows-tray/.build/packages/YTM-Tray-$($Metadata.version)-$RuntimeIdentifier.zip"
+$PayloadRoot = "apps/windows-tray/.build/package-work/$RuntimeIdentifier/payload"
+$ExplorerArchiveCheck = Join-Path $PSScriptRoot "assert-explorer-archive-compatible.ps1"
 $UpdateManifestPath = "apps/windows-tray/.build/update-manifest/YTM-Tray-update.json"
 $ExtractRoot = Join-Path $env:TEMP "ytm-tray-package-smoke"
 $InstallRoot = Join-Path $env:TEMP "ytm-tray-package-install"
@@ -110,7 +112,23 @@ Invoke-Pnpm run $PackageScript
 Invoke-Pnpm run windows-tray:update-manifest -- "--package=$ArchivePath"
 
 Assert-PathExists $ArchivePath
+Assert-PathExists $PayloadRoot
 Assert-PathExists $UpdateManifestPath
+Invoke-Native `
+  -FilePath powershell.exe `
+  -Arguments @(
+    "-NoLogo",
+    "-NoProfile",
+    "-STA",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    $ExplorerArchiveCheck,
+    "-ArchivePath",
+    $ArchivePath,
+    "-PayloadRoot",
+    $PayloadRoot
+  )
 
 $UpdateManifest = Get-Content -LiteralPath $UpdateManifestPath -Raw |
   ConvertFrom-Json

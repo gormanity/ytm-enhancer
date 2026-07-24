@@ -1,7 +1,16 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const appRoot = resolve(process.cwd(), "apps/windows-tray");
@@ -754,6 +763,54 @@ describe("Windows tray connector scaffold", () => {
     expect(signingScript).toContain('"verify"');
   });
 
+  it("archives release payloads with Windows Explorer-compatible entry names", async () => {
+    const testRoot = mkdtempSync(
+      join(tmpdir(), "ytm-windows-tray-archive-test-"),
+    );
+    const payloadRoot = join(testRoot, "payload");
+    const archivePath = join(testRoot, "YTM-Tray-test-win-x64.zip");
+
+    try {
+      mkdirSync(join(payloadRoot, "nested"), { recursive: true });
+      writeFileSync(join(payloadRoot, "Install YTM Tray.cmd"), "install");
+      writeFileSync(join(payloadRoot, "YTMTray.exe"), "tray");
+      writeFileSync(join(payloadRoot, "nested", "fixture.txt"), "fixture");
+
+      const packageModule = (await import(
+        pathToFileURL(resolve(appRoot, "scripts/package-release.mjs")).href
+      )) as {
+        archivePayloadDirectory: (options: {
+          archivePath: string;
+          payloadRoot: string;
+        }) => void;
+      };
+
+      packageModule.archivePayloadDirectory({ archivePath, payloadRoot });
+
+      const entries = execFileSync("tar", ["-tf", archivePath], {
+        encoding: "utf-8",
+      })
+        .trim()
+        .split(/\r?\n/);
+
+      expect(entries).toContain("Install YTM Tray.cmd");
+      expect(entries).toContain("YTMTray.exe");
+      expect(entries).toContain("nested/fixture.txt");
+      expect(entries).not.toContain(".");
+      expect(entries).not.toContain("./");
+      expect(
+        entries.every(
+          (entry) =>
+            !entry.startsWith("./") &&
+            !entry.startsWith("/") &&
+            !entry.startsWith("\\"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(testRoot, { recursive: true, force: true });
+    }
+  });
+
   it("generates a checksum update manifest for packaged Windows runtimes", async () => {
     const outputRoot = mkdtempSync(
       join(tmpdir(), "ytm-windows-tray-manifest-test-"),
@@ -939,6 +996,7 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:payload:win-arm64");
     expect(workflow).toContain("windows-tray:archive:win-x64");
     expect(workflow).toContain("windows-tray:archive:win-arm64");
+    expect(workflow).toContain("assert-explorer-archive-compatible.ps1");
     expect(workflow).toContain("windows-tray:update-manifest");
     expect(workflow).toContain("verify-windows-tray-codesign.ps1");
     expect(
@@ -971,6 +1029,9 @@ describe("Windows tray connector scaffold", () => {
     expect(signingCheckWorkflow).toContain("windows-tray:payload:win-arm64");
     expect(signingCheckWorkflow).toContain("windows-tray:archive:win-x64");
     expect(signingCheckWorkflow).toContain("windows-tray:archive:win-arm64");
+    expect(signingCheckWorkflow).toContain(
+      "assert-explorer-archive-compatible.ps1",
+    );
     expect(signingCheckWorkflow).toContain("windows-tray:update-manifest");
     expect(signingCheckWorkflow).toContain("verify-windows-tray-codesign.ps1");
     expect(

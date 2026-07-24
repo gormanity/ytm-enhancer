@@ -3,6 +3,7 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -181,6 +182,26 @@ function buildReleasePayload({
   return { archivePath, payloadRoot };
 }
 
+function archivePayloadDirectory({ archivePath, payloadRoot }) {
+  const entries = readdirSync(payloadRoot).sort();
+  if (entries.length === 0) {
+    throw new Error(
+      `Windows tray package payload contains no files: ${payloadRoot}`,
+    );
+  }
+
+  run("tar", [
+    "-a",
+    "-c",
+    "-f",
+    archivePath,
+    "-C",
+    payloadRoot,
+    "--",
+    ...entries,
+  ]);
+}
+
 function archiveReleasePayload({
   runtime = "win-x64",
   outputRoot = resolve(appRoot, ".build/packages"),
@@ -200,7 +221,7 @@ function archiveReleasePayload({
 
   mkdirSync(outputRoot, { recursive: true });
   rmSync(archivePath, { force: true });
-  run("tar", ["-a", "-c", "-f", archivePath, "-C", payloadRoot, "."]);
+  archivePayloadDirectory({ archivePath, payloadRoot });
 
   return archivePath;
 }
@@ -245,4 +266,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   }
 }
 
-export { archiveReleasePayload, buildReleasePayload, packageRelease };
+export {
+  archivePayloadDirectory,
+  archiveReleasePayload,
+  buildReleasePayload,
+  packageRelease,
+};

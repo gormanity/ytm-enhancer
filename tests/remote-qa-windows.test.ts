@@ -300,6 +300,9 @@ describe("Windows remote QA scaffold", () => {
 
   it("automates Windows tray release package smoke", () => {
     const packageSmoke = read("scripts/windows-qa/tray-package-smoke.ps1");
+    const explorerArchiveCheck = read(
+      "scripts/windows-qa/assert-explorer-archive-compatible.ps1",
+    );
     const packageSmokeShell = read(
       "scripts/remote/windows-qa/tray-package-smoke.sh",
     );
@@ -311,6 +314,16 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).toContain("windows-tray:update-manifest");
     expect(packageSmoke).toContain("--package=$ArchivePath");
     expect(packageSmoke).toContain("YTM-Tray-update.json");
+    expect(packageSmoke).toContain("assert-explorer-archive-compatible.ps1");
+    expect(packageSmoke).toContain("-FilePath powershell.exe");
+    expect(packageSmoke).toContain("-Arguments @(");
+    expect(packageSmoke).toContain("-STA");
+    expect(explorerArchiveCheck).toContain("Assert-ExplorerArchiveCompatible");
+    expect(explorerArchiveCheck).toContain("Shell.Application");
+    expect(explorerArchiveCheck).toContain("NameSpace");
+    expect(explorerArchiveCheck).toContain("ZipFile]::OpenRead");
+    expect(explorerArchiveCheck).toContain("GetApartmentState");
+    expect(explorerArchiveCheck).not.toContain("CopyHere");
     expect(packageSmoke).toContain("Expand-Archive");
     expect(packageSmoke).toContain("install-native-hosts.ps1");
     expect(packageSmoke).toContain("Uninstall YTM Tray.cmd");
