@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using YTMTray.Core;
 
 namespace YTMTray;
 
@@ -24,7 +25,7 @@ internal static class TrayIconFactory
         StatusSvgIconRenderer.Draw(
             graphics,
             resourceName,
-            new Rectangle(Point.Empty, bitmap.Size),
+            TrayIconLayout.RenderBounds(isPlaying, bitmap.Size),
             paintColor
         );
 

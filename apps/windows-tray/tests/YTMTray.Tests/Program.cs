@@ -32,6 +32,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("pending seek clears optimistic progress when the track changes", PendingSeekClearsOnPlaybackItemChange),
     ("pending seek survives same-track metadata enrichment", PendingSeekSurvivesMetadataEnrichment),
     ("popup placement stays attached to tray anchors", PopupPlacementStaysAttachedToTrayAnchors),
+    ("tray icon layout enlarges only idle glyph", TrayIconLayoutEnlargesOnlyIdleGlyph),
     ("artwork layout preserves source aspect ratios", ArtworkLayoutPreservesAspectRatios),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
@@ -661,6 +662,22 @@ static Task PopupPlacementStaysAttachedToTrayAnchors()
             popupSize,
             new Point(-20, 1060)
         )
+    );
+
+    return Task.CompletedTask;
+}
+
+static Task TrayIconLayoutEnlargesOnlyIdleGlyph()
+{
+    var canvas = new Size(32, 32);
+
+    AssertEqual(
+        new Rectangle(-1, -1, 34, 34),
+        TrayIconLayout.RenderBounds(isPlaying: false, canvas)
+    );
+    AssertEqual(
+        new Rectangle(Point.Empty, canvas),
+        TrayIconLayout.RenderBounds(isPlaying: true, canvas)
     );
 
     return Task.CompletedTask;

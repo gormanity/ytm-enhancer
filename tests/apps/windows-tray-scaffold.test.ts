@@ -583,11 +583,18 @@ describe("Windows tray connector scaffold", () => {
 
   it("uses the full notification-area canvas for the Windows tray glyph", () => {
     const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
+    const trayIconLayout = read("src/YTMTray.Core/TrayIconLayout.cs");
 
     expect(trayIconFactory).toContain("new Bitmap(32, 32)");
     expect(trayIconFactory).toContain(
-      "new Rectangle(Point.Empty, bitmap.Size)",
+      "TrayIconLayout.RenderBounds(isPlaying, bitmap.Size)",
     );
+    expect(trayIconLayout).toContain("var canvasBounds =");
+    expect(trayIconLayout).toContain("? canvasBounds");
+    expect(trayIconLayout).toContain(
+      "Rectangle.Inflate(canvasBounds, IdleOverscan, IdleOverscan)",
+    );
+    expect(trayIconLayout).toContain("private const int IdleOverscan = 1");
     expect(trayIconFactory).not.toContain("new Rectangle(2, 2, 28, 28)");
   });
 
