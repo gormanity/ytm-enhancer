@@ -454,6 +454,25 @@ describe("menu bar connector app scaffold", () => {
     expect(artworkViews).not.toContain('systemSymbolName: "music.note"');
   });
 
+  it("preserves non-square artwork aspect ratios", () => {
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+    const artworkView = viewSource.match(
+      /private final class MenuBarArtworkView:[\s\S]+?private final class MenuBarNextTrackArtworkView/,
+    )?.[0];
+    const nextTrackArtworkView = viewSource.match(
+      /private final class MenuBarNextTrackArtworkView:[\s\S]+?private final class MenuBarIconButton/,
+    )?.[0];
+
+    expect(artworkView).toContain(
+      "imageView.imageScaling = .scaleProportionallyUpOrDown",
+    );
+    expect(nextTrackArtworkView).toContain(
+      "imageView.imageScaling = .scaleProportionallyUpOrDown",
+    );
+    expect(artworkView).not.toContain(".scaleAxesIndependently");
+    expect(nextTrackArtworkView).not.toContain(".scaleAxesIndependently");
+  });
+
   it("uses distinct repeat-one iconography for the menu bar repeat control", () => {
     const repeatIcon = read(
       "Sources/YTMMenuBarConnector/Resources/playback-repeat.svg",

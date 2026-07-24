@@ -415,6 +415,21 @@ describe("Windows tray connector scaffold", () => {
     expect(artworkBox).not.toContain("LinearGradientMode.ForwardDiagonal");
   });
 
+  it("preserves non-square artwork aspect ratios", () => {
+    const popupForm = read("src/YTMTray/PlaybackPopupForm.cs");
+    const artworkLayout = read("src/YTMTray.Core/ArtworkLayout.cs");
+    const artworkBox = popupForm.match(
+      /internal sealed class ArtworkBoxControl[\s\S]+?private static bool IsSupportedArtworkUrl/,
+    )?.[0];
+
+    expect(artworkLayout).toContain("public static RectangleF AspectFit(");
+    expect(artworkLayout).toContain("Math.Min(widthScale, heightScale)");
+    expect(artworkBox).toContain("ArtworkLayout.AspectFit");
+    expect(artworkBox).not.toContain(
+      "DrawImage(artwork, new Rectangle(1, 1, Width - 2, Height - 2))",
+    );
+  });
+
   it("switches both tray actions between Open and Focus from YTM tab status", () => {
     const app = read("src/YTMTray.Core/ConnectorApp.cs");
     const protocol = read("src/YTMTray.Core/ConnectorProtocol.cs");

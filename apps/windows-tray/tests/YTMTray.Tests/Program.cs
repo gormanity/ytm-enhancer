@@ -32,6 +32,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("pending seek clears optimistic progress when the track changes", PendingSeekClearsOnPlaybackItemChange),
     ("pending seek survives same-track metadata enrichment", PendingSeekSurvivesMetadataEnrichment),
     ("popup placement stays attached to tray anchors", PopupPlacementStaysAttachedToTrayAnchors),
+    ("artwork layout preserves source aspect ratios", ArtworkLayoutPreservesAspectRatios),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
     ("update options use packaged release version", UpdateOptionsUsePackagedReleaseVersion),
@@ -660,6 +661,34 @@ static Task PopupPlacementStaysAttachedToTrayAnchors()
             popupSize,
             new Point(-20, 1060)
         )
+    );
+
+    return Task.CompletedTask;
+}
+
+static Task ArtworkLayoutPreservesAspectRatios()
+{
+    var squareBounds = new Rectangle(0, 0, 160, 160);
+
+    AssertEqual(
+        new RectangleF(0, 35, 160, 90),
+        ArtworkLayout.AspectFit(new Size(16, 9), squareBounds)
+    );
+    AssertEqual(
+        new RectangleF(35, 0, 90, 160),
+        ArtworkLayout.AspectFit(new Size(9, 16), squareBounds)
+    );
+    AssertEqual(
+        new RectangleF(squareBounds.X, squareBounds.Y, squareBounds.Width, squareBounds.Height),
+        ArtworkLayout.AspectFit(new Size(160, 160), squareBounds)
+    );
+    AssertEqual(
+        RectangleF.Empty,
+        ArtworkLayout.AspectFit(Size.Empty, squareBounds)
+    );
+    AssertEqual(
+        RectangleF.Empty,
+        ArtworkLayout.AspectFit(new Size(16, 9), Rectangle.Empty)
     );
 
     return Task.CompletedTask;

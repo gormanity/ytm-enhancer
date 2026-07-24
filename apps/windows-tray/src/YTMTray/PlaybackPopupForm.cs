@@ -1243,13 +1243,19 @@ internal sealed class ArtworkBoxControl : Control
 
         if (artwork is not null)
         {
+            var imageBounds = new Rectangle(1, 1, Width - 2, Height - 2);
             using var imagePath = PlaybackPopupForm.RoundedRectangle(
-                new Rectangle(1, 1, Width - 2, Height - 2),
+                imageBounds,
                 cornerRadius - 1
             );
             var graphicsState = e.Graphics.Save();
             e.Graphics.SetClip(imagePath);
-            e.Graphics.DrawImage(artwork, new Rectangle(1, 1, Width - 2, Height - 2));
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            e.Graphics.DrawImage(
+                artwork,
+                ArtworkLayout.AspectFit(artwork.Size, imageBounds)
+            );
             e.Graphics.Restore(graphicsState);
         }
         else
