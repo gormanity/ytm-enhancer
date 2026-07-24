@@ -38,7 +38,7 @@ const CONNECTED_APP_ACCESS_LABELS: Record<ConnectorPermission, string> = {
   "playback:read": "Playback info and progress",
   "track:read": "Track details, artwork, and Up Next",
   "playback:control": "Playback controls",
-  "ytm:focus": "Focus YouTube Music",
+  "ytm:focus": "Open or focus YouTube Music",
 };
 
 interface ConnectedAppCardModel {

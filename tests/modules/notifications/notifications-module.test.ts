@@ -110,6 +110,7 @@ function createModuleContext(
       listTabs: vi.fn(),
       selectTab: vi.fn(),
       focusTab: vi.fn(),
+      openOrFocusTab: vi.fn(),
       getTabArtwork: vi.fn(),
       getPlaybackState: vi.fn(),
       executePlaybackAction: vi.fn(),

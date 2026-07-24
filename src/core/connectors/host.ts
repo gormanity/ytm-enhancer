@@ -64,6 +64,7 @@ export interface ConnectorHost {
   stop(): void;
   receive(connectionId: string, message: unknown): Promise<ConnectorHostResult>;
   publishPlaybackState(state: PlaybackState): Promise<void>;
+  publishYtmStatus(): Promise<void>;
   hasPlaybackStateSubscribers(): boolean;
   listSessions(): ConnectorSessionSnapshot[];
   disconnect(connectionId: string): void;
@@ -79,9 +80,9 @@ export interface ConnectorHostOptions {
   ytm: Pick<
     YtmRuntimeClient,
     | "executePlaybackAction"
-    | "focusTab"
     | "getPlaybackState"
     | "listTabs"
+    | "openOrFocusTab"
     | "seekTo"
   >;
   supportedProtocolVersions?: readonly string[];
@@ -259,6 +260,24 @@ export function createConnectorHost(
     await Promise.allSettled(deliveries);
   };
 
+  const publishYtmStatus = async (): Promise<void> => {
+    if (!enabled) return;
+
+    const state = await options.ytm.listTabs();
+    const message: ConnectorOutboundMessage = {
+      type: "ytm.status",
+      status: toConnectorYtmStatus(state),
+    };
+    const deliveries: Promise<void>[] = [];
+
+    for (const session of sessions.values()) {
+      if (!session.permissions.has("ytm:focus")) continue;
+      deliveries.push(deliver(session.connectionId, message));
+    }
+
+    await Promise.allSettled(deliveries);
+  };
+
   const publishCurrentPlaybackState = async (): Promise<void> => {
     if (!enabled || !hasPlaybackStateSubscribers()) return;
 
@@ -409,7 +428,7 @@ export function createConnectorHost(
       case "ytm.focus": {
         const missingPermission = requirePermission(session, "ytm:focus");
         if (missingPermission) return missingPermission;
-        await options.ytm.focusTab();
+        await options.ytm.openOrFocusTab();
         return ack(message.requestId);
       }
       case "ytm.getStatus": {
@@ -498,6 +517,10 @@ export function createConnectorHost(
 
     async publishPlaybackState(state: PlaybackState): Promise<void> {
       await publishPlaybackState(state);
+    },
+
+    async publishYtmStatus(): Promise<void> {
+      await publishYtmStatus();
     },
 
     hasPlaybackStateSubscribers() {

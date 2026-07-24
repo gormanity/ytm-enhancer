@@ -50,6 +50,9 @@ public static partial class ConnectorProtocol
 
     public static YtmFocusMessage FocusYouTubeMusic(string requestId) =>
         new("ytm.focus", requestId);
+
+    public static YtmGetStatusMessage YtmStatusRequest(string requestId) =>
+        new("ytm.getStatus", requestId);
 }
 
 public sealed record ConnectorManifest(
@@ -87,6 +90,14 @@ public sealed record PlaybackSeekMessage(
 );
 
 public sealed record YtmFocusMessage(string Type, string RequestId);
+
+public sealed record YtmGetStatusMessage(string Type, string RequestId);
+
+public sealed record YtmStatus(
+    bool HasTabs,
+    int TabCount,
+    bool SelectedTabKnown
+);
 
 public sealed record ConnectorSource(
     string Id,
@@ -138,6 +149,7 @@ public sealed class HostMessage
     public string Type { get; set; } = "";
     public string? RequestId { get; set; }
     public PlaybackState? State { get; set; }
+    public YtmStatus? Status { get; set; }
     public ConnectorSource? Source { get; set; }
     public string? Code { get; set; }
     public string? Message { get; set; }

@@ -133,6 +133,17 @@ jobs:
           generate_release_notes: true
           previous_tag: ${{ env.PREVIOUS_WINDOWS_TRAY_TAG }}
           make_latest: false
+          body: |
+            ## Install
+
+            1. Download the zip for your Windows architecture.
+            2. Extract the entire zip to one folder.
+            3. From that folder, run `YTMTray.Setup.exe`.
+            4. Open YTM Tray from the Start menu, then enable Connected Apps
+               and YTM Tray in the YTM Enhancer extension.
+
+            YTM Tray installs for your Windows account and appears in Windows
+            Settings > Apps > Installed apps for normal uninstallation.
           files: |
             apps/windows-tray/.build/packages/*.zip
             apps/windows-tray/.build/update-manifest/*.json

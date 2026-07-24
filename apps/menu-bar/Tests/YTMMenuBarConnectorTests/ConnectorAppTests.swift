@@ -3,6 +3,118 @@ import AppKit
 import XCTest
 
 final class ConnectorAppTests: XCTestCase {
+  func testMenuActionReflectsYouTubeMusicTabAvailability() {
+    _ = NSApplication.shared
+    let menu = MenuBarController()
+
+    XCTAssertEqual("Open YouTube Music", menu.youtubeMusicActionTitle)
+
+    menu.setYouTubeMusicTabAvailable(false)
+    XCTAssertEqual("Open YouTube Music", menu.youtubeMusicActionTitle)
+
+    menu.setYouTubeMusicTabAvailable(true)
+    XCTAssertEqual("Focus YouTube Music", menu.youtubeMusicActionTitle)
+  }
+
+  func testDisconnectedMenuActionOpensYouTubeMusic() {
+    _ = NSApplication.shared
+    let connection = FakeConnectorConnection()
+    let menu = MenuBarController()
+    var openCount = 0
+    let app = ConnectorApp(
+      connection: connection,
+      menu: menu,
+      openYouTubeMusic: { openCount += 1 }
+    )
+
+    app.start()
+    menu.onFocusYouTubeMusic?()
+
+    XCTAssertEqual(1, openCount)
+    XCTAssertEqual(["connector.hello"], connection.sentMessageTypes)
+  }
+
+  func testMissingTabFocusErrorFallsBackToOpeningYouTubeMusic() {
+    _ = NSApplication.shared
+    let connection = FakeConnectorConnection()
+    let menu = MenuBarController()
+    var openCount = 0
+    let app = ConnectorApp(
+      connection: connection,
+      menu: menu,
+      openYouTubeMusic: { openCount += 1 }
+    )
+
+    app.start()
+    connection.emit([
+      "type": "connector.ready",
+      "requestId": "hello-1",
+    ])
+    menu.onFocusYouTubeMusic?()
+    connection.emit([
+      "type": "connector.error",
+      "requestId": "focus-5",
+      "code": "route_failed",
+      "message": "No active YouTube Music tab",
+    ])
+
+    XCTAssertEqual("ytm.focus", connection.sentMessageTypes.last)
+    XCTAssertEqual(1, openCount)
+  }
+
+  func testOlderExtensionStatusRejectionIsIgnored() throws {
+    _ = NSApplication.shared
+    let connection = FakeConnectorConnection()
+    let menu = MenuBarController()
+    let logPath = FileManager.default.temporaryDirectory
+      .appendingPathComponent("ytm-menu-bar-status-\(UUID().uuidString).log")
+      .path
+    defer {
+      try? FileManager.default.removeItem(atPath: logPath)
+    }
+    let app = ConnectorApp(
+      connection: connection,
+      menu: menu,
+      logger: NativeAppLogger(
+        environment: ["YTM_MENU_BAR_LOG_PATH": logPath]
+      )
+    )
+
+    app.start()
+    connection.emit([
+      "type": "connector.ready",
+      "requestId": "hello-1",
+    ])
+    connection.emit([
+      "type": "connector.error",
+      "requestId": "ytm-status-3",
+      "code": "invalid_message",
+      "message": "Invalid connector message: unsupported type ytm.getStatus",
+    ])
+
+    let log = try String(contentsOfFile: logPath, encoding: .utf8)
+    XCTAssertTrue(
+      log.contains("ignoring unsupported YouTube Music status request")
+    )
+  }
+
+  func testHostMessageDecodesYouTubeMusicTabStatus() {
+    let message = HostMessage(
+      json: [
+        "type": "ytm.status",
+        "status": [
+          "hasTabs": false,
+          "tabCount": 0,
+          "selectedTabKnown": false,
+        ],
+      ]
+    )
+
+    XCTAssertEqual(false, message?.status?.hasTabs)
+    XCTAssertEqual(0, message?.status?.tabCount)
+    XCTAssertEqual(false, message?.status?.selectedTabKnown)
+  }
+
   func testBrowserSourceHintRecognizesLocalChromeDevExtension() {
     XCTAssertEqual(
       "Chrome",
@@ -136,5 +248,27 @@ final class ConnectorAppTests: XCTestCase {
       year: year,
       artworkUrl: artworkUrl
     )
+  }
+}
+
+private final class FakeConnectorConnection: ConnectorConnection {
+  private var onMessage: (([String: Any]) -> Void)?
+  private(set) var sentMessageTypes: [String] = []
+
+  func start(
+    onMessage: @escaping ([String: Any]) -> Void,
+    onDisconnect: @escaping () -> Void
+  ) {
+    self.onMessage = onMessage
+  }
+
+  func stop() {}
+
+  func send(_ message: [String: Any]) {
+    sentMessageTypes.append(message["type"] as? String ?? "")
+  }
+
+  func emit(_ message: [String: Any]) {
+    onMessage?(message)
   }
 }

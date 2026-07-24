@@ -7,6 +7,7 @@ const CONNECTION_ERROR =
   "Could not establish connection. Receiving end does not exist.";
 const DISABLED_ERROR = "Disabled while the dev build is active";
 const NO_YTM_TAB_ERROR = "No YTM tab";
+const YOUTUBE_MUSIC_URL = "https://music.youtube.com/";
 const TAB_ARTWORK_QUERY_TIMEOUT_MS = 150;
 
 export interface YtmTabSummary {
@@ -30,6 +31,7 @@ export interface YtmRuntimeClient {
   listTabs(): Promise<YtmTabListState>;
   selectTab(tabId: number | null): Promise<void>;
   focusTab(tabId?: number | null): Promise<void>;
+  openOrFocusTab(): Promise<void>;
   getTabArtwork(tabId: number): Promise<string | null>;
   getPlaybackState(target?: YtmTarget): Promise<PlaybackState>;
   executePlaybackAction(
@@ -195,6 +197,31 @@ export function createYtmRuntimeClient(
           : { kind: "selected" },
       );
       await chrome.tabs.update(tab.id!, { active: true });
+      if (tab.windowId != null) {
+        await chrome.windows.update(tab.windowId, { focused: true });
+      }
+    },
+
+    async openOrFocusTab(): Promise<void> {
+      const tab = await findYTMTab(options.getSelectedTabId());
+      if (!tab?.id) {
+        debug("YTMClient: opening YouTube Music; no existing tab");
+        const createdTab = await chrome.tabs.create({
+          url: YOUTUBE_MUSIC_URL,
+          active: true,
+        });
+        if (createdTab.windowId != null) {
+          await chrome.windows.update(createdTab.windowId, { focused: true });
+        }
+        return;
+      }
+      if (options.isTabSuppressed(tab.id)) throw new Error(DISABLED_ERROR);
+
+      debug("YTMClient: focusing existing YouTube Music tab", {
+        tabId: tab.id,
+        windowId: tab.windowId ?? null,
+      });
+      await chrome.tabs.update(tab.id, { active: true });
       if (tab.windowId != null) {
         await chrome.windows.update(tab.windowId, { focused: true });
       }

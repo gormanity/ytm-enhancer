@@ -5,7 +5,6 @@ namespace YTMTray;
 
 internal sealed class TrayApplicationContext : ApplicationContext
 {
-    private readonly IConnectorConnection connection;
     private readonly ConnectorApp connectorApp;
     private readonly TrayController trayController;
 
@@ -16,7 +15,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
         bool openPopupForTest = false
     )
     {
-        this.connection = connection;
         trayController = new TrayController(initialStatus, logger: logger);
         trayController.OnQuit = ExitThread;
         connectorApp = new ConnectorApp(connection, trayController, logger);
@@ -34,7 +32,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             connectorApp.Dispose();
             trayController.Dispose();
-            connection.Dispose();
         }
 
         base.Dispose(disposing);

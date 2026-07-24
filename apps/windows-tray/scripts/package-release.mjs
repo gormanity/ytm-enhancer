@@ -147,6 +147,23 @@ function buildReleasePayload({
     join(payloadRoot, "install-native-hosts.ps1"),
   );
   writeFileSync(
+    join(payloadRoot, "INSTALL.txt"),
+    [
+      "YTM Tray for Windows",
+      "",
+      "1. Extract the entire zip to one folder.",
+      "2. Double-click YTMTray.Setup.exe to install YTM Tray.",
+      "3. Open YTM Tray from the Start menu.",
+      "4. In YTM Enhancer, enable Connected Apps and YTM Tray.",
+      "",
+      "Do not run YTMTray.exe directly from this folder.",
+      "YTMTray.Setup.exe installs the app and adds normal Windows shortcuts.",
+      "",
+      "To uninstall, use Windows Settings > Apps > Installed apps > YTM Tray.",
+      "",
+    ].join("\r\n"),
+  );
+  writeFileSync(
     join(payloadRoot, "release.json"),
     `${JSON.stringify(
       {

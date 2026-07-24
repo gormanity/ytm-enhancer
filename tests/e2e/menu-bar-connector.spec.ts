@@ -1402,6 +1402,42 @@ my closeOpenMenu()
     await clickMenuBarElement("Focus YouTube Music");
     await expectMenuBarLogContains(menuBarLogPath, "requestId=focus-");
 
+    await ytmPage.close();
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my openYtmMenu()
+`);
+    await expect
+      .poll(() => menuBarProcessText())
+      .toContain("Open YouTube Music");
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my closeOpenMenu()
+`);
+    await clickMenuBarElement("Open YouTube Music");
+    await expect
+      .poll(
+        () =>
+          extension!.context
+            .pages()
+            .filter((page) =>
+              page.url().startsWith("https://music.youtube.com/"),
+            ).length,
+        { timeout: 15_000 },
+      )
+      .toBe(1);
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my openYtmMenu()
+`);
+    await expect
+      .poll(() => menuBarProcessText())
+      .toContain("Focus YouTube Music");
+    await runAppleScript(`
+${MENU_BAR_APPLESCRIPT_HELPERS}
+my closeOpenMenu()
+`);
+
     await setMenuBarConnectorEnabled(extension, false);
     await expectMenuBarLogContains(
       menuBarLogPath,

@@ -205,8 +205,8 @@ async function launchTrayApp(
   executablePath: string,
   resultPath: string,
   logPath: string,
-): Promise<void> {
-  await runPowerShell(
+): Promise<number> {
+  const output = await runPowerShell(
     interactiveScript("launch", resultPath, [
       `$ExecutablePath = ${psLiteral(executablePath)}`,
       `$env:YTM_TRAY_LOG_PATH = ${psLiteral(logPath)}`,
@@ -222,6 +222,8 @@ async function launchTrayApp(
     ]),
     60_000,
   );
+  const result = JSON.parse(output) as { pid: number };
+  return result.pid;
 }
 
 const TRAY_UIA_HELPERS = String.raw`
@@ -686,12 +688,13 @@ async function clickAboutAndClose(
     'Click-PopupElementByName "About YTM Tray"',
     '$Dialog = Wait-WindowByName "About YTM Tray" 8000',
     "if ($null -eq $Dialog) { throw \"About dialog was not shown. Visible windows: $((Get-VisibleWindowNames) -join ', ')\" }",
-    `$ExpectedAboutText = @("Beta connected app", "Updates", "How updates work", ${psLiteral(expectedConnectionSummary)})`,
+    `$ExpectedAboutText = @("Beta", "Updates", ${psLiteral(expectedConnectionSummary)})`,
     "foreach ($Name in $ExpectedAboutText) {",
     "  if ($null -eq (Find-ElementByName $Dialog $Name)) {",
     "    throw \"About dialog text '$Name' was not found. Visible elements: $((Get-VisibleElementNames) -join ', ')\"",
     "  }",
     "}",
+    'if ($null -ne (Find-ElementByName $Dialog "How updates work")) { throw "About dialog still exposes internal update details." }',
     '$UpdateAction = Find-ElementByName $Dialog "Check for Updates"',
     'if ($null -eq $UpdateAction) { $UpdateAction = Find-ElementByName $Dialog "Check Again" }',
     "if ($null -eq $UpdateAction) {",
@@ -910,7 +913,7 @@ test("routes Windows tray buttons through the browser native messaging host", as
       ),
       300_000,
     );
-    await launchTrayApp(
+    const trayProcessId = await launchTrayApp(
       executablePath,
       testInfo.outputPath("tray-launch.json"),
       trayLogPath,
@@ -1029,6 +1032,16 @@ test("routes Windows tray buttons through the browser native messaging host", as
       testInfo.outputPath("tray-about.json"),
       browserSource,
     );
+    await expect
+      .poll(async () =>
+        (
+          await runPowerShell(
+            `$Process = Get-Process -Id ${trayProcessId} -ErrorAction SilentlyContinue; if ($null -ne $Process) { $Process.Id }`,
+            15_000,
+          )
+        ).trim(),
+      )
+      .toBe(String(trayProcessId));
     if (promoScreenshotPath && testInfo.project.name === "edge") {
       await captureLiveTrayPromoScreenshot(
         extension,
@@ -1108,6 +1121,45 @@ test("routes Windows tray buttons through the browser native messaging host", as
         { timeout: 25_000 },
       )
       .toMatchObject({ name: "No YouTube Music tab" });
+
+    await expect
+      .poll(
+        () =>
+          readTrayPopupElement(
+            "missing-tab-action",
+            testInfo.outputPath("tray-missing-tab-action.json"),
+            "Open YouTube Music",
+          ),
+        { timeout: 15_000 },
+      )
+      .toMatchObject({ enabled: true, name: "Open YouTube Music" });
+    await clickTrayPopupElement(
+      "open",
+      testInfo.outputPath("tray-open.json"),
+      "Open YouTube Music",
+    );
+    await expect
+      .poll(
+        () =>
+          extension!.context
+            .pages()
+            .filter((page) =>
+              page.url().startsWith("https://music.youtube.com/"),
+            ).length,
+        { timeout: 15_000 },
+      )
+      .toBe(1);
+    await expect
+      .poll(
+        () =>
+          readTrayPopupElement(
+            "opened-tab-action",
+            testInfo.outputPath("tray-opened-tab-action.json"),
+            "Focus YouTube Music",
+          ),
+        { timeout: 15_000 },
+      )
+      .toMatchObject({ enabled: true, name: "Focus YouTube Music" });
 
     await clickTrayPopupElement(
       "quit",

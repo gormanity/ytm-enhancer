@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace YTMTray.Core;
 
 public sealed class ConnectorApp : IDisposable
@@ -9,6 +11,7 @@ public sealed class ConnectorApp : IDisposable
     private readonly IConnectorConnection connection;
     private readonly ITrayController tray;
     private readonly NativeAppLogger logger;
+    private readonly Action openYouTubeMusic;
     private readonly TimeSpan playbackStateRetryDelay;
     private readonly TimeSpan playbackStateStaleDelay;
     private int nextRequestNumber;
@@ -24,12 +27,15 @@ public sealed class ConnectorApp : IDisposable
         ITrayController tray,
         NativeAppLogger? logger = null,
         TimeSpan? playbackStateRetryDelay = null,
-        TimeSpan? playbackStateStaleTimeout = null
+        TimeSpan? playbackStateStaleTimeout = null,
+        Action? openYouTubeMusic = null
     )
     {
         this.connection = connection;
         this.tray = tray;
         this.logger = logger ?? new NativeAppLogger();
+        this.openYouTubeMusic =
+            openYouTubeMusic ?? OpenYouTubeMusicInDefaultBrowser;
         this.playbackStateRetryDelay =
             playbackStateRetryDelay ?? DefaultPlaybackStateRetryDelay;
         playbackStateStaleDelay =
@@ -53,6 +59,8 @@ public sealed class ConnectorApp : IDisposable
 
     public void Dispose()
     {
+        if (disposed) return;
+
         disposed = true;
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
@@ -80,6 +88,7 @@ public sealed class ConnectorApp : IDisposable
                     ConnectorProtocol.SubscribePlayback(NextRequestId("subscribe"))
                 );
                 RequestPlaybackState();
+                RequestYtmStatus();
                 break;
             case "playback.state":
                 if (message.State is not null)
@@ -89,6 +98,12 @@ public sealed class ConnectorApp : IDisposable
                 else
                 {
                     logger.Log("playback state message missing state payload");
+                }
+                break;
+            case "ytm.status":
+                if (message.Status is not null)
+                {
+                    tray.UpdateYouTubeMusicTabAvailability(message.Status.HasTabs);
                 }
                 break;
             case "connector.error":
@@ -114,6 +129,7 @@ public sealed class ConnectorApp : IDisposable
         ClearPlaybackStateStaleTimeout();
         tray.UpdateConnectionStatus("Disconnected");
         tray.UpdateBrowserSource(null);
+        tray.UpdateYouTubeMusicTabAvailability(false);
 
         if (!disposed)
         {
@@ -125,6 +141,7 @@ public sealed class ConnectorApp : IDisposable
     {
         ClearPlaybackStateRetry();
         ClearPlaybackStateStaleTimeout();
+        tray.UpdateYouTubeMusicTabAvailability(true);
         logger.Log(PlaybackStateSummary(state));
 
         if (ShouldKeepStalePlaybackState(state))
@@ -150,14 +167,28 @@ public sealed class ConnectorApp : IDisposable
         var label = UserFacingStatus(message.Code, message.Message);
         logger.Log($"connector error {label}");
 
+        if (IsUnsupportedYtmStatusRequestError(message))
+        {
+            logger.Log("ignoring unsupported YouTube Music status request");
+            return;
+        }
+
         if (message.Code == "connector_not_registered")
         {
             RestartHandshake(label);
             return;
         }
 
+        if (IsFocusYouTubeMusicRequestError(message))
+        {
+            tray.UpdateYouTubeMusicTabAvailability(false);
+            OpenYouTubeMusicLocally("extension could not find a YouTube Music tab");
+            return;
+        }
+
         if (IsPlaybackStateRequestError(message))
         {
+            tray.UpdateYouTubeMusicTabAvailability(false);
             tray.UpdateConnectionStatus(label);
             SchedulePlaybackStateRetry();
             return;
@@ -171,6 +202,7 @@ public sealed class ConnectorApp : IDisposable
             ClearPlaybackStateRetry();
             ClearPlaybackStateStaleTimeout();
             tray.UpdateBrowserSource(null);
+            tray.UpdateYouTubeMusicTabAvailability(false);
         }
 
         tray.UpdateConnectionStatus(label);
@@ -190,6 +222,14 @@ public sealed class ConnectorApp : IDisposable
         );
     }
 
+    private void RequestYtmStatus()
+    {
+        if (!ready) return;
+        _ = connection.SendAsync(
+            ConnectorProtocol.YtmStatusRequest(NextRequestId("ytm-status"))
+        );
+    }
+
     private void SendAction(string action)
     {
         if (!ready) return;
@@ -206,7 +246,11 @@ public sealed class ConnectorApp : IDisposable
 
     private void SendFocusYouTubeMusic()
     {
-        if (!ready) return;
+        if (!ready)
+        {
+            OpenYouTubeMusicLocally("connector is not ready");
+            return;
+        }
         _ = connection.SendAsync(ConnectorProtocol.FocusYouTubeMusic(NextRequestId("focus")));
     }
 
@@ -216,6 +260,14 @@ public sealed class ConnectorApp : IDisposable
     private bool IsPlaybackStateRequestError(HostMessage message) =>
         message.RequestId?.StartsWith("state-", StringComparison.Ordinal) == true
         && IsMissingYouTubeMusicTabMessage(message.Message);
+
+    private bool IsFocusYouTubeMusicRequestError(HostMessage message) =>
+        message.RequestId?.StartsWith("focus-", StringComparison.Ordinal) == true
+        && IsMissingYouTubeMusicTabMessage(message.Message);
+
+    private static bool IsUnsupportedYtmStatusRequestError(HostMessage message) =>
+        message.RequestId?.StartsWith("ytm-status-", StringComparison.Ordinal) == true
+        && message.Code == "invalid_message";
 
     private void SchedulePlaybackStateRetry()
     {
@@ -253,7 +305,32 @@ public sealed class ConnectorApp : IDisposable
         ClearPlaybackStateStaleTimeout();
         tray.UpdateConnectionStatus(reason);
         tray.UpdateBrowserSource(null);
+        tray.UpdateYouTubeMusicTabAvailability(false);
         _ = connection.SendAsync(ConnectorProtocol.Hello(NextRequestId("hello")));
+    }
+
+    private void OpenYouTubeMusicLocally(string reason)
+    {
+        logger.Log($"opening YouTube Music in the default browser because {reason}");
+        try
+        {
+            openYouTubeMusic();
+        }
+        catch (Exception error)
+        {
+            logger.Log($"could not open YouTube Music: {error.Message}");
+            tray.UpdateConnectionStatus("Could not open YouTube Music");
+        }
+    }
+
+    private static void OpenYouTubeMusicInDefaultBrowser()
+    {
+        Process.Start(
+            new ProcessStartInfo("https://music.youtube.com/")
+            {
+                UseShellExecute = true
+            }
+        );
     }
 
     private bool ShouldKeepStalePlaybackState(PlaybackState state)

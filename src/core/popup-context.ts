@@ -51,6 +51,9 @@ export function createPopupYtmRuntimeClient(
     focusTab(tabId) {
       return runtime.command({ type: "focus-ytm-tab", tabId });
     },
+    openOrFocusTab() {
+      return runtime.command({ type: "open-or-focus-ytm-tab" });
+    },
     async getTabArtwork(tabId) {
       const data = await runtime.request<{ artworkUrl: string | null }>({
         type: "get-ytm-tab-artwork",

@@ -277,7 +277,7 @@ describe("menu bar connector app scaffold", () => {
     expect(e2e).toContain('toContain("3:33")');
   });
 
-  it("adds a menu action for focusing YouTube Music", () => {
+  it("adds a state-aware menu action for opening or focusing YouTube Music", () => {
     const protocolSource = read(
       "Sources/YTMMenuBarConnector/ConnectorProtocol.swift",
     );
@@ -288,11 +288,19 @@ describe("menu bar connector app scaffold", () => {
 
     expect(protocolSource).toContain("ytm:focus");
     expect(protocolSource).toContain("static func focusYouTubeMusic");
+    expect(protocolSource).toContain("static func ytmStatusRequest");
     expect(protocolSource).toContain('"type": "ytm.focus"');
+    expect(protocolSource).toContain('"type": "ytm.getStatus"');
     expect(appSource).toContain("menu.onFocusYouTubeMusic");
     expect(appSource).toContain("sendFocusYouTubeMusic");
+    expect(appSource).toContain('"https://music.youtube.com/"');
+    expect(appSource).toContain("NSWorkspace.shared.open");
+    expect(appSource).toContain('case "ytm.status"');
+    expect(appSource).toContain("setYouTubeMusicTabAvailable");
     expect(controllerSource).toContain("onFocusYouTubeMusic");
-    expect(controllerSource).toContain('title: "Focus YouTube Music"');
+    expect(controllerSource).toContain('title: "Open YouTube Music"');
+    expect(controllerSource).toContain('"Open YouTube Music"');
+    expect(controllerSource).toContain("setYouTubeMusicTabAvailable");
     expect(controllerSource).toContain("menu.addItem(focusItem)");
   });
 
@@ -420,6 +428,30 @@ describe("menu bar connector app scaffold", () => {
     expect(controlsSource).toBeDefined();
     expect(controlsSource).not.toContain("systemSymbolName:");
     expect(controlsSource).not.toContain("setSystemSymbolName");
+  });
+
+  it("reuses the shared connector artwork placeholder", () => {
+    const manifest = read("Package.swift");
+    const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
+    const localResource =
+      "Sources/YTMMenuBarConnector/Resources/artwork-placeholder.svg";
+
+    expect(manifest).toContain('.copy("Resources/artwork-placeholder.svg")');
+    expect(read(localResource)).toBe(
+      read(
+        "../../packages/connector-ui-assets/artwork/artwork-placeholder.svg",
+      ),
+    );
+    expect(viewSource).toContain(
+      'MenuBarResources.url(forResource: "artwork-placeholder"',
+    );
+    expect(viewSource).toContain("image.isTemplate = true");
+
+    const artworkViews = viewSource.match(
+      /private final class MenuBarArtworkView:[\s\S]+$/,
+    )?.[0];
+    expect(artworkViews).toBeDefined();
+    expect(artworkViews).not.toContain('systemSymbolName: "music.note"');
   });
 
   it("uses distinct repeat-one iconography for the menu bar repeat control", () => {
@@ -818,7 +850,7 @@ describe("menu bar connector app scaffold", () => {
       "focusItem.keyEquivalentModifierMask = [.command]",
     );
     expect(controllerSource).toContain(
-      'menuItemIcon("arrow.up.forward.app", accessibilityDescription: "Focus YouTube Music")',
+      'accessibilityDescription: "Open YouTube Music"',
     );
     expect(controllerSource).toContain(
       'menuItemIcon("xmark.circle", accessibilityDescription: "Quit")',
@@ -1228,7 +1260,6 @@ describe("menu bar connector app scaffold", () => {
 
     expect(sources).not.toContain("@/");
     expect(sources).not.toContain("src/");
-    expect(sources).not.toContain("music.youtube.com");
   });
 
   it("includes a macOS native host installer", () => {

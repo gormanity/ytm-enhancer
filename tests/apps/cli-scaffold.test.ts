@@ -103,4 +103,12 @@ describe("YTM Enhancer CLI app scaffold", () => {
     expect(settingsSource).toContain('name: "YTM Enhancer CLI"');
     expect(settingsSource).toContain('installLabel: "Install CLI"');
   });
+
+  it("offers equivalent open and focus commands for YouTube Music", () => {
+    const cliSource = read("apps/cli/internal/cli/cli.go");
+
+    expect(cliSource).toContain('case "open", "focus":');
+    expect(cliSource).toContain('app.simple("focus", nil)');
+    expect(cliSource).toContain("ytme open|focus");
+  });
 });

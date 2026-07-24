@@ -105,6 +105,15 @@ internal static class StatusSvgIconRenderer
     }
 }
 
+internal static class ArtworkPlaceholderSvgRenderer
+{
+    private static readonly Lazy<SvgIconDefinition> Icon =
+        new(() => SvgIconRenderer.Load("artwork-placeholder"));
+
+    public static bool Draw(Graphics graphics, Rectangle bounds, Color color) =>
+        SvgIconRenderer.Draw(graphics, Icon.Value, bounds, color);
+}
+
 internal static class SvgIconRenderer
 {
     public static bool Draw(

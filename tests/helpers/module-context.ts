@@ -51,6 +51,7 @@ export function createMockYtmRuntimeClient(
     listTabs: vi.fn().mockResolvedValue({ tabs: [], selectedTabId: null }),
     selectTab: vi.fn().mockResolvedValue(undefined),
     focusTab: vi.fn().mockResolvedValue(undefined),
+    openOrFocusTab: vi.fn().mockResolvedValue(undefined),
     getTabArtwork: vi.fn().mockResolvedValue(null),
     getPlaybackState: vi.fn().mockResolvedValue({
       title: null,

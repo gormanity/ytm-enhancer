@@ -375,6 +375,20 @@ test("routes CLI commands through the browser native messaging host", async ({},
     await runYtme(cliPath, ["play"], env);
     await expectFixtureEvent(ytmPage, "player-play-pause-clicked");
 
+    await ytmPage.close();
+    await runYtme(cliPath, ["open"], env);
+    await expect
+      .poll(
+        () =>
+          extension.context
+            .pages()
+            .filter((page) =>
+              page.url().startsWith("https://music.youtube.com/"),
+            ).length,
+        { timeout: 15_000 },
+      )
+      .toBe(1);
+
     await setCliConnectorEnabled(extension, false);
     const disabledStatus = await runCommandResult(cliPath, ["status"], env);
     expect(disabledStatus.exitCode).not.toBe(0);

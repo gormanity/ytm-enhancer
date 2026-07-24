@@ -86,6 +86,7 @@ describe("macOS remote QA scaffold", () => {
     expect(menuBarE2e).toContain("UI elements enabled");
     expect(menuBarE2e).toContain("System Events");
     expect(menuBarE2e).toContain("Focus YouTube Music");
+    expect(menuBarE2e).toContain("Open YouTube Music");
     expect(menuBarE2e).toContain("Quit");
   });
 

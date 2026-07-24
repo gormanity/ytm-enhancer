@@ -14,5 +14,6 @@ public interface ITrayController
     void UpdateBrowserSource(ConnectorSource? source);
     void RequestUninstall();
     void SetStalePlaybackState();
+    void UpdateYouTubeMusicTabAvailability(bool available);
     void UpdatePlayback(PlaybackState state);
 }

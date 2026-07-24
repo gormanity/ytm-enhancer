@@ -181,7 +181,7 @@ export interface ConnectorUninstallRequestedMessage {
 
 export interface YtmStatusMessage {
   type: "ytm.status";
-  requestId: string;
+  requestId?: string;
   status: ConnectorYtmStatus;
 }
 

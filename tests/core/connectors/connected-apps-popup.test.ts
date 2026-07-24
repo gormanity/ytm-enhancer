@@ -179,7 +179,7 @@ describe("Connected Apps popup view", () => {
     expect(card?.textContent).toContain("Shared by YTM Enhancer");
     expect(card?.textContent).toContain("Playback info and progress");
     expect(card?.textContent).toContain("Playback controls");
-    expect(card?.textContent).toContain("Focus YouTube Music");
+    expect(card?.textContent).toContain("Open or focus YouTube Music");
 
     const lifecycleButton = container.querySelector<HTMLButtonElement>(
       '[data-role="connected-app-lifecycle-button"][data-connector-id="com.example.menu-bar"]',

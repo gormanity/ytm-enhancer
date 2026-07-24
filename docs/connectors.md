@@ -28,6 +28,8 @@ The first implementation exposes playback through `YtmRuntimeClient`:
   and toggle play.
 - `seekTo()` for timeline control.
 - `focusTab()` for bringing the active YouTube Music tab/window forward.
+- `openOrFocusTab()` for bringing an existing tab forward or opening YouTube
+  Music when no tab exists.
 - `listTabs()` for aggregate diagnostics about whether YouTube Music tabs are
   currently known to the extension.
 
@@ -59,9 +61,10 @@ The first permission set is intentionally small:
 - `playback:control` allows playback commands and seeking.
 - `track:read` allows track metadata such as title, artist, album, year,
   artwork, and upcoming next-track metadata.
-- `ytm:focus` allows a connector to focus the active YouTube Music tab/window.
-  It also allows aggregate YouTube Music tab diagnostics, such as whether a tab
-  is currently detected and whether a selected tab is known.
+- `ytm:focus` allows a connector to focus the active YouTube Music tab/window,
+  or open YouTube Music when no tab exists. It also allows aggregate YouTube
+  Music tab diagnostics, such as whether a tab is currently detected and whether
+  a selected tab is known.
 
 The host rejects unknown permissions during `connector.hello`. If a connector
 has `playback:read` but not `track:read`, playback state is still available, but
@@ -255,8 +258,8 @@ messaging manifests. On Linux it writes manifests for Google Chrome, Chromium,
 Microsoft Edge, Brave, and Firefox.
 
 The `ytme` command supports playback status, JSON status output, play/pause,
-previous/next, seek, shuffle, repeat, focus, watch mode, and diagnostics. Watch
-mode renders a live terminal status with a progress bar by default, with
+previous/next, seek, shuffle, repeat, open/focus, watch mode, and diagnostics.
+Watch mode renders a live terminal status with a progress bar by default, with
 line-oriented output, newline-delimited JSON, custom polling intervals, and
 bounded `--count` runs available for automation. Homebrew packaging and public
 CLI release automation are intentionally left for a later release slice.
@@ -266,10 +269,10 @@ CLI release automation are intentionally left for a later release slice.
 The first-party Windows tray connector lives in `apps/windows-tray`. It is a
 modern .NET WinForms tray app that communicates with the extension through
 native messaging. It mirrors the macOS menu bar connector's user-facing role on
-Windows: current playback status, tray/menu controls, focus YouTube Music, and
-connection diagnostics. Direct release installs can check GitHub component
-releases in the background, verify the runtime package checksum, and hand off to
-the signed `YTMTray.Setup.exe` installer after user confirmation.
+Windows: current playback status, tray/menu controls, open or focus YouTube
+Music, and connection diagnostics. Direct release installs can check GitHub
+component releases in the background, verify the runtime package checksum, and
+hand off to the signed `YTMTray.Setup.exe` installer after user confirmation.
 
 The Windows tray app is separate from the CLI. Windows users get a native tray
 surface; PowerShell or WSL CLI support is intentionally not part of the Windows

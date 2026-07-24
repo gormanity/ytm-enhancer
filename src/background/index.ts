@@ -128,6 +128,7 @@ const devBuildConflictState: DevBuildConflictState = {
 };
 const TAB_ARTWORK_QUERY_TIMEOUT_MS = 150;
 let externalDevBuildStaleTimer: ReturnType<typeof setTimeout> | null = null;
+let ytmStatusPublishTimer: ReturnType<typeof setTimeout> | null = null;
 let lastPlaybackStateIsPlaying = false;
 type PopupRuntimeMessage =
   | { type: "ytm-tabs-changed" }
@@ -145,6 +146,17 @@ function broadcastPopupMessage(message: PopupRuntimeMessage): void {
 function notifyYtmTabsChanged(): void {
   broadcastPopupMessage({ type: "ytm-tabs-changed" });
   context.events.emit("ytm-tabs-changed", undefined);
+  scheduleYtmStatusPublish();
+}
+
+function scheduleYtmStatusPublish(): void {
+  if (ytmStatusPublishTimer !== null) {
+    clearTimeout(ytmStatusPublishTimer);
+  }
+  ytmStatusPublishTimer = setTimeout(() => {
+    ytmStatusPublishTimer = null;
+    void connectorHost?.publishYtmStatus().catch(() => undefined);
+  }, 50);
 }
 
 function notifyConnectedAppsChanged(): void {
@@ -719,6 +731,11 @@ handler.on("focus-ytm-tab", async (message) => {
   const requestedTabId =
     typeof message.tabId === "number" ? (message.tabId as number) : null;
   await ytm.focusTab(requestedTabId);
+  return { ok: true };
+});
+
+handler.on("open-or-focus-ytm-tab", async () => {
+  await ytm.openOrFocusTab();
   return { ok: true };
 });
 

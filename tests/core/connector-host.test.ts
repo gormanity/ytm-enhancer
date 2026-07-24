@@ -452,7 +452,7 @@ describe("ConnectorHost", () => {
     });
   });
 
-  it("routes focus requests through the centralized YTM runtime API", async () => {
+  it("routes YTM activation through the open-or-focus runtime API", async () => {
     const ytm = createMockYtmRuntimeClient();
     const host = createConnectorHost({ enabled: true, ytm });
     await connect(host);
@@ -466,7 +466,8 @@ describe("ConnectorHost", () => {
       ok: true,
       message: { type: "connector.ack", requestId: "focus-1" },
     });
-    expect(ytm.focusTab).toHaveBeenCalledWith();
+    expect(ytm.openOrFocusTab).toHaveBeenCalledWith();
+    expect(ytm.focusTab).not.toHaveBeenCalled();
   });
 
   it("routes YTM tab diagnostics through the centralized YTM runtime API", async () => {
@@ -506,6 +507,33 @@ describe("ConnectorHost", () => {
     expect(ytm.listTabs).toHaveBeenCalledTimes(1);
   });
 
+  it("publishes current YTM tab availability to permitted connectors", async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const ytm = createMockYtmRuntimeClient({
+      listTabs: vi.fn().mockResolvedValue({
+        selectedTabId: null,
+        tabs: [],
+      }),
+    });
+    const host = createConnectorHost({
+      enabled: true,
+      ytm,
+      transports: [{ start: vi.fn(), stop: vi.fn(), send }],
+    });
+    await connect(host);
+
+    await host.publishYtmStatus();
+
+    expect(send).toHaveBeenCalledWith("connection-1", {
+      type: "ytm.status",
+      status: {
+        hasTabs: false,
+        tabCount: 0,
+        selectedTabKnown: false,
+      },
+    });
+  });
+
   it("requires explicit permission before focusing YouTube Music", async () => {
     const ytm = createMockYtmRuntimeClient();
     const host = createConnectorHost({ enabled: true, ytm });
@@ -531,7 +559,7 @@ describe("ConnectorHost", () => {
         message: `Connector ${validManifest.id} is missing ytm:focus`,
       },
     });
-    expect(ytm.focusTab).not.toHaveBeenCalled();
+    expect(ytm.openOrFocusTab).not.toHaveBeenCalled();
   });
 
   it("requires explicit permission before reading YTM tab diagnostics", async () => {

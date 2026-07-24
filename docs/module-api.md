@@ -217,6 +217,7 @@ export interface YtmRuntimeClient {
   listTabs(): Promise<YtmTabListState>;
   selectTab(tabId: number | null): Promise<void>;
   focusTab(tabId?: number | null): Promise<void>;
+  openOrFocusTab(): Promise<void>;
   getTabArtwork(tabId: number): Promise<string | null>;
   getPlaybackState(target?: YtmTarget): Promise<PlaybackState>;
   executePlaybackAction(
@@ -265,13 +266,14 @@ await context.ytm.executePlaybackAction("pause", { kind: "any" });
 
 ### Tab UI
 
-Use `listTabs()`, `selectTab()`, `focusTab()`, and `getTabArtwork()` for popup
-tab chips and now-playing UI.
+Use `listTabs()`, `selectTab()`, `focusTab()`, `openOrFocusTab()`, and
+`getTabArtwork()` for popup tab chips and now-playing UI.
 
 ```typescript
 const state = await context.ytm.listTabs();
 await context.ytm.selectTab(state.tabs[0]?.id ?? null);
 await context.ytm.focusTab();
+await context.ytm.openOrFocusTab();
 ```
 
 ### Playback UI

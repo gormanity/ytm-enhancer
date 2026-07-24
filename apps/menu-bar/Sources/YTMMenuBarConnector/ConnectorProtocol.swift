@@ -66,6 +66,13 @@ enum ConnectorProtocol {
     ]
   }
 
+  static func ytmStatusRequest(requestId: String) -> [String: Any] {
+    [
+      "type": "ytm.getStatus",
+      "requestId": requestId,
+    ]
+  }
+
   static func appBusy(ownerName: String) -> [String: Any] {
     [
       "type": "connector.error",
@@ -108,10 +115,17 @@ struct PlaybackState: Decodable {
   let repeatMode: String?
 }
 
+struct YtmStatus: Decodable {
+  let hasTabs: Bool
+  let tabCount: Int
+  let selectedTabKnown: Bool
+}
+
 struct HostMessage {
   let type: String
   let requestId: String?
   let state: PlaybackState?
+  let status: YtmStatus?
   let code: String?
   let message: String?
   let source: ConnectorSource?
@@ -139,6 +153,15 @@ struct HostMessage {
       )
     } else {
       self.state = nil
+    }
+
+    if let statusObject = json["status"] {
+      self.status = try? JSONDecoder().decode(
+        YtmStatus.self,
+        from: JSONSerialization.data(withJSONObject: statusObject)
+      )
+    } else {
+      self.status = nil
     }
   }
 }

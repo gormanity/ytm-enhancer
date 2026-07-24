@@ -20,7 +20,7 @@ final class MenuBarController: NSObject {
   private let nowPlayingView = MenuBarNowPlayingView()
   private let nowPlayingItem = NSMenuItem()
   private let focusItem = NSMenuItem(
-    title: "Focus YouTube Music",
+    title: "Open YouTube Music",
     action: #selector(focusYouTubeMusic),
     keyEquivalent: "f"
   )
@@ -30,6 +30,10 @@ final class MenuBarController: NSObject {
     keyEquivalent: ""
   )
   private let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
+
+  var youtubeMusicActionTitle: String {
+    focusItem.title
+  }
 
   override init() {
     statusIcon = MenuBarStatusIcon.monochromeIcon() ?? MenuBarStatusIcon.extensionIcon()
@@ -57,6 +61,15 @@ final class MenuBarController: NSObject {
     nowPlayingView.updatePlayback(state)
   }
 
+  func setYouTubeMusicTabAvailable(_ isAvailable: Bool) {
+    let title = isAvailable ? "Focus YouTube Music" : "Open YouTube Music"
+    focusItem.title = title
+    focusItem.image = Self.menuItemIcon(
+      "arrow.up.forward.app",
+      accessibilityDescription: title
+    )
+  }
+
   func setAboutUpdateAvailable(_ isAvailable: Bool) {
     aboutItem.title =
       isAvailable
@@ -68,7 +81,10 @@ final class MenuBarController: NSObject {
     focusItem.target = self
     focusItem.indentationLevel = 0
     focusItem.keyEquivalentModifierMask = [.command]
-    focusItem.image = Self.menuItemIcon("arrow.up.forward.app", accessibilityDescription: "Focus YouTube Music")
+    focusItem.image = Self.menuItemIcon(
+      "arrow.up.forward.app",
+      accessibilityDescription: "Open YouTube Music"
+    )
     aboutItem.target = self
     aboutItem.indentationLevel = 0
     aboutItem.image = Self.menuItemIcon("info.circle", accessibilityDescription: "About YTM Menu Bar")

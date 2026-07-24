@@ -211,6 +211,7 @@ public sealed class BridgeUiConnection : IConnectorConnection
     private NamedPipeServerStream? server;
     private CancellationTokenSource? cancellation;
     private Stream? connectedClient;
+    private int disposeState;
 
     public BridgeUiConnection(string? pipeName = null, NativeAppLogger? logger = null)
     {
@@ -258,17 +259,25 @@ public sealed class BridgeUiConnection : IConnectorConnection
 
     public void Stop()
     {
-        cancellation?.Cancel();
-        connectedClient?.Dispose();
-        connectedClient = null;
-        server?.Dispose();
-        server = null;
+        var cancellationToStop = Interlocked.Exchange(ref cancellation, null);
+        try
+        {
+            cancellationToStop?.Cancel();
+        }
+        finally
+        {
+            cancellationToStop?.Dispose();
+        }
+
+        Interlocked.Exchange(ref connectedClient, null)?.Dispose();
+        Interlocked.Exchange(ref server, null)?.Dispose();
     }
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref disposeState, 1) != 0) return;
+
         Stop();
-        cancellation?.Dispose();
         writeLock.Dispose();
     }
 

@@ -14,6 +14,7 @@ internal static class Program
     private static void Main()
     {
         var logger = new NativeAppLogger();
+        ConfigureExceptionLogging(logger);
         logger.Log("starting YTM Tray");
 
         using var mutex = new Mutex(true, MutexName, out var createdNew);
@@ -40,6 +41,18 @@ internal static class Program
             useVisualDemo ? "Connected" : "Waiting for YTM Enhancer",
             openPopupForTest
         );
+    }
+
+    private static void ConfigureExceptionLogging(NativeAppLogger logger)
+    {
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+        Application.ThreadException += (_, eventArgs) =>
+        {
+            logger.Log($"unhandled UI exception error={eventArgs.Exception}");
+            Application.Exit();
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+            logger.Log($"unhandled app exception error={eventArgs.ExceptionObject}");
     }
 
     private static void RunTray(

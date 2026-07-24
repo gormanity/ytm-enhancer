@@ -79,6 +79,35 @@ func TestVersionPrintsCliVersion(t *testing.T) {
 	}
 }
 
+func TestOpenAndFocusUseTheSameStateAwareActivation(t *testing.T) {
+	for _, command := range []string{"open", "focus"} {
+		t.Run(command, func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			var requested ipc.Request
+
+			code := App{
+				Stdout: &stdout,
+				Stderr: &stderr,
+				Request: func(request ipc.Request) (ipc.Response, error) {
+					requested = request
+					return ipc.Response{OK: true, Message: "ok"}, nil
+				},
+			}.Run([]string{command})
+
+			if code != 0 {
+				t.Fatalf("exit code = %d, want 0; stderr = %q", code, stderr.String())
+			}
+			if requested.Command != "focus" {
+				t.Fatalf("request command = %q, want focus", requested.Command)
+			}
+			if stdout.String() != "" {
+				t.Fatalf("stdout = %q, want empty", stdout.String())
+			}
+		})
+	}
+}
+
 func TestDaemonStartReportsRunningDaemon(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

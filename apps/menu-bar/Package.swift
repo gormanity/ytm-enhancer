@@ -23,6 +23,7 @@ let package = Package(
         .product(name: "Sparkle", package: "Sparkle")
       ],
       resources: [
+        .copy("Resources/artwork-placeholder.svg"),
         .copy("Resources/extension-icon.svg"),
         .copy("Resources/extension-icon-monochrome.svg"),
         .copy("Resources/extension-icon-monochrome-ring.svg"),

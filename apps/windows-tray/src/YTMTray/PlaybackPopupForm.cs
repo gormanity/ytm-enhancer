@@ -37,7 +37,7 @@ internal sealed class PlaybackPopupForm : Form
     private readonly ScrollingLabelControl nextDetailLabel = new();
     private readonly PopupActionRowControl focusRow = new(
         PopupActionIcon.Focus,
-        "Focus YouTube Music"
+        "Open YouTube Music"
     );
     private readonly PopupActionRowControl updateRow = new(
         PopupActionIcon.Update,
@@ -209,6 +209,15 @@ internal sealed class PlaybackPopupForm : Form
             : $"Install Update {version}";
         updateRow.AccessibleName = updateRow.Text;
         updateRow.Invalidate();
+    }
+
+    public void SetYouTubeMusicTabAvailable(bool available)
+    {
+        focusRow.Text = available
+            ? "Focus YouTube Music"
+            : "Open YouTube Music";
+        focusRow.AccessibleName = focusRow.Text;
+        focusRow.Invalidate();
     }
 
     protected override void OnResize(EventArgs e)
@@ -1359,39 +1368,11 @@ internal sealed class ArtworkBoxControl : Control
 
     private void DrawPlaceholder(Graphics graphics)
     {
-        var stemX = Width * 0.58f;
-        var stemTop = Height * 0.18f;
-        var stemBottom = Height * 0.66f;
-        var stemWidth = Math.Max(3.5f, Width / 13f);
-        var flagHeight = Height * 0.2f;
         var theme = TrayTheme.CurrentApp;
-        using var noteBrush = new SolidBrush(theme.ArtworkPlaceholderColor);
-        using var notePen = new Pen(theme.ArtworkPlaceholderColor, stemWidth)
-        {
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round,
-            LineJoin = LineJoin.Round
-        };
-
-        using var flagPath = new GraphicsPath();
-        flagPath.AddPolygon(
-            new[]
-            {
-                new PointF(stemX - stemWidth / 2f, stemTop),
-                new PointF(Width * 0.78f, stemTop - Height * 0.05f),
-                new PointF(Width * 0.78f, stemTop + flagHeight * 0.55f),
-                new PointF(stemX - stemWidth / 2f, stemTop + flagHeight)
-            }
-        );
-
-        graphics.FillPath(noteBrush, flagPath);
-        graphics.DrawLine(notePen, stemX, stemTop, stemX, stemBottom);
-        graphics.FillEllipse(
-            noteBrush,
-            Width * 0.28f,
-            Height * 0.58f,
-            Width * 0.26f,
-            Height * 0.2f
+        ArtworkPlaceholderSvgRenderer.Draw(
+            graphics,
+            new Rectangle(0, 0, Width, Height),
+            theme.ArtworkPlaceholderColor
         );
     }
 

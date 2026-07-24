@@ -152,20 +152,29 @@ describe("Windows tray connector scaffold", () => {
     expect(trayController).toContain("aboutDialog.Show(owner)");
   });
 
-  it("includes update status and process details in the About dialog", () => {
+  it("keeps the About dialog focused on useful status and actions", () => {
     const aboutDialog = read("src/YTMTray/AboutDialogForm.cs");
     const trayController = read("src/YTMTray/TrayController.cs");
 
     expect(aboutDialog).toContain("About YTM Tray");
-    expect(aboutDialog).toContain("Beta connected app");
+    expect(aboutDialog).toContain('"Beta"');
+    expect(aboutDialog).toContain(
+      "See what's playing and control YouTube Music from the Windows taskbar.",
+    );
     expect(aboutDialog).toContain("WindowsTrayAboutUpdateStatus");
     expect(aboutDialog).toContain("Updates");
     expect(aboutDialog).toContain("Check for Updates");
     expect(aboutDialog).toContain("Install Update");
     expect(aboutDialog).toContain('closeButton.Text = "Close"');
-    expect(aboutDialog).toContain("SHA-256 checksum");
-    expect(aboutDialog).toContain("%LOCALAPPDATA%\\\\YTM Enhancer\\\\Tray");
-    expect(aboutDialog).toContain("native messaging host registration");
+    expect(aboutDialog).toContain("ClientSize = new Size(520, 420)");
+    expect(aboutDialog).toContain("RowCount = 7");
+    expect(aboutDialog).toContain("BuildFooter(), 0, 6");
+    expect(aboutDialog).not.toContain("BuildProcessSection");
+    expect(aboutDialog).not.toContain("How updates work");
+    expect(aboutDialog).not.toContain("component-scoped");
+    expect(aboutDialog).not.toContain("release manifest");
+    expect(aboutDialog).not.toContain("Beta connected app");
+    expect(aboutDialog).not.toContain("First-party Windows tray controls");
     expect(aboutDialog).toContain("OnCheckForUpdates");
     expect(trayController).toContain("SetAboutUpdateStatus");
     expect(trayController).toContain("WindowsTrayAboutUpdateStatus.Checking()");
@@ -218,6 +227,11 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain("row.SetBounds(24, y, 376, 28)");
     expect(popupForm).toContain('nextSectionLabel.Text = "Up Next"');
     expect(popupForm).toContain('"Focus YouTube Music"');
+    expect(popupForm).toContain('"Open YouTube Music"');
+    expect(popupForm).toContain(
+      'PopupActionIcon.Focus,\n        "Open YouTube Music"',
+    );
+    expect(popupForm).toContain("SetYouTubeMusicTabAvailable");
     expect(popupForm).toContain('"Check for Updates"');
     expect(popupForm).toContain("Install Update {version}");
     expect(popupForm).toContain('"About YTM Tray"');
@@ -268,11 +282,16 @@ describe("Windows tray connector scaffold", () => {
     expect(project).toContain(
       "packages\\connector-ui-assets\\demo-artwork\\*.png",
     );
+    expect(project).toContain(
+      "packages\\connector-ui-assets\\artwork\\artwork-placeholder.svg",
+    );
     expect(project).toContain('Link="Resources\\%(Filename)%(Extension)"');
     expect(renderer).toContain("playback-shuffle");
     expect(renderer).toContain("playback-repeat-one");
     expect(renderer).toContain("action-focus");
     expect(renderer).toContain("extension-icon-monochrome-ring");
+    expect(renderer).toContain("ArtworkPlaceholderSvgRenderer");
+    expect(renderer).toContain('"artwork-placeholder"');
     expect(renderer).toContain("IntrinsicPixelSize");
     expect(renderer).toContain("ParseIntrinsicSize");
     expect(renderer).toContain("ParseOptionalSvgLength");
@@ -282,8 +301,9 @@ describe("Windows tray connector scaffold", () => {
     expect(renderer).not.toContain("PackageReference");
   });
 
-  it("uses a neutral macOS-style artwork placeholder", () => {
+  it("uses the shared connector artwork placeholder", () => {
     const popupForm = read("src/YTMTray/PlaybackPopupForm.cs");
+    const renderer = read("src/YTMTray/PlaybackSvgIconRenderer.cs");
     const artworkBox = popupForm.match(
       /internal sealed class ArtworkBoxControl[\s\S]+?private static bool IsSupportedArtworkUrl/,
     )?.[0];
@@ -293,11 +313,33 @@ describe("Windows tray connector scaffold", () => {
     expect(artworkBox).toContain("BorderColor");
     expect(artworkBox).toContain("PlaceholderColor");
     expect(artworkBox).toContain("DrawPlaceholder");
-    expect(artworkBox).toContain("notePen");
-    expect(artworkBox).toContain("FillEllipse");
+    expect(artworkBox).toContain("ArtworkPlaceholderSvgRenderer.Draw");
+    expect(renderer).toContain('SvgIconRenderer.Load("artwork-placeholder")');
+    expect(artworkBox).not.toContain("notePen");
+    expect(artworkBox).not.toContain("FillEllipse");
     expect(artworkBox).not.toContain("albumBrush");
     expect(artworkBox).not.toContain("sunBrush");
     expect(artworkBox).not.toContain("LinearGradientMode.ForwardDiagonal");
+  });
+
+  it("switches both tray actions between Open and Focus from YTM tab status", () => {
+    const app = read("src/YTMTray.Core/ConnectorApp.cs");
+    const protocol = read("src/YTMTray.Core/ConnectorProtocol.cs");
+    const popup = read("src/YTMTray/PlaybackPopupForm.cs");
+    const tray = read("src/YTMTray/TrayController.cs");
+
+    expect(protocol).toContain('"ytm.getStatus"');
+    expect(protocol).toContain("YtmStatus");
+    expect(app).toContain('case "ytm.status"');
+    expect(app).toContain("UpdateYouTubeMusicTabAvailability");
+    expect(popup).toContain("SetYouTubeMusicTabAvailable");
+    expect(popup).toContain('"Open YouTube Music"');
+    expect(popup).toContain('"Focus YouTube Music"');
+    expect(tray).toContain("focusMenuItem");
+    expect(tray).toContain(
+      'new ToolStripMenuItem(\n            "Open YouTube Music"',
+    );
+    expect(tray).toContain("UpdateYouTubeMusicTabAvailability");
   });
 
   it("dismisses the playback popup on taskbar and outside clicks", () => {
@@ -716,6 +758,13 @@ describe("Windows tray connector scaffold", () => {
     expect(packageScript).toContain('argValue("stage", "package")');
     expect(packageScript).toContain("src/YTMTray.Setup/YTMTray.Setup.csproj");
     expect(packageScript).toContain("YTMTray.Setup.exe");
+    expect(packageScript).toContain('join(payloadRoot, "INSTALL.txt")');
+    expect(packageScript).toContain(
+      "Double-click YTMTray.Setup.exe to install YTM Tray.",
+    );
+    expect(packageScript).toContain(
+      "Do not run YTMTray.exe directly from this folder.",
+    );
     expect(packageScript).toContain("install-native-hosts.ps1");
     expect(packageScript).not.toContain("uninstall-native-hosts.ps1");
     expect(packageScript).not.toContain("Install YTM Tray.cmd");
@@ -1044,6 +1093,8 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:payload:win-arm64");
     expect(workflow).toContain("windows-tray:archive:win-x64");
     expect(workflow).toContain("windows-tray:archive:win-arm64");
+    expect(workflow).toContain("Extract the entire zip");
+    expect(workflow).toContain("run `YTMTray.Setup.exe`");
     expect(workflow).toContain("assert-explorer-archive-compatible.ps1");
     expect(workflow).toContain("windows-tray:update-manifest");
     expect(workflow).toContain("verify-windows-tray-codesign.ps1");

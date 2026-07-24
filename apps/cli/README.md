@@ -25,6 +25,7 @@ ytme seek +10
 ytme seek -5
 ytme shuffle
 ytme repeat
+ytme open
 ytme focus
 ytme watch
 ytme watch --lines
@@ -36,6 +37,9 @@ ytme daemon status --verbose
 ytme daemon start
 ytme daemon stop
 ```
+
+`ytme open` and `ytme focus` both bring an existing YouTube Music tab forward or
+open YouTube Music when no tab exists.
 
 `ytme daemon status` is equivalent to `ytme doctor`. `ytme daemon stop` asks the
 native host to exit cleanly.

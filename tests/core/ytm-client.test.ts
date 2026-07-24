@@ -17,6 +17,10 @@ type TabSendMessage = (
   message: unknown,
 ) => Promise<MessageResponse>;
 
+type TabCreate = (
+  createProperties: chrome.tabs.CreateProperties,
+) => Promise<chrome.tabs.Tab>;
+
 function createClient(options: Partial<YtmRuntimeClientOptions> = {}) {
   let selectedTabId = options.getSelectedTabId?.() ?? null;
   const setSelectedTabId = vi.fn(async (tabId: number | null) => {
@@ -38,6 +42,7 @@ describe("YtmRuntimeClient", () => {
     vi.stubGlobal("chrome", {
       tabs: {
         query: vi.fn(),
+        create: vi.fn().mockResolvedValue(undefined),
         sendMessage: vi.fn(),
         update: vi.fn().mockResolvedValue(undefined),
       },
@@ -166,6 +171,37 @@ describe("YtmRuntimeClient", () => {
     expect(setSelectedTabId).toHaveBeenCalledWith(4);
     expect(chrome.tabs.update).toHaveBeenCalledWith(4, { active: true });
     expect(chrome.windows.update).toHaveBeenCalledWith(11, { focused: true });
+  });
+
+  it("focuses an existing tab instead of opening a duplicate", async () => {
+    const { client } = createClient();
+    vi.mocked(chrome.tabs.query as TabQuery).mockResolvedValue([
+      { id: 4, title: "YouTube Music", windowId: 11 },
+    ] as chrome.tabs.Tab[]);
+
+    await client.openOrFocusTab();
+
+    expect(chrome.tabs.update).toHaveBeenCalledWith(4, { active: true });
+    expect(chrome.windows.update).toHaveBeenCalledWith(11, { focused: true });
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+  });
+
+  it("opens YouTube Music when there is no existing tab", async () => {
+    const { client } = createClient();
+    vi.mocked(chrome.tabs.query as TabQuery).mockResolvedValue([]);
+    vi.mocked(chrome.tabs.create as TabCreate).mockResolvedValue({
+      id: 8,
+      windowId: 12,
+    } as chrome.tabs.Tab);
+
+    await client.openOrFocusTab();
+
+    expect(chrome.tabs.create).toHaveBeenCalledWith({
+      url: "https://music.youtube.com/",
+      active: true,
+    });
+    expect(chrome.windows.update).toHaveBeenCalledWith(12, { focused: true });
+    expect(chrome.tabs.update).not.toHaveBeenCalled();
   });
 
   it("syncs the favicon indicator only to the selected YTM tab", async () => {

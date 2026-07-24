@@ -16,6 +16,7 @@ internal sealed class TrayController : ITrayController, IDisposable
     private readonly WindowsTrayUpdateService updateService;
     private readonly NativeAppLogger? logger;
     private readonly CancellationTokenSource updateCancellation = new();
+    private ToolStripMenuItem? focusMenuItem;
     private ToolStripMenuItem? updateMenuItem;
     private AboutDialogForm? aboutDialog;
     private WindowsTrayUpdateCheckResult? availableUpdate;
@@ -116,6 +117,22 @@ internal sealed class TrayController : ITrayController, IDisposable
         RunOnUiThread(popup.SetStalePlaybackState);
     }
 
+    public void UpdateYouTubeMusicTabAvailability(bool available)
+    {
+        RunOnUiThread(() =>
+        {
+            var label = available
+                ? "Focus YouTube Music"
+                : "Open YouTube Music";
+            popup.SetYouTubeMusicTabAvailable(available);
+            if (focusMenuItem is not null)
+            {
+                focusMenuItem.Text = label;
+                focusMenuItem.AccessibleName = label;
+            }
+        });
+    }
+
     public void RequestUninstall()
     {
         RunOnUiThread(() => StartUninstaller(popup));
@@ -147,7 +164,13 @@ internal sealed class TrayController : ITrayController, IDisposable
     private ContextMenuStrip CreateContextMenu()
     {
         var menu = new ContextMenuStrip();
-        menu.Items.Add("Focus YouTube Music", null, (_, _) => OnFocusYouTubeMusic?.Invoke());
+        focusMenuItem = new ToolStripMenuItem(
+            "Open YouTube Music",
+            null,
+            (_, _) => OnFocusYouTubeMusic?.Invoke()
+        );
+        focusMenuItem.AccessibleName = focusMenuItem.Text;
+        menu.Items.Add(focusMenuItem);
         updateMenuItem = new ToolStripMenuItem(
             "Check for Updates",
             null,

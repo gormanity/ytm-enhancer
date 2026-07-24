@@ -79,6 +79,7 @@ function createModuleContext(
       }),
       selectTab: vi.fn().mockResolvedValue(undefined),
       focusTab: vi.fn().mockResolvedValue(undefined),
+      openOrFocusTab: vi.fn().mockResolvedValue(undefined),
       getTabArtwork: vi.fn().mockResolvedValue(null),
       getPlaybackState: vi.fn().mockResolvedValue({
         title: "Track A",

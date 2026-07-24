@@ -11,7 +11,11 @@ var tests = new (string Name, Func<Task> Run)[]
     ("protocol manifest uses tray connector identity", ProtocolManifest),
     ("protocol app busy diagnostic names the active browser", ProtocolAppBusyDiagnostic),
     ("native messaging codec round trips JSON frames", NativeMessagingCodecRoundTrip),
+    ("bridge UI connection disposal is idempotent", BridgeUiConnectionDisposalIsIdempotent),
     ("connector app handshakes and subscribes after ready", ConnectorAppHandshake),
+    ("connector app opens YTM while disconnected", ConnectorAppOpensYtmWhileDisconnected),
+    ("connector app falls back to opening YTM after focus failure", ConnectorAppOpensYtmAfterFocusFailure),
+    ("connector app tolerates older extensions without YTM status", ConnectorAppToleratesMissingYtmStatusRoute),
     ("connector app queues a fresh handshake after disconnect", ConnectorAppReconnectHandshake),
     ("connector app routes uninstall requests", ConnectorAppUninstallRequest),
     ("connector app updates tray playback state", ConnectorAppPlaybackState),
@@ -22,6 +26,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("connector app accepts shuffle updates after stale timeout", ConnectorAppAcceptsShuffleUpdateAfterStaleTimeout),
     ("connector app accepts repeat updates after stale timeout", ConnectorAppAcceptsRepeatUpdateAfterStaleTimeout),
     ("connector app normalizes missing tab errors", ConnectorAppNormalizesMissingTabError),
+    ("connector app tracks YouTube Music tab availability", ConnectorAppTracksYouTubeMusicTabAvailability),
     ("pending seek holds optimistic progress until confirmed", PendingSeekHoldsOptimisticProgress),
     ("pending seek expires back to reported progress", PendingSeekExpires),
     ("pending seek clears optimistic progress when the track changes", PendingSeekClearsOnPlaybackItemChange),
@@ -115,6 +120,18 @@ static async Task NativeMessagingCodecRoundTrip()
     AssertEqual("togglePlay", document.RootElement.GetProperty("action").GetString());
 }
 
+#pragma warning disable CA1416
+static Task BridgeUiConnectionDisposalIsIdempotent()
+{
+    var connection = new BridgeUiConnection($"ytm-tray-dispose-test-{Guid.NewGuid():N}");
+    connection.Start(_ => { }, () => { });
+
+    connection.Dispose();
+    connection.Dispose();
+    return Task.CompletedTask;
+}
+#pragma warning restore CA1416
+
 static async Task ConnectorAppHandshake()
 {
     var connection = new FakeConnection();
@@ -138,6 +155,72 @@ static async Task ConnectorAppHandshake()
     await Task.CompletedTask;
 }
 
+static Task ConnectorAppOpensYtmWhileDisconnected()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    var openCount = 0;
+    using var app = new ConnectorApp(
+        connection,
+        tray,
+        openYouTubeMusic: () => openCount += 1
+    );
+
+    app.Start();
+    tray.OnFocusYouTubeMusic?.Invoke();
+
+    AssertEqual(1, openCount);
+    AssertEqual(1, connection.SentMessages.Count);
+    return Task.CompletedTask;
+}
+
+static Task ConnectorAppOpensYtmAfterFocusFailure()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    var openCount = 0;
+    using var app = new ConnectorApp(
+        connection,
+        tray,
+        openYouTubeMusic: () => openCount += 1
+    );
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    tray.OnFocusYouTubeMusic?.Invoke();
+    AssertEqual("ytm.focus", connection.MessageTypeAt(4));
+    connection.Emit(new HostMessage
+    {
+        Type = "connector.error",
+        RequestId = "focus-5",
+        Code = "route_failed",
+        Message = "No active YouTube Music tab"
+    });
+
+    AssertEqual(1, openCount);
+    return Task.CompletedTask;
+}
+
+static Task ConnectorAppToleratesMissingYtmStatusRoute()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(connection, tray);
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    connection.Emit(new HostMessage
+    {
+        Type = "connector.error",
+        RequestId = "ytm-status-4",
+        Code = "invalid_message",
+        Message = "Invalid connector message: unsupported type ytm.getStatus"
+    });
+
+    AssertEqual("Connected", tray.Status);
+    return Task.CompletedTask;
+}
+
 static async Task ConnectorAppReconnectHandshake()
 {
     var connection = new FakeConnection();
@@ -154,7 +237,8 @@ static async Task ConnectorAppReconnectHandshake()
     connection.Disconnect();
 
     AssertEqual("Disconnected", tray.Status);
-    AssertEqual("connector.hello", connection.MessageTypeAt(3));
+    AssertEqual(false, tray.YouTubeMusicTabAvailable);
+    AssertEqual("connector.hello", connection.MessageTypeAt(4));
     await Task.CompletedTask;
 }
 
@@ -281,6 +365,33 @@ static Task ConnectorAppNormalizesMissingTabError()
     });
 
     AssertEqual("No YouTube Music tab", tray.Status);
+    AssertEqual(false, tray.YouTubeMusicTabAvailable);
+    return Task.CompletedTask;
+}
+
+static Task ConnectorAppTracksYouTubeMusicTabAvailability()
+{
+    var connection = new FakeConnection();
+    var tray = new FakeTrayController();
+    using var app = new ConnectorApp(connection, tray);
+    app.Start();
+    connection.Emit(new HostMessage { Type = "connector.ready" });
+
+    AssertEqual("ytm.getStatus", connection.MessageTypeAt(3));
+
+    connection.Emit(new HostMessage
+    {
+        Type = "ytm.status",
+        Status = new YtmStatus(false, 0, false)
+    });
+    AssertEqual(false, tray.YouTubeMusicTabAvailable);
+
+    connection.Emit(new HostMessage
+    {
+        Type = "playback.state",
+        State = PlaybackStateFixture(progress: 12)
+    });
+    AssertEqual(true, tray.YouTubeMusicTabAvailable);
     return Task.CompletedTask;
 }
 
@@ -1063,10 +1174,13 @@ sealed class FakeTrayController : ITrayController
     public bool UninstallRequested { get; private set; }
     public int StaleCount { get; private set; }
     public int UpdateCount { get; private set; }
+    public bool? YouTubeMusicTabAvailable { get; private set; }
 
     public void UpdateConnectionStatus(string status) => Status = status;
     public void UpdateBrowserSource(ConnectorSource? source) => BrowserSource = source;
     public void RequestUninstall() => UninstallRequested = true;
+    public void UpdateYouTubeMusicTabAvailability(bool available) =>
+        YouTubeMusicTabAvailable = available;
     public void SetStalePlaybackState()
     {
         StaleCount += 1;

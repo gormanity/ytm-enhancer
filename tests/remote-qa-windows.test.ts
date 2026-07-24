@@ -563,6 +563,7 @@ describe("Windows remote QA scaffold", () => {
     expect(trayE2e).toContain("UIAutomationClient");
     expect(trayE2e).toContain("Playback progress");
     expect(trayE2e).toContain("Focus YouTube Music");
+    expect(trayE2e).toContain("Open YouTube Music");
     expect(trayE2e).toContain("YTM_TRAY_LOG_PATH");
     expect(trayE2e).toContain("requestId=focus-");
     expect(trayE2e).toContain("Microsoft Edge and Firefox");

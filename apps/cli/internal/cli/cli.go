@@ -80,7 +80,7 @@ func (app App) Run(args []string) int {
 			return 2
 		}
 		return app.seek(args[1])
-	case "focus":
+	case "open", "focus":
 		return app.simple("focus", nil)
 	case "watch":
 		if hasHelpFlag(args[1:]) {
@@ -421,7 +421,7 @@ func (app App) printUsage() {
   ytme play|pause|toggle|next|prev|previous
   ytme seek <time|+seconds|-seconds>
   ytme shuffle|repeat
-  ytme focus
+  ytme open|focus
   ytme watch [--json|--lines] [--interval <duration>] [--count <n>]
   ytme doctor [--verbose]
   ytme daemon status [--verbose]|start|stop

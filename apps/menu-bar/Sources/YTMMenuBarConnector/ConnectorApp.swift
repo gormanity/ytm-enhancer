@@ -9,6 +9,7 @@ final class ConnectorApp {
   private let connection: ConnectorConnection
   private let menu: MenuBarController
   private let logger: NativeAppLogger
+  private let openYouTubeMusic: () -> Void
   private var nextRequestNumber = 0
   private var isReady = false
   private var playbackStateRetry: DispatchWorkItem?
@@ -23,11 +24,19 @@ final class ConnectorApp {
   init(
     connection: ConnectorConnection,
     menu: MenuBarController,
-    logger: NativeAppLogger = NativeAppLogger()
+    logger: NativeAppLogger = NativeAppLogger(),
+    openYouTubeMusic: (() -> Void)? = nil
   ) {
     self.connection = connection
     self.menu = menu
     self.logger = logger
+    self.openYouTubeMusic =
+      openYouTubeMusic ?? {
+        guard let url = URL(string: "https://music.youtube.com/") else {
+          return
+        }
+        NSWorkspace.shared.open(url)
+      }
   }
 
   func start() {
@@ -53,6 +62,7 @@ final class ConnectorApp {
         self?.clearPlaybackStateRetry()
         self?.clearPlaybackStateStaleTimeout()
         self?.menu.updateConnectionStatus("Disconnected")
+        self?.menu.setYouTubeMusicTabAvailable(false)
         self?.onDisconnected?()
       }
     )
@@ -87,6 +97,7 @@ final class ConnectorApp {
           requestId: nextRequestId("subscribe")
         )
       )
+      requestYouTubeMusicStatus()
       requestPlaybackState()
     case "playback.state":
       if let state = message.state {
@@ -94,9 +105,28 @@ final class ConnectorApp {
       } else {
         logger.log("playback state message missing state payload")
       }
+    case "ytm.status":
+      if let status = message.status {
+        menu.setYouTubeMusicTabAvailable(status.hasTabs)
+      } else {
+        logger.log("YouTube Music status message missing status payload")
+      }
     case "connector.error":
       let label = userFacingStatus(code: message.code, message: message.message)
       logger.log("connector error \(label)")
+      if isUnsupportedYouTubeMusicStatusRequestError(message) {
+        logger.log("ignoring unsupported YouTube Music status request")
+        return
+      }
+      if isMissingYouTubeMusicTabError(message.message) {
+        menu.setYouTubeMusicTabAvailable(false)
+      }
+      if isFocusYouTubeMusicRequestError(message) {
+        openYouTubeMusicLocally(
+          reason: "extension could not find a YouTube Music tab"
+        )
+        return
+      }
       if message.code == "connector_not_registered" {
         restartHandshake(reason: label)
         return
@@ -114,6 +144,7 @@ final class ConnectorApp {
         lastAcceptedPlaybackState = nil
         clearPlaybackStateRetry()
         clearPlaybackStateStaleTimeout()
+        menu.setYouTubeMusicTabAvailable(false)
       }
       menu.updateConnectionStatus(label)
     case ConnectorProtocol.uninstallRequestedType:
@@ -128,6 +159,7 @@ final class ConnectorApp {
   private func handlePlaybackState(_ state: PlaybackState) {
     clearPlaybackStateRetry()
     clearPlaybackStateStaleTimeout()
+    menu.setYouTubeMusicTabAvailable(true)
     logger.log(playbackStateSummary(state))
 
     if shouldKeepStalePlaybackState(state) {
@@ -155,6 +187,19 @@ final class ConnectorApp {
     logger.log("requesting playback state")
     connection.send(
       ConnectorProtocol.playbackStateRequest(requestId: nextRequestId("state"))
+    )
+  }
+
+  private func requestYouTubeMusicStatus() {
+    guard isReady else {
+      logger.log("YouTube Music status skipped because connector is not ready")
+      return
+    }
+    logger.log("requesting YouTube Music tab status")
+    connection.send(
+      ConnectorProtocol.ytmStatusRequest(
+        requestId: nextRequestId("ytm-status")
+      )
     )
   }
 
@@ -188,7 +233,7 @@ final class ConnectorApp {
 
   private func sendFocusYouTubeMusic() {
     guard isReady else {
-      logger.log("focus YouTube Music skipped because connector is not ready")
+      openYouTubeMusicLocally(reason: "connector is not ready")
       return
     }
     logger.log("sending focus YouTube Music")
@@ -228,6 +273,28 @@ final class ConnectorApp {
     }
 
     return isMissingYouTubeMusicTabError(message.message)
+  }
+
+  private func isFocusYouTubeMusicRequestError(_ message: HostMessage) -> Bool {
+    guard message.requestId?.hasPrefix("focus-") == true else {
+      return false
+    }
+
+    return isMissingYouTubeMusicTabError(message.message)
+  }
+
+  private func isUnsupportedYouTubeMusicStatusRequestError(
+    _ message: HostMessage
+  ) -> Bool {
+    message.requestId?.hasPrefix("ytm-status-") == true
+      && message.code == "invalid_message"
+  }
+
+  private func openYouTubeMusicLocally(reason: String) {
+    logger.log(
+      "opening YouTube Music in the default browser because \(reason)"
+    )
+    openYouTubeMusic()
   }
 
   private func schedulePlaybackStateRetry(reason: String) {
@@ -279,6 +346,7 @@ final class ConnectorApp {
     clearPlaybackStateStaleTimeout()
     logger.log("connector handshake restarting reason=\(reason)")
     menu.updateConnectionStatus(reason)
+    menu.setYouTubeMusicTabAvailable(false)
     connection.send(ConnectorProtocol.hello(requestId: nextRequestId("hello")))
   }
 

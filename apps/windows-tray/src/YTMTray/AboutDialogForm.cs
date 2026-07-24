@@ -27,7 +27,7 @@ internal sealed record WindowsTrayAboutUpdateStatus(
         new(
             WindowsTrayAboutUpdateStatusKind.Idle,
             "Ready to check for updates.",
-            "YTM Tray can check the component-scoped GitHub release manifest when you are ready.",
+            "Check for the latest version of YTM Tray when you are ready.",
             "Check for Updates",
             true
         );
@@ -36,7 +36,7 @@ internal sealed record WindowsTrayAboutUpdateStatus(
         new(
             WindowsTrayAboutUpdateStatusKind.Checking,
             "Checking for updates.",
-            "YTM Tray is checking the Windows tray release manifest.",
+            "Looking for the latest version of YTM Tray.",
             "Checking...",
             false
         );
@@ -45,7 +45,7 @@ internal sealed record WindowsTrayAboutUpdateStatus(
         new(
             WindowsTrayAboutUpdateStatusKind.UpToDate,
             "YTM Tray is up to date.",
-            "You are running the latest available version for this Windows install.",
+            "You are running the latest available version.",
             "Check Again",
             true
         );
@@ -59,11 +59,11 @@ internal sealed record WindowsTrayAboutUpdateStatus(
             true
         );
 
-    public static WindowsTrayAboutUpdateStatus Failed(string message) =>
+    public static WindowsTrayAboutUpdateStatus Failed(string _) =>
         new(
             WindowsTrayAboutUpdateStatusKind.Failed,
             "Unable to check for updates.",
-            message,
+            "Please try again in a moment.",
             "Check Again",
             true
         );
@@ -102,7 +102,7 @@ internal sealed class AboutDialogForm : Form
         MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 570);
+        ClientSize = new Size(520, 420);
 
         Controls.Add(BuildLayout());
         SetBrowserSource(null);
@@ -205,14 +205,12 @@ internal sealed class AboutDialogForm : Form
                 Dock = DockStyle.Fill,
                 Padding = new Padding(24),
                 ColumnCount = 1,
-                RowCount = 9
+                RowCount = 7
             },
             static (control, theme) => control.BackColor = theme.AboutSurfaceColor
         );
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -222,8 +220,7 @@ internal sealed class AboutDialogForm : Form
         layout.Controls.Add(BuildHeader(), 0, 0);
         layout.Controls.Add(BuildConnectionSection(), 0, 2);
         layout.Controls.Add(BuildUpdateSection(), 0, 4);
-        layout.Controls.Add(BuildProcessSection(), 0, 6);
-        layout.Controls.Add(BuildFooter(), 0, 8);
+        layout.Controls.Add(BuildFooter(), 0, 6);
         return layout;
     }
 
@@ -279,7 +276,7 @@ internal sealed class AboutDialogForm : Form
         textStack.Controls.Add(BuildBetaLabel());
         textStack.Controls.Add(
             MakeLabel(
-                "First-party Windows tray controls for YTM Enhancer connected apps.",
+                "See what's playing and control YouTube Music from the Windows taskbar.",
                 9f,
                 FontStyle.Regular,
                 static theme => theme.TertiaryTextColor,
@@ -295,7 +292,7 @@ internal sealed class AboutDialogForm : Form
     private Control BuildBetaLabel()
     {
         var label = MakeLabel(
-            "Beta connected app",
+            "Beta",
             8f,
             FontStyle.Bold,
             static theme => theme.WarningColor,
@@ -383,46 +380,6 @@ internal sealed class AboutDialogForm : Form
         connectionDetailLabel.AutoSize = true;
         connectionDetailLabel.MaximumSize = new Size(424, 0);
         connectionDetailLabel.Margin = new Padding(0, 4, 0, 0);
-        return panel;
-    }
-
-    private Control BuildProcessSection()
-    {
-        var panel = BuildPanel();
-        panel.Controls.Add(MakeSectionLabel("How updates work"), 0, 0);
-        panel.Controls.Add(
-            MakeLabel(
-                "YTM Tray checks the component-scoped GitHub release manifest, downloads the matching package for this Windows runtime, verifies the SHA-256 checksum, and then runs the local installer.",
-                9f,
-                FontStyle.Regular,
-                static theme => theme.SecondaryTextColor,
-                maxWidth: 424
-            ),
-            0,
-            1
-        );
-        panel.Controls.Add(
-            MakeLabel(
-                "The installer replaces files in %LOCALAPPDATA%\\YTM Enhancer\\Tray and refreshes browser native messaging host registration.",
-                9f,
-                FontStyle.Regular,
-                static theme => theme.SecondaryTextColor,
-                maxWidth: 424
-            ),
-            0,
-            2
-        );
-        panel.Controls.Add(
-            MakeLabel(
-                "Beta builds are signed and delivered as GitHub release zips while the Windows install experience is finalized.",
-                8.5f,
-                FontStyle.Regular,
-                static theme => theme.TertiaryTextColor,
-                maxWidth: 424
-            ),
-            0,
-            3
-        );
         return panel;
     }
 
