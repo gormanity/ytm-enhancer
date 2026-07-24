@@ -419,6 +419,12 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmoke).toContain("Check for Updates");
     expect(liveUpdateSmoke).toContain("Wait-DialogButton");
     expect(liveUpdateSmoke).toContain("Update YTM Tray");
+    expect(liveUpdateSmoke).toContain(
+      "if (-not (Invoke-Element $UpdateElement)) {",
+    );
+    expect(liveUpdateSmoke).toContain('$ActionActivation = "invoke"');
+    expect(liveUpdateSmoke).toContain('$ActionActivation = "click"');
+    expect(liveUpdateSmoke).toContain("actionActivation");
     expect(liveUpdateSmoke).toContain("runnerScripts");
     expect(liveUpdateSmoke).toContain("$SmokePassed");
     expect(liveUpdateSmoke).toContain(

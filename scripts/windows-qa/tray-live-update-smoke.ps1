@@ -712,7 +712,11 @@ function Invoke-LiveUpdateUi {
       '  $ProcessState = Get-Process YTMTray -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id',
       '  throw "Update action was not found. YTMTray processes: $($ProcessState -join '', ''). Visible elements: $((Get-VisibleElementNames) -join '', '')"',
       '}',
-      'Click-Element $UpdateElement',
+      '$ActionActivation = "invoke"',
+      'if (-not (Invoke-Element $UpdateElement)) {',
+      '  $ActionActivation = "click"',
+      '  Click-Element $UpdateElement',
+      '}',
       '$YesButton = Wait-DialogButton "Update YTM Tray" "Yes" 45000',
       'if ($null -eq $YesButton) {',
       '  throw "Update confirmation Yes button was not shown. Visible elements: $((Get-VisibleElementNames) -join '', '')"',
@@ -745,6 +749,7 @@ function Invoke-LiveUpdateUi {
       '  ok = $true',
       '  clickedAction = $ActionName',
       '  actionSurface = $ActionSurface',
+      '  actionActivation = $ActionActivation',
       '  runnerScripts = $RunnerScripts',
       '  installerLogs = $InstallerLogs',
       '  trayProcessIds = $TrayProcessIds',
@@ -801,7 +806,10 @@ try {
   Assert-Uninstalled
 
   Write-Host "Windows tray live-update smoke passed: $BaselineVersion -> $TargetVersion ($RuntimeIdentifier)."
-  Write-Host "Clicked update action: $($Update.clickedAction) via $($Update.actionSurface)"
+  Write-Host (
+    "Activated update action: $($Update.clickedAction) via " +
+      "$($Update.actionSurface) with $($Update.actionActivation)"
+  )
   $SmokePassed = $true
 } finally {
   Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
