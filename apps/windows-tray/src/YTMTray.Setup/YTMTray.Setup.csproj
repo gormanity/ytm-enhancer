@@ -7,5 +7,6 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AssemblyName>YTMTray.Setup</AssemblyName>
+    <ApplicationIcon>..\..\assets\YTMEnhancer.ico</ApplicationIcon>
   </PropertyGroup>
 </Project>

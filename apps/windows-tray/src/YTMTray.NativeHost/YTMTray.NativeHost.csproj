@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AssemblyName>YTMTray.NativeHost</AssemblyName>
+    <ApplicationIcon>..\..\assets\YTMEnhancer.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\YTMTray.Core\YTMTray.Core.csproj" />

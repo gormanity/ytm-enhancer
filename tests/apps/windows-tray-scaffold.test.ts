@@ -68,6 +68,63 @@ describe("Windows tray connector scaffold", () => {
     );
   });
 
+  it("embeds the YTM Enhancer product icon in every Windows executable", () => {
+    const projectPaths = [
+      "src/YTMTray/YTMTray.csproj",
+      "src/YTMTray.Setup/YTMTray.Setup.csproj",
+      "src/YTMTray.NativeHost/YTMTray.NativeHost.csproj",
+    ];
+    const generator = read("scripts/generate-app-icon.mjs");
+    const setup = read("src/YTMTray.Setup/Program.cs");
+    const iconPath = resolve(appRoot, "assets/YTMEnhancer.ico");
+    const icon = readFileSync(iconPath);
+
+    for (const projectPath of projectPaths) {
+      expect(read(projectPath)).toContain(
+        "<ApplicationIcon>..\\..\\assets\\YTMEnhancer.ico</ApplicationIcon>",
+      );
+    }
+
+    expect(generator).toContain('resolve(repoRoot, "src/assets/icon.svg")');
+    expect(generator).toContain('resolve(appRoot, "assets/YTMEnhancer.ico")');
+    expect(generator).toContain("sharp");
+    expect(generator).toContain("16, 20, 24, 32, 40, 48, 64, 128, 256");
+    expect(() =>
+      execFileSync(
+        process.execPath,
+        [resolve(appRoot, "scripts/generate-app-icon.mjs"), "--check"],
+        { stdio: "pipe" },
+      ),
+    ).not.toThrow();
+    expect(setup).toContain("shellLink.SetIconLocation(iconPath, 0)");
+    expect(setup).toContain('"DisplayIcon"');
+    expect(setup).toContain('$"{trayExecutablePath},0"');
+
+    expect(icon.readUInt16LE(0)).toBe(0);
+    expect(icon.readUInt16LE(2)).toBe(1);
+    const imageCount = icon.readUInt16LE(4);
+    expect(imageCount).toBe(9);
+
+    const sizes = Array.from({ length: imageCount }, (_, index) => {
+      const entryOffset = 6 + index * 16;
+      const width = icon[entryOffset] === 0 ? 256 : icon[entryOffset];
+      const height = icon[entryOffset + 1] === 0 ? 256 : icon[entryOffset + 1];
+      const dataLength = icon.readUInt32LE(entryOffset + 8);
+      const dataOffset = icon.readUInt32LE(entryOffset + 12);
+      const pngSignature = icon.subarray(dataOffset, dataOffset + 8);
+
+      expect(height).toBe(width);
+      expect(icon.readUInt16LE(entryOffset + 6)).toBe(32);
+      expect(dataOffset + dataLength).toBeLessThanOrEqual(icon.length);
+      expect([...pngSignature]).toEqual([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      ]);
+      return width;
+    });
+
+    expect(sizes).toEqual([16, 20, 24, 32, 40, 48, 64, 128, 256]);
+  });
+
   it("installs, updates, and uninstalls through a native setup executable", () => {
     const setup = listFiles("src/YTMTray.Setup").map(read).join("\n");
     const updater = read("src/YTMTray.Core/WindowsTrayUpdateService.cs");
