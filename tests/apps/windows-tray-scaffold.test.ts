@@ -10,7 +10,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const appRoot = resolve(process.cwd(), "apps/windows-tray");
@@ -763,12 +762,12 @@ describe("Windows tray connector scaffold", () => {
     expect(signingScript).toContain('"verify"');
   });
 
-  it("archives release payloads with Windows Explorer-compatible entry names", async () => {
+  it("archives release payloads with Windows Explorer-compatible entry names", () => {
     const testRoot = mkdtempSync(
       join(tmpdir(), "ytm-windows-tray-archive-test-"),
     );
     const payloadRoot = join(testRoot, "payload");
-    const archivePath = join(testRoot, "YTM-Tray-test-win-x64.zip");
+    const archivePath = join(testRoot, "YTM-Tray-test.tar");
 
     try {
       mkdirSync(join(payloadRoot, "nested"), { recursive: true });
@@ -776,16 +775,16 @@ describe("Windows tray connector scaffold", () => {
       writeFileSync(join(payloadRoot, "YTMTray.exe"), "tray");
       writeFileSync(join(payloadRoot, "nested", "fixture.txt"), "fixture");
 
-      const packageModule = (await import(
-        pathToFileURL(resolve(appRoot, "scripts/package-release.mjs")).href
-      )) as {
-        archivePayloadDirectory: (options: {
-          archivePath: string;
-          payloadRoot: string;
-        }) => void;
-      };
-
-      packageModule.archivePayloadDirectory({ archivePath, payloadRoot });
+      execFileSync(
+        process.execPath,
+        [
+          resolve(appRoot, "scripts/package-release.mjs"),
+          "--stage=archive-payload",
+          `--payload=${payloadRoot}`,
+          `--archive=${archivePath}`,
+        ],
+        { stdio: "pipe" },
+      );
 
       const entries = execFileSync("tar", ["-tf", archivePath], {
         encoding: "utf-8",

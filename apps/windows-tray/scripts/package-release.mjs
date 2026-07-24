@@ -255,6 +255,20 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (stage === "payload") {
     const { payloadRoot } = buildReleasePayload({ runtime, outputRoot });
     console.log(`Built Windows tray package payload at ${payloadRoot}`);
+  } else if (stage === "archive-payload") {
+    const payloadRoot = argValue("payload");
+    const archivePath = argValue("archive");
+    if (!payloadRoot || !archivePath) {
+      throw new Error(
+        "Windows tray archive-payload stage requires --payload and --archive.",
+      );
+    }
+
+    archivePayloadDirectory({
+      archivePath: resolve(archivePath),
+      payloadRoot: resolve(payloadRoot),
+    });
+    console.log(`Built Windows tray package at ${resolve(archivePath)}`);
   } else if (stage === "archive") {
     const archivePath = archiveReleasePayload({ runtime, outputRoot });
     console.log(`Built Windows tray package at ${archivePath}`);
@@ -266,9 +280,4 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   }
 }
 
-export {
-  archivePayloadDirectory,
-  archiveReleasePayload,
-  buildReleasePayload,
-  packageRelease,
-};
+export { archiveReleasePayload, buildReleasePayload, packageRelease };
