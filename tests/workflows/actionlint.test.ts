@@ -72,7 +72,7 @@ describe("GitHub Actions workflow linting", () => {
     expect(workflow).not.toContain("tray-button-smoke.ps1");
   });
 
-  it("deploys product pages from main without a component release", () => {
+  it("deploys product pages without advertising an unpublished tray release", () => {
     const workflow = readFileSync(
       resolve(process.cwd(), ".github/workflows/pages.yml"),
       "utf-8",
@@ -84,8 +84,12 @@ describe("GitHub Actions workflow linting", () => {
     expect(workflow).toContain("Product Pages");
     expect(workflow).toContain("branches: [main]");
     expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).toContain("workflow_run:");
+    expect(workflow).toContain('workflows: ["Windows Tray Release"]');
+    expect(workflow).toContain("github.event.workflow_run.conclusion");
     expect(workflow).toContain("apps/cli/release/**");
     expect(workflow).toContain("apps/cli/scripts/render-demo-video.mjs");
+    expect(workflow).toContain("contents: read");
     expect(workflow).toContain("pages: write");
     expect(workflow).toContain("id-token: write");
     expect(workflow).toContain("cancel-in-progress: false");
@@ -94,6 +98,9 @@ describe("GitHub Actions workflow linting", () => {
       "gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
     );
     expect(workflow).toContain("YTM_MENU_BAR_VERSION=$version");
+    expect(workflow).toContain("Resolve published Windows tray release");
+    expect(workflow).toContain("YTM_WINDOWS_TRAY_VERSION=$version");
+    expect(workflow).toContain("YTM_WINDOWS_TRAY_BUILD_NUMBER=$build_number");
     expect(workflow).toContain("pnpm run site:build");
     expect(workflow).toContain(
       "apps/menu-bar/.build/appcast/menu-bar/appcast.xml",

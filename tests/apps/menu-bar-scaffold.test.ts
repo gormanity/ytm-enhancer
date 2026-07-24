@@ -2051,6 +2051,66 @@ describe("menu bar connector app scaffold", () => {
     ).toContain('"connectedApps"');
   });
 
+  it("can pin product pages to the published Windows tray release", async () => {
+    const { generateLandingPages } = (await import(
+      pathToFileURL(resolve(appRoot, "scripts/generate-appcast.mjs")).href
+    )) as {
+      generateLandingPages: (options: {
+        outputPath: string;
+        releaseBaseUrl: string;
+      }) => string;
+    };
+    const outputRoot = mkdtempSync(join(tmpdir(), "ytm-published-tray-"));
+    const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
+    const previousVersion = process.env.YTM_WINDOWS_TRAY_VERSION;
+    const previousBuildNumber = process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER;
+
+    process.env.YTM_WINDOWS_TRAY_VERSION = "9.8.7";
+    process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER = "9008007";
+
+    try {
+      generateLandingPages({
+        outputPath,
+        releaseBaseUrl: "https://example.test/releases/download",
+      });
+
+      const releaseIndex = JSON.parse(
+        readFileSync(resolve(outputRoot, "site/releases.json"), "utf-8"),
+      ) as {
+        products: {
+          windowsTray: {
+            latestVersion: string;
+            buildNumber: string;
+            tag: string;
+          };
+        };
+      };
+      const windowsTrayPage = readFileSync(
+        resolve(outputRoot, "site/windows-tray/install.html"),
+        "utf-8",
+      );
+
+      expect(releaseIndex.products.windowsTray.latestVersion).toBe("9.8.7");
+      expect(releaseIndex.products.windowsTray.buildNumber).toBe("9008007");
+      expect(releaseIndex.products.windowsTray.tag).toBe("windows-tray-v9.8.7");
+      expect(windowsTrayPage).toContain("Latest version: 9.8.7");
+      expect(windowsTrayPage).toContain(
+        'href="https://github.com/gormanity/ytm-enhancer/releases/tag/windows-tray-v9.8.7"',
+      );
+    } finally {
+      if (previousVersion === undefined) {
+        delete process.env.YTM_WINDOWS_TRAY_VERSION;
+      } else {
+        process.env.YTM_WINDOWS_TRAY_VERSION = previousVersion;
+      }
+      if (previousBuildNumber === undefined) {
+        delete process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER;
+      } else {
+        process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER = previousBuildNumber;
+      }
+    }
+  });
+
   it("generates production native host manifests for app bundle installs", () => {
     const generator = read("scripts/generate-native-host-manifests.mjs");
 

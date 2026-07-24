@@ -112,7 +112,21 @@ function readCliProtocolVersion() {
 }
 
 function readWindowsTrayMetadata() {
-  return readJson(resolve(repoRoot, "apps/windows-tray/release/metadata.json"));
+  const metadata = readJson(
+    resolve(repoRoot, "apps/windows-tray/release/metadata.json"),
+  );
+  const version = process.env.YTM_WINDOWS_TRAY_VERSION;
+  const buildNumber = process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER;
+
+  if ((version === undefined) !== (buildNumber === undefined)) {
+    throw new Error(
+      "YTM_WINDOWS_TRAY_VERSION and YTM_WINDOWS_TRAY_BUILD_NUMBER must be set together.",
+    );
+  }
+
+  return version === undefined
+    ? metadata
+    : { ...metadata, version, buildNumber };
 }
 
 function extensionStoreUrls() {
