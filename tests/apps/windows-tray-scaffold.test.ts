@@ -321,8 +321,8 @@ describe("Windows tray connector scaffold", () => {
     expect(popupForm).toContain('nextSectionLabel.Text = "Up Next"');
     expect(popupForm).toContain('"Focus YouTube Music"');
     expect(popupForm).toContain('"Open YouTube Music"');
-    expect(popupForm).toContain(
-      'PopupActionIcon.Focus,\n        "Open YouTube Music"',
+    expect(popupForm).toMatch(
+      /PopupActionIcon\.Focus,\r?\n {8}"Open YouTube Music"/,
     );
     expect(popupForm).toContain("SetYouTubeMusicTabAvailable");
     expect(popupForm).toContain('"Check for Updates"');
@@ -444,8 +444,8 @@ describe("Windows tray connector scaffold", () => {
     expect(popup).toContain('"Open YouTube Music"');
     expect(popup).toContain('"Focus YouTube Music"');
     expect(tray).toContain("focusMenuItem");
-    expect(tray).toContain(
-      'new ToolStripMenuItem(\n            "Open YouTube Music"',
+    expect(tray).toMatch(
+      /new ToolStripMenuItem\(\r?\n {12}"Open YouTube Music"/,
     );
     expect(tray).toContain("UpdateYouTubeMusicTabAvailability");
   });
