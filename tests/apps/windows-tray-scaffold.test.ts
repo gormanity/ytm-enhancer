@@ -43,6 +43,7 @@ describe("Windows tray connector scaffold", () => {
     const nativeHostProject = read(
       "src/YTMTray.NativeHost/YTMTray.NativeHost.csproj",
     );
+    const setupProject = read("src/YTMTray.Setup/YTMTray.Setup.csproj");
 
     expect(project).toContain(
       "<TargetFramework>net10.0-windows</TargetFramework>",
@@ -57,6 +58,41 @@ describe("Windows tray connector scaffold", () => {
     expect(nativeHostProject).toContain(
       "<AssemblyName>YTMTray.NativeHost</AssemblyName>",
     );
+    expect(setupProject).toContain(
+      "<TargetFramework>net10.0-windows</TargetFramework>",
+    );
+    expect(setupProject).toContain("<UseWindowsForms>true</UseWindowsForms>");
+    expect(setupProject).toContain("<OutputType>WinExe</OutputType>");
+    expect(setupProject).toContain(
+      "<AssemblyName>YTMTray.Setup</AssemblyName>",
+    );
+  });
+
+  it("installs, updates, and uninstalls through a native setup executable", () => {
+    const setup = listFiles("src/YTMTray.Setup").map(read).join("\n");
+    const updater = read("src/YTMTray.Core/WindowsTrayUpdateService.cs");
+    const trayController = read("src/YTMTray/TrayController.cs");
+
+    expect(setup).toContain("WindowsTrayInstaller");
+    expect(setup).toContain("Install YTM Tray");
+    expect(setup).toContain("RegistryHive.CurrentUser");
+    expect(setup).toContain("NativeMessagingHosts");
+    expect(setup).toContain("UninstallString");
+    expect(setup).toContain("CreateStartMenuShortcut");
+    expect(setup).toContain("--wait-for-process");
+    expect(setup).toContain("--uninstall-worker");
+    expect(setup).not.toContain("powershell.exe");
+    expect(setup).not.toContain("cmd.exe");
+
+    expect(updater).toContain("InstallerExecutablePath");
+    expect(updater).toContain('"YTMTray.Setup.exe"');
+    expect(updater).toContain("--wait-for-process");
+    expect(updater).not.toContain('ProcessStartInfo("powershell.exe")');
+    expect(updater).not.toContain("run-update-installer.ps1");
+
+    expect(trayController).toContain('"YTMTray.Setup.exe"');
+    expect(trayController).toContain('ArgumentList.Add("uninstall")');
+    expect(trayController).not.toContain('"uninstall-native-hosts.ps1"');
   });
 
   it("uses the connector protocol over native messaging stdio", () => {
@@ -678,10 +714,12 @@ describe("Windows tray connector scaffold", () => {
     expect(packageScript).toContain("buildReleasePayload");
     expect(packageScript).toContain("archiveReleasePayload");
     expect(packageScript).toContain('argValue("stage", "package")');
+    expect(packageScript).toContain("src/YTMTray.Setup/YTMTray.Setup.csproj");
+    expect(packageScript).toContain("YTMTray.Setup.exe");
     expect(packageScript).toContain("install-native-hosts.ps1");
-    expect(packageScript).toContain("uninstall-native-hosts.ps1");
-    expect(packageScript).toContain("Install YTM Tray.cmd");
-    expect(packageScript).toContain("Uninstall YTM Tray.cmd");
+    expect(packageScript).not.toContain("uninstall-native-hosts.ps1");
+    expect(packageScript).not.toContain("Install YTM Tray.cmd");
+    expect(packageScript).not.toContain("Uninstall YTM Tray.cmd");
     expect(packageScript).toContain("release.json");
     expect(packageScript).toContain(
       "releaseListUrl: metadata.githubReleaseListUrl",
@@ -734,6 +772,9 @@ describe("Windows tray connector scaffold", () => {
     expect(installScript).toContain("Get-Process YTMTray, YTMTray.NativeHost");
     expect(installScript).toContain("Stop-RunningTrayProcesses");
     expect(installScript).toContain("Copy-ItemWithRetry");
+    expect(installScript).toContain("$PackagedSetupExecutablePath");
+    expect(installScript).toContain('"--quiet"');
+    expect(installScript).toContain('"--install-root"');
 
     expect(signingScript).toContain("signtool.exe");
     expect(signingScript).toContain("PROCESSOR_ARCHITECTURE");
@@ -759,6 +800,7 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(signingScript).toContain("YTMTray.exe");
     expect(signingScript).toContain("YTMTray.NativeHost.exe");
+    expect(signingScript).toContain("YTMTray.Setup.exe");
     expect(signingScript).toContain('"verify"');
   });
 
@@ -771,7 +813,7 @@ describe("Windows tray connector scaffold", () => {
 
     try {
       mkdirSync(join(payloadRoot, "nested"), { recursive: true });
-      writeFileSync(join(payloadRoot, "Install YTM Tray.cmd"), "install");
+      writeFileSync(join(payloadRoot, "YTMTray.Setup.exe"), "setup");
       writeFileSync(join(payloadRoot, "YTMTray.exe"), "tray");
       writeFileSync(join(payloadRoot, "nested", "fixture.txt"), "fixture");
 
@@ -792,9 +834,11 @@ describe("Windows tray connector scaffold", () => {
         .trim()
         .split(/\r?\n/);
 
-      expect(entries).toContain("Install YTM Tray.cmd");
+      expect(entries).toContain("YTMTray.Setup.exe");
       expect(entries).toContain("YTMTray.exe");
       expect(entries).toContain("nested/fixture.txt");
+      expect(entries).not.toContain("Install YTM Tray.cmd");
+      expect(entries).not.toContain("Uninstall YTM Tray.cmd");
       expect(entries).not.toContain(".");
       expect(entries).not.toContain("./");
       expect(
@@ -932,11 +976,12 @@ describe("Windows tray connector scaffold", () => {
     expect(updater).toContain("VerifyChecksum");
     expect(updater).toContain("ExtractZipSafely");
     expect(updater).toContain("unsafe package path");
-    expect(updater).toContain('ProcessStartInfo("powershell.exe")');
+    expect(updater).toContain('"YTMTray.Setup.exe"');
     expect(updater).toContain("ArgumentList.Add");
-    expect(updater).toContain("run-update-installer.ps1");
     expect(updater).toContain("update-installer.log");
-    expect(updater).toContain("Wait-Process -Id $ParentProcessId");
+    expect(updater).toContain("--wait-for-process");
+    expect(updater).not.toContain('ProcessStartInfo("powershell.exe")');
+    expect(updater).not.toContain("run-update-installer.ps1");
     expect(updater).toContain("FromReleaseMetadataFile");
 
     expect(trayController).toContain("StartBackgroundUpdateCheck");
@@ -1071,6 +1116,7 @@ describe("Windows tray connector scaffold", () => {
     expect(verifyCodesignScript).toContain("Get-AuthenticodeSignature");
     expect(verifyCodesignScript).toContain("YTMTray.exe");
     expect(verifyCodesignScript).toContain("YTMTray.NativeHost.exe");
+    expect(verifyCodesignScript).toContain("YTMTray.Setup.exe");
     expect(verifyCodesignScript).toContain('$Signature.Status -ne "Valid"');
     expect(packageJson.scripts["windows-tray:signing:secrets"]).toBeUndefined();
 
@@ -1078,7 +1124,8 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("YTM-Tray-<version>-win-x64.zip");
     expect(releaseDocs).toContain("YTM-Tray-update.json");
     expect(releaseDocs).toContain("Windows Settings > Apps > Installed apps");
-    expect(releaseDocs).toContain("Uninstall YTM Tray.cmd");
+    expect(releaseDocs).toContain("YTMTray.Setup.exe");
+    expect(releaseDocs).not.toContain("Uninstall YTM Tray.cmd");
     expect(releaseDocs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
     expect(releaseDocs).toContain(
       "scripts/remote/windows-qa/tray-button-smoke.sh",
@@ -1090,7 +1137,7 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("component release that does not replace");
     expect(releaseDocs).toContain("Checksum-Verified In-App Updates");
     expect(releaseDocs).toContain("Check for Updates");
-    expect(releaseDocs).toContain("Azure Artifact Signing");
+    expect(releaseDocs).toContain("Microsoft Artifact Signing");
     expect(releaseDocs).toContain("windows-signing");
     expect(releaseDocs).toContain("Windows Tray Signing Check");
     expect(releaseDocs).toContain("Code Signing Policy");
@@ -1103,7 +1150,7 @@ describe("Windows tray connector scaffold", () => {
       "Chrome, Microsoft Edge, and Firefox native messaging",
     );
     expect(codeSigningPolicy).toContain("Current Windows Tray Signing");
-    expect(codeSigningPolicy).toContain("Azure Artifact Signing");
+    expect(codeSigningPolicy).toContain("Microsoft Artifact Signing");
     expect(codeSigningPolicy).toContain(
       "Artifact Signing Certificate Profile Signer",
     );

@@ -930,8 +930,9 @@ function writeSitePages({ metadata, outputPath }) {
               <a class="button" href="#uninstall">Uninstall</a>
             </div>
             <p class="beta-note">
-              YTM Tray is part of the Connected Apps beta. Builds are signed by
-              the release workflow while trusted publisher signing is pending.
+              YTM Tray is part of the Connected Apps beta.
+              The tray app, native host, and installer are signed through
+              Microsoft Artifact Signing.
               See the <a href="https://github.com/gormanity/ytm-enhancer/blob/main/docs/code-signing-policy.md">code signing policy</a>.
             </p>
           </div>
@@ -948,9 +949,9 @@ function writeSitePages({ metadata, outputPath }) {
             <div class="section-header">
               <h2 id="setup-title">Setup</h2>
               <p>
-                Download the release zip for your Windows runtime, run the
-                included installer script, then enable Connected Apps from the
-                YTM Enhancer extension popup.
+                Download and extract the release zip for your Windows runtime,
+                run <code>YTMTray.Setup.exe</code>, then enable Connected Apps
+                from the YTM Enhancer extension popup.
               </p>
             </div>
             <ul class="meta-list" aria-label="YTM Tray details">
@@ -977,13 +978,14 @@ function writeSitePages({ metadata, outputPath }) {
               <h2 id="uninstall-title">Uninstall</h2>
               <p>
                 Release packages register YTM Tray as a user-level Windows app.
-                Remove it from Windows Settings or run the packaged uninstaller.
+                Remove it from Windows Settings, the Start Menu, or the signed
+                setup executable.
               </p>
             </div>
             <ul class="meta-list" aria-label="YTM Tray uninstall options">
               <li>Windows Settings > Apps > Installed apps > YTM Tray > Uninstall</li>
               <li>Start Menu > YTM Enhancer > Uninstall YTM Tray</li>
-              <li>Extracted release zip: <code>Uninstall YTM Tray.cmd</code></li>
+              <li>Extracted release zip: <code>YTMTray.Setup.exe uninstall</code></li>
             </ul>
           </div>
           <article class="card">

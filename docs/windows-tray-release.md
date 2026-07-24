@@ -26,21 +26,22 @@ Release for release zip downloads.
 YTM Tray currently supports Chrome, Microsoft Edge, and Firefox native messaging
 on Windows.
 
-Release packages include prebuilt self-contained executables, the native host
-relay, friendly install and uninstall command launchers, the installer script,
-the uninstaller script, and package metadata. Users do not need the .NET SDK
-when installing from a release zip.
+Release packages include the prebuilt self-contained tray app, native host
+relay, signed native setup executable, package metadata, and a temporary legacy
+update bridge. Users do not need the .NET SDK when installing from a release
+zip. Release packages do not use command or PowerShell launchers for normal
+installation or uninstallation.
 
 The installer registers YTM Tray as a user-level Windows app under
 `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\YTMTray`, creates
 Start Menu shortcuts under `YTM Enhancer`, and copies the uninstaller into the
 installed app folder. Users can uninstall from Windows Settings > Apps >
 Installed apps, from Start Menu > YTM Enhancer > Uninstall YTM Tray, or by
-running `Uninstall YTM Tray.cmd` from the extracted release zip.
+running `YTMTray.Setup.exe uninstall` from the extracted release zip.
 
-The release workflow signs `YTMTray.exe` and `YTMTray.NativeHost.exe` with Azure
-Artifact Signing before zipping release payloads. Signing is required for
-`windows-tray-v*` tag releases.
+The release workflow signs `YTMTray.exe`, `YTMTray.NativeHost.exe`, and
+`YTMTray.Setup.exe` through Microsoft Artifact Signing before zipping release
+payloads. Signing is required for `windows-tray-v*` tag releases.
 
 ## Beta User Path
 
@@ -53,21 +54,23 @@ The user-facing release path is:
 
 1. Download the current `YTM-Tray-<version>-<runtime>.zip` from the Windows tray
    install page or component-scoped GitHub Release.
-2. Extract the zip and run `Install YTM Tray.cmd`.
+2. Extract the zip and run `YTMTray.Setup.exe`.
 3. Start YTM Tray, open YTM Enhancer > Connected Apps, and enable Connected Apps
    plus the YTM Tray card.
 4. Use `Check for Updates` from the tray popup or About window. The app checks
    the `windows-tray-v*` GitHub release list, downloads `YTM-Tray-update.json`,
    verifies the package checksum, and hands off to the packaged installer.
 5. Uninstall from Windows Settings > Apps > Installed apps, Start Menu > YTM
-   Enhancer > Uninstall YTM Tray, or the packaged `Uninstall YTM Tray.cmd`.
+   Enhancer > Uninstall YTM Tray, or run `YTMTray.Setup.exe uninstall` from the
+   extracted release zip.
 
-## Azure Artifact Signing
+## Microsoft Artifact Signing
 
-Windows tray releases use Azure Artifact Signing from a protected GitHub
-environment named `windows-signing`. The release workflow authenticates with
-GitHub OIDC, builds unzipped package payloads, signs all payload executables,
-verifies Authenticode signatures, then archives the signed payloads.
+Windows tray releases use Microsoft Artifact Signing, formerly Azure Artifact
+Signing, from a protected GitHub environment named `windows-signing`. The
+release workflow authenticates with GitHub OIDC, builds unzipped package
+payloads, signs all three payload executables, verifies their Authenticode
+signatures, then archives the signed payloads.
 
 The `windows-signing` GitHub environment must provide these secrets:
 
@@ -83,15 +86,15 @@ It must also provide these environment variables:
 
 The Azure app registration must have the
 `Artifact Signing Certificate Profile Signer` role on the certificate profile or
-Artifact Signing account. The endpoint must match the Artifact Signing account
-region.
+Artifact Signing account. The Azure-backed endpoint must match the Microsoft
+Artifact Signing account region.
 
 See [Code Signing Policy](code-signing-policy.md) for the current policy and
 local signing-smoke details.
 
 Run the manual `Windows Tray Signing Check` workflow on `main` after changing
 release signing, packaging, or installer behavior. It builds `win-x64` and
-`win-arm64` payloads, signs them with Azure Artifact Signing, verifies
+`win-arm64` payloads, signs them with Microsoft Artifact Signing, verifies
 signatures, archives the release packages, and generates the update manifest
 without publishing a GitHub Release:
 
@@ -123,17 +126,22 @@ When the user accepts an update, the tray app:
 3. Downloads the release zip.
 4. Verifies the zip against the manifest SHA-256 checksum.
 5. Extracts the zip with path traversal protection.
-6. Starts the packaged `install-native-hosts.ps1`.
+6. Starts the signed packaged `YTMTray.Setup.exe`.
 7. Quits so the installer can replace the running tray executable.
 
 The updater is intentionally not silent-installing. The user confirms the
 download/install handoff, and the installer continues to use user-level
 registration under `%LOCALAPPDATA%` and `HKCU`.
 
-Before replacing files or registry keys, the installer snapshots the current
-tray executables, package metadata, native messaging manifests, and Chrome,
-Edge, and Firefox native messaging registrations. If install or registration
-fails, it restores the previous install state before returning the error.
+The 0.1.6 release invokes `install-native-hosts.ps1` during its update handoff.
+Release packages temporarily retain that script as a compatibility bridge that
+starts the native setup executable. Current installs, updates, and uninstalls do
+not use the script directly.
+
+Before replacing files or registry keys, setup snapshots the current tray
+executables, package metadata, native messaging manifests, and Chrome, Edge, and
+Firefox native messaging registrations. If install or registration fails, it
+restores the previous install state before returning the error.
 
 ## Local Package Smoke
 
@@ -149,8 +157,8 @@ pnpm run windows-tray:update-manifest
 Then extract the package for the current architecture and run:
 
 ```powershell
-.\Install YTM Tray.cmd
-.\Uninstall YTM Tray.cmd
+.\YTMTray.Setup.exe
+.\YTMTray.Setup.exe uninstall
 ```
 
 The installer should copy prebuilt binaries from the release package. It should
@@ -167,7 +175,7 @@ scripts/remote/windows-qa/tray-package-smoke.sh
 The remote signing smoke requires the Windows SDK `signtool.exe`. It creates a
 disposable self-signed code-signing certificate, exports it to a temporary PFX,
 runs package generation with `YTM_WINDOWS_TRAY_CODESIGN_REQUIRED=1`, verifies
-both packaged executables have Authenticode signatures from the disposable
+all three packaged executables have Authenticode signatures from the disposable
 signer, and removes the test certificate:
 
 ```sh
@@ -211,11 +219,11 @@ scripts/remote/windows-qa/tray-operational-smoke.sh X.Y.Z
    - a component release that does not replace GitHub's repo-wide latest release
    - `win-x64` and `win-arm64` release zips
    - `YTM-Tray-update.json` with package checksums and release URLs
-   - `Install YTM Tray.cmd` and `Uninstall YTM Tray.cmd` in each zip
-   - signed `YTMTray.exe` and `YTMTray.NativeHost.exe`
+   - signed `YTMTray.exe`, `YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe`
+   - no command launchers or packaged uninstall PowerShell script
 10. On a clean Windows account, install from the release zip and confirm:
 
-- `YTMTray.exe` and `YTMTray.NativeHost.exe` are installed under
+- `YTMTray.exe`, `YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe` are under
   `%LOCALAPPDATA%\YTM Enhancer\Tray`
 - Edge, Chrome, and Firefox native messaging registry keys point at their
   manifests
@@ -223,6 +231,7 @@ scripts/remote/windows-qa/tray-operational-smoke.sh X.Y.Z
 - playback controls, seeking, focus, About, and Quit still work
 - Windows Settings > Apps > Installed apps shows YTM Tray
 - uninstall removes registry keys, Start Menu shortcuts, and app files
+- Smart App Control permits install and uninstall from an Internet-marked zip
 
 For operational testing where a developer needs to keep using the installed
 candidate, run `scripts/remote/windows-qa/tray-operational-smoke.sh` instead of
@@ -254,5 +263,5 @@ Manual validation is optional:
 ## Follow-Up
 
 The current updater validates package checksums and safely hands off to the
-packaged installer. SmartScreen reputation and a future package-manager channel
-remain separate release hardening tasks.
+signed native installer. SmartScreen download reputation and a future
+package-manager channel remain separate release hardening tasks.

@@ -31,6 +31,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
     ("update options use packaged release version", UpdateOptionsUsePackagedReleaseVersion),
     ("update service prepares verified package", UpdateServicePreparesVerifiedPackage),
+    ("update service launches native setup directly", UpdateServiceLaunchesNativeSetupDirectly),
+    ("update service rejects packages without native setup", UpdateServiceRejectsMissingNativeSetup),
     ("update service rejects unsafe package entries", UpdateServiceRejectsUnsafePackageEntries)
 };
 
@@ -683,7 +685,7 @@ static async Task UpdateServicePreparesVerifiedPackage()
 {
     using var temp = new TempDirectory();
     var packageBytes = CreatePackageBytes(
-        ("install-native-hosts.ps1", "Write-Output installed"),
+        ("YTMTray.Setup.exe", "setup"),
         ("YTMTray.exe", "tray"),
         ("YTMTray.NativeHost.exe", "native-host")
     );
@@ -715,7 +717,95 @@ static async Task UpdateServicePreparesVerifiedPackage()
 
     AssertEqual("0.2.0", prepared.Version);
     AssertEqual(true, File.Exists(prepared.PackagePath));
-    AssertEqual(true, File.Exists(prepared.InstallerScriptPath));
+    AssertEqual(true, File.Exists(prepared.InstallerExecutablePath));
+    AssertEqual(
+        "YTMTray.Setup.exe",
+        Path.GetFileName(prepared.InstallerExecutablePath)
+    );
+}
+
+static Task UpdateServiceLaunchesNativeSetupDirectly()
+{
+    using var temp = new TempDirectory();
+    var extractDirectory = Path.Combine(temp.Path, "payload");
+    var installRoot = Path.Combine(temp.Path, "installed");
+    var setupPath = Path.Combine(extractDirectory, "YTMTray.Setup.exe");
+    var logPath = Path.Combine(extractDirectory, "update-installer.log");
+    Directory.CreateDirectory(extractDirectory);
+    File.WriteAllText(setupPath, "setup");
+    var prepared = new PreparedWindowsTrayUpdate(
+        "0.2.0",
+        "win-x64",
+        Path.Combine(temp.Path, "package.zip"),
+        extractDirectory,
+        setupPath
+    );
+
+    var startInfo = WindowsTrayUpdateService.CreateInstallerStartInfo(
+        1234,
+        installRoot,
+        prepared,
+        logPath
+    );
+    var arguments = startInfo.ArgumentList.ToArray();
+
+    AssertEqual(setupPath, startInfo.FileName);
+    AssertEqual(false, startInfo.UseShellExecute);
+    AssertEqual(extractDirectory, startInfo.WorkingDirectory);
+    AssertEqual(true, arguments.Contains("install"));
+    AssertEqual(true, arguments.Contains("--quiet"));
+    AssertEqual(true, arguments.Contains("--wait-for-process"));
+    AssertEqual(true, arguments.Contains("1234"));
+    AssertEqual(true, arguments.Contains("--install-root"));
+    AssertEqual(true, arguments.Contains(installRoot));
+    AssertEqual(true, arguments.Contains("--log-path"));
+    AssertEqual(true, arguments.Contains(logPath));
+    AssertEqual(false, startInfo.FileName.Contains("powershell", StringComparison.OrdinalIgnoreCase));
+    AssertEqual(
+        false,
+        arguments.Any(argument =>
+            argument.Contains("powershell", StringComparison.OrdinalIgnoreCase)
+            || argument.Contains("cmd.exe", StringComparison.OrdinalIgnoreCase)
+        )
+    );
+    return Task.CompletedTask;
+}
+
+static async Task UpdateServiceRejectsMissingNativeSetup()
+{
+    using var temp = new TempDirectory();
+    var packageBytes = CreatePackageBytes(
+        ("install-native-hosts.ps1", "Write-Output legacy"),
+        ("YTMTray.exe", "tray"),
+        ("YTMTray.NativeHost.exe", "native-host")
+    );
+    var checksum = Sha256(packageBytes);
+    using var http = new HttpClient(new FakeHttpHandler(request =>
+        request.RequestUri?.AbsoluteUri switch
+        {
+            "https://example.test/releases" => ReleasesResponse(),
+            "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-update.json" =>
+                JsonResponse(UpdateManifestJson(checksum)),
+            "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-0.2.0-win-x64.zip" =>
+                BytesResponse(packageBytes),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        }
+    ));
+    var service = new WindowsTrayUpdateService(
+        http,
+        new WindowsTrayUpdateOptions(
+            new Uri("https://example.test/releases"),
+            "windows-tray-v",
+            "0.1.0",
+            "win-x64"
+        )
+    );
+
+    var update = await service.CheckForUpdateAsync();
+    await AssertThrowsAsync<InvalidDataException>(
+        () => service.DownloadAndPrepareUpdateAsync(update, temp.Path),
+        "missing YTMTray.Setup.exe"
+    );
 }
 
 static async Task UpdateServiceRejectsUnsafePackageEntries()

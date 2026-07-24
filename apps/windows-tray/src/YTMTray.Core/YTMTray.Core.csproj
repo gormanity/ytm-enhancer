@@ -9,4 +9,7 @@
     <FileVersion>0.1.6.1006</FileVersion>
     <InformationalVersion>0.1.6</InformationalVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="YTMTray.Tests" />
+  </ItemGroup>
 </Project>

@@ -104,6 +104,7 @@ if ([string]::IsNullOrWhiteSpace($VerifyMode)) {
 $FilesToSign = @(
   Join-Path $PayloadRoot "YTMTray.exe"
   Join-Path $PayloadRoot "YTMTray.NativeHost.exe"
+  Join-Path $PayloadRoot "YTMTray.Setup.exe"
 )
 
 foreach ($FileToSign in $FilesToSign) {

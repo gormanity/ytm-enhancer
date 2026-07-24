@@ -22,9 +22,11 @@ $TrayProjectPath = Join-Path $AppRoot "src\YTMTray\YTMTray.csproj"
 $NativeHostProjectPath = Join-Path $AppRoot "src\YTMTray.NativeHost\YTMTray.NativeHost.csproj"
 $PackagedExecutablePath = Join-Path $ScriptRoot "YTMTray.exe"
 $PackagedNativeHostExecutablePath = Join-Path $ScriptRoot "YTMTray.NativeHost.exe"
+$PackagedSetupExecutablePath = Join-Path $ScriptRoot "YTMTray.Setup.exe"
 $PackagedUninstallerPath = Join-Path $ScriptRoot "uninstall-native-hosts.ps1"
 $PackagedReleaseMetadataPath = Join-Path $ScriptRoot "release.json"
 $CompatibilityRunnerPath = Join-Path $ScriptRoot "run-update-installer.ps1"
+$InstallRootWasSpecified = -not [string]::IsNullOrWhiteSpace($InstallRoot)
 
 if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) {
   $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
@@ -36,6 +38,27 @@ if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) {
 
 if ([string]::IsNullOrWhiteSpace($InstallRoot)) {
   $InstallRoot = Join-Path $env:LOCALAPPDATA "YTM Enhancer\Tray"
+}
+
+if (Test-Path -LiteralPath $PackagedSetupExecutablePath) {
+  $NativeSetupArguments = @(
+    "install",
+    "--quiet",
+    "--runtime-identifier",
+    $RuntimeIdentifier
+  )
+  if ($InstallRootWasSpecified) {
+    $NativeSetupArguments += @("--install-root", $InstallRoot)
+  }
+  foreach ($Origin in $AdditionalAllowedOrigins) {
+    $NativeSetupArguments += @("--additional-allowed-origin", $Origin)
+  }
+
+  & $PackagedSetupExecutablePath @NativeSetupArguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "YTMTray.Setup.exe exited with code $LASTEXITCODE"
+  }
+  return
 }
 
 if ([string]::IsNullOrWhiteSpace($InstallerLogPath)) {

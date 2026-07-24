@@ -12,6 +12,7 @@ if (-not (Test-Path -LiteralPath $PayloadRoot)) {
 $FilesToVerify = @(
   Join-Path $PayloadRoot "YTMTray.exe"
   Join-Path $PayloadRoot "YTMTray.NativeHost.exe"
+  Join-Path $PayloadRoot "YTMTray.Setup.exe"
 )
 
 foreach ($FileToVerify in $FilesToVerify) {

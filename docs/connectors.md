@@ -269,7 +269,7 @@ native messaging. It mirrors the macOS menu bar connector's user-facing role on
 Windows: current playback status, tray/menu controls, focus YouTube Music, and
 connection diagnostics. Direct release installs can check GitHub component
 releases in the background, verify the runtime package checksum, and hand off to
-the packaged installer after user confirmation.
+the signed `YTMTray.Setup.exe` installer after user confirmation.
 
 The Windows tray app is separate from the CLI. Windows users get a native tray
 surface; PowerShell or WSL CLI support is intentionally not part of the Windows
@@ -281,7 +281,7 @@ The Connected Apps popup links users to the stable Windows install page:
 https://gormanity.github.io/ytm-enhancer/windows-tray/install.html
 ```
 
-Initial local development commands are:
+Initial source-checkout development commands are:
 
 ```powershell
 dotnet run --project apps/windows-tray/tests/YTMTray.Tests/YTMTray.Tests.csproj
@@ -289,10 +289,12 @@ apps/windows-tray/scripts/install-native-hosts.ps1
 apps/windows-tray/scripts/uninstall-native-hosts.ps1
 ```
 
-The local installer publishes a self-contained `YTMTray.exe` plus
+The local development script publishes a self-contained `YTMTray.exe` plus
 `YTMTray.NativeHost.exe`, writes a native messaging manifest that points at the
 native-host relay under `%LOCALAPPDATA%\YTM Enhancer\Tray`, and registers
 user-level native messaging keys for Google Chrome, Microsoft Edge, and Firefox.
+Release users instead run the signed native `YTMTray.Setup.exe`; the app, native
+host, and setup executable are signed through Microsoft Artifact Signing.
 
 ## Release Status
 

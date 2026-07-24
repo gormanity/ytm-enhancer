@@ -326,7 +326,8 @@ describe("Windows remote QA scaffold", () => {
     expect(explorerArchiveCheck).not.toContain("CopyHere");
     expect(packageSmoke).toContain("Expand-Archive");
     expect(packageSmoke).toContain("install-native-hosts.ps1");
-    expect(packageSmoke).toContain("Uninstall YTM Tray.cmd");
+    expect(packageSmoke).toContain("YTMTray.Setup.exe");
+    expect(packageSmoke).not.toContain("Uninstall YTM Tray.cmd");
     expect(packageSmoke).toContain(
       "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\YTMTray",
     );
@@ -462,6 +463,26 @@ describe("Windows remote QA scaffold", () => {
     );
     expect(docs).toContain("does not uninstall or");
     expect(docs).toContain("quit the tray app");
+  });
+
+  it("validates a public Windows tray archive under Smart App Control", () => {
+    const sacSmoke = read("scripts/windows-qa/tray-sac-smoke.ps1");
+    const sacSmokeShell = read("scripts/remote/windows-qa/tray-sac-smoke.sh");
+    const docs = read("docs/remote-qa.md");
+
+    expect(sacSmoke).toContain("VerifiedAndReputablePolicyState");
+    expect(sacSmoke).toContain("ZoneId=3");
+    expect(sacSmoke).toContain("Get-AuthenticodeSignature");
+    expect(sacSmoke).toContain("YTMTray.Setup.exe");
+    expect(sacSmoke).toContain("Wait-WindowsQaUiAgentReady");
+    expect(sacSmoke).toContain("Invoke-InteractivePowerShell");
+    expect(sacSmoke).toContain("Microsoft-Windows-CodeIntegrity/Operational");
+    expect(sacSmoke).toContain("Microsoft-Windows-AppLocker/MSI and Script");
+    expect(sacSmoke).toContain('".cmd", ".ps1"');
+    expect(sacSmokeShell).toContain("-ArchivePath");
+    expect(sacSmokeShell).toContain("scripts\\windows-qa\\tray-sac-smoke.ps1");
+    expect(docs).toContain("scripts/remote/windows-qa/tray-sac-smoke.sh");
+    expect(docs).toContain("Smart App Control enforcement");
   });
 
   it("automates Windows tray release signing smoke with a disposable certificate", () => {

@@ -26,7 +26,10 @@ $FirefoxManifestPath = Join-Path $InstallRoot "$HostName.firefox.json"
 $NativeHostPath = Join-Path $InstallRoot "YTMTray.NativeHost.exe"
 $ReleaseMetadataPath = Join-Path $InstallRoot "release.json"
 $TrayPath = Join-Path $InstallRoot "YTMTray.exe"
-$UninstallerPath = Join-Path $InstallRoot "uninstall-native-hosts.ps1"
+$SetupPath = Join-Path $InstallRoot "YTMTray.Setup.exe"
+$LegacyUninstallerPath = Join-Path $InstallRoot "uninstall-native-hosts.ps1"
+$TrayShortcutPath = Join-Path $StartMenuFolder "YTM Tray.lnk"
+$UninstallShortcutPath = Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk"
 $LaunchResultPath = Join-Path $WorkRoot "launch.json"
 $TrayLogPath = Join-Path $WorkRoot "tray.log"
 $NativeRegistryKeys = @{
@@ -57,6 +60,50 @@ function Assert-PathExists {
 
   if (-not (Test-Path -LiteralPath $Path)) {
     throw "Expected path to exist: $Path"
+  }
+}
+
+function Assert-PathMissing {
+  param([Parameter(Mandatory = $true)][string] $Path)
+
+  if (Test-Path -LiteralPath $Path) {
+    throw "Expected path to be removed: $Path"
+  }
+}
+
+function Assert-NoInstalledScripts {
+  $Scripts = @(
+    Get-ChildItem -LiteralPath $InstallRoot -Recurse -File |
+      Where-Object { $_.Extension -in @(".cmd", ".ps1") }
+  )
+  if ($Scripts.Count -gt 0) {
+    throw "Expected no installed command or PowerShell scripts; found: $($Scripts.FullName -join ', ')"
+  }
+}
+
+function Assert-Shortcut {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)][string] $ExpectedTargetPath,
+    [string] $ExpectedArguments = ""
+  )
+
+  Assert-PathExists $Path
+  $Shell = New-Object -ComObject WScript.Shell
+  $Shortcut = $Shell.CreateShortcut($Path)
+  Assert-Equal $ExpectedTargetPath $Shortcut.TargetPath "$Path target"
+  Assert-Equal $ExpectedArguments $Shortcut.Arguments "$Path arguments"
+}
+
+function Invoke-Native {
+  param(
+    [Parameter(Mandatory = $true)][string] $FilePath,
+    [string[]] $Arguments = @()
+  )
+
+  & $FilePath @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "$FilePath exited with code $LASTEXITCODE"
   }
 }
 
@@ -129,10 +176,7 @@ function Expand-ReleasePackage {
   New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
   Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractRoot -Force
 
-  Assert-PathExists (Join-Path $ExtractRoot "Install YTM Tray.cmd")
-  Assert-PathExists (Join-Path $ExtractRoot "Uninstall YTM Tray.cmd")
-  Assert-PathExists (Join-Path $ExtractRoot "install-native-hosts.ps1")
-  Assert-PathExists (Join-Path $ExtractRoot "uninstall-native-hosts.ps1")
+  Assert-PathExists (Join-Path $ExtractRoot "YTMTray.Setup.exe")
   Assert-PathExists (Join-Path $ExtractRoot "release.json")
   Assert-PathExists (Join-Path $ExtractRoot "YTMTray.exe")
   Assert-PathExists (Join-Path $ExtractRoot "YTMTray.NativeHost.exe")
@@ -159,14 +203,17 @@ function Assert-InstalledRelease {
   Assert-PathExists $NativeHostPath
   Assert-PathExists $ChromiumManifestPath
   Assert-PathExists $FirefoxManifestPath
-  Assert-PathExists $UninstallerPath
+  Assert-PathExists $SetupPath
+  Assert-PathMissing $LegacyUninstallerPath
+  Assert-NoInstalledScripts
   Assert-PathExists $ReleaseMetadataPath
   Assert-PathExists $UninstallRegistryKey
-  Assert-PathExists (Join-Path $StartMenuFolder "YTM Tray.lnk")
-  Assert-PathExists (Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk")
+  Assert-PathExists $TrayShortcutPath
+  Assert-PathExists $UninstallShortcutPath
 
   Assert-AuthenticodeSigner $TrayPath
   Assert-AuthenticodeSigner $NativeHostPath
+  Assert-AuthenticodeSigner $SetupPath
 
   $ReleaseMetadata = Get-Content -LiteralPath $ReleaseMetadataPath -Raw |
     ConvertFrom-Json
@@ -176,6 +223,21 @@ function Assert-InstalledRelease {
   $UninstallEntry = Get-ItemProperty -LiteralPath $UninstallRegistryKey
   Assert-Equal $InstallRoot $UninstallEntry.InstallLocation "uninstall install location"
   Assert-Equal $ReleaseVersion $UninstallEntry.DisplayVersion "uninstall display version"
+  Assert-Equal `
+    "`"$SetupPath`" uninstall" `
+    $UninstallEntry.UninstallString `
+    "uninstall command"
+  Assert-Equal `
+    "`"$SetupPath`" uninstall --quiet" `
+    $UninstallEntry.QuietUninstallString `
+    "quiet uninstall command"
+  Assert-Shortcut `
+    -Path $TrayShortcutPath `
+    -ExpectedTargetPath $TrayPath
+  Assert-Shortcut `
+    -Path $UninstallShortcutPath `
+    -ExpectedTargetPath $SetupPath `
+    -ExpectedArguments "uninstall"
 
   foreach ($RegistryKey in $NativeRegistryKeys.Keys) {
     Assert-PathExists $RegistryKey
@@ -185,8 +247,36 @@ function Assert-InstalledRelease {
 }
 
 function Invoke-InstalledUninstaller {
-  if (Test-Path -LiteralPath $UninstallerPath) {
-    & $UninstallerPath -Quiet
+  if (Test-Path -LiteralPath $SetupPath) {
+    Invoke-Native `
+      -FilePath $SetupPath `
+      -Arguments @(
+        "uninstall",
+        "--quiet",
+        "--install-root",
+        $InstallRoot
+      )
+    $Deadline = (Get-Date).AddSeconds(30)
+    while (
+      (
+        (Test-Path -LiteralPath $InstallRoot) -or
+        (Test-Path -LiteralPath $UninstallRegistryKey) -or
+        (Test-Path -LiteralPath $TrayShortcutPath) -or
+        (Test-Path -LiteralPath $UninstallShortcutPath)
+      ) -and
+      (Get-Date) -lt $Deadline
+    ) {
+      Start-Sleep -Milliseconds 250
+    }
+    Assert-PathMissing $InstallRoot
+    Assert-PathMissing $UninstallRegistryKey
+    Assert-PathMissing $TrayShortcutPath
+    Assert-PathMissing $UninstallShortcutPath
+    return
+  }
+
+  if (Test-Path -LiteralPath $LegacyUninstallerPath) {
+    & $LegacyUninstallerPath -Quiet -InstallRoot $InstallRoot
   }
 }
 
@@ -196,14 +286,16 @@ function Install-ReleasePackage {
     [Parameter(Mandatory = $true)][string] $ReleaseVersion
   )
 
-  Push-Location $ExtractRoot
-  try {
-    & .\install-native-hosts.ps1 `
-      -RuntimeIdentifier $RuntimeIdentifier `
-      -InstallRoot $InstallRoot
-  } finally {
-    Pop-Location
-  }
+  Invoke-Native `
+    -FilePath (Join-Path $ExtractRoot "YTMTray.Setup.exe") `
+    -Arguments @(
+      "install",
+      "--quiet",
+      "--runtime-identifier",
+      $RuntimeIdentifier,
+      "--install-root",
+      $InstallRoot
+    )
 
   Assert-InstalledRelease -ReleaseVersion $ReleaseVersion
 }

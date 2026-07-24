@@ -833,6 +833,42 @@ Authenticode signatures from the disposable signer, and removes the temporary
 certificate. It validates the signing plumbing without installing production
 signing secrets on the QA target.
 
+Run the Windows tray Smart App Control smoke against an already-published,
+public-trust-signed release archive:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/tray-sac-smoke.ps1 `
+  -ArchivePath "$env:USERPROFILE\Downloads\YTM-Tray-0.1.7-win-x64.zip"
+```
+
+The remote wrapper accepts a path on the Windows target. Keep the archive
+outside `REMOTE_QA_WINDOWS_WORK_ROOT`, because the wrapper replaces that
+disposable checkout when it syncs:
+
+```sh
+scripts/remote/windows-qa/tray-sac-smoke.sh \
+  'C:\Users\<windows-qa-user>\Downloads\YTM-Tray-0.1.7-win-x64.zip'
+```
+
+The smoke requires Smart App Control enforcement to already be on
+(`VerifiedAndReputablePolicyState=1`) and an unlocked desktop with the Windows
+QA UI agent running. The target must not have an existing YTM Tray install; the
+smoke fails rather than replacing user state. It does not change Smart App
+Control state, download an archive, create a certificate, or sign binaries. It
+extracts the supplied ZIP, adds Internet-zone Mark of the Web to every payload
+file, requires valid Authenticode signatures on `YTMTray.exe`,
+`YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe`, and captures Code Integrity
+and AppLocker event-log cursors. It then launches the marked native setup
+through the logged-in desktop agent, validates the installed files and registry
+entries, confirms that no CMD or PowerShell scripts were installed, runs the
+installed native uninstaller, and verifies cleanup. The smoke fails if new
+blocking events identify setup, CMD, or PowerShell.
+
+Set `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS` to control the desktop readiness
+wait. Set `YTM_WINDOWS_TRAY_SAC_OPERATION_TIMEOUT_SECONDS` to control install
+and uninstall waits.
+
 Run the Windows tray visual smoke from an active Windows desktop session:
 
 ```powershell

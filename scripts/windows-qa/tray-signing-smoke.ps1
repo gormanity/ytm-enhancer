@@ -160,6 +160,9 @@ try {
   Assert-SignedFile `
     -Path (Join-Path $ExtractRoot "YTMTray.NativeHost.exe") `
     -ExpectedThumbprint $CertificateThumbprint
+  Assert-SignedFile `
+    -Path (Join-Path $ExtractRoot "YTMTray.Setup.exe") `
+    -ExpectedThumbprint $CertificateThumbprint
   Write-SmokeStep "Signing smoke passed."
 } finally {
   Remove-Item Env:YTM_WINDOWS_TRAY_CODESIGN_REQUIRED -ErrorAction SilentlyContinue

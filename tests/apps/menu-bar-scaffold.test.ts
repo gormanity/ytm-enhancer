@@ -1683,7 +1683,7 @@ describe("menu bar connector app scaffold", () => {
       "YTM Tray currently supports Chrome, Microsoft Edge, and Firefox.",
     );
     expect(appcastScript).toContain(
-      "Builds are signed by\n              the release workflow while trusted publisher signing is pending.",
+      "The tray app, native host, and installer are signed through\n              Microsoft Artifact Signing.",
     );
     expect(appcastScript).toContain(
       "https://github.com/gormanity/ytm-enhancer/blob/main/docs/code-signing-policy.md",
@@ -1924,10 +1924,11 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(windowsTrayPage).not.toContain("releases?q=");
     expect(windowsTrayPage).toContain("Windows Settings > Apps");
-    expect(windowsTrayPage).toContain("Uninstall YTM Tray.cmd");
+    expect(windowsTrayPage).toContain("YTMTray.Setup.exe");
+    expect(windowsTrayPage).not.toContain("Uninstall YTM Tray.cmd");
     expect(windowsTrayPage).toContain("Start Menu > YTM Enhancer");
     expect(windowsTrayPage).toContain(
-      "Builds are signed by\n              the release workflow while trusted publisher signing is pending.",
+      "The tray app, native host, and installer are signed through\n              Microsoft Artifact Signing.",
     );
     expect(windowsTrayPage).toContain(
       "https://github.com/gormanity/ytm-enhancer/blob/main/docs/code-signing-policy.md",

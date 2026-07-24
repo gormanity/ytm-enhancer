@@ -90,13 +90,6 @@ function maybeSignPayload(payloadRoot) {
   ]);
 }
 
-function writeCommandFile(path, scriptName) {
-  writeFileSync(
-    path,
-    `@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0${scriptName}"\r\n`,
-  );
-}
-
 function releasePaths({ runtime, metadata, outputRoot }) {
   if (!metadata.runtimes.includes(runtime)) {
     throw new Error(`Unsupported Windows tray runtime: ${runtime}`);
@@ -140,22 +133,18 @@ function buildReleasePayload({
     runtime,
     metadata,
   });
+  publishProject({
+    project: resolve(appRoot, "src/YTMTray.Setup/YTMTray.Setup.csproj"),
+    outputDirectory: payloadRoot,
+    runtime,
+    metadata,
+  });
 
+  // Retain this bridge so the 0.1.6 updater can hand off to the native setup
+  // executable. New installs and subsequent updates launch YTMTray.Setup.exe.
   copyFileSync(
     resolve(appRoot, "scripts/install-native-hosts.ps1"),
     join(payloadRoot, "install-native-hosts.ps1"),
-  );
-  copyFileSync(
-    resolve(appRoot, "scripts/uninstall-native-hosts.ps1"),
-    join(payloadRoot, "uninstall-native-hosts.ps1"),
-  );
-  writeCommandFile(
-    join(payloadRoot, "Install YTM Tray.cmd"),
-    "install-native-hosts.ps1",
-  );
-  writeCommandFile(
-    join(payloadRoot, "Uninstall YTM Tray.cmd"),
-    "uninstall-native-hosts.ps1",
   );
   writeFileSync(
     join(payloadRoot, "release.json"),

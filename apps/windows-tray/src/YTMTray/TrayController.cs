@@ -334,12 +334,12 @@ internal sealed class TrayController : ITrayController, IDisposable
 
     private void StartUninstaller(IWin32Window? owner = null)
     {
-        var uninstallerPath = Path.Combine(AppContext.BaseDirectory, "uninstall-native-hosts.ps1");
+        var uninstallerPath = Path.Combine(AppContext.BaseDirectory, "YTMTray.Setup.exe");
         if (!File.Exists(uninstallerPath))
         {
             ShowUninstallMessage(
                 owner,
-                "This YTM Tray build does not include the packaged uninstaller. Use the uninstaller script from the release zip, or reinstall from the Windows install page.",
+                "This YTM Tray build does not include the native uninstaller. Reinstall from the Windows install page, then try again.",
                 MessageBoxIcon.Warning
             );
             return;
@@ -354,16 +354,13 @@ internal sealed class TrayController : ITrayController, IDisposable
         );
         if (uninstallChoice != DialogResult.Yes) return;
 
-        var startInfo = new ProcessStartInfo("powershell.exe")
+        var startInfo = new ProcessStartInfo(uninstallerPath)
         {
             UseShellExecute = false,
             WorkingDirectory = AppContext.BaseDirectory
         };
-        startInfo.ArgumentList.Add("-NoProfile");
-        startInfo.ArgumentList.Add("-ExecutionPolicy");
-        startInfo.ArgumentList.Add("Bypass");
-        startInfo.ArgumentList.Add("-File");
-        startInfo.ArgumentList.Add(uninstallerPath);
+        startInfo.ArgumentList.Add("uninstall");
+        startInfo.ArgumentList.Add("--quiet");
 
         try
         {

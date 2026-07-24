@@ -21,6 +21,10 @@ $StartMenuFolder = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs
 $ChromiumManifestPath = Join-Path $InstallRoot "$HostName.json"
 $FirefoxManifestPath = Join-Path $InstallRoot "$HostName.firefox.json"
 $NativeHostPath = Join-Path $InstallRoot "YTMTray.NativeHost.exe"
+$SetupPath = Join-Path $InstallRoot "YTMTray.Setup.exe"
+$LegacyUninstallerPath = Join-Path $InstallRoot "uninstall-native-hosts.ps1"
+$TrayShortcutPath = Join-Path $StartMenuFolder "YTM Tray.lnk"
+$UninstallShortcutPath = Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk"
 $NativeRegistryKeys = @{
   "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$HostName" = $ChromiumManifestPath
   "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$HostName" = $ChromiumManifestPath
@@ -52,6 +56,42 @@ function Assert-PathMissing {
 
   if (Test-Path -LiteralPath $Path) {
     throw "Expected path to be removed: $Path"
+  }
+}
+
+function Assert-NoInstalledScripts {
+  $Scripts = @(
+    Get-ChildItem -LiteralPath $InstallRoot -Recurse -File |
+      Where-Object { $_.Extension -in @(".cmd", ".ps1") }
+  )
+  if ($Scripts.Count -gt 0) {
+    throw "Expected no installed command or PowerShell scripts; found: $($Scripts.FullName -join ', ')"
+  }
+}
+
+function Assert-Shortcut {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)][string] $ExpectedTargetPath,
+    [string] $ExpectedArguments = ""
+  )
+
+  Assert-PathExists $Path
+  $Shell = New-Object -ComObject WScript.Shell
+  $Shortcut = $Shell.CreateShortcut($Path)
+  Assert-Equal $ExpectedTargetPath $Shortcut.TargetPath "$Path target"
+  Assert-Equal $ExpectedArguments $Shortcut.Arguments "$Path arguments"
+}
+
+function Invoke-Native {
+  param(
+    [Parameter(Mandatory = $true)][string] $FilePath,
+    [string[]] $Arguments = @()
+  )
+
+  & $FilePath @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "$FilePath exited with code $LASTEXITCODE"
   }
 }
 
@@ -93,7 +133,8 @@ function Save-ReleaseAsset {
 function Expand-ReleasePackage {
   param(
     [Parameter(Mandatory = $true)][string] $Version,
-    [Parameter(Mandatory = $true)][string] $ArchivePath
+    [Parameter(Mandatory = $true)][string] $ArchivePath,
+    [switch] $RequireNativeSetup
   )
 
   $ExtractRoot = Join-Path $WorkRoot "extract-$Version"
@@ -101,13 +142,17 @@ function Expand-ReleasePackage {
   New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
   Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractRoot -Force
 
-  Assert-PathExists (Join-Path $ExtractRoot "Install YTM Tray.cmd")
-  Assert-PathExists (Join-Path $ExtractRoot "Uninstall YTM Tray.cmd")
-  Assert-PathExists (Join-Path $ExtractRoot "install-native-hosts.ps1")
-  Assert-PathExists (Join-Path $ExtractRoot "uninstall-native-hosts.ps1")
   Assert-PathExists (Join-Path $ExtractRoot "release.json")
   Assert-PathExists (Join-Path $ExtractRoot "YTMTray.exe")
   Assert-PathExists (Join-Path $ExtractRoot "YTMTray.NativeHost.exe")
+
+  $PackageSetupPath = Join-Path $ExtractRoot "YTMTray.Setup.exe"
+  if ($RequireNativeSetup) {
+    Assert-PathExists $PackageSetupPath
+  } elseif (-not (Test-Path -LiteralPath $PackageSetupPath)) {
+    Assert-PathExists (Join-Path $ExtractRoot "install-native-hosts.ps1")
+    Assert-PathExists (Join-Path $ExtractRoot "uninstall-native-hosts.ps1")
+  }
 
   return $ExtractRoot
 }
@@ -118,16 +163,28 @@ function Install-ReleasePackage {
     [Parameter(Mandatory = $true)][string] $Version
   )
 
-  Push-Location $ExtractRoot
-  try {
-    & .\install-native-hosts.ps1 `
+  $PackageSetupPath = Join-Path $ExtractRoot "YTMTray.Setup.exe"
+  $UsesNativeSetup = Test-Path -LiteralPath $PackageSetupPath
+  if ($UsesNativeSetup) {
+    Invoke-Native `
+      -FilePath $PackageSetupPath `
+      -Arguments @(
+        "install",
+        "--quiet",
+        "--runtime-identifier",
+        $RuntimeIdentifier,
+        "--install-root",
+        $InstallRoot
+      )
+  } else {
+    & (Join-Path $ExtractRoot "install-native-hosts.ps1") `
       -RuntimeIdentifier $RuntimeIdentifier `
       -InstallRoot $InstallRoot
-  } finally {
-    Pop-Location
   }
 
-  Assert-InstalledRelease -Version $Version
+  Assert-InstalledRelease `
+    -Version $Version `
+    -NativeSetupExpected:$UsesNativeSetup
 }
 
 function Assert-AuthenticodeSigner {
@@ -143,7 +200,10 @@ function Assert-AuthenticodeSigner {
 }
 
 function Assert-InstalledRelease {
-  param([Parameter(Mandatory = $true)][string] $Version)
+  param(
+    [Parameter(Mandatory = $true)][string] $Version,
+    [switch] $NativeSetupExpected
+  )
 
   $TrayPath = Join-Path $InstallRoot "YTMTray.exe"
   $ReleaseMetadataPath = Join-Path $InstallRoot "release.json"
@@ -152,15 +212,21 @@ function Assert-InstalledRelease {
   Assert-PathExists $NativeHostPath
   Assert-PathExists $ChromiumManifestPath
   Assert-PathExists $FirefoxManifestPath
-  Assert-PathExists (Join-Path $InstallRoot "uninstall-native-hosts.ps1")
-  Assert-PathExists (Join-Path $InstallRoot "Uninstall YTM Tray.cmd")
   Assert-PathExists $ReleaseMetadataPath
   Assert-PathExists $UninstallRegistryKey
-  Assert-PathExists (Join-Path $StartMenuFolder "YTM Tray.lnk")
-  Assert-PathExists (Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk")
+  Assert-PathExists $TrayShortcutPath
+  Assert-PathExists $UninstallShortcutPath
 
   Assert-AuthenticodeSigner $TrayPath
   Assert-AuthenticodeSigner $NativeHostPath
+  if ($NativeSetupExpected) {
+    Assert-PathExists $SetupPath
+    Assert-AuthenticodeSigner $SetupPath
+    Assert-PathMissing $LegacyUninstallerPath
+    Assert-NoInstalledScripts
+  } else {
+    Assert-PathExists $LegacyUninstallerPath
+  }
 
   $ReleaseMetadata = Get-Content -LiteralPath $ReleaseMetadataPath -Raw |
     ConvertFrom-Json
@@ -170,6 +236,23 @@ function Assert-InstalledRelease {
   $UninstallEntry = Get-ItemProperty -LiteralPath $UninstallRegistryKey
   Assert-Equal $InstallRoot $UninstallEntry.InstallLocation "uninstall install location"
   Assert-Equal $Version $UninstallEntry.DisplayVersion "uninstall display version"
+  if ($NativeSetupExpected) {
+    Assert-Equal `
+      "`"$SetupPath`" uninstall" `
+      $UninstallEntry.UninstallString `
+      "uninstall command"
+    Assert-Equal `
+      "`"$SetupPath`" uninstall --quiet" `
+      $UninstallEntry.QuietUninstallString `
+      "quiet uninstall command"
+    Assert-Shortcut `
+      -Path $TrayShortcutPath `
+      -ExpectedTargetPath $TrayPath
+    Assert-Shortcut `
+      -Path $UninstallShortcutPath `
+      -ExpectedTargetPath $SetupPath `
+      -ExpectedArguments "uninstall"
+  }
 
   foreach ($RegistryKey in $NativeRegistryKeys.Keys) {
     Assert-PathExists $RegistryKey
@@ -191,8 +274,8 @@ function Assert-InstalledRelease {
 function Assert-Uninstalled {
   Assert-PathMissing $InstallRoot
   Assert-PathMissing $UninstallRegistryKey
-  Assert-PathMissing (Join-Path $StartMenuFolder "YTM Tray.lnk")
-  Assert-PathMissing (Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk")
+  Assert-PathMissing $TrayShortcutPath
+  Assert-PathMissing $UninstallShortcutPath
 
   foreach ($RegistryKey in $NativeRegistryKeys.Keys) {
     Assert-PathMissing $RegistryKey
@@ -226,13 +309,47 @@ function Get-VerifiedUpdatePackage {
   $ActualSha256 = Get-FileSha256 -Path $ArchivePath
   Assert-Equal $Asset.sha256 $ActualSha256 "update package sha256"
 
-  return Expand-ReleasePackage -Version $Version -ArchivePath $ArchivePath
+  return Expand-ReleasePackage `
+    -Version $Version `
+    -ArchivePath $ArchivePath `
+    -RequireNativeSetup
 }
 
 function Invoke-InstalledUninstaller {
-  $UninstallerPath = Join-Path $InstallRoot "uninstall-native-hosts.ps1"
-  Assert-PathExists $UninstallerPath
-  & $UninstallerPath -InstallRoot $InstallRoot
+  if (Test-Path -LiteralPath $SetupPath) {
+    Invoke-Native `
+      -FilePath $SetupPath `
+      -Arguments @(
+        "uninstall",
+        "--quiet",
+        "--install-root",
+        $InstallRoot
+      )
+    Wait-Uninstalled
+    return
+  }
+
+  if (Test-Path -LiteralPath $LegacyUninstallerPath) {
+    & $LegacyUninstallerPath -InstallRoot $InstallRoot
+  }
+}
+
+function Wait-Uninstalled {
+  param([int] $TimeoutSeconds = 30)
+
+  $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  while (
+    (
+      (Test-Path -LiteralPath $InstallRoot) -or
+      (Test-Path -LiteralPath $UninstallRegistryKey) -or
+      (Test-Path -LiteralPath $TrayShortcutPath) -or
+      (Test-Path -LiteralPath $UninstallShortcutPath)
+    ) -and
+    (Get-Date) -lt $Deadline
+  ) {
+    Start-Sleep -Milliseconds 250
+  }
+  Assert-Uninstalled
 }
 
 Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
@@ -270,10 +387,7 @@ try {
     Stop-Process -Force
 
   if (Test-Path -LiteralPath $InstallRoot) {
-    $FallbackUninstaller = Join-Path $InstallRoot "uninstall-native-hosts.ps1"
-    if (Test-Path -LiteralPath $FallbackUninstaller) {
-      & $FallbackUninstaller -InstallRoot $InstallRoot
-    }
+    Invoke-InstalledUninstaller
   }
 
   if (-not $KeepArtifacts) {

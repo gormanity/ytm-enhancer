@@ -56,6 +56,49 @@ function Assert-Throws {
   throw "Expected failure: $Label"
 }
 
+function Assert-NoInstalledScripts {
+  param([Parameter(Mandatory = $true)][string] $Path)
+
+  $Scripts = @(
+    Get-ChildItem -LiteralPath $Path -Recurse -File |
+      Where-Object { $_.Extension -in @(".cmd", ".ps1") }
+  )
+  if ($Scripts.Count -gt 0) {
+    throw "Expected no installed command or PowerShell scripts; found: $($Scripts.FullName -join ', ')"
+  }
+}
+
+function Assert-Shortcut {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)][string] $ExpectedTargetPath,
+    [string] $ExpectedArguments = ""
+  )
+
+  Assert-PathExists $Path
+  $Shell = New-Object -ComObject WScript.Shell
+  $Shortcut = $Shell.CreateShortcut($Path)
+  Assert-Equal $ExpectedTargetPath $Shortcut.TargetPath "$Path target"
+  Assert-Equal $ExpectedArguments $Shortcut.Arguments "$Path arguments"
+}
+
+function Wait-Uninstalled {
+  param([int] $TimeoutSeconds = 30)
+
+  $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  while (
+    (
+      (Test-Path -LiteralPath $InstallRoot) -or
+      (Test-Path -LiteralPath $UninstallRegistryKey) -or
+      (Test-Path -LiteralPath $TrayShortcutPath) -or
+      (Test-Path -LiteralPath $UninstallShortcutPath)
+    ) -and
+    (Get-Date) -lt $Deadline
+  ) {
+    Start-Sleep -Milliseconds 250
+  }
+}
+
 function Read-FilePrefixBytes {
   param(
     [Parameter(Mandatory = $true)]
@@ -85,7 +128,6 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
   throw ".NET 10 SDK is required for Windows tray package QA."
 }
 
-$RepositoryRoot = (Get-Location).Path
 $Metadata = Get-Content -LiteralPath "apps/windows-tray/release/metadata.json" -Raw |
   ConvertFrom-Json
 $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
@@ -100,8 +142,11 @@ $ExplorerArchiveCheck = Join-Path $PSScriptRoot "assert-explorer-archive-compati
 $UpdateManifestPath = "apps/windows-tray/.build/update-manifest/YTM-Tray-update.json"
 $ExtractRoot = Join-Path $env:TEMP "ytm-tray-package-smoke"
 $InstallRoot = Join-Path $env:TEMP "ytm-tray-package-install"
+$InstalledSetupPath = Join-Path $InstallRoot "YTMTray.Setup.exe"
 $UninstallRegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\YTMTray"
 $StartMenuFolder = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\YTM Enhancer"
+$TrayShortcutPath = Join-Path $StartMenuFolder "YTM Tray.lnk"
+$UninstallShortcutPath = Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk"
 
 $env:CI = "true"
 
@@ -149,28 +194,50 @@ New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
 
 try {
   Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractRoot -Force
-  Assert-PathExists (Join-Path $ExtractRoot "Install YTM Tray.cmd")
-  Assert-PathExists (Join-Path $ExtractRoot "Uninstall YTM Tray.cmd")
+  $PackageSetupPath = Join-Path $ExtractRoot "YTMTray.Setup.exe"
+  Assert-PathExists $PackageSetupPath
 
-  Push-Location $ExtractRoot
-  & .\install-native-hosts.ps1 -InstallRoot $InstallRoot
-  Pop-Location
+  Invoke-Native `
+    -FilePath $PackageSetupPath `
+    -Arguments @(
+      "install",
+      "--quiet",
+      "--runtime-identifier",
+      $RuntimeIdentifier,
+      "--install-root",
+      $InstallRoot
+    )
 
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.exe")
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.NativeHost.exe")
+  Assert-PathExists $InstalledSetupPath
   Assert-PathExists (Join-Path $InstallRoot "com.gormanity.ytm_enhancer.tray.json")
   Assert-PathExists (Join-Path $InstallRoot "com.gormanity.ytm_enhancer.tray.firefox.json")
-  Assert-PathExists (Join-Path $InstallRoot "uninstall-native-hosts.ps1")
-  Assert-PathExists (Join-Path $InstallRoot "Uninstall YTM Tray.cmd")
+  Assert-PathMissing (Join-Path $InstallRoot "install-native-hosts.ps1")
+  Assert-PathMissing (Join-Path $InstallRoot "uninstall-native-hosts.ps1")
+  Assert-NoInstalledScripts $InstallRoot
   Assert-PathExists (Join-Path $InstallRoot "release.json")
   Assert-PathExists (Join-Path $ExtractRoot "release.json")
   Assert-PathExists $UninstallRegistryKey
-  Assert-PathExists (Join-Path $StartMenuFolder "YTM Tray.lnk")
-  Assert-PathExists (Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk")
+  Assert-Shortcut `
+    -Path $TrayShortcutPath `
+    -ExpectedTargetPath (Join-Path $InstallRoot "YTMTray.exe")
+  Assert-Shortcut `
+    -Path $UninstallShortcutPath `
+    -ExpectedTargetPath $InstalledSetupPath `
+    -ExpectedArguments "uninstall"
 
   $UninstallEntry = Get-ItemProperty -LiteralPath $UninstallRegistryKey
   Assert-Equal $InstallRoot $UninstallEntry.InstallLocation "uninstall install location"
   Assert-Equal $Metadata.version $UninstallEntry.DisplayVersion "uninstall display version"
+  Assert-Equal `
+    "`"$InstalledSetupPath`" uninstall" `
+    $UninstallEntry.UninstallString `
+    "uninstall command"
+  Assert-Equal `
+    "`"$InstalledSetupPath`" uninstall --quiet" `
+    $UninstallEntry.QuietUninstallString `
+    "quiet uninstall command"
 
   $PackageMetadata = Get-Content -LiteralPath (Join-Path $ExtractRoot "release.json") -Raw |
     ConvertFrom-Json
@@ -181,28 +248,42 @@ try {
 
   $ExistingTrayBytes = Read-FilePrefixBytes (Join-Path $InstallRoot "YTMTray.exe") 16
   Set-Content -LiteralPath (Join-Path $ExtractRoot "YTMTray.exe") -Value "broken update payload"
-  Push-Location $ExtractRoot
   Assert-Throws {
-    & .\install-native-hosts.ps1 -InstallRoot $InstallRoot `
-      -AdditionalAllowedOrigins "not-a-valid-origin"
+    Invoke-Native `
+      -FilePath $PackageSetupPath `
+      -Arguments @(
+        "install",
+        "--quiet",
+        "--runtime-identifier",
+        $RuntimeIdentifier,
+        "--install-root",
+        $InstallRoot,
+        "--additional-allowed-origin",
+        "not-a-valid-origin"
+      )
   } "invalid package reinstall"
-  Pop-Location
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.exe")
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.NativeHost.exe")
   $RestoredTrayBytes = Read-FilePrefixBytes (Join-Path $InstallRoot "YTMTray.exe") 16
   Assert-Equal ($ExistingTrayBytes -join ",") ($RestoredTrayBytes -join ",") "restored tray executable"
 } finally {
-  if ((Get-Location).Path -eq $ExtractRoot) {
-    Pop-Location
+  $PackageSetupPath = Join-Path $ExtractRoot "YTMTray.Setup.exe"
+  if (Test-Path -LiteralPath $PackageSetupPath) {
+    Invoke-Native `
+      -FilePath $PackageSetupPath `
+      -Arguments @(
+        "uninstall",
+        "--quiet",
+        "--install-root",
+        $InstallRoot
+      )
+    Wait-Uninstalled
   }
-
-  & (Join-Path $RepositoryRoot "apps/windows-tray/scripts/uninstall-native-hosts.ps1") `
-    -InstallRoot $InstallRoot
 
   Assert-PathMissing $InstallRoot
   Assert-PathMissing $UninstallRegistryKey
   Assert-PathMissing (Join-Path $StartMenuFolder "YTM Tray.lnk")
-  Assert-PathMissing (Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk")
+  Assert-PathMissing $UninstallShortcutPath
 
   if (Test-Path -LiteralPath $ExtractRoot) {
     Remove-Item -LiteralPath $ExtractRoot -Recurse -Force
