@@ -24,7 +24,7 @@ internal static class TrayIconFactory
         StatusSvgIconRenderer.Draw(
             graphics,
             resourceName,
-            new Rectangle(2, 2, 28, 28),
+            new Rectangle(Point.Empty, bitmap.Size),
             paintColor
         );
 

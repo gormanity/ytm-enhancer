@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
+import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 
 const appRoot = resolve(process.cwd(), "apps/windows-tray");
@@ -35,6 +36,41 @@ function listFiles(dir: string): string[] {
       ? listFiles(relativePath)
       : relativePath;
   });
+}
+
+async function meaningfulAlphaBounds(path: string): Promise<{
+  width: number;
+  height: number;
+}> {
+  const alphaThreshold = 64;
+  const { data, info } = await sharp(path)
+    .resize(16, 16)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let minX = info.width;
+  let minY = info.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      const alpha = data[(y * info.width + x) * info.channels + 3];
+      if (alpha < alphaThreshold) {
+        continue;
+      }
+
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+
+  return {
+    width: maxX < minX ? 0 : maxX - minX + 1,
+    height: maxY < minY ? 0 : maxY - minY + 1,
+  };
 }
 
 describe("Windows tray connector scaffold", () => {
@@ -528,6 +564,34 @@ describe("Windows tray connector scaffold", () => {
     expect(theme).toContain("SystemUsesLightTheme");
     expect(theme).toContain("StatusIconPaintColor");
     expect(trayIconFactory).not.toContain("235, 82, 82");
+  });
+
+  it("uses the full notification-area canvas for the Windows tray glyph", () => {
+    const trayIconFactory = read("src/YTMTray/TrayIconFactory.cs");
+
+    expect(trayIconFactory).toContain("new Bitmap(32, 32)");
+    expect(trayIconFactory).toContain(
+      "new Rectangle(Point.Empty, bitmap.Size)",
+    );
+    expect(trayIconFactory).not.toContain("new Rectangle(2, 2, 28, 28)");
+  });
+
+  it("keeps status glyphs visually full at 16-pixel tray size", async () => {
+    const cases = [
+      ["extension-icon-monochrome.svg", 14],
+      ["extension-icon-monochrome-ring.svg", 15],
+    ] as const;
+
+    for (const [name, minimumSpan] of cases) {
+      const bounds = await meaningfulAlphaBounds(
+        resolve(process.cwd(), "packages/connector-ui-assets/status", name),
+      );
+
+      expect(bounds.width, `${name} width`).toBeGreaterThanOrEqual(minimumSpan);
+      expect(bounds.height, `${name} height`).toBeGreaterThanOrEqual(
+        minimumSpan,
+      );
+    }
   });
 
   it("captures Windows tray release screenshots from real connector playback", () => {
