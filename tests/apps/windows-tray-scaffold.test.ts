@@ -73,6 +73,45 @@ async function meaningfulAlphaBounds(path: string): Promise<{
   };
 }
 
+async function meaningfulAlphaBoundingBox(path: string): Promise<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}> {
+  const alphaThreshold = 64;
+  const { data, info } = await sharp(path)
+    .resize(64, 64)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let minX = info.width;
+  let minY = info.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      const alpha = data[(y * info.width + x) * info.channels + 3];
+      if (alpha < alphaThreshold) {
+        continue;
+      }
+
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX < minX ? 0 : maxX - minX + 1,
+    height: maxY < minY ? 0 : maxY - minY + 1,
+  };
+}
+
 describe("Windows tray connector scaffold", () => {
   it("defines a modern .NET WinForms tray executable", () => {
     const project = read("src/YTMTray/YTMTray.csproj");
@@ -413,6 +452,55 @@ describe("Windows tray connector scaffold", () => {
     expect(artworkBox).not.toContain("albumBrush");
     expect(artworkBox).not.toContain("sunBrush");
     expect(artworkBox).not.toContain("LinearGradientMode.ForwardDiagonal");
+  });
+
+  it("matches the polished menu bar artwork placeholder treatment", async () => {
+    const sharedArtworkPath = resolve(
+      process.cwd(),
+      "packages/connector-ui-assets/artwork/artwork-placeholder.svg",
+    );
+    const sharedArtwork = readFileSync(sharedArtworkPath, "utf-8");
+    const menuBarArtwork = readRepo(
+      "apps/menu-bar/Sources/YTMMenuBarConnector/Resources/artwork-placeholder.svg",
+    );
+    const theme = read("src/YTMTray/TrayTheme.cs");
+    const popupForm = read("src/YTMTray/PlaybackPopupForm.cs");
+    const artworkBox = popupForm.match(
+      /internal sealed class ArtworkBoxControl[\s\S]+?private static bool IsSupportedArtworkUrl/,
+    )?.[0];
+    const onPaint = artworkBox?.match(
+      /protected override void OnPaint[\s\S]+?protected override void Dispose/,
+    )?.[0];
+
+    expect(menuBarArtwork).toBe(sharedArtwork);
+    expect(sharedArtwork).toContain("<path");
+    expect(sharedArtwork).not.toContain("<line");
+    expect(sharedArtwork).not.toContain("stroke=");
+    await expect(
+      meaningfulAlphaBoundingBox(sharedArtworkPath),
+    ).resolves.toEqual({
+      x: 15,
+      y: 5,
+      width: 35,
+      height: 55,
+    });
+
+    expect(theme).toContain(
+      "ArtworkBackgroundColor = Color.FromArgb(23, 23, 23)",
+    );
+    expect(theme).toContain("ArtworkBorderColor = Color.FromArgb(72, 72, 72)");
+    expect(theme).toContain(
+      "ArtworkPlaceholderColor = Color.FromArgb(150, 150, 150)",
+    );
+    expect(onPaint).toContain(
+      "e.Graphics.SmoothingMode = SmoothingMode.HighQuality",
+    );
+    expect(onPaint).toContain(
+      "e.Graphics.CompositingQuality = CompositingQuality.HighQuality",
+    );
+    expect(onPaint).toContain(
+      "e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality",
+    );
   });
 
   it("preserves non-square artwork aspect ratios", () => {

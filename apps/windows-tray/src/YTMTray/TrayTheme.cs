@@ -68,9 +68,9 @@ internal sealed class TrayTheme
         ProgressTrackColor = Color.FromArgb(76, 76, 80),
         ProgressDisabledTrackColor = Color.FromArgb(42, 42, 48),
         ProgressDisabledFillColor = Color.FromArgb(88, 88, 96),
-        ArtworkBackgroundColor = Color.FromArgb(28, 28, 31),
-        ArtworkBorderColor = Color.FromArgb(68, 68, 74),
-        ArtworkPlaceholderColor = Color.FromArgb(174, 174, 182),
+        ArtworkBackgroundColor = Color.FromArgb(23, 23, 23),
+        ArtworkBorderColor = Color.FromArgb(72, 72, 72),
+        ArtworkPlaceholderColor = Color.FromArgb(150, 150, 150),
         DialogButtonBackgroundColor = Color.FromArgb(32, 32, 36),
         DialogButtonBorderColor = Color.FromArgb(78, 78, 84),
         StatusIconPaintColor = Color.FromArgb(232, 232, 238)

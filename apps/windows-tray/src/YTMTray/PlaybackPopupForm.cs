@@ -1229,7 +1229,9 @@ internal sealed class ArtworkBoxControl : Control
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        e.Graphics.SmoothingMode = SmoothingMode.HighQuality;
+        e.Graphics.CompositingQuality = CompositingQuality.HighQuality;
+        e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
         var theme = TrayTheme.CurrentApp;
 
         using var backgroundBrush = new SolidBrush(theme.ArtworkBackgroundColor);
