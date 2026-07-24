@@ -335,6 +335,10 @@ describe("Windows remote QA scaffold", () => {
       "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\YTMTray",
     );
     expect(packageSmoke).toContain("Start Menu\\Programs\\YTM Enhancer");
+    expect(packageSmoke).toContain("Get-Item -LiteralPath $ExpectedTargetPath");
+    expect(packageSmoke).toContain(
+      "Get-Item -LiteralPath $Shortcut.TargetPath",
+    );
     expect(packageSmoke).toContain("release.json");
     expect(packageSmoke).toContain("Read-FilePrefixBytes");
     expect(packageSmoke).toContain("[System.IO.File]::OpenRead");

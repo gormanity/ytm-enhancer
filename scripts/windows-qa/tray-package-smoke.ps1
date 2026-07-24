@@ -99,7 +99,16 @@ function Assert-Shortcut {
   Assert-PathExists $Path
   $Shell = New-Object -ComObject WScript.Shell
   $Shortcut = $Shell.CreateShortcut($Path)
-  Assert-Equal $ExpectedTargetPath $Shortcut.TargetPath "$Path target"
+  $ResolvedExpectedTargetPath = (
+    Get-Item -LiteralPath $ExpectedTargetPath
+  ).FullName
+  $ResolvedActualTargetPath = (
+    Get-Item -LiteralPath $Shortcut.TargetPath
+  ).FullName
+  Assert-Equal `
+    $ResolvedExpectedTargetPath `
+    $ResolvedActualTargetPath `
+    "$Path target"
   Assert-Equal $ExpectedArguments $Shortcut.Arguments "$Path arguments"
 }
 
