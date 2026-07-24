@@ -8,6 +8,27 @@ function Invoke-Native {
     [string[]] $Arguments
   )
 
+  if ([IO.Path]::GetFileName($FilePath) -ieq "YTMTray.Setup.exe") {
+    $CommandLine = @(
+      $Arguments | ForEach-Object {
+        if ($_ -notmatch '[\s"]' -and $_.Length -gt 0) {
+          $_
+        } else {
+          '"' + (($_ -replace '(\\*)"', '$1$1\"') -replace '(\\+)$', '$1$1') + '"'
+        }
+      }
+    ) -join " "
+    $Process = Start-Process `
+      -FilePath $FilePath `
+      -ArgumentList $CommandLine `
+      -Wait `
+      -PassThru
+    if ($Process.ExitCode -ne 0) {
+      throw "$FilePath exited with code $($Process.ExitCode)"
+    }
+    return
+  }
+
   & $FilePath @Arguments
   if ($LASTEXITCODE -ne 0) {
     throw "$FilePath exited with code $LASTEXITCODE"
@@ -99,6 +120,28 @@ function Wait-Uninstalled {
   }
 }
 
+function Remove-QaTree {
+  param([Parameter(Mandatory = $true)][string] $Path)
+
+  if (-not (Test-Path -LiteralPath $Path)) {
+    return
+  }
+
+  $Deadline = (Get-Date).AddSeconds(15)
+  $LastError = $null
+  do {
+    try {
+      Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+      return
+    } catch [System.IO.IOException], [System.UnauthorizedAccessException] {
+      $LastError = $_
+      Start-Sleep -Milliseconds 300
+    }
+  } while ((Get-Date) -lt $Deadline)
+
+  throw $LastError
+}
+
 function Read-FilePrefixBytes {
   param(
     [Parameter(Mandatory = $true)]
@@ -185,10 +228,10 @@ if ($RuntimeAsset.sha256 -notmatch "^[a-f0-9]{64}$") {
 }
 
 if (Test-Path -LiteralPath $ExtractRoot) {
-  Remove-Item -LiteralPath $ExtractRoot -Recurse -Force
+  Remove-QaTree $ExtractRoot
 }
 if (Test-Path -LiteralPath $InstallRoot) {
-  Remove-Item -LiteralPath $InstallRoot -Recurse -Force
+  Remove-QaTree $InstallRoot
 }
 New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
 
@@ -196,6 +239,7 @@ try {
   Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractRoot -Force
   $PackageSetupPath = Join-Path $ExtractRoot "YTMTray.Setup.exe"
   Assert-PathExists $PackageSetupPath
+  Assert-PathExists (Join-Path $ExtractRoot "install-native-hosts.ps1")
 
   Invoke-Native `
     -FilePath $PackageSetupPath `
@@ -286,6 +330,6 @@ try {
   Assert-PathMissing $UninstallShortcutPath
 
   if (Test-Path -LiteralPath $ExtractRoot) {
-    Remove-Item -LiteralPath $ExtractRoot -Recurse -Force
+    Remove-QaTree $ExtractRoot
   }
 }

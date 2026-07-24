@@ -96,13 +96,22 @@ Run the manual `Windows Tray Signing Check` workflow on `main` after changing
 release signing, packaging, or installer behavior. It builds `win-x64` and
 `win-arm64` payloads, signs them with Microsoft Artifact Signing, verifies
 signatures, archives the release packages, and generates the update manifest
-without publishing a GitHub Release:
+without publishing a GitHub Release. It uploads those files as the
+`windows-tray-signed-candidate` QA artifact for three days:
 
 ```sh
 gh workflow run "Windows Tray Signing Check" \
   --repo gormanity/ytm-enhancer \
   --ref main
+
+gh run download RUN_ID \
+  --repo gormanity/ytm-enhancer \
+  --name windows-tray-signed-candidate
 ```
+
+Use the signed candidate for pre-tag install, uninstall, and Smart App Control
+QA. Its update manifest points to the future release URLs, so validate live
+updater downloads after publishing the component release.
 
 Local package generation remains unsigned by default so development and dry-run
 package smokes do not need production signing material. Set
@@ -188,7 +197,8 @@ scripts/remote/windows-qa/tray-signing-smoke.sh
 2. Update the default version metadata in
    `apps/windows-tray/src/YTMTray.Core/YTMTray.Core.csproj`.
 3. Run the manual `Windows Tray Signing Check` workflow after changing release
-   signing, packaging, or installer behavior.
+   signing, packaging, or installer behavior. Download its
+   `windows-tray-signed-candidate` artifact.
 4. Run targeted tests:
 
 ```sh
@@ -198,30 +208,40 @@ scripts/remote/windows-qa/tray-package-smoke.sh
 scripts/remote/windows-qa/tray-signing-smoke.sh
 ```
 
-5. Run manual tray button smoke when release plumbing, native messaging, or
+5. Copy the signed x64 candidate outside the Windows remote QA work root, then
+   validate install and uninstall with Smart App Control enforcement enabled:
+
+```sh
+scripts/remote/windows-qa/tray-sac-smoke.sh \
+  'C:\path\to\YTM-Tray-X.Y.Z-win-x64.zip'
+```
+
+6. Run manual tray button smoke when release plumbing, native messaging, or
    connector behavior changed:
 
 ```sh
 scripts/remote/windows-qa/tray-button-smoke.sh
 ```
 
-6. For a beta release candidate, run the operational smoke and leave the app
+7. For a beta release candidate, run the operational smoke and leave the app
    installed for hands-on testing:
 
 ```sh
 scripts/remote/windows-qa/tray-operational-smoke.sh X.Y.Z
 ```
 
-7. Create a `windows-tray-vX.Y.Z` tag from the verified commit.
-8. Push the tag.
-9. Confirm the `Windows Tray Release` workflow publishes:
-   - a GitHub Release named `YTM Tray X.Y.Z`
-   - a component release that does not replace GitHub's repo-wide latest release
-   - `win-x64` and `win-arm64` release zips
-   - `YTM-Tray-update.json` with package checksums and release URLs
-   - signed `YTMTray.exe`, `YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe`
-   - no command launchers or packaged uninstall PowerShell script
-10. On a clean Windows account, install from the release zip and confirm:
+8. Create a `windows-tray-vX.Y.Z` tag from the verified commit.
+9. Push the tag.
+10. Confirm the `Windows Tray Release` workflow publishes:
+
+- a GitHub Release named `YTM Tray X.Y.Z`
+- a component release that does not replace GitHub's repo-wide latest release
+- `win-x64` and `win-arm64` release zips
+- `YTM-Tray-update.json` with package checksums and release URLs
+- signed `YTMTray.exe`, `YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe`
+- no command launchers or packaged uninstall PowerShell script
+
+11. On a clean Windows account, install from the release zip and confirm:
 
 - `YTMTray.exe`, `YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe` are under
   `%LOCALAPPDATA%\YTM Enhancer\Tray`

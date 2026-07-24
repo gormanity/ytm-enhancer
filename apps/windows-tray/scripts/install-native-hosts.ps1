@@ -28,6 +28,16 @@ $PackagedReleaseMetadataPath = Join-Path $ScriptRoot "release.json"
 $CompatibilityRunnerPath = Join-Path $ScriptRoot "run-update-installer.ps1"
 $InstallRootWasSpecified = -not [string]::IsNullOrWhiteSpace($InstallRoot)
 
+function ConvertTo-NativeProcessArgument {
+  param([Parameter(Mandatory = $true)][string] $Value)
+
+  if ($Value.Length -gt 0 -and $Value -notmatch '[\s"]') {
+    return $Value
+  }
+
+  return '"' + (($Value -replace '(\\*)"', '$1$1\"') -replace '(\\+)$', '$1$1') + '"'
+}
+
 if ([string]::IsNullOrWhiteSpace($RuntimeIdentifier)) {
   $RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
     "win-arm64"
@@ -54,9 +64,19 @@ if (Test-Path -LiteralPath $PackagedSetupExecutablePath) {
     $NativeSetupArguments += @("--additional-allowed-origin", $Origin)
   }
 
-  & $PackagedSetupExecutablePath @NativeSetupArguments
-  if ($LASTEXITCODE -ne 0) {
-    throw "YTMTray.Setup.exe exited with code $LASTEXITCODE"
+  $NativeSetupCommandLine = @(
+    $NativeSetupArguments | ForEach-Object {
+      ConvertTo-NativeProcessArgument $_
+    }
+  ) -join " "
+  $NativeSetupProcess = Start-Process `
+    -FilePath $PackagedSetupExecutablePath `
+    -ArgumentList $NativeSetupCommandLine `
+    -WorkingDirectory $ScriptRoot `
+    -Wait `
+    -PassThru
+  if ($NativeSetupProcess.ExitCode -ne 0) {
+    throw "YTMTray.Setup.exe exited with code $($NativeSetupProcess.ExitCode)"
   }
   return
 }
@@ -493,7 +513,7 @@ function Get-InstalledVersion {
     }
   }
 
-  return "0.1.6"
+  return "0.1.7"
 }
 
 function Register-UninstallEntry {

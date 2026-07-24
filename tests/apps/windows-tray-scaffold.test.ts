@@ -671,7 +671,7 @@ describe("Windows tray connector scaffold", () => {
 
     expect(metadata.appName).toBe("YTM Tray");
     expect(metadata.nativeHostName).toBe("com.gormanity.ytm_enhancer.tray");
-    expect(metadata.version).toBe("0.1.6");
+    expect(metadata.version).toBe("0.1.7");
     expect(metadata.githubReleaseTagPrefix).toBe("windows-tray-v");
     expect(metadata.githubReleaseListUrl).toBe(
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
@@ -720,6 +720,10 @@ describe("Windows tray connector scaffold", () => {
     expect(packageScript).not.toContain("uninstall-native-hosts.ps1");
     expect(packageScript).not.toContain("Install YTM Tray.cmd");
     expect(packageScript).not.toContain("Uninstall YTM Tray.cmd");
+    expect(installScript).toMatch(
+      /Start-Process[\s\S]*-FilePath \$PackagedSetupExecutablePath[\s\S]*-Wait[\s\S]*-PassThru/,
+    );
+    expect(installScript).toContain("$NativeSetupProcess.ExitCode");
     expect(packageScript).toContain("release.json");
     expect(packageScript).toContain(
       "releaseListUrl: metadata.githubReleaseListUrl",
@@ -743,7 +747,7 @@ describe("Windows tray connector scaffold", () => {
 
     expect(installScript).toContain("Test-PackagedBinaries");
     expect(installScript).toContain("Install-PackagedBinaries");
-    expect(installScript).toContain('return "0.1.6"');
+    expect(installScript).toContain('return "0.1.7"');
     expect(installScript).toContain("[switch] $InstallerWorker");
     expect(installScript).toContain("Start-DetachedInstallerWorker");
     expect(installScript).toContain(
@@ -858,9 +862,9 @@ describe("Windows tray connector scaffold", () => {
     const outputRoot = mkdtempSync(
       join(tmpdir(), "ytm-windows-tray-manifest-test-"),
     );
-    const expectedVersion = process.env.YTM_WINDOWS_TRAY_VERSION ?? "0.1.6";
+    const expectedVersion = process.env.YTM_WINDOWS_TRAY_VERSION ?? "0.1.7";
     const expectedBuildNumber = Number(
-      process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER ?? "1006",
+      process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER ?? "1007",
     );
     const x64Package = join(
       outputRoot,
@@ -956,10 +960,10 @@ describe("Windows tray connector scaffold", () => {
     const coreProject = read("src/YTMTray.Core/YTMTray.Core.csproj");
 
     expect(protocol).toContain("AssemblyInformationalVersionAttribute");
-    expect(protocol).not.toContain('ConnectorVersion = "0.1.6"');
-    expect(coreProject).toContain("<Version>0.1.6</Version>");
+    expect(protocol).not.toContain('ConnectorVersion = "0.1.7"');
+    expect(coreProject).toContain("<Version>0.1.7</Version>");
     expect(coreProject).toContain(
-      "<InformationalVersion>0.1.6</InformationalVersion>",
+      "<InformationalVersion>0.1.7</InformationalVersion>",
     );
   });
 
@@ -1078,6 +1082,18 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(signingCheckWorkflow).toContain("windows-tray:update-manifest");
     expect(signingCheckWorkflow).toContain("verify-windows-tray-codesign.ps1");
+    expect(signingCheckWorkflow).toContain("actions/upload-artifact@v7");
+    expect(signingCheckWorkflow).toContain("windows-tray-signed-candidate");
+    expect(signingCheckWorkflow).toContain(
+      "apps/windows-tray/.build/packages/*.zip",
+    );
+    expect(signingCheckWorkflow).toContain(
+      "apps/windows-tray/.build/update-manifest/*.json",
+    );
+    expect(signingCheckWorkflow).toContain("if-no-files-found: error");
+    expect(signingCheckWorkflow).toContain("retention-days: 3");
+    expect(signingCheckWorkflow).toContain("compression-level: 0");
+    expect(signingCheckWorkflow).toContain("include-hidden-files: true");
     expect(
       signingCheckWorkflow.match(/\$LASTEXITCODE -ne 0/g)?.length ?? 0,
     ).toBeGreaterThanOrEqual(5);
@@ -1139,6 +1155,9 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("Check for Updates");
     expect(releaseDocs).toContain("Microsoft Artifact Signing");
     expect(releaseDocs).toContain("windows-signing");
+    expect(releaseDocs).toContain("windows-tray-signed-candidate");
+    expect(releaseDocs).toContain("gh run download");
+    expect(releaseDocs).toContain("tray-sac-smoke.sh");
     expect(releaseDocs).toContain("Windows Tray Signing Check");
     expect(releaseDocs).toContain("Code Signing Policy");
     expect(releaseDocs).toContain("AZURE_ARTIFACT_SIGNING_ENDPOINT");

@@ -327,6 +327,9 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).toContain("Expand-Archive");
     expect(packageSmoke).toContain("install-native-hosts.ps1");
     expect(packageSmoke).toContain("YTMTray.Setup.exe");
+    expect(packageSmoke).toContain("-FilePath $FilePath");
+    expect(packageSmoke).toContain("-Wait");
+    expect(packageSmoke).toContain("$Process.ExitCode");
     expect(packageSmoke).not.toContain("Uninstall YTM Tray.cmd");
     expect(packageSmoke).toContain(
       "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\YTMTray",
@@ -476,12 +479,16 @@ describe("Windows remote QA scaffold", () => {
     expect(sacSmoke).toContain("YTMTray.Setup.exe");
     expect(sacSmoke).toContain("Wait-WindowsQaUiAgentReady");
     expect(sacSmoke).toContain("Invoke-InteractivePowerShell");
+    expect(sacSmoke).toContain("-FilePath $SetupPath");
+    expect(sacSmoke).toContain("-Wait");
+    expect(sacSmoke).toContain("$Process.ExitCode");
     expect(sacSmoke).toContain("Microsoft-Windows-CodeIntegrity/Operational");
     expect(sacSmoke).toContain("Microsoft-Windows-AppLocker/MSI and Script");
     expect(sacSmoke).toContain('".cmd", ".ps1"');
     expect(sacSmokeShell).toContain("-ArchivePath");
     expect(sacSmokeShell).toContain("scripts\\windows-qa\\tray-sac-smoke.ps1");
     expect(docs).toContain("scripts/remote/windows-qa/tray-sac-smoke.sh");
+    expect(docs).toContain("windows-tray-signed-candidate");
     expect(docs).toContain("Smart App Control enforcement");
   });
 

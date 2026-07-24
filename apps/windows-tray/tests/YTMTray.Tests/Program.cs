@@ -33,7 +33,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("update service prepares verified package", UpdateServicePreparesVerifiedPackage),
     ("update service launches native setup directly", UpdateServiceLaunchesNativeSetupDirectly),
     ("update service rejects packages without native setup", UpdateServiceRejectsMissingNativeSetup),
-    ("update service rejects unsafe package entries", UpdateServiceRejectsUnsafePackageEntries)
+    ("update service rejects unsafe package entries", UpdateServiceRejectsUnsafePackageEntries),
+    ("update service rejects unsafe package names", UpdateServiceRejectsUnsafePackageNames)
 };
 
 var failures = new List<string>();
@@ -844,6 +845,45 @@ static async Task UpdateServiceRejectsUnsafePackageEntries()
     );
 }
 
+static async Task UpdateServiceRejectsUnsafePackageNames()
+{
+    using var temp = new TempDirectory();
+    var packageBytes = CreatePackageBytes(
+        ("YTMTray.Setup.exe", "setup"),
+        ("YTMTray.exe", "tray"),
+        ("YTMTray.NativeHost.exe", "native-host")
+    );
+    var checksum = Sha256(packageBytes);
+    const string unsafeAssetName = "../escaped-package.zip";
+    using var http = new HttpClient(new FakeHttpHandler(request =>
+        request.RequestUri?.AbsoluteUri switch
+        {
+            "https://example.test/releases" => ReleasesResponse(),
+            "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-update.json" =>
+                JsonResponse(UpdateManifestJson(checksum, unsafeAssetName)),
+            "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-0.2.0-win-x64.zip" =>
+                BytesResponse(packageBytes),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        }
+    ));
+    var service = new WindowsTrayUpdateService(
+        http,
+        new WindowsTrayUpdateOptions(
+            new Uri("https://example.test/releases"),
+            "windows-tray-v",
+            "0.1.0",
+            "win-x64"
+        )
+    );
+
+    var update = await service.CheckForUpdateAsync();
+    await AssertThrowsAsync<InvalidDataException>(
+        () => service.DownloadAndPrepareUpdateAsync(update, temp.Path),
+        "unsafe package name"
+    );
+    AssertEqual(false, File.Exists(Path.Combine(temp.Path, "escaped-package.zip")));
+}
+
 static HttpResponseMessage ReleasesResponse() =>
     JsonResponse(
         """
@@ -864,7 +904,10 @@ static HttpResponseMessage ReleasesResponse() =>
         """
     );
 
-static string UpdateManifestJson(string checksum) =>
+static string UpdateManifestJson(
+    string checksum,
+    string assetName = "YTM-Tray-0.2.0-win-x64.zip"
+) =>
     $$"""
     {
       "schemaVersion": 1,
@@ -879,7 +922,7 @@ static string UpdateManifestJson(string checksum) =>
       "minimumWindowsVersion": "Windows 11",
       "assets": {
         "win-x64": {
-          "name": "YTM-Tray-0.2.0-win-x64.zip",
+          "name": "{{assetName}}",
           "sha256": "{{checksum}}",
           "size": 0,
           "url": "https://example.test/download/windows-tray-v0.2.0/YTM-Tray-0.2.0-win-x64.zip"

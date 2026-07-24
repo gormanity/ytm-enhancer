@@ -791,14 +791,14 @@ candidate and keep it in place for manual testing:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-operational-smoke.ps1 `
-  -Version 0.1.6 `
+  -Version 0.1.7 `
   -UiReadyTimeoutSeconds 60
 ```
 
 Run the same smoke through the configured Windows transport:
 
 ```sh
-scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.6
+scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.7
 ```
 
 This downloads the published release zip, installs it to the real user-level
@@ -833,8 +833,9 @@ Authenticode signatures from the disposable signer, and removes the temporary
 certificate. It validates the signing plumbing without installing production
 signing secrets on the QA target.
 
-Run the Windows tray Smart App Control smoke against an already-published,
-public-trust-signed release archive:
+Run the Windows tray Smart App Control smoke against a public-trust-signed
+archive from the `windows-tray-signed-candidate` signing-check artifact or an
+already-published release:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `

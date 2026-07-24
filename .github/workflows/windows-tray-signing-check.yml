@@ -98,3 +98,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm run windows-tray:update-manifest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload signed QA candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-tray-signed-candidate
+          path: |
+            apps/windows-tray/.build/packages/*.zip
+            apps/windows-tray/.build/update-manifest/*.json
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+          include-hidden-files: true

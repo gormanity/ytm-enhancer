@@ -185,7 +185,12 @@ public sealed class WindowsTrayUpdateService
 
         RequireHttps(asset.Url, "update package");
 
-        var packagePath = Path.Combine(updateRoot, asset.Name);
+        var packagePath = GetSafePackagePath(
+            updateRoot,
+            asset.Name,
+            manifest.Version,
+            options.RuntimeIdentifier
+        );
         await DownloadFileAsync(asset.Url, packagePath, cancellationToken);
         VerifyChecksum(packagePath, asset.Sha256);
 
@@ -360,6 +365,42 @@ public sealed class WindowsTrayUpdateService
             ? directory
             : $"{directory}{Path.DirectorySeparatorChar}";
         return path.StartsWith(normalizedDirectory, PathComparison);
+    }
+
+    private static string GetSafePackagePath(
+        string updateRoot,
+        string assetName,
+        string version,
+        string runtimeIdentifier
+    )
+    {
+        var expectedAssetName = $"YTM-Tray-{version}-{runtimeIdentifier}.zip";
+        if (
+            !string.Equals(
+                assetName,
+                expectedAssetName,
+                StringComparison.Ordinal
+            )
+        )
+        {
+            throw new InvalidDataException(
+                "Update manifest contains an unsafe package name. "
+                    + $"Expected {expectedAssetName}."
+            );
+        }
+
+        var normalizedUpdateRoot = Path.GetFullPath(updateRoot);
+        var packagePath = Path.GetFullPath(
+            Path.Combine(normalizedUpdateRoot, assetName)
+        );
+        if (!IsInsideDirectory(normalizedUpdateRoot, packagePath))
+        {
+            throw new InvalidDataException(
+                "Update manifest contains an unsafe package name."
+            );
+        }
+
+        return packagePath;
     }
 
     private static void VerifyChecksum(string path, string expectedSha256)

@@ -89,6 +89,27 @@ function Invoke-Native {
     [string[]] $Arguments = @()
   )
 
+  if ([IO.Path]::GetFileName($FilePath) -ieq "YTMTray.Setup.exe") {
+    $CommandLine = @(
+      $Arguments | ForEach-Object {
+        if ($_ -notmatch '[\s"]' -and $_.Length -gt 0) {
+          $_
+        } else {
+          '"' + (($_ -replace '(\\*)"', '$1$1\"') -replace '(\\+)$', '$1$1') + '"'
+        }
+      }
+    ) -join " "
+    $Process = Start-Process `
+      -FilePath $FilePath `
+      -ArgumentList $CommandLine `
+      -Wait `
+      -PassThru
+    if ($Process.ExitCode -ne 0) {
+      throw "$FilePath exited with code $($Process.ExitCode)"
+    }
+    return
+  }
+
   & $FilePath @Arguments
   if ($LASTEXITCODE -ne 0) {
     throw "$FilePath exited with code $LASTEXITCODE"
