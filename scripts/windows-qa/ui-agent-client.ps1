@@ -1,5 +1,106 @@
 $ErrorActionPreference = "Stop"
 
+function Invoke-WindowsQaDialogOk {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int] $WindowHandle,
+    [int] $ButtonHandle = 0
+  )
+
+  if ($WindowHandle -eq 0) {
+    throw "The Windows QA dialog does not expose a native window handle."
+  }
+
+  if (-not ("YtmEnhancerWindowsQaNativeMethods" -as [type])) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class YtmEnhancerWindowsQaNativeMethods
+{
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PostMessage(
+        IntPtr windowHandle,
+        uint message,
+        IntPtr wordParameter,
+        IntPtr longParameter
+    );
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr GetDlgItem(
+        IntPtr dialogHandle,
+        int controlId
+    );
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SetActiveWindow(IntPtr windowHandle);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindow(IntPtr windowHandle);
+}
+"@
+  }
+
+  $DialogResultOk = 1
+  $UnsignedWindowHandle = [BitConverter]::ToUInt32(
+    [BitConverter]::GetBytes($WindowHandle),
+    0
+  )
+  $DialogHandle = [IntPtr] ([long] $UnsignedWindowHandle)
+  if (-not [YtmEnhancerWindowsQaNativeMethods]::IsWindow($DialogHandle)) {
+    throw "The Windows QA dialog handle is not a valid window."
+  }
+
+  $OkButtonHandle = [IntPtr]::Zero
+  if ($ButtonHandle -ne 0) {
+    $UnsignedButtonHandle = [BitConverter]::ToUInt32(
+      [BitConverter]::GetBytes($ButtonHandle),
+      0
+    )
+    $CandidateButtonHandle = [IntPtr] ([long] $UnsignedButtonHandle)
+    if ([YtmEnhancerWindowsQaNativeMethods]::IsWindow($CandidateButtonHandle)) {
+      $OkButtonHandle = $CandidateButtonHandle
+    }
+  }
+  if ($OkButtonHandle -eq [IntPtr]::Zero) {
+    $OkButtonHandle = [YtmEnhancerWindowsQaNativeMethods]::GetDlgItem(
+      $DialogHandle,
+      $DialogResultOk
+    )
+  }
+  if ($OkButtonHandle -eq [IntPtr]::Zero) {
+    throw "The Windows QA dialog does not expose a native OK button."
+  }
+
+  [void] [YtmEnhancerWindowsQaNativeMethods]::SetActiveWindow($DialogHandle)
+  $ButtonClickMessage = 0x00F5
+  if (-not [YtmEnhancerWindowsQaNativeMethods]::PostMessage(
+      $OkButtonHandle,
+      $ButtonClickMessage,
+      [IntPtr]::Zero,
+      [IntPtr]::Zero
+    )) {
+    $ErrorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    throw [ComponentModel.Win32Exception]::new(
+      $ErrorCode,
+      "The Windows QA dialog button could not be invoked."
+    )
+  }
+
+  $DialogCloseDeadline = (Get-Date).AddSeconds(5)
+  while (
+    [YtmEnhancerWindowsQaNativeMethods]::IsWindow($DialogHandle) -and
+    (Get-Date) -lt $DialogCloseDeadline
+  ) {
+    Start-Sleep -Milliseconds 50
+  }
+  if ([YtmEnhancerWindowsQaNativeMethods]::IsWindow($DialogHandle)) {
+    throw "The Windows QA dialog remained open after its OK button was invoked."
+  }
+}
+
 function Invoke-WindowsQaUiAgentProbe {
   param(
     [switch] $LaunchProbe,

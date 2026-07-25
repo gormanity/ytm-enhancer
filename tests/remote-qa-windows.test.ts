@@ -505,6 +505,7 @@ describe("Windows remote QA scaffold", () => {
   it("validates the public Windows tray installer under Smart App Control", () => {
     const sacSmoke = read("scripts/windows-qa/tray-sac-smoke.ps1");
     const sacSmokeShell = read("scripts/remote/windows-qa/tray-sac-smoke.sh");
+    const uiAgentClient = read("scripts/windows-qa/ui-agent-client.ps1");
     const docs = read("docs/remote-qa.md");
     const interactiveInstall = sacSmoke.slice(
       sacSmoke.indexOf("function Invoke-InteractiveInstallThroughUiAgent"),
@@ -529,7 +530,34 @@ describe("Windows remote QA scaffold", () => {
       "YTM Tray was installed successfully.",
     );
     expect(interactiveInstall).toContain("PrematureTray");
-    expect(interactiveInstall).toContain("InvokePattern");
+    expect(interactiveInstall).toContain(
+      "$DialogElementCollection.Item($ElementIndex)",
+    );
+    expect(interactiveInstall).not.toContain("$ButtonCondition");
+    expect(interactiveInstall).not.toContain("InvokePattern");
+    expect(interactiveInstall).toContain("Invoke-WindowsQaDialogOk");
+    expect(interactiveInstall).toContain("$Dialog.Current.NativeWindowHandle");
+    expect(interactiveInstall).toContain("-ButtonHandle $OkButtonWindowHandle");
+    expect(interactiveInstall).toContain("$UiDiagnosticsPath");
+    expect(interactiveInstall.indexOf("if (-not $WasSuccessful)")).toBeLessThan(
+      interactiveInstall.indexOf("Invoke-WindowsQaDialogOk"),
+    );
+    expect(uiAgentClient).toContain("$DialogResultOk = 1");
+    expect(uiAgentClient).toContain("[BitConverter]::ToUInt32");
+    expect(uiAgentClient).toContain(
+      "The Windows QA dialog handle is not a valid window.",
+    );
+    expect(uiAgentClient).toContain("GetDlgItem(");
+    expect(uiAgentClient).toContain("$ButtonClickMessage = 0x00F5");
+    expect(uiAgentClient).toContain("SetActiveWindow(");
+    expect(uiAgentClient).toContain("PostMessage(");
+    expect(uiAgentClient).toContain("$DialogCloseDeadline");
+    expect(uiAgentClient).not.toContain("SendMessage(");
+    expect(uiAgentClient).not.toContain("EndDialog(");
+    expect(uiAgentClient).not.toContain("GetParent(");
+    expect(uiAgentClient).toContain(
+      "The Windows QA dialog remained open after its OK button was invoked.",
+    );
     expect(interactiveInstall).toContain("-FilePath taskkill.exe");
     expect(interactiveInstall).toContain("WaitForExit(5000)");
     expect(interactiveInstall).not.toContain("--quiet");
