@@ -794,14 +794,14 @@ candidate and keep it in place for manual testing:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-operational-smoke.ps1 `
-  -Version 0.1.8 `
+  -Version 0.1.9 `
   -UiReadyTimeoutSeconds 60
 ```
 
 Run the same smoke through the configured Windows transport:
 
 ```sh
-scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.8
+scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.9
 ```
 
 This downloads the published `YTM-Tray-<version>-Setup.exe`, verifies its
@@ -845,7 +845,7 @@ an already-published release:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-sac-smoke.ps1 `
-  -InstallerPath "$env:USERPROFILE\Downloads\YTM-Tray-0.1.8-Setup.exe"
+  -InstallerPath "$env:USERPROFILE\Downloads\YTM-Tray-0.1.9-Setup.exe"
 ```
 
 The remote wrapper accepts a path on the Windows target. Keep the installer
@@ -854,7 +854,7 @@ disposable checkout when it syncs:
 
 ```sh
 scripts/remote/windows-qa/tray-sac-smoke.sh \
-  'C:\Users\<windows-qa-user>\Downloads\YTM-Tray-0.1.8-Setup.exe'
+  'C:\Users\<windows-qa-user>\Downloads\YTM-Tray-0.1.9-Setup.exe'
 ```
 
 The smoke requires Smart App Control enforcement to already be on

@@ -4,10 +4,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <Version>0.1.8</Version>
-    <AssemblyVersion>0.1.8.1008</AssemblyVersion>
-    <FileVersion>0.1.8.1008</FileVersion>
-    <InformationalVersion>0.1.8</InformationalVersion>
+    <Version>0.1.9</Version>
+    <AssemblyVersion>0.1.9.1009</AssemblyVersion>
+    <FileVersion>0.1.9.1009</FileVersion>
+    <InformationalVersion>0.1.9</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="YTMTray.Tests" />
