@@ -312,6 +312,17 @@ foreach ($CurrentRuntimeIdentifier in $RuntimeIdentifiers) {
 Assert-PathExists $CombinedInstallerPath
 Assert-PathExists $UpdateManifestPath
 
+Assert-Throws {
+  Invoke-Native `
+    -FilePath $CombinedInstallerPath `
+    -Arguments @(
+      "install",
+      "--quiet",
+      "--runtime-identifier",
+      "invalid"
+    )
+} "quiet combined installer argument failure"
+
 $UpdateManifest = Get-Content -LiteralPath $UpdateManifestPath -Raw |
   ConvertFrom-Json
 $RuntimeAsset = $UpdateManifest.assets.PSObject.Properties[$RuntimeIdentifier].Value

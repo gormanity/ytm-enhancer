@@ -20,6 +20,13 @@ internal static partial class Program
     {
         InstallerLogger? logger = null;
         string? tempRoot = null;
+        var quiet = args.Any(argument =>
+            string.Equals(
+                argument,
+                "--quiet",
+                StringComparison.OrdinalIgnoreCase
+            )
+        );
 
         try
         {
@@ -76,13 +83,16 @@ internal static partial class Program
         {
             logger ??= InstallerLogger.CreateFallback();
             logger.Write($"installer failed: {error}");
-            MessageBox(
-                0,
-                $"YTM Tray installation could not complete.\n\n{error.Message}"
-                    + $"\n\nDetails were written to:\n{logger.LogPath}",
-                InstallTitle,
-                OkButton | ErrorIcon
-            );
+            if (!quiet)
+            {
+                MessageBox(
+                    0,
+                    $"YTM Tray installation could not complete.\n\n{error.Message}"
+                        + $"\n\nDetails were written to:\n{logger.LogPath}",
+                    InstallTitle,
+                    OkButton | ErrorIcon
+                );
+            }
             return 1;
         }
         finally

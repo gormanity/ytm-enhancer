@@ -1079,6 +1079,7 @@ describe("Windows tray connector scaffold", () => {
       "src/YTMTray.Core/WindowsRuntimeIdentifier.cs",
     );
     const packageInstaller = read("scripts/package-installer.mjs");
+    const packageSmoke = readRepo("scripts/windows-qa/tray-package-smoke.ps1");
     const packageJson = JSON.parse(readRepo("package.json")) as {
       scripts: Record<string, string>;
     };
@@ -1101,9 +1102,14 @@ describe("Windows tray connector scaffold", () => {
     expect(installer).toContain('"--runtime-identifier"');
     expect(installer).toContain("WaitForExit()");
     expect(installer).toContain("Delete(tempRoot");
+    expect(installer).toContain("var quiet = args.Any(argument =>");
+    expect(installer).toMatch(
+      /catch \(Exception error\)[\s\S]*?if \(!quiet\)\s*\{\s*MessageBox\(/,
+    );
     expect(installer).toContain(
       "The combined installer does not accept --runtime-identifier.",
     );
+    expect(packageSmoke).toContain("quiet combined installer argument failure");
     expect(setup).toContain(
       "WindowsRuntimeIdentifier.CurrentOperatingSystem()",
     );
