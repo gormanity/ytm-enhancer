@@ -26,10 +26,6 @@
       Include="..\..\..\..\packages\connector-ui-assets\demo-artwork\*.png"
       Link="Resources\%(Filename)%(Extension)"
     />
-    <EmbeddedResource
-      Include="..\..\..\..\packages\connector-ui-assets\artwork\artwork-placeholder.svg"
-      Link="Resources\%(Filename)%(Extension)"
-    />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\YTMTray.Core\YTMTray.Core.csproj" />

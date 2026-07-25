@@ -1423,27 +1423,6 @@ final class MenuBarControlsView: NSView {
   }
 }
 
-private enum MenuBarArtworkPlaceholder {
-  private static let sourceImage: NSImage? = {
-    guard
-      let url = MenuBarResources.url(forResource: "artwork-placeholder", withExtension: "svg"),
-      let image = NSImage(contentsOf: url)
-    else {
-      return nil
-    }
-
-    image.isTemplate = true
-    return image
-  }()
-
-  static func image(accessibilityDescription: String) -> NSImage? {
-    guard let image = sourceImage?.copy() as? NSImage else { return nil }
-
-    image.accessibilityDescription = accessibilityDescription
-    return image
-  }
-}
-
 private final class MenuBarArtworkView: NSView {
   private let imageView = NSImageView()
   private let logger = NativeAppLogger()
@@ -1531,9 +1510,11 @@ private final class MenuBarArtworkView: NSView {
   }
 
   func showPlaceholder() {
-    let image = MenuBarArtworkPlaceholder.image(
+    let image = NSImage(
+      systemSymbolName: "music.note",
       accessibilityDescription: "No artwork"
     )
+    image?.isTemplate = true
     imageView.image = image
     imageView.contentTintColor = MenuBarStyle.secondaryText
   }
@@ -1637,9 +1618,11 @@ private final class MenuBarNextTrackArtworkView: NSView {
   }
 
   func showPlaceholder() {
-    let image = MenuBarArtworkPlaceholder.image(
+    let image = NSImage(
+      systemSymbolName: "music.note",
       accessibilityDescription: "No next track artwork"
     )
+    image?.isTemplate = true
     imageView.image = image
     imageView.contentTintColor = MenuBarStyle.tertiaryText
   }

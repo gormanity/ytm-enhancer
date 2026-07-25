@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -430,28 +431,30 @@ describe("menu bar connector app scaffold", () => {
     expect(controlsSource).not.toContain("setSystemSymbolName");
   });
 
-  it("reuses the shared connector artwork placeholder", () => {
+  it("uses the native macOS music symbol for artwork placeholders", () => {
     const manifest = read("Package.swift");
     const viewSource = read("Sources/YTMMenuBarConnector/MenuBarViews.swift");
-    const localResource =
-      "Sources/YTMMenuBarConnector/Resources/artwork-placeholder.svg";
-
-    expect(manifest).toContain('.copy("Resources/artwork-placeholder.svg")');
-    expect(read(localResource)).toBe(
-      read(
-        "../../packages/connector-ui-assets/artwork/artwork-placeholder.svg",
-      ),
-    );
-    expect(viewSource).toContain(
-      'MenuBarResources.url(forResource: "artwork-placeholder"',
-    );
-    expect(viewSource).toContain("image.isTemplate = true");
 
     const artworkViews = viewSource.match(
       /private final class MenuBarArtworkView:[\s\S]+$/,
     )?.[0];
     expect(artworkViews).toBeDefined();
-    expect(artworkViews).not.toContain('systemSymbolName: "music.note"');
+    expect(
+      artworkViews?.match(/systemSymbolName: "music\.note"/g),
+    ).toHaveLength(2);
+    expect(artworkViews).toContain("image?.isTemplate = true");
+    expect(viewSource).not.toContain("MenuBarArtworkPlaceholder");
+    expect(manifest).not.toContain(
+      '.copy("Resources/artwork-placeholder.svg")',
+    );
+    expect(
+      existsSync(
+        resolve(
+          appRoot,
+          "Sources/YTMMenuBarConnector/Resources/artwork-placeholder.svg",
+        ),
+      ),
+    ).toBe(false);
   });
 
   it("preserves non-square artwork aspect ratios", () => {

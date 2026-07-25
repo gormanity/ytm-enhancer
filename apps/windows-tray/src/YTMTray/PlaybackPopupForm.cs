@@ -87,8 +87,8 @@ internal sealed class PlaybackPopupForm : Form
     public PlaybackPopupForm(NativeAppLogger? logger = null)
     {
         this.logger = logger;
-        currentArtwork = new ArtworkBoxControl(10, logger, "current");
-        nextArtwork = new ArtworkBoxControl(8, logger, "next");
+        currentArtwork = new ArtworkBoxControl(10, 64, logger, "current");
+        nextArtwork = new ArtworkBoxControl(8, 40, logger, "next");
         scrollDiagnosticsEnabled =
             Environment.GetEnvironmentVariable("YTM_TRAY_SCROLL_QA") == "1";
 
@@ -1156,8 +1156,14 @@ internal sealed class ArtworkBoxControl : Control
     private static readonly HttpClient HttpClient = new();
     private const string PackagedArtworkScheme = "ytm-tray-resource";
     private const string FixtureArtworkHost = "ytm-enhancer.local";
+    private const string FluentArtworkPlaceholderFontFamily = "Segoe Fluent Icons";
+    private const string LegacyArtworkPlaceholderFontFamily = "Segoe MDL2 Assets";
+    private const string ArtworkPlaceholderGlyph = "\uEC4F";
+    private static readonly string ArtworkPlaceholderFontFamily =
+        ResolvePlaceholderFontFamily();
 
     private readonly int cornerRadius;
+    private readonly int placeholderFontSize;
     private readonly NativeAppLogger? logger;
     private readonly string logName;
     private Image? artwork;
@@ -1166,11 +1172,13 @@ internal sealed class ArtworkBoxControl : Control
 
     public ArtworkBoxControl(
         int cornerRadius,
+        int placeholderFontSize,
         NativeAppLogger? logger = null,
         string logName = "artwork"
     )
     {
         this.cornerRadius = cornerRadius;
+        this.placeholderFontSize = placeholderFontSize;
         this.logger = logger;
         this.logName = logName;
         SetStyle(
@@ -1377,11 +1385,38 @@ internal sealed class ArtworkBoxControl : Control
     private void DrawPlaceholder(Graphics graphics)
     {
         var theme = TrayTheme.CurrentApp;
-        ArtworkPlaceholderSvgRenderer.Draw(
-            graphics,
-            new Rectangle(0, 0, Width, Height),
-            theme.ArtworkPlaceholderColor
+        using var font = new Font(
+            ArtworkPlaceholderFontFamily,
+            LogicalToDeviceUnits(placeholderFontSize),
+            FontStyle.Regular,
+            GraphicsUnit.Pixel
         );
+        TextRenderer.DrawText(
+            graphics,
+            ArtworkPlaceholderGlyph,
+            font,
+            ClientRectangle,
+            theme.ArtworkPlaceholderColor,
+            TextFormatFlags.HorizontalCenter
+                | TextFormatFlags.VerticalCenter
+                | TextFormatFlags.SingleLine
+                | TextFormatFlags.NoPrefix
+                | TextFormatFlags.NoPadding
+                | TextFormatFlags.PreserveGraphicsClipping
+        );
+    }
+
+    private static string ResolvePlaceholderFontFamily()
+    {
+        try
+        {
+            using var family = new FontFamily(FluentArtworkPlaceholderFontFamily);
+            return family.Name;
+        }
+        catch (ArgumentException)
+        {
+            return LegacyArtworkPlaceholderFontFamily;
+        }
     }
 
     private static bool IsSupportedArtworkUrl(string? artworkUrl)

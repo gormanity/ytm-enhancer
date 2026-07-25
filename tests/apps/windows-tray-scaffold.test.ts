@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -68,45 +69,6 @@ async function meaningfulAlphaBounds(path: string): Promise<{
   }
 
   return {
-    width: maxX < minX ? 0 : maxX - minX + 1,
-    height: maxY < minY ? 0 : maxY - minY + 1,
-  };
-}
-
-async function meaningfulAlphaBoundingBox(path: string): Promise<{
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}> {
-  const alphaThreshold = 64;
-  const { data, info } = await sharp(path)
-    .resize(64, 64)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  let minX = info.width;
-  let minY = info.height;
-  let maxX = -1;
-  let maxY = -1;
-
-  for (let y = 0; y < info.height; y += 1) {
-    for (let x = 0; x < info.width; x += 1) {
-      const alpha = data[(y * info.width + x) * info.channels + 3];
-      if (alpha < alphaThreshold) {
-        continue;
-      }
-
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-    }
-  }
-
-  return {
-    x: minX,
-    y: minY,
     width: maxX < minX ? 0 : maxX - minX + 1,
     height: maxY < minY ? 0 : maxY - minY + 1,
   };
@@ -414,16 +376,16 @@ describe("Windows tray connector scaffold", () => {
     expect(project).toContain(
       "packages\\connector-ui-assets\\demo-artwork\\*.png",
     );
-    expect(project).toContain(
+    expect(project).toContain('Link="Resources\\%(Filename)%(Extension)"');
+    expect(project).not.toContain(
       "packages\\connector-ui-assets\\artwork\\artwork-placeholder.svg",
     );
-    expect(project).toContain('Link="Resources\\%(Filename)%(Extension)"');
     expect(renderer).toContain("playback-shuffle");
     expect(renderer).toContain("playback-repeat-one");
     expect(renderer).toContain("action-focus");
     expect(renderer).toContain("extension-icon-monochrome-ring");
-    expect(renderer).toContain("ArtworkPlaceholderSvgRenderer");
-    expect(renderer).toContain('"artwork-placeholder"');
+    expect(renderer).not.toContain("ArtworkPlaceholderSvgRenderer");
+    expect(renderer).not.toContain('"artwork-placeholder"');
     expect(renderer).toContain("IntrinsicPixelSize");
     expect(renderer).toContain("ParseIntrinsicSize");
     expect(renderer).toContain("ParseOptionalSvgLength");
@@ -433,9 +395,8 @@ describe("Windows tray connector scaffold", () => {
     expect(renderer).not.toContain("PackageReference");
   });
 
-  it("uses the shared connector artwork placeholder", () => {
+  it("uses the native Windows music symbol for artwork placeholders", () => {
     const popupForm = read("src/YTMTray/PlaybackPopupForm.cs");
-    const renderer = read("src/YTMTray/PlaybackSvgIconRenderer.cs");
     const artworkBox = popupForm.match(
       /internal sealed class ArtworkBoxControl[\s\S]+?private static bool IsSupportedArtworkUrl/,
     )?.[0];
@@ -445,24 +406,39 @@ describe("Windows tray connector scaffold", () => {
     expect(artworkBox).toContain("BorderColor");
     expect(artworkBox).toContain("PlaceholderColor");
     expect(artworkBox).toContain("DrawPlaceholder");
-    expect(artworkBox).toContain("ArtworkPlaceholderSvgRenderer.Draw");
-    expect(renderer).toContain('SvgIconRenderer.Load("artwork-placeholder")');
+    expect(artworkBox).toContain('"Segoe Fluent Icons"');
+    expect(artworkBox).toContain('"Segoe MDL2 Assets"');
+    expect(artworkBox).toContain('"\\uEC4F"');
+    expect(artworkBox).toContain("ResolvePlaceholderFontFamily");
+    expect(artworkBox).toContain("LogicalToDeviceUnits(placeholderFontSize)");
+    expect(artworkBox).toContain("TextRenderer.DrawText");
+    expect(artworkBox).toContain("TextFormatFlags.HorizontalCenter");
+    expect(artworkBox).toContain("TextFormatFlags.VerticalCenter");
+    expect(artworkBox).toContain("TextFormatFlags.NoPadding");
+    expect(artworkBox).toContain("TextFormatFlags.SingleLine");
+    expect(artworkBox).toContain("TextFormatFlags.NoPrefix");
+    expect(artworkBox).toContain("TextFormatFlags.PreserveGraphicsClipping");
+    expect(artworkBox).not.toContain("TextFormatFlags.NoClipping");
+    expect(
+      existsSync(
+        resolve(
+          process.cwd(),
+          "packages/connector-ui-assets/artwork/artwork-placeholder.svg",
+        ),
+      ),
+    ).toBe(false);
     expect(artworkBox).not.toContain("notePen");
     expect(artworkBox).not.toContain("FillEllipse");
     expect(artworkBox).not.toContain("albumBrush");
     expect(artworkBox).not.toContain("sunBrush");
     expect(artworkBox).not.toContain("LinearGradientMode.ForwardDiagonal");
+    expect(popupForm).toContain(
+      'new ArtworkBoxControl(10, 64, logger, "current")',
+    );
+    expect(popupForm).toContain('new ArtworkBoxControl(8, 40, logger, "next")');
   });
 
-  it("matches the polished menu bar artwork placeholder treatment", async () => {
-    const sharedArtworkPath = resolve(
-      process.cwd(),
-      "packages/connector-ui-assets/artwork/artwork-placeholder.svg",
-    );
-    const sharedArtwork = readFileSync(sharedArtworkPath, "utf-8");
-    const menuBarArtwork = readRepo(
-      "apps/menu-bar/Sources/YTMMenuBarConnector/Resources/artwork-placeholder.svg",
-    );
+  it("matches the native connector artwork placeholder treatment", () => {
     const theme = read("src/YTMTray/TrayTheme.cs");
     const popupForm = read("src/YTMTray/PlaybackPopupForm.cs");
     const artworkBox = popupForm.match(
@@ -471,19 +447,6 @@ describe("Windows tray connector scaffold", () => {
     const onPaint = artworkBox?.match(
       /protected override void OnPaint[\s\S]+?protected override void Dispose/,
     )?.[0];
-
-    expect(menuBarArtwork).toBe(sharedArtwork);
-    expect(sharedArtwork).toContain("<path");
-    expect(sharedArtwork).not.toContain("<line");
-    expect(sharedArtwork).not.toContain("stroke=");
-    await expect(
-      meaningfulAlphaBoundingBox(sharedArtworkPath),
-    ).resolves.toEqual({
-      x: 15,
-      y: 5,
-      width: 35,
-      height: 55,
-    });
 
     expect(theme).toContain(
       "ArtworkBackgroundColor = Color.FromArgb(23, 23, 23)",
