@@ -71,8 +71,14 @@ internal sealed record WindowsTrayAboutUpdateStatus(
 
 internal sealed class AboutDialogForm : Form
 {
+    private const int DefaultClientWidth = 520;
+    private const int DefaultClientHeight = 480;
+
     private Icon appIcon;
     private Image appIconImage;
+    private readonly TableLayoutPanel layout;
+    private readonly TableLayoutPanel contentLayout;
+    private readonly Control footer;
     private readonly PictureBox appIconBox = new();
     private readonly Label connectionSummaryLabel = new();
     private readonly Label connectionDetailLabel = new();
@@ -82,6 +88,7 @@ internal sealed class AboutDialogForm : Form
     private readonly Button closeButton = new();
     private readonly List<Action<TrayTheme>> themeBindings = [];
     private ConnectorSource? currentBrowserSource;
+    private Size defaultClientSize;
     private WindowsTrayAboutUpdateStatus currentUpdateStatus =
         WindowsTrayAboutUpdateStatus.Idle();
 
@@ -102,9 +109,12 @@ internal sealed class AboutDialogForm : Form
         MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(520, 420);
+        ClientSize = new Size(DefaultClientWidth, DefaultClientHeight);
 
-        Controls.Add(BuildLayout());
+        contentLayout = BuildContentLayout();
+        footer = BuildFooter();
+        layout = BuildLayout(contentLayout, footer);
+        Controls.Add(layout);
         SetBrowserSource(null);
         SetUpdateStatus(WindowsTrayAboutUpdateStatus.Idle());
     }
@@ -116,12 +126,14 @@ internal sealed class AboutDialogForm : Form
     {
         currentBrowserSource = source;
         ApplyBrowserSource(TrayTheme.CurrentApp);
+        FitToContentIfVisible();
     }
 
     public void SetUpdateStatus(WindowsTrayAboutUpdateStatus status)
     {
         currentUpdateStatus = status;
         ApplyUpdateStatus(TrayTheme.CurrentApp);
+        FitToContentIfVisible();
     }
 
     public void ApplyTheme()
@@ -138,7 +150,15 @@ internal sealed class AboutDialogForm : Form
         RefreshAppIcon(theme);
         ApplyBrowserSource(theme);
         ApplyUpdateStatus(theme);
+        FitToContentIfVisible();
         Invalidate(true);
+    }
+
+    protected override void OnShown(EventArgs eventArgs)
+    {
+        base.OnShown(eventArgs);
+        defaultClientSize = ClientSize;
+        FitToContent();
     }
 
     private void ApplyBrowserSource(TrayTheme theme)
@@ -197,7 +217,7 @@ internal sealed class AboutDialogForm : Form
         base.Dispose(disposing);
     }
 
-    private Control BuildLayout()
+    private TableLayoutPanel BuildLayout(Control content, Control footerControl)
     {
         var layout = BindTheme(
             new TableLayoutPanel
@@ -205,23 +225,101 @@ internal sealed class AboutDialogForm : Form
                 Dock = DockStyle.Fill,
                 Padding = new Padding(24),
                 ColumnCount = 1,
-                RowCount = 7
+                RowCount = 2
             },
             static (control, theme) => control.BackColor = theme.AboutSurfaceColor
         );
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        layout.Controls.Add(BuildHeader(), 0, 0);
-        layout.Controls.Add(BuildConnectionSection(), 0, 2);
-        layout.Controls.Add(BuildUpdateSection(), 0, 4);
-        layout.Controls.Add(BuildFooter(), 0, 6);
+        var scrollViewport = BindTheme(
+            new Panel
+            {
+                AutoScroll = true,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0)
+            },
+            static (control, theme) => control.BackColor = theme.AboutSurfaceColor
+        );
+        scrollViewport.Controls.Add(content);
+
+        layout.Controls.Add(scrollViewport, 0, 0);
+        layout.Controls.Add(footerControl, 0, 1);
         return layout;
+    }
+
+    private TableLayoutPanel BuildContentLayout()
+    {
+        var content = BindTheme(
+            new TableLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0),
+                ColumnCount = 1,
+                RowCount = 5
+            },
+            static (control, theme) => control.BackColor = theme.AboutSurfaceColor
+        );
+        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
+        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 14));
+        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        content.Controls.Add(BuildHeader(), 0, 0);
+        content.Controls.Add(BuildConnectionSection(), 0, 2);
+        content.Controls.Add(BuildUpdateSection(), 0, 4);
+        return content;
+    }
+
+    private void FitToContentIfVisible()
+    {
+        if (Visible)
+        {
+            FitToContent();
+        }
+    }
+
+    private void FitToContent()
+    {
+        var workingArea = Screen.FromControl(this).WorkingArea;
+        var frameWidth = Math.Max(0, Width - ClientSize.Width);
+        var frameHeight = Math.Max(0, Height - ClientSize.Height);
+        var maximumClientWidth = Math.Max(1, workingArea.Width - frameWidth);
+        var maximumClientHeight = Math.Max(1, workingArea.Height - frameHeight);
+        var targetWidth = Math.Min(defaultClientSize.Width, maximumClientWidth);
+        var baselineHeight = Math.Min(defaultClientSize.Height, maximumClientHeight);
+
+        ClientSize = new Size(targetWidth, baselineHeight);
+        PerformLayout();
+        contentLayout.PerformLayout();
+
+        var contentWidth = Math.Max(1, targetWidth - layout.Padding.Horizontal);
+        var preferredContentHeight = contentLayout
+            .GetPreferredSize(new Size(contentWidth, 0))
+            .Height;
+        var preferredFooterHeight = footer
+            .GetPreferredSize(new Size(contentWidth, 0))
+            .Height;
+        var preferredHeight =
+            layout.Padding.Vertical
+            + preferredContentHeight
+            + footer.Margin.Vertical
+            + preferredFooterHeight;
+        var targetHeight = Math.Min(
+            Math.Max(defaultClientSize.Height, preferredHeight),
+            maximumClientHeight
+        );
+        ClientSize = new Size(targetWidth, targetHeight);
+
+        var maximumLeft = Math.Max(workingArea.Left, workingArea.Right - Width);
+        var maximumTop = Math.Max(workingArea.Top, workingArea.Bottom - Height);
+        Location = new Point(
+            Math.Clamp(Left, workingArea.Left, maximumLeft),
+            Math.Clamp(Top, workingArea.Top, maximumTop)
+        );
     }
 
     private Control BuildHeader()
@@ -408,7 +506,7 @@ internal sealed class AboutDialogForm : Form
                 AutoSize = true,
                 Dock = DockStyle.Top,
                 FlowDirection = FlowDirection.RightToLeft,
-                Margin = new Padding(0)
+                Margin = new Padding(0, 16, 0, 0)
             },
             static (control, theme) => control.BackColor = theme.AboutSurfaceColor
         );

@@ -260,9 +260,15 @@ describe("Windows tray connector scaffold", () => {
     expect(aboutDialog).toContain("Check for Updates");
     expect(aboutDialog).toContain("Install Update");
     expect(aboutDialog).toContain('closeButton.Text = "Close"');
-    expect(aboutDialog).toContain("ClientSize = new Size(520, 420)");
-    expect(aboutDialog).toContain("RowCount = 7");
-    expect(aboutDialog).toContain("BuildFooter(), 0, 6");
+    expect(aboutDialog).toContain("DefaultClientWidth = 520");
+    expect(aboutDialog).toContain("DefaultClientHeight = 480");
+    expect(aboutDialog).toContain(
+      "ClientSize = new Size(DefaultClientWidth, DefaultClientHeight)",
+    );
+    expect(aboutDialog).toContain("AutoScroll = true");
+    expect(aboutDialog).toContain("scrollViewport.Controls.Add(content)");
+    expect(aboutDialog).toContain("layout.Controls.Add(scrollViewport, 0, 0)");
+    expect(aboutDialog).toContain("layout.Controls.Add(footerControl, 0, 1)");
     expect(aboutDialog).not.toContain("BuildProcessSection");
     expect(aboutDialog).not.toContain("How updates work");
     expect(aboutDialog).not.toContain("component-scoped");

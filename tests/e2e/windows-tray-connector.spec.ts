@@ -235,6 +235,18 @@ $NativeInputSource = @'
 using System;
 using System.Runtime.InteropServices;
 public static class NativeInput {
+  [StructLayout(LayoutKind.Sequential)]
+  public struct Point {
+    public int X;
+    public int Y;
+  }
+  [StructLayout(LayoutKind.Sequential)]
+  public struct Rect {
+    public int Left;
+    public int Top;
+    public int Right;
+    public int Bottom;
+  }
   [DllImport("user32.dll")]
   public static extern bool SetCursorPos(int X, int Y);
   [DllImport("user32.dll")]
@@ -243,9 +255,38 @@ public static class NativeInput {
   public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")]
   public static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")]
+  public static extern bool GetClientRect(IntPtr hWnd, out Rect rect);
+  [DllImport("user32.dll")]
+  public static extern bool ClientToScreen(IntPtr hWnd, ref Point point);
 }
 '@
 Add-Type -TypeDefinition $NativeInputSource
+
+function Get-ClientScreenRectangle {
+  param([Parameter(Mandatory = $true)][IntPtr] $Handle)
+
+  $ClientRect = [NativeInput+Rect]::new()
+  if (-not [NativeInput]::GetClientRect($Handle, [ref]$ClientRect)) {
+    throw "Unable to read the About dialog client rectangle."
+  }
+  $TopLeft = [NativeInput+Point]::new()
+  $TopLeft.X = $ClientRect.Left
+  $TopLeft.Y = $ClientRect.Top
+  $BottomRight = [NativeInput+Point]::new()
+  $BottomRight.X = $ClientRect.Right
+  $BottomRight.Y = $ClientRect.Bottom
+  if (-not [NativeInput]::ClientToScreen($Handle, [ref]$TopLeft) -or
+      -not [NativeInput]::ClientToScreen($Handle, [ref]$BottomRight)) {
+    throw "Unable to map the About dialog client rectangle to screen coordinates."
+  }
+  return [System.Drawing.Rectangle]::FromLTRB(
+    $TopLeft.X,
+    $TopLeft.Y,
+    $BottomRight.X,
+    $BottomRight.Y
+  )
+}
 
 function Get-Elements {
   $Root = [System.Windows.Automation.AutomationElement]::RootElement
@@ -709,6 +750,32 @@ async function clickAboutAndClose(
     'if ($null -eq $UpdateAction) { throw "About dialog update action was not found." }',
     '$CloseButton = Find-ElementByName $Dialog "Close"',
     'if ($null -eq $CloseButton) { throw "About dialog Close button was not found." }',
+    "$DialogRect = $Dialog.Current.BoundingRectangle",
+    "$DialogHandle = [IntPtr]$Dialog.Current.NativeWindowHandle",
+    "$ClientRect = Get-ClientScreenRectangle $DialogHandle",
+    "$WorkingArea = [System.Windows.Forms.Screen]::FromHandle($DialogHandle).WorkingArea",
+    "if (",
+    "  $DialogRect.Left -lt $WorkingArea.Left -or",
+    "  $DialogRect.Top -lt $WorkingArea.Top -or",
+    "  $DialogRect.Right -gt $WorkingArea.Right -or",
+    "  $DialogRect.Bottom -gt $WorkingArea.Bottom",
+    ") {",
+    '  throw "About dialog extends beyond its monitor working area."',
+    "}",
+    "foreach ($Action in @($UpdateAction, $CloseButton)) {",
+    "  $ActionRect = $Action.Current.BoundingRectangle",
+    "  if (",
+    "    $Action.Current.IsOffscreen -or",
+    "    $ActionRect.Width -le 0 -or",
+    "    $ActionRect.Height -le 0 -or",
+    "    $ActionRect.Left -lt $ClientRect.Left -or",
+    "    $ActionRect.Top -lt $ClientRect.Top -or",
+    "    $ActionRect.Right -gt $ClientRect.Right -or",
+    "    $ActionRect.Bottom -gt $ClientRect.Bottom",
+    "  ) {",
+    `    throw "About dialog action '$($Action.Current.Name)' is clipped or offscreen."`,
+    "  }",
+    "}",
     "Click-Element $CloseButton",
     "Start-Sleep -Milliseconds 350",
   ]);
