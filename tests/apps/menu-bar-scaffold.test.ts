@@ -1951,8 +1951,8 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.menuBar.channels.homebrew.updateCommand).toBe(
       "brew update && brew upgrade --cask ytm-menu-bar",
     );
-    expect(releaseIndex.products.windowsTray.latestVersion).toBe("0.1.9");
-    expect(releaseIndex.products.windowsTray.tag).toBe("windows-tray-v0.1.9");
+    expect(releaseIndex.products.windowsTray.latestVersion).toBe("0.1.10");
+    expect(releaseIndex.products.windowsTray.tag).toBe("windows-tray-v0.1.10");
     expect(releaseIndex.products.windowsTray.installPage).toBe(
       "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
     );
@@ -1960,12 +1960,12 @@ describe("menu bar connector app scaffold", () => {
       "Windows 11",
     );
     expect(releaseIndex.products.windowsTray.channels.direct.asset).toBe(
-      "YTM-Tray-0.1.9-Setup.exe",
+      "YTM-Tray-0.1.10-Setup.exe",
     );
     expect(
       releaseIndex.products.windowsTray.channels.direct.packageUrl,
     ).toContain(
-      "/releases/download/windows-tray-v0.1.9/YTM-Tray-0.1.9-Setup.exe",
+      "/releases/download/windows-tray-v0.1.10/YTM-Tray-0.1.10-Setup.exe",
     );
     expect(releaseIndex.products.windowsTray.channels.direct.runtimes).toEqual([
       "win-x64",
