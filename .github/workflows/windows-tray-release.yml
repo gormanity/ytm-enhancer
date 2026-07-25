@@ -164,9 +164,9 @@ jobs:
 
             1. Download `YTM-Tray-${{ env.YTM_WINDOWS_TRAY_VERSION }}-Setup.exe`.
             2. Run `YTM-Tray-${{ env.YTM_WINDOWS_TRAY_VERSION }}-Setup.exe`.
-               It selects the native x64 or ARM64 app automatically.
-            3. Open YTM Tray from the Start menu, then enable Connected Apps
-               and YTM Tray in the YTM Enhancer extension.
+               It selects the native x64 or ARM64 app and opens YTM Tray
+               automatically.
+            3. Enable Connected Apps and YTM Tray in the YTM Enhancer extension.
 
             YTM Tray installs for your Windows account and appears in Windows
             Settings > Apps > Installed apps for normal uninstallation.

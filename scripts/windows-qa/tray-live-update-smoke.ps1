@@ -417,6 +417,10 @@ function Invoke-LiveUpdateUi {
       'Add-Type -AssemblyName System.Windows.Forms',
       'Add-Type -AssemblyName UIAutomationClient',
       'Add-Type -AssemblyName UIAutomationTypes',
+      "`$TrayPath = $(ConvertTo-PowerShellLiteral $TrayPath)",
+      "`$TrayLogPath = $(ConvertTo-PowerShellLiteral $TrayLogPath)",
+      "`$BaselineProcessId = $($Launch.pid)",
+      "`$ExpectedSessionId = $ActiveSessionId",
       '$NativeInputSource = @''',
       'using System;',
       'using System.Runtime.InteropServices;',
@@ -727,7 +731,67 @@ function Invoke-LiveUpdateUi {
       '  throw "Verified update OK button was not shown. Visible elements: $((Get-VisibleElementNames) -join '', '')"',
       '}',
       'Click-Element $OkButton',
-      'Start-Sleep -Milliseconds 1000',
+      '$ExpectedTrayPath = [IO.Path]::GetFullPath($TrayPath)',
+      '$UpdatedTrayProcess = $null',
+      '$RelaunchDeadline = (Get-Date).AddSeconds(120)',
+      'do {',
+      '  $Candidates = @(',
+      '    Get-Process YTMTray -ErrorAction SilentlyContinue |',
+      '      Where-Object {',
+      '        try {',
+      '          $_.Id -ne $BaselineProcessId -and',
+      '            $_.SessionId -eq $ExpectedSessionId -and',
+      '            -not [string]::IsNullOrWhiteSpace($_.Path) -and',
+      '            [IO.Path]::GetFullPath($_.Path) -ieq $ExpectedTrayPath',
+      '        } catch {',
+      '          $false',
+      '        }',
+      '      }',
+      '  )',
+      '  if ($Candidates.Count -eq 1) {',
+      '    $UpdatedTrayProcess = $Candidates[0]',
+      '    break',
+      '  }',
+      '  if ($Candidates.Count -gt 1) {',
+      '    throw "The update launched multiple installed YTM Tray processes: $($Candidates.Id -join '', '')."',
+      '  }',
+      '  Start-Sleep -Milliseconds 250',
+      '} while ((Get-Date) -lt $RelaunchDeadline)',
+      'if ($null -eq $UpdatedTrayProcess) {',
+      '  throw "The updated YTM Tray app did not relaunch in desktop session $ExpectedSessionId."',
+      '}',
+      'foreach ($ProbeDelay in @(500, 1000)) {',
+      '  Start-Sleep -Milliseconds $ProbeDelay',
+      '  $UpdatedTrayProcess.Refresh()',
+      '  if ($UpdatedTrayProcess.HasExited) {',
+      '    throw "The updated YTM Tray app exited after relaunch with code $($UpdatedTrayProcess.ExitCode)."',
+      '  }',
+      '}',
+      '$TrayStartLogCount = 0',
+      '$BridgeStartLogCount = 0',
+      '$LogDeadline = (Get-Date).AddSeconds(30)',
+      'do {',
+      '  $TrayLog = if (Test-Path -LiteralPath $TrayLogPath) {',
+      '    Get-Content -LiteralPath $TrayLogPath -Raw',
+      '  } else {',
+      '    ""',
+      '  }',
+      '  $TrayStartLogCount = ([regex]::Matches(',
+      '    $TrayLog,',
+      '    [regex]::Escape("starting YTM Tray")',
+      '  )).Count',
+      '  $BridgeStartLogCount = ([regex]::Matches(',
+      '    $TrayLog,',
+      '    [regex]::Escape("bridge server listening pipe=")',
+      '  )).Count',
+      '  if ($TrayStartLogCount -ge 2 -and $BridgeStartLogCount -ge 2) {',
+      '    break',
+      '  }',
+      '  Start-Sleep -Milliseconds 250',
+      '} while ((Get-Date) -lt $LogDeadline)',
+      'if ($TrayStartLogCount -lt 2 -or $BridgeStartLogCount -lt 2) {',
+      '  throw "The tray log did not record both baseline and updated app startup."',
+      '}',
       '$UpdateRoot = Join-Path $env:TEMP "YTM Enhancer\Tray\Updates"',
       '$RunnerScripts = @()',
       '$InstallerLogs = @()',
@@ -741,10 +805,6 @@ function Invoke-LiveUpdateUi {
       '      Select-Object -ExpandProperty FullName',
       '  )',
       '}',
-      '$TrayProcessIds = @(',
-      '  Get-Process YTMTray -ErrorAction SilentlyContinue |',
-      '    Select-Object -ExpandProperty Id',
-      ')',
       '$Payload = @{',
       '  ok = $true',
       '  clickedAction = $ActionName',
@@ -752,7 +812,10 @@ function Invoke-LiveUpdateUi {
       '  actionActivation = $ActionActivation',
       '  runnerScripts = $RunnerScripts',
       '  installerLogs = $InstallerLogs',
-      '  trayProcessIds = $TrayProcessIds',
+      '  trayProcessId = $UpdatedTrayProcess.Id',
+      '  trayProcessSessionId = $UpdatedTrayProcess.SessionId',
+      '  trayStartLogCount = $TrayStartLogCount',
+      '  bridgeStartLogCount = $BridgeStartLogCount',
       '}'
     )
 
@@ -760,7 +823,7 @@ function Invoke-LiveUpdateUi {
     -Name "update" `
     -ScriptLines $UpdateLines `
     -ResultPath $UpdateResultPath `
-    -TimeoutSeconds 180
+    -TimeoutSeconds 480
 }
 
 Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
@@ -800,6 +863,19 @@ try {
   $Update = Invoke-LiveUpdateUi
 
   Wait-InstalledRelease -Version $TargetVersion -NativeSetupExpected
+  if ([int]$Update.trayProcessId -eq [int]$Launch.pid) {
+    throw "The update did not replace the baseline YTM Tray process."
+  }
+  Assert-Equal `
+    $ActiveSessionId `
+    $Update.trayProcessSessionId `
+    "updated tray process session"
+  if (
+    [int]$Update.trayStartLogCount -lt 2 -or
+    [int]$Update.bridgeStartLogCount -lt 2
+  ) {
+    throw "The updated YTM Tray process did not complete startup."
+  }
 
   Write-Host "Uninstalling YTM Tray $TargetVersion from installed uninstaller."
   Invoke-InstalledUninstaller

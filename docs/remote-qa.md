@@ -778,10 +778,12 @@ scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.1 0.1.2
 This installs the published baseline release into the real user-level install
 location, launches the released tray app through the Windows QA UI agent, clicks
 the popup update action, accepts the update dialogs, waits for the target
-release to replace the baseline, validates the installed files and native host
-registrations, then uninstalls and verifies cleanup. It intentionally uses the
-default `%LOCALAPPDATA%\YTM Enhancer\Tray` path because the in-app updater hands
-off to the native setup inside the selected architecture-specific updater zip.
+release to replace the baseline, and confirms that the updated app relaunches as
+a new process in the same desktop session and completes startup. It validates
+the installed files and native host registrations, then uninstalls and verifies
+cleanup. It intentionally uses the default `%LOCALAPPDATA%\YTM Enhancer\Tray`
+path because the in-app updater hands off to the native setup inside the
+selected architecture-specific updater zip.
 
 The remote wrapper also accepts `YTM_WINDOWS_TRAY_BASELINE_VERSION` and
 `YTM_WINDOWS_TRAY_TARGET_VERSION` when positional arguments are not convenient.
@@ -808,11 +810,11 @@ This downloads the published `YTM-Tray-<version>-Setup.exe`, verifies its
 Authenticode signer, and installs through the same combined offline installer
 linked from the website. The installer selects x64 or ARM64 automatically. The
 smoke validates the native installed files, native host manifests, browser
-registrations, Start Menu shortcuts, and Windows uninstall entry, launches YTM
-Tray through the Windows QA UI agent, and opens Google Chrome to YouTube Music.
-It intentionally does not uninstall or quit the tray app. Use it after
-destructive install/update/uninstall smokes when you want the target left ready
-for hands-on operational testing.
+registrations, Start Menu shortcuts, Windows uninstall entry, and the running
+YTM Tray app, then opens Google Chrome to YouTube Music. It intentionally does
+not uninstall or quit the tray app. Use it after destructive
+install/update/uninstall smokes when you want the target left ready for hands-on
+operational testing.
 
 Set `YTM_WINDOWS_TRAY_OPERATIONAL_PLAYBACK_URL` to open a specific YouTube Music
 URL, or `YTM_WINDOWS_TRAY_OPERATIONAL_SKIP_CHROME=1` to leave Chrome untouched
@@ -865,12 +867,15 @@ Control state, download an installer, create a certificate, or sign binaries. It
 adds Internet-zone Mark of the Web to the supplied EXE, requires a valid
 public-trust Authenticode signature, and captures Code Integrity and AppLocker
 event-log cursors. It then launches the marked combined installer through the
-logged-in desktop agent, confirms that it selected the native runtime, validates
-the signed installed files and registry entries, and confirms that no CMD or
-PowerShell scripts were installed. It starts the installed tray and native host
-in the desktop session, requires a real native-host-to-tray bridge handshake,
-runs the installed native uninstaller, and verifies cleanup. The smoke fails if
-new blocking events identify any release executable, CMD, or PowerShell.
+logged-in desktop agent without quiet or launch flags, confirms that the tray
+stays closed while the success dialog is visible, and dismisses the dialog. It
+confirms that the installer selected the native runtime, validates the signed
+installed files and registry entries, and confirms that no CMD or PowerShell
+scripts were installed. It verifies that setup then launched the installed tray
+in the desktop session, starts the native host, requires a real
+native-host-to-tray bridge handshake, runs the installed native uninstaller, and
+verifies cleanup. The smoke fails if new blocking events identify any release
+executable, CMD, or PowerShell.
 
 Set `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS` to control the desktop readiness
 wait. Set `YTM_WINDOWS_TRAY_SAC_OPERATION_TIMEOUT_SECONDS` to control install

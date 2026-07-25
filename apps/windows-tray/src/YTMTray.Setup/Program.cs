@@ -45,12 +45,39 @@ internal static class Program
                 {
                     MessageBox.Show(
                         "YTM Tray was installed successfully.\n\n"
-                            + "Open YTM Tray from the Start menu, then enable Connected Apps "
-                            + "in YTM Enhancer.",
+                            + "YTM Tray will open after you close this message. "
+                            + "Then enable Connected Apps in YTM Enhancer.",
                         InstallTitle,
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
                     );
+                }
+
+                if (
+                    WindowsTrayAppLaunch.ShouldLaunchAfterInstall(
+                        options.Quiet,
+                        options.LaunchAfterInstallRequested,
+                        options.WaitForProcessId.HasValue
+                    )
+                )
+                {
+                    var launchError = installer.LaunchInstalledTray();
+                    if (launchError is not null && !options.Quiet)
+                    {
+                        MessageBox.Show(
+                            "YTM Tray was installed successfully, but it could not "
+                                + "open automatically.\n\n"
+                                + "Open YTM Tray from the Start menu.\n\n"
+                                + $"Details were written to:\n{logger.LogPath}",
+                            InstallTitle,
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+                    }
+                }
+                else
+                {
+                    logger.Write("post-install launch skipped for quiet setup");
                 }
             }
             else if (options.IsUninstallWorker)
@@ -111,6 +138,7 @@ internal enum SetupAction
 internal sealed record SetupOptions(
     SetupAction Action,
     bool Quiet,
+    bool LaunchAfterInstallRequested,
     string InstallRoot,
     string RuntimeIdentifier,
     IReadOnlyList<string> AdditionalAllowedOrigins,
@@ -133,6 +161,7 @@ internal sealed record SetupOptions(
         var actionWasSpecified = false;
         SetupAction? specifiedAction = null;
         var quiet = false;
+        var launchAfterInstallRequested = false;
         string? installRoot = null;
         string? runtimeIdentifier = null;
         var additionalAllowedOrigins = new List<string>();
@@ -167,6 +196,10 @@ internal sealed record SetupOptions(
                 case "--quiet":
                     RequireFlag(option, inlineValue);
                     quiet = true;
+                    break;
+                case "--launch-after-install":
+                    RequireFlag(option, inlineValue);
+                    launchAfterInstallRequested = true;
                     break;
                 case "--install-root":
                     installRoot = ReadValue(args, ref index, option, inlineValue);
@@ -216,6 +249,13 @@ internal sealed record SetupOptions(
             );
         }
 
+        if (launchAfterInstallRequested && action != SetupAction.Install)
+        {
+            throw new ArgumentException(
+                "--launch-after-install can only be used when installing YTM Tray."
+            );
+        }
+
         installRoot = NormalizePath(
             string.IsNullOrWhiteSpace(installRoot)
                 ? ExistingInstallRoot() ?? DefaultInstallRoot()
@@ -249,6 +289,7 @@ internal sealed record SetupOptions(
         return new SetupOptions(
             action,
             quiet,
+            launchAfterInstallRequested,
             installRoot,
             runtimeIdentifier,
             additionalAllowedOrigins,
@@ -550,6 +591,36 @@ internal sealed class WindowsTrayInstaller
             backup.Restore();
             RemoveDirectoryIfEmpty(startMenuFolder);
             throw;
+        }
+    }
+
+    public Exception? LaunchInstalledTray()
+    {
+        try
+        {
+            if (!File.Exists(trayExecutablePath))
+            {
+                throw new FileNotFoundException(
+                    "The installed YTM Tray executable was not found.",
+                    trayExecutablePath
+                );
+            }
+
+            using var process = Process.Start(
+                WindowsTrayAppLaunch.CreateStartInfo(options.InstallRoot)
+            ) ?? throw new InvalidOperationException(
+                "The installed YTM Tray app could not be started."
+            );
+            logger.Write(
+                $"launched installed YTM Tray process {process.Id} from "
+                    + $"{trayExecutablePath}"
+            );
+            return null;
+        }
+        catch (Exception error)
+        {
+            logger.Write($"could not launch installed YTM Tray: {error}");
+            return error;
         }
     }
 

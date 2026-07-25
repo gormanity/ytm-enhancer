@@ -1996,7 +1996,7 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(windowsTrayPage).not.toContain("releases?q=");
     expect(windowsTrayPage).toContain(
-      "The installer selects the native x64 or ARM64 build automatically.",
+      "The installer selects the native x64 or ARM64 build and opens YTM Tray automatically.",
     );
     expect(windowsTrayPage).not.toContain(
       "Download and extract the release zip",
@@ -2230,7 +2230,7 @@ describe("menu bar connector app scaffold", () => {
         "The unified installer is not yet available in this published release.",
       );
       expect(windowsTrayPage).not.toContain(
-        "The installer selects the native x64 or ARM64 build automatically.",
+        "The installer selects the native x64 or ARM64 build and opens YTM Tray automatically.",
       );
     } finally {
       for (const name of environmentNames) {

@@ -73,13 +73,14 @@ The user-facing release path is:
 
 1. Download `YTM-Tray-<version>-Setup.exe` from the Windows tray install page.
 2. Run the installer. It selects x64 or ARM64 automatically and installs the
-   matching native app and native host.
-3. Start YTM Tray, open YTM Enhancer > Connected Apps, and enable Connected Apps
-   plus the YTM Tray card.
+   matching native app and native host, then opens YTM Tray.
+3. Open YTM Enhancer > Connected Apps and enable Connected Apps plus the YTM
+   Tray card.
 4. Use `Check for Updates` from the tray popup or About window. The app checks
    the `windows-tray-v*` GitHub release list, downloads `YTM-Tray-update.json`,
    selects and verifies the architecture-specific updater zip, and hands off to
-   its packaged installer.
+   its packaged installer. The installer reopens YTM Tray when the update
+   finishes.
 5. Uninstall from Windows Settings > Apps > Installed apps, Start Menu > YTM
    Enhancer > Uninstall YTM Tray, or run the installed
    `YTMTray.Setup.exe uninstall`.
@@ -167,6 +168,7 @@ When the user accepts an update, the tray app:
 5. Extracts the zip with path traversal protection.
 6. Starts the signed packaged `YTMTray.Setup.exe`.
 7. Quits so the installer can replace the running tray executable.
+8. Reopens YTM Tray after the verified update finishes.
 
 The updater is intentionally not silent-installing. The user confirms the
 download/install handoff, and the installer continues to use user-level
@@ -289,6 +291,10 @@ scripts/remote/windows-qa/tray-operational-smoke.sh X.Y.Z
     confirm:
 
 - the combined installer selects the native x64 or ARM64 runtime
+- interactive setup opens YTM Tray after the success message closes
+- generic quiet setup does not open YTM Tray
+- an in-app update reopens YTM Tray after replacing the running version
+- failed setup does not open YTM Tray
 - `YTMTray.exe`, `YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe` are under
   `%LOCALAPPDATA%\YTM Enhancer\Tray`
 - Edge, Chrome, and Firefox native messaging registry keys point at their

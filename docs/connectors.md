@@ -273,13 +273,14 @@ Windows: current playback status, tray/menu controls, open or focus YouTube
 Music, and connection diagnostics. Website users download one
 `YTM-Tray-<version>-Setup.exe` offline installer. It detects the Windows
 operating system architecture and selects the native x64 or ARM64 app and host
-automatically.
+automatically, then opens YTM Tray.
 
 Architecture-specific zips remain updater assets. Direct release installs can
 check GitHub component releases in the background.
 
 They verify the runtime package checksum before handing off to the signed
-`YTMTray.Setup.exe` inside the selected zip after user confirmation.
+`YTMTray.Setup.exe` inside the selected zip after user confirmation. The
+installer reopens YTM Tray after the update completes.
 
 The Windows tray app is separate from the CLI. Windows users get a native tray
 surface; PowerShell or WSL CLI support is intentionally not part of the Windows

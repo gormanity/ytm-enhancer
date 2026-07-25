@@ -244,6 +244,7 @@ public sealed class WindowsTrayUpdateService
         };
         startInfo.ArgumentList.Add("install");
         startInfo.ArgumentList.Add("--quiet");
+        startInfo.ArgumentList.Add("--launch-after-install");
         startInfo.ArgumentList.Add("--runtime-identifier");
         startInfo.ArgumentList.Add(update.RuntimeIdentifier);
         startInfo.ArgumentList.Add("--install-root");

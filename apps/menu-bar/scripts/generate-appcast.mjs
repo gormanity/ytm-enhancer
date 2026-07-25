@@ -697,7 +697,7 @@ function writeSitePages({ metadata, outputPath, releaseBaseUrl }) {
     ? "Download for Windows"
     : "View current Windows release";
   const windowsSetupCopy = windowsInstallerAvailable
-    ? "Download and run the signed installer, then enable Connected Apps from the YTM Enhancer extension popup. The installer selects the native x64 or ARM64 build automatically."
+    ? "Download and run the signed installer, then enable Connected Apps from the YTM Enhancer extension popup. The installer selects the native x64 or ARM64 build and opens YTM Tray automatically."
     : "The unified installer is not yet available in this published release. View the current release page for available Windows downloads.";
   const windowsArchitectureCopy = windowsInstallerAvailable
     ? "Architectures: x64 and ARM64 (selected automatically)"

@@ -93,6 +93,56 @@ function Assert-NoInstalledScripts {
   }
 }
 
+function Get-InstalledTrayProcesses {
+  $ExpectedPath = [IO.Path]::GetFullPath(
+    (Join-Path $InstallRoot "YTMTray.exe")
+  )
+  return @(
+    Get-Process -Name "YTMTray" -ErrorAction SilentlyContinue |
+      Where-Object {
+        try {
+          -not [string]::IsNullOrWhiteSpace($_.Path) -and
+            [IO.Path]::GetFullPath($_.Path) -ieq $ExpectedPath
+        } catch {
+          $false
+        }
+      }
+  )
+}
+
+function Assert-NoInstalledTrayProcess {
+  $Processes = @(Get-InstalledTrayProcesses)
+  if ($Processes.Count -gt 0) {
+    throw "Expected quiet or failed setup not to launch $InstallRoot\YTMTray.exe; found process IDs: $($Processes.Id -join ', ')"
+  }
+}
+
+function Assert-LogContains {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)][string] $Expected
+  )
+
+  Assert-PathExists $Path
+  $Contents = Get-Content -LiteralPath $Path -Raw
+  if (-not $Contents.Contains($Expected)) {
+    throw "Expected $Path to contain: $Expected"
+  }
+}
+
+function Assert-LogExcludes {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)][string] $Unexpected
+  )
+
+  Assert-PathExists $Path
+  $Contents = Get-Content -LiteralPath $Path -Raw
+  if ($Contents.Contains($Unexpected)) {
+    throw "Expected $Path not to contain: $Unexpected"
+  }
+}
+
 function Assert-Shortcut {
   param(
     [Parameter(Mandatory = $true)][string] $Path,
@@ -212,6 +262,8 @@ $UninstallRegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninsta
 $StartMenuFolder = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\YTM Enhancer"
 $TrayShortcutPath = Join-Path $StartMenuFolder "YTM Tray.lnk"
 $UninstallShortcutPath = Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk"
+$QuietSetupLogPath = Join-Path $ExtractRoot "quiet-setup.log"
+$FailedSetupLogPath = Join-Path $ExtractRoot "failed-setup.log"
 
 $env:CI = "true"
 
@@ -289,7 +341,9 @@ try {
       "install",
       "--quiet",
       "--install-root",
-      $InstallRoot
+      $InstallRoot,
+      "--log-path",
+      $QuietSetupLogPath
     )
 
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.exe")
@@ -301,6 +355,13 @@ try {
   Assert-PathMissing (Join-Path $InstallRoot "uninstall-native-hosts.ps1")
   Assert-NoInstalledScripts $InstallRoot
   Assert-PathExists (Join-Path $InstallRoot "release.json")
+  Assert-NoInstalledTrayProcess
+  Assert-LogContains `
+    -Path $QuietSetupLogPath `
+    -Expected "post-install launch skipped for quiet setup"
+  Assert-LogExcludes `
+    -Path $QuietSetupLogPath `
+    -Unexpected "launched installed YTM Tray process"
   Assert-PathExists (Join-Path $ExtractRoot "release.json")
   Assert-PathExists $UninstallRegistryKey
   Assert-Shortcut `
@@ -342,16 +403,24 @@ try {
       -Arguments @(
         "install",
         "--quiet",
+        "--launch-after-install",
         "--runtime-identifier",
         $RuntimeIdentifier,
         "--install-root",
         $InstallRoot,
         "--additional-allowed-origin",
-        "not-a-valid-origin"
+        "not-a-valid-origin",
+        "--log-path",
+        $FailedSetupLogPath
       )
   } "invalid package reinstall"
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.exe")
   Assert-PathExists (Join-Path $InstallRoot "YTMTray.NativeHost.exe")
+  Assert-NoInstalledTrayProcess
+  Assert-LogContains -Path $FailedSetupLogPath -Expected "setup failed:"
+  Assert-LogExcludes `
+    -Path $FailedSetupLogPath `
+    -Unexpected "launched installed YTM Tray process"
   $RestoredTrayBytes = Read-FilePrefixBytes (Join-Path $InstallRoot "YTMTray.exe") 16
   Assert-Equal ($ExistingTrayBytes -join ",") ($RestoredTrayBytes -join ",") "restored tray executable"
 } finally {

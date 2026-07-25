@@ -21,15 +21,16 @@ registers user-level native messaging keys for Edge, Chrome, and Firefox.
 
 Website users download one `YTM-Tray-<version>-Setup.exe` offline installer. It
 detects the Windows operating system architecture and installs the native x64 or
-ARM64 tray app and native host automatically. Users do not need to choose a
-runtime, extract an archive, or install the .NET runtime.
+ARM64 tray app and native host automatically, then opens YTM Tray. Users do not
+need to choose a runtime, extract an archive, or install the .NET runtime.
 
 The component release still contains architecture-specific release zips. Those
 zips include the signed `YTMTray.Setup.exe` native installer, prebuilt app and
 native host executables, and `release.json`. They are updater assets rather than
 the website's direct-install path. When an update is available, the tray menu
 and flyout download the update manifest, verify the selected release zip
-checksum, and run its native installer after confirmation.
+checksum, run its native installer after confirmation, and reopen the updated
+app.
 
 YTM Tray is currently a Connected Apps beta. Beta users should install from the
 Windows tray install page or a component-scoped `windows-tray-v*` GitHub

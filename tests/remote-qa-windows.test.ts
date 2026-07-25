@@ -352,6 +352,13 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).toContain("release.json");
     expect(packageSmoke).toContain("Read-FilePrefixBytes");
     expect(packageSmoke).toContain("[System.IO.File]::OpenRead");
+    expect(packageSmoke).toContain("$QuietSetupLogPath");
+    expect(packageSmoke).toContain(
+      "post-install launch skipped for quiet setup",
+    );
+    expect(packageSmoke).toContain("launched installed YTM Tray process");
+    expect(packageSmoke).toContain("Assert-NoInstalledTrayProcess");
+    expect(packageSmoke).toContain('"--launch-after-install"');
     expect(packageSmoke).toContain("Assert-PathMissing $InstallRoot");
     expect(packageSmoke).toContain("Assert-PathMissing $UninstallRegistryKey");
     expect(packageSmoke).toContain(
@@ -429,6 +436,12 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmoke).toContain('$ActionActivation = "invoke"');
     expect(liveUpdateSmoke).toContain('$ActionActivation = "click"');
     expect(liveUpdateSmoke).toContain("actionActivation");
+    expect(liveUpdateSmoke).toContain("-TimeoutSeconds 480");
+    expect(liveUpdateSmoke).toContain("$ExpectedSessionId");
+    expect(liveUpdateSmoke).toContain("trayProcessId");
+    expect(liveUpdateSmoke).toContain("trayProcessSessionId");
+    expect(liveUpdateSmoke).toContain("trayStartLogCount");
+    expect(liveUpdateSmoke).toContain("bridgeStartLogCount");
     expect(liveUpdateSmoke).toContain("runnerScripts");
     expect(liveUpdateSmoke).toContain("$SmokePassed");
     expect(liveUpdateSmoke).toContain(
@@ -486,14 +499,17 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain(
       "scripts/remote/windows-qa/tray-operational-smoke.sh",
     );
-    expect(docs).toContain("does not uninstall or");
-    expect(docs).toContain("quit the tray app");
+    expect(docs).toMatch(/does\s+not\s+uninstall or quit the tray app/);
   });
 
   it("validates the public Windows tray installer under Smart App Control", () => {
     const sacSmoke = read("scripts/windows-qa/tray-sac-smoke.ps1");
     const sacSmokeShell = read("scripts/remote/windows-qa/tray-sac-smoke.sh");
     const docs = read("docs/remote-qa.md");
+    const interactiveInstall = sacSmoke.slice(
+      sacSmoke.indexOf("function Invoke-InteractiveInstallThroughUiAgent"),
+      sacSmoke.indexOf("function Invoke-InstalledRuntimeThroughUiAgent"),
+    );
 
     expect(sacSmoke).toContain("VerifiedAndReputablePolicyState");
     expect(sacSmoke).toContain("ZoneId=3");
@@ -508,6 +524,20 @@ describe("Windows remote QA scaffold", () => {
     expect(sacSmoke).toContain("-Wait");
     expect(sacSmoke).toContain("$Process.ExitCode");
     expect(sacSmoke).toContain("Invoke-InstalledRuntimeThroughUiAgent");
+    expect(sacSmoke).toContain("Invoke-InteractiveInstallThroughUiAgent");
+    expect(interactiveInstall).toContain(
+      "YTM Tray was installed successfully.",
+    );
+    expect(interactiveInstall).toContain("PrematureTray");
+    expect(interactiveInstall).toContain("InvokePattern");
+    expect(interactiveInstall).toContain("-FilePath taskkill.exe");
+    expect(interactiveInstall).toContain("WaitForExit(5000)");
+    expect(interactiveInstall).not.toContain("--quiet");
+    expect(interactiveInstall).not.toContain("--launch-after-install");
+    expect(sacSmoke).toContain("Installer did not launch the installed");
+    expect(sacSmoke).not.toContain(
+      "Start-Process -FilePath $TrayPath -PassThru",
+    );
     expect(sacSmoke).toContain("RedirectStandardInput = $true");
     expect(sacSmoke).toContain("bridge server accepted native host");
     expect(sacSmoke).toContain("native messaging relay starting");
@@ -520,7 +550,8 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("scripts/remote/windows-qa/tray-sac-smoke.sh");
     expect(docs).toContain("windows-tray-signed-candidate");
     expect(docs).toContain("Smart App Control enforcement");
-    expect(docs).toContain("starts the installed tray and native host");
+    expect(docs).toMatch(/setup\s+then launched the installed tray/);
+    expect(docs).toContain("starts the native host");
   });
 
   it("automates Windows tray release signing smoke with a disposable certificate", () => {

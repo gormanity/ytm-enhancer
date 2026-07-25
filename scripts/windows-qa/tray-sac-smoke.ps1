@@ -23,7 +23,7 @@ $UninstallShortcutPath = Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk"
 $InstallResultPath = Join-Path $WorkRoot "install-result.json"
 $RuntimeResultPath = Join-Path $WorkRoot "runtime-result.json"
 $UninstallResultPath = Join-Path $WorkRoot "uninstall-result.json"
-$TrayRuntimeLogPath = Join-Path $WorkRoot "tray-runtime.log"
+$TrayRuntimeLogPath = Join-Path $InstallRoot "tray.log"
 $NativeHostRuntimeLogPath = Join-Path $WorkRoot "native-host-runtime.log"
 $ProtectedProcessPattern =
   "(?i)(YTM-Tray-[^\\/:]+-Setup\.exe|YTMTray(?:\.NativeHost|\.Setup)?(?:\.exe)?|cmd\.exe|powershell\.exe|pwsh\.exe)"
@@ -264,7 +264,7 @@ function Format-BlockingEvents {
 function Invoke-SetupThroughUiAgent {
   param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("install", "uninstall")]
+    [ValidateSet("uninstall")]
     [string] $Action,
     [Parameter(Mandatory = $true)]
     [string] $SetupPath,
@@ -309,6 +309,274 @@ function Invoke-SetupThroughUiAgent {
     -TimeoutSeconds $OperationTimeoutSeconds | Out-Null
 }
 
+function Invoke-InteractiveInstallThroughUiAgent {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $SetupPath,
+    [Parameter(Mandatory = $true)]
+    [int] $ExpectedSessionId
+  )
+
+  $InteractiveTimeoutSeconds = ($OperationTimeoutSeconds * 4) + 30
+  $ScriptLines = @(
+    '$ErrorActionPreference = "Stop"',
+    'Add-Type -AssemblyName UIAutomationClient',
+    'Add-Type -AssemblyName UIAutomationTypes',
+    "`$SetupPath = $(ConvertTo-PowerShellLiteral $SetupPath)",
+    "`$ResultPath = $(ConvertTo-PowerShellLiteral $InstallResultPath)",
+    "`$TrayPath = $(ConvertTo-PowerShellLiteral (Join-Path $InstallRoot "YTMTray.exe"))",
+    "`$TrayLogPath = $(ConvertTo-PowerShellLiteral $TrayRuntimeLogPath)",
+    "`$ExpectedSessionId = $ExpectedSessionId",
+    '$InstallerProcess = $null',
+    '$InstallerCompleted = $false',
+    '$TrayProcess = $null',
+    '$DialogProcess = $null',
+    '$Payload = $null',
+    '$CleanupErrors = @()',
+    "try {",
+    '  $AgentSessionId = (Get-Process -Id $PID).SessionId',
+    '  if ($AgentSessionId -ne $ExpectedSessionId) {',
+    '    throw "Installer UI agent is in session $AgentSessionId, expected $ExpectedSessionId."',
+    "  }",
+    '  Remove-Item -LiteralPath $TrayLogPath -Force -ErrorAction SilentlyContinue',
+    '  $env:YTM_TRAY_LOG_PATH = $TrayLogPath',
+    '  $InstallerProcess = Start-Process -FilePath $SetupPath -PassThru',
+    '  $InstallerStartedAt = $InstallerProcess.StartTime',
+    '  $Root = [System.Windows.Automation.AutomationElement]::RootElement',
+    '  $WindowCondition = New-Object System.Windows.Automation.PropertyCondition(',
+    '    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,',
+    '    [System.Windows.Automation.ControlType]::Window',
+    "  )",
+    '  $Dialog = $null',
+    '  $DialogDeadline = (Get-Date).AddSeconds(' +
+      "$OperationTimeoutSeconds)",
+    "  do {",
+    '    foreach ($Candidate in $Root.FindAll(',
+    '      [System.Windows.Automation.TreeScope]::Descendants,',
+    '      $WindowCondition',
+    "    )) {",
+    '      if ($Candidate.Current.Name -ne "Install YTM Tray") {',
+    "        continue",
+    "      }",
+    "      try {",
+    '        $CandidateProcess = Get-Process `',
+    '          -Id $Candidate.Current.ProcessId `',
+    '          -ErrorAction Stop',
+    '        $CandidateName = [IO.Path]::GetFileName($CandidateProcess.Path)',
+    "        if (",
+    '          ($CandidateProcess.Id -eq $InstallerProcess.Id -or',
+    '            $CandidateName -ieq "YTMTray.Setup.exe") -and',
+    '          $CandidateProcess.StartTime -ge $InstallerStartedAt.AddSeconds(-1)',
+    "        ) {",
+    '          $Dialog = $Candidate',
+    '          $DialogProcess = $CandidateProcess',
+    "          break",
+    "        }",
+    "      } catch {}",
+    "    }",
+    '    if ($null -eq $Dialog) {',
+    "      Start-Sleep -Milliseconds 200",
+    "    }",
+    '  } while ($null -eq $Dialog -and (Get-Date) -lt $DialogDeadline)',
+    '  if ($null -eq $Dialog) {',
+    '    throw "Interactive installer did not show the Install YTM Tray completion dialog."',
+    "  }",
+    '  $DialogNames = @(',
+    '    $Dialog.FindAll(',
+    '      [System.Windows.Automation.TreeScope]::Descendants,',
+    '      [System.Windows.Automation.Condition]::TrueCondition',
+    "    ) |",
+    '      ForEach-Object { $_.Current.Name } |',
+    '      Where-Object { -not [string]::IsNullOrWhiteSpace($_) }',
+    "  )",
+    '  $DialogText = $DialogNames -join "`n"',
+    '  $WasSuccessful = $DialogText.Contains(',
+    '    "YTM Tray was installed successfully."',
+    "  )",
+    '  $ButtonCondition = New-Object System.Windows.Automation.PropertyCondition(',
+    '    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,',
+    '    [System.Windows.Automation.ControlType]::Button',
+    "  )",
+    '  $OkButton = @(',
+    '    $Dialog.FindAll(',
+    '      [System.Windows.Automation.TreeScope]::Descendants,',
+    '      $ButtonCondition',
+    "    ) |",
+    '      Where-Object { $_.Current.Name -eq "OK" }',
+    '  ) | Select-Object -First 1',
+    '  if ($null -eq $OkButton) {',
+    '    throw "Installer completion dialog did not expose an OK button. Visible text: $DialogText"',
+    "  }",
+    '  $ExpectedTrayPath = [IO.Path]::GetFullPath($TrayPath)',
+    '  $PrematureTray = @(',
+    '    Get-Process YTMTray -ErrorAction SilentlyContinue |',
+    '      Where-Object {',
+    "        try {",
+    '          $_.SessionId -eq $ExpectedSessionId -and',
+    '            -not [string]::IsNullOrWhiteSpace($_.Path) -and',
+    '            [IO.Path]::GetFullPath($_.Path) -ieq $ExpectedTrayPath',
+    "        } catch {",
+    '          $false',
+    "        }",
+    "      }",
+    "  )",
+    '  if ($PrematureTray.Count -gt 0) {',
+    '    throw "YTM Tray launched before the installer completion dialog was dismissed."',
+    "  }",
+    '  $InvokePattern = $OkButton.GetCurrentPattern(',
+    '    [System.Windows.Automation.InvokePattern]::Pattern',
+    "  )",
+    '  $InvokePattern.Invoke()',
+    '  if (-not $WasSuccessful) {',
+    '    throw "Installer displayed an unexpected completion dialog: $DialogText"',
+    "  }",
+    '  if (-not $InstallerProcess.WaitForExit(' +
+      "($OperationTimeoutSeconds * 1000))) {",
+    '    throw "Combined installer did not exit after its success dialog was dismissed."',
+    "  }",
+    '  if ($InstallerProcess.ExitCode -ne 0) {',
+    '    throw "Combined installer exited with code $($InstallerProcess.ExitCode)."',
+    "  }",
+    '  $TrayDeadline = (Get-Date).AddSeconds(' +
+      "$OperationTimeoutSeconds)",
+    "  do {",
+    '    $Candidates = @(',
+    '      Get-Process YTMTray -ErrorAction SilentlyContinue |',
+    '        Where-Object {',
+    "          try {",
+    '            $_.SessionId -eq $ExpectedSessionId -and',
+    '              -not [string]::IsNullOrWhiteSpace($_.Path) -and',
+    '              [IO.Path]::GetFullPath($_.Path) -ieq $ExpectedTrayPath',
+    "          } catch {",
+    '            $false',
+    "          }",
+    "        }",
+    "    )",
+    '    if ($Candidates.Count -eq 1) {',
+    '      $TrayProcess = $Candidates[0]',
+    "      break",
+    "    }",
+    '    if ($Candidates.Count -gt 1) {',
+    '      throw "Installer launched multiple installed YTM Tray processes: $($Candidates.Id -join '', '')."',
+    "    }",
+    "    Start-Sleep -Milliseconds 200",
+    '  } while ((Get-Date) -lt $TrayDeadline)',
+    '  if ($null -eq $TrayProcess) {',
+    '    throw "Installer did not launch the installed YTM Tray app in session $ExpectedSessionId."',
+    "  }",
+    '  foreach ($ProbeDelay in @(500, 1000)) {',
+    "    Start-Sleep -Milliseconds `$ProbeDelay",
+    "    `$TrayProcess.Refresh()",
+    "    if (`$TrayProcess.HasExited) {",
+    '      throw "Installer-launched YTM Tray exited with code $($TrayProcess.ExitCode)."',
+    "    }",
+    "  }",
+    '  $InstallerCompleted = $true',
+    '  $Payload = @{',
+    '    ok = $true',
+    '    installerPid = $InstallerProcess.Id',
+    '    trayPid = $TrayProcess.Id',
+    '    traySessionId = $TrayProcess.SessionId',
+    "  }",
+    "} catch {",
+    '  $Payload = @{',
+    '    ok = $false',
+    '    error = $_.Exception.ToString()',
+    '    scriptStack = $_.ScriptStackTrace',
+    "  }",
+    "} finally {",
+    '  if ($null -ne $TrayProcess) {',
+    '    $TrayProcess.Dispose()',
+    "  }",
+    '  if ($null -ne $InstallerProcess) {',
+    "    try {",
+    '      $InstallerProcess.Refresh()',
+    '      if (-not $InstallerCompleted -and -not $InstallerProcess.HasExited) {',
+    "        try {",
+    '          $TreeKill = Start-Process `',
+    '            -FilePath taskkill.exe `',
+    '            -ArgumentList @(',
+    '              "/PID",',
+    '              $InstallerProcess.Id.ToString(),',
+    '              "/T",',
+    '              "/F"',
+    '            ) `',
+    '            -Wait `',
+    '            -PassThru `',
+    '            -WindowStyle Hidden',
+    "          try {",
+    '            [void]$TreeKill.ExitCode',
+    "          } finally {",
+    '            $TreeKill.Dispose()',
+    "          }",
+    "        } catch {",
+    "        }",
+    "      }",
+    "    } catch {",
+    '      $CleanupErrors += $_.Exception.Message',
+    "    }",
+    "  }",
+    '  if (-not $InstallerCompleted) {',
+    '    $StoppedProcessIds = @()',
+    '    foreach ($TrackedProcess in @($DialogProcess, $InstallerProcess)) {',
+    '      if ($null -eq $TrackedProcess) {',
+    "        continue",
+    "      }",
+    "      try {",
+    '        $TrackedProcessId = $TrackedProcess.Id',
+    '        if ($StoppedProcessIds -contains $TrackedProcessId) {',
+    "          continue",
+    "        }",
+    '        $StoppedProcessIds += $TrackedProcessId',
+    '        $TrackedProcess.Refresh()',
+    '        if (-not $TrackedProcess.HasExited) {',
+    "          try {",
+    '            $TrackedProcess.Kill()',
+    "          } catch {",
+    '            $TrackedProcess.Refresh()',
+    '            if (-not $TrackedProcess.HasExited) {',
+    "              throw",
+    "            }",
+    "          }",
+    '          if (-not $TrackedProcess.WaitForExit(5000)) {',
+    '            throw "Process $TrackedProcessId did not exit during installer cleanup."',
+    "          }",
+    "        }",
+    "      } catch {",
+    '        $CleanupErrors += $_.Exception.Message',
+    "      }",
+    "    }",
+    "  }",
+    '  foreach ($TrackedProcess in @($DialogProcess, $InstallerProcess)) {',
+    '    if ($null -ne $TrackedProcess) {',
+    "      try {",
+    '        $TrackedProcess.Dispose()',
+    "      } catch {}",
+    "    }",
+    "  }",
+    '  if ($CleanupErrors.Count -gt 0) {',
+    '    $PrimaryMessage = if ($null -ne $Payload.error) {',
+    '      [string]$Payload.error',
+    "    } else {",
+    '      "Interactive installer cleanup failed."',
+    "    }",
+    '    $Payload = @{',
+    '      ok = $false',
+    '      error = "$PrimaryMessage Cleanup: $($CleanupErrors -join ''; '')"',
+    "    }",
+    "  }",
+    "}",
+    '$Json = $Payload | ConvertTo-Json -Depth 8 -Compress',
+    '[IO.File]::WriteAllText($ResultPath, $Json)'
+  )
+
+  return Invoke-InteractivePowerShell `
+    -Name "TraySacInstall" `
+    -ScriptLines $ScriptLines `
+    -ResultPath $InstallResultPath `
+    -TimeoutSeconds $InteractiveTimeoutSeconds
+}
+
 function Invoke-InstalledRuntimeThroughUiAgent {
   $ScriptLines = @(
     '$ErrorActionPreference = "Stop"',
@@ -322,6 +590,7 @@ function Invoke-InstalledRuntimeThroughUiAgent {
     '$NativeHostProcess = $null',
     '$Payload = $null',
     '$CleanupErrors = @()',
+    '$AgentSessionId = (Get-Process -Id $PID).SessionId',
     "function Wait-ForRuntimeLog {",
     "  param(",
     '    [Parameter(Mandatory = $true)][string] $Label,',
@@ -353,13 +622,37 @@ function Invoke-InstalledRuntimeThroughUiAgent {
     "}",
     "try {",
     '  Remove-Item `',
-    '    -LiteralPath $TrayLogPath, $NativeHostLogPath `',
+    '    -LiteralPath $NativeHostLogPath `',
     '    -Force `',
     '    -ErrorAction SilentlyContinue',
-    '  $env:YTM_TRAY_LOG_PATH = $TrayLogPath',
-    '  $TrayProcess = Start-Process -FilePath $TrayPath -PassThru',
     '  $Deadline = (Get-Date).AddSeconds(' +
       "$OperationTimeoutSeconds)",
+    '  $ExpectedTrayPath = [IO.Path]::GetFullPath($TrayPath)',
+    '  do {',
+    '    $TrayProcesses = @(',
+    '      Get-Process YTMTray -ErrorAction SilentlyContinue |',
+    '        Where-Object {',
+    '          try {',
+    '            $_.SessionId -eq $AgentSessionId -and',
+    '              -not [string]::IsNullOrWhiteSpace($_.Path) -and',
+    '              [IO.Path]::GetFullPath($_.Path) -ieq $ExpectedTrayPath',
+    '          } catch {',
+    '            $false',
+    '          }',
+    '        }',
+    '    )',
+    '    if ($TrayProcesses.Count -eq 1) {',
+    '      $TrayProcess = $TrayProcesses[0]',
+    '      break',
+    '    }',
+    '    if ($TrayProcesses.Count -gt 1) {',
+    '      throw "Installer launched multiple YTM Tray processes: $($TrayProcesses.Id -join '', '')."',
+    '    }',
+    '    Start-Sleep -Milliseconds 100',
+    '  } while ((Get-Date) -lt $Deadline)',
+    '  if ($null -eq $TrayProcess) {',
+    '    throw "Installer did not launch the installed YTM Tray app in session $AgentSessionId."',
+    '  }',
     '  Wait-ForRuntimeLog `',
     '    -Label "tray" `',
     '    -LogPath $TrayLogPath `',
@@ -604,11 +897,10 @@ try {
   Write-SmokeStep "Capturing App Control event log cursors."
   $EventLogCursors = Get-BlockingEventLogCursors
 
-  Write-SmokeStep "Launching the marked combined installer through the desktop agent."
-  Invoke-SetupThroughUiAgent `
-    -Action "install" `
+  Write-SmokeStep "Driving the marked combined installer through the desktop agent."
+  $InstallLaunch = Invoke-InteractiveInstallThroughUiAgent `
     -SetupPath $ResolvedInstallerPath `
-    -ResultPath $InstallResultPath
+    -ExpectedSessionId $UiAgent.sessionId
   Assert-InstalledRelease -ExpectedVersion $ExpectedVersion
   $InstalledMetadata = Get-Content `
     -LiteralPath (Join-Path $InstallRoot "release.json") `
@@ -619,8 +911,12 @@ try {
     $InstalledMetadata.runtimeIdentifier `
     "installed runtime"
 
-  Write-SmokeStep "Starting the installed tray and native host."
+  Write-SmokeStep "Verifying the installer-launched tray and native host."
   $RuntimeResult = Invoke-InstalledRuntimeThroughUiAgent
+  Assert-Equal `
+    $InstallLaunch.trayPid `
+    $RuntimeResult.trayPid `
+    "installer-launched tray process"
   Assert-Equal `
     $UiAgent.sessionId `
     $RuntimeResult.traySessionId `

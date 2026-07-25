@@ -178,6 +178,9 @@ describe("Windows tray connector scaffold", () => {
     expect(setup).toContain("UninstallString");
     expect(setup).toContain("CreateStartMenuShortcut");
     expect(setup).toContain("--wait-for-process");
+    expect(setup).toContain("--launch-after-install");
+    expect(setup).toContain("WindowsTrayAppLaunch.ShouldLaunchAfterInstall");
+    expect(setup).toContain("LaunchInstalledTray");
     expect(setup).toContain("--uninstall-worker");
     expect(setup).not.toContain("powershell.exe");
     expect(setup).not.toContain("cmd.exe");
@@ -185,6 +188,7 @@ describe("Windows tray connector scaffold", () => {
     expect(updater).toContain("InstallerExecutablePath");
     expect(updater).toContain('"YTMTray.Setup.exe"');
     expect(updater).toContain("--wait-for-process");
+    expect(updater).toContain('ArgumentList.Add("--launch-after-install")');
     expect(updater).not.toContain('ProcessStartInfo("powershell.exe")');
     expect(updater).not.toContain("run-update-installer.ps1");
 
@@ -967,6 +971,9 @@ describe("Windows tray connector scaffold", () => {
       "Double-click YTMTray.Setup.exe to install YTM Tray.",
     );
     expect(packageScript).toContain(
+      "YTM Tray opens automatically after installation.",
+    );
+    expect(packageScript).toContain(
       "Do not run YTMTray.exe directly from this folder.",
     );
     expect(packageScript).toContain("install-native-hosts.ps1");
@@ -1360,6 +1367,7 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:installer");
     expect(workflow).toContain("Run `YTM-Tray-");
     expect(workflow).toContain("-Setup.exe`");
+    expect(workflow).toContain("opens YTM Tray");
     expect(workflow).toContain("assert-explorer-archive-compatible.ps1");
     expect(workflow).toContain("windows-tray:update-manifest");
     expect(workflow).toContain("verify-windows-tray-codesign.ps1");

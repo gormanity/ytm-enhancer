@@ -44,6 +44,14 @@ var tests = new (string Name, Func<Task> Run)[]
     ("update options use packaged release version", UpdateOptionsUsePackagedReleaseVersion),
     ("update service prepares verified package", UpdateServicePreparesVerifiedPackage),
     ("update service launches native setup directly", UpdateServiceLaunchesNativeSetupDirectly),
+    (
+        "post-install launch policy handles user and updater flows",
+        PostInstallLaunchPolicyHandlesUserAndUpdaterFlows
+    ),
+    (
+        "post-install launch targets the installed tray app",
+        PostInstallLaunchTargetsInstalledTrayApp
+    ),
     ("update service rejects packages without native setup", UpdateServiceRejectsMissingNativeSetup),
     ("update service rejects unsafe package entries", UpdateServiceRejectsUnsafePackageEntries),
     ("update service rejects unsafe package names", UpdateServiceRejectsUnsafePackageNames)
@@ -935,6 +943,7 @@ static Task UpdateServiceLaunchesNativeSetupDirectly()
     AssertEqual(extractDirectory, startInfo.WorkingDirectory);
     AssertEqual(true, arguments.Contains("install"));
     AssertEqual(true, arguments.Contains("--quiet"));
+    AssertEqual(true, arguments.Contains("--launch-after-install"));
     AssertEqual(true, arguments.Contains("--wait-for-process"));
     AssertEqual(true, arguments.Contains("1234"));
     AssertEqual(true, arguments.Contains("--install-root"));
@@ -949,6 +958,57 @@ static Task UpdateServiceLaunchesNativeSetupDirectly()
             || argument.Contains("cmd.exe", StringComparison.OrdinalIgnoreCase)
         )
     );
+    return Task.CompletedTask;
+}
+
+static Task PostInstallLaunchPolicyHandlesUserAndUpdaterFlows()
+{
+    AssertEqual(
+        true,
+        WindowsTrayAppLaunch.ShouldLaunchAfterInstall(
+            quiet: false,
+            launchAfterInstallRequested: false,
+            waitForProcessRequested: false
+        )
+    );
+    AssertEqual(
+        false,
+        WindowsTrayAppLaunch.ShouldLaunchAfterInstall(
+            quiet: true,
+            launchAfterInstallRequested: false,
+            waitForProcessRequested: false
+        )
+    );
+    AssertEqual(
+        true,
+        WindowsTrayAppLaunch.ShouldLaunchAfterInstall(
+            quiet: true,
+            launchAfterInstallRequested: true,
+            waitForProcessRequested: false
+        )
+    );
+    AssertEqual(
+        true,
+        WindowsTrayAppLaunch.ShouldLaunchAfterInstall(
+            quiet: true,
+            launchAfterInstallRequested: false,
+            waitForProcessRequested: true
+        )
+    );
+    return Task.CompletedTask;
+}
+
+static Task PostInstallLaunchTargetsInstalledTrayApp()
+{
+    using var temp = new TempDirectory();
+    var startInfo = WindowsTrayAppLaunch.CreateStartInfo(temp.Path);
+
+    AssertEqual(
+        Path.Combine(temp.Path, "YTMTray.exe"),
+        startInfo.FileName
+    );
+    AssertEqual(temp.Path, startInfo.WorkingDirectory);
+    AssertEqual(false, startInfo.UseShellExecute);
     return Task.CompletedTask;
 }
 
