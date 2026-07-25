@@ -31,6 +31,10 @@ function toPosixPath(path: string): string {
 function listFiles(dir: string): string[] {
   const absolute = resolve(appRoot, dir);
   return readdirSync(absolute).flatMap((entry) => {
+    if (entry === "bin" || entry === "obj") {
+      return [];
+    }
+
     const path = join(absolute, entry);
     const relativePath = toPosixPath(relative(appRoot, path));
     return statSync(path).isDirectory()
