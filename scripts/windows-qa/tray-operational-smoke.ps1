@@ -14,7 +14,10 @@ $ProgressPreference = "SilentlyContinue"
 
 $HostName = "com.gormanity.ytm_enhancer.tray"
 $ReleaseDownloadRoot = "https://github.com/gormanity/ytm-enhancer/releases/download"
-$RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
+$RuntimeIdentifier = if (
+  $env:PROCESSOR_ARCHITECTURE -eq "ARM64" -or
+  $env:PROCESSOR_ARCHITEW6432 -eq "ARM64"
+) {
   "win-arm64"
 } else {
   "win-x64"
@@ -101,7 +104,11 @@ function Invoke-Native {
     [string[]] $Arguments = @()
   )
 
-  if ([IO.Path]::GetFileName($FilePath) -ieq "YTMTray.Setup.exe") {
+  $FileName = [IO.Path]::GetFileName($FilePath)
+  if (
+    $FileName -ieq "YTMTray.Setup.exe" -or
+    $FileName -like "YTM-Tray-*-Setup.exe"
+  ) {
     $CommandLine = @(
       $Arguments | ForEach-Object {
         if ($_ -notmatch '[\s"]' -and $_.Length -gt 0) {
@@ -184,25 +191,6 @@ function Save-ReleaseAsset {
   $AssetUrl = "$ReleaseDownloadRoot/windows-tray-v$ReleaseVersion/$AssetName"
   Write-Host "Downloading $AssetUrl"
   Invoke-WebRequest -UseBasicParsing -Uri $AssetUrl -OutFile $DestinationPath
-}
-
-function Expand-ReleasePackage {
-  param(
-    [Parameter(Mandatory = $true)][string] $ReleaseVersion,
-    [Parameter(Mandatory = $true)][string] $ArchivePath
-  )
-
-  $ExtractRoot = Join-Path $WorkRoot "extract-$ReleaseVersion"
-  Remove-QaTree -Path $ExtractRoot
-  New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
-  Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractRoot -Force
-
-  Assert-PathExists (Join-Path $ExtractRoot "YTMTray.Setup.exe")
-  Assert-PathExists (Join-Path $ExtractRoot "release.json")
-  Assert-PathExists (Join-Path $ExtractRoot "YTMTray.exe")
-  Assert-PathExists (Join-Path $ExtractRoot "YTMTray.NativeHost.exe")
-
-  return $ExtractRoot
 }
 
 function Assert-AuthenticodeSigner {
@@ -303,17 +291,17 @@ function Invoke-InstalledUninstaller {
 
 function Install-ReleasePackage {
   param(
-    [Parameter(Mandatory = $true)][string] $ExtractRoot,
+    [Parameter(Mandatory = $true)][string] $InstallerPath,
     [Parameter(Mandatory = $true)][string] $ReleaseVersion
   )
 
+  Assert-PathExists $InstallerPath
+  Assert-AuthenticodeSigner $InstallerPath
   Invoke-Native `
-    -FilePath (Join-Path $ExtractRoot "YTMTray.Setup.exe") `
+    -FilePath $InstallerPath `
     -Arguments @(
       "install",
       "--quiet",
-      "--runtime-identifier",
-      $RuntimeIdentifier,
       "--install-root",
       $InstallRoot
     )
@@ -405,18 +393,17 @@ if (Test-Path -LiteralPath $InstallRoot) {
   Remove-QaTree -Path $InstallRoot
 }
 
-$ArchiveName = "YTM-Tray-$ResolvedVersion-$RuntimeIdentifier.zip"
-$ArchivePath = Join-Path $WorkRoot $ArchiveName
+$InstallerName = "YTM-Tray-$ResolvedVersion-Setup.exe"
+$InstallerPath = Join-Path $WorkRoot $InstallerName
 Save-ReleaseAsset `
   -ReleaseVersion $ResolvedVersion `
-  -AssetName $ArchiveName `
-  -DestinationPath $ArchivePath
-$ExtractRoot = Expand-ReleasePackage `
-  -ReleaseVersion $ResolvedVersion `
-  -ArchivePath $ArchivePath
+  -AssetName $InstallerName `
+  -DestinationPath $InstallerPath
 
 Write-Host "Installing YTM Tray $ResolvedVersion from published release."
-Install-ReleasePackage -ExtractRoot $ExtractRoot -ReleaseVersion $ResolvedVersion
+Install-ReleasePackage `
+  -InstallerPath $InstallerPath `
+  -ReleaseVersion $ResolvedVersion
 
 Write-Host "Launching YTM Tray $ResolvedVersion in desktop session $ActiveSessionId."
 $Launch = Start-OperationalDesktopSession -ExpectedSessionId $ActiveSessionId

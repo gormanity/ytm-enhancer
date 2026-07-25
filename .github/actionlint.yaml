@@ -1,0 +1,9 @@
+# GitHub Actions added concurrency.queue after actionlint 1.7.12. Keep this
+# exception path-scoped until a released actionlint version supports the key.
+paths:
+  .github/workflows/menu-bar-release.yml:
+    ignore:
+      - '^unexpected key "queue" for "concurrency" section\.'
+  .github/workflows/pages.yml:
+    ignore:
+      - '^unexpected key "queue" for "concurrency" section\.'

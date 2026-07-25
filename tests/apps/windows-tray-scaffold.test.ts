@@ -1051,6 +1051,65 @@ describe("Windows tray connector scaffold", () => {
     expect(signingScript).toContain('"verify"');
   });
 
+  it("builds one offline installer that selects the native Windows architecture", () => {
+    const installerProject = read(
+      "src/YTMTray.Installer/YTMTray.Installer.csproj",
+    );
+    const installer = read("src/YTMTray.Installer/Program.cs");
+    const setup = read("src/YTMTray.Setup/Program.cs");
+    const updater = read("src/YTMTray.Core/WindowsTrayUpdateService.cs");
+    const runtimeIdentifier = read(
+      "src/YTMTray.Core/WindowsRuntimeIdentifier.cs",
+    );
+    const packageInstaller = read("scripts/package-installer.mjs");
+    const packageJson = JSON.parse(readRepo("package.json")) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(installerProject).toContain("<OutputType>WinExe</OutputType>");
+    expect(installerProject).toContain(
+      "<RuntimeIdentifier>win-x64</RuntimeIdentifier>",
+    );
+    expect(installerProject).toContain("YTMTray.Installer.Payload.win-x64.zip");
+    expect(installerProject).toContain(
+      "YTMTray.Installer.Payload.win-arm64.zip",
+    );
+    expect(installerProject).toContain("YTMTrayInstallerX64Package");
+    expect(installerProject).toContain("YTMTrayInstallerArm64Package");
+    expect(installer).toContain(
+      "WindowsRuntimeIdentifier.CurrentOperatingSystem()",
+    );
+    expect(installer).toContain("ZipPackageExtractor.Extract");
+    expect(installer).toContain('"YTMTray.Setup.exe"');
+    expect(installer).toContain('"--runtime-identifier"');
+    expect(installer).toContain("WaitForExit()");
+    expect(installer).toContain("Delete(tempRoot");
+    expect(installer).toContain(
+      "The combined installer does not accept --runtime-identifier.",
+    );
+    expect(setup).toContain(
+      "WindowsRuntimeIdentifier.CurrentOperatingSystem()",
+    );
+    expect(setup).not.toContain("RuntimeInformation.ProcessArchitecture");
+    expect(updater).toContain(
+      "WindowsRuntimeIdentifier.CurrentOperatingSystem()",
+    );
+    expect(runtimeIdentifier).toContain("Architecture.X64");
+    expect(runtimeIdentifier).toContain("Architecture.Arm64");
+    expect(runtimeIdentifier).toContain("PlatformNotSupportedException");
+    expect(packageInstaller).toContain("YTMTray.Installer.csproj");
+    expect(packageInstaller).toContain(
+      "${metadata.assetPrefix}-${metadata.version}-Setup.exe",
+    );
+    expect(packageInstaller).toContain("YTMTrayInstallerX64Package");
+    expect(packageInstaller).toContain("YTMTrayInstallerArm64Package");
+    expect(packageInstaller).toContain('"win-x64"');
+    expect(packageInstaller).toContain('"win-arm64"');
+    expect(packageJson.scripts["windows-tray:installer"]).toBe(
+      "node apps/windows-tray/scripts/package-installer.mjs",
+    );
+  });
+
   it("archives release payloads with Windows Explorer-compatible entry names", () => {
     const testRoot = mkdtempSync(
       join(tmpdir(), "ytm-windows-tray-archive-test-"),
@@ -1212,6 +1271,7 @@ describe("Windows tray connector scaffold", () => {
 
   it("provides a checksum-verified Windows tray updater", () => {
     const updater = read("src/YTMTray.Core/WindowsTrayUpdateService.cs");
+    const packageExtractor = read("src/YTMTray.Core/ZipPackageExtractor.cs");
     const trayController = read("src/YTMTray/TrayController.cs");
     const popupForm = read("src/YTMTray/PlaybackPopupForm.cs");
     const appContext = read("src/YTMTray/TrayApplicationContext.cs");
@@ -1221,8 +1281,8 @@ describe("Windows tray connector scaffold", () => {
     expect(updater).toContain("YTM-Tray-update.json");
     expect(updater).toContain("RequireHttps");
     expect(updater).toContain("VerifyChecksum");
-    expect(updater).toContain("ExtractZipSafely");
-    expect(updater).toContain("unsafe package path");
+    expect(updater).toContain("ZipPackageExtractor.Extract");
+    expect(packageExtractor).toContain("unsafe package path");
     expect(updater).toContain('"YTMTray.Setup.exe"');
     expect(updater).toContain("ArgumentList.Add");
     expect(updater).toContain("update-installer.log");
@@ -1287,11 +1347,21 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:payload:win-arm64");
     expect(workflow).toContain("windows-tray:archive:win-x64");
     expect(workflow).toContain("windows-tray:archive:win-arm64");
-    expect(workflow).toContain("Extract the entire zip");
-    expect(workflow).toContain("run `YTMTray.Setup.exe`");
+    expect(workflow).toContain("windows-tray:installer");
+    expect(workflow).toContain("Run `YTM-Tray-");
+    expect(workflow).toContain("-Setup.exe`");
     expect(workflow).toContain("assert-explorer-archive-compatible.ps1");
     expect(workflow).toContain("windows-tray:update-manifest");
     expect(workflow).toContain("verify-windows-tray-codesign.ps1");
+    expect(
+      workflow.match(/azure\/artifact-signing-action@v2/g)?.length ?? 0,
+    ).toBe(2);
+    expect(workflow.indexOf("Sign release payloads")).toBeLessThan(
+      workflow.indexOf("windows-tray:installer"),
+    );
+    expect(workflow.indexOf("windows-tray:installer")).toBeLessThan(
+      workflow.indexOf("Sign combined installer"),
+    );
     expect(
       workflow.match(/\$LASTEXITCODE -ne 0/g)?.length ?? 0,
     ).toBeGreaterThanOrEqual(5);
@@ -1302,6 +1372,7 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).not.toContain("Remove signing certificate");
     expect(workflow).toContain("make_latest: false");
     expect(workflow).toContain("apps/windows-tray/.build/packages/*.zip");
+    expect(workflow).toContain("apps/windows-tray/.build/installer/*.exe");
     expect(workflow).toContain(
       "apps/windows-tray/.build/update-manifest/*.json",
     );
@@ -1322,6 +1393,17 @@ describe("Windows tray connector scaffold", () => {
     expect(signingCheckWorkflow).toContain("windows-tray:payload:win-arm64");
     expect(signingCheckWorkflow).toContain("windows-tray:archive:win-x64");
     expect(signingCheckWorkflow).toContain("windows-tray:archive:win-arm64");
+    expect(signingCheckWorkflow).toContain("windows-tray:installer");
+    expect(
+      signingCheckWorkflow.match(/azure\/artifact-signing-action@v2/g)
+        ?.length ?? 0,
+    ).toBe(2);
+    expect(signingCheckWorkflow.indexOf("Sign release payloads")).toBeLessThan(
+      signingCheckWorkflow.indexOf("windows-tray:installer"),
+    );
+    expect(signingCheckWorkflow.indexOf("windows-tray:installer")).toBeLessThan(
+      signingCheckWorkflow.indexOf("Sign combined installer"),
+    );
     expect(signingCheckWorkflow).toContain(
       "assert-explorer-archive-compatible.ps1",
     );
@@ -1331,6 +1413,9 @@ describe("Windows tray connector scaffold", () => {
     expect(signingCheckWorkflow).toContain("windows-tray-signed-candidate");
     expect(signingCheckWorkflow).toContain(
       "apps/windows-tray/.build/packages/*.zip",
+    );
+    expect(signingCheckWorkflow).toContain(
+      "apps/windows-tray/.build/installer/*.exe",
     );
     expect(signingCheckWorkflow).toContain(
       "apps/windows-tray/.build/update-manifest/*.json",
@@ -1375,15 +1460,17 @@ describe("Windows tray connector scaffold", () => {
       "YTM_WINDOWS_TRAY_CODESIGN_CERTIFICATE_THUMBPRINT",
     );
     expect(verifyCodesignScript).toContain("Get-AuthenticodeSignature");
-    expect(verifyCodesignScript).toContain("YTMTray.exe");
-    expect(verifyCodesignScript).toContain("YTMTray.NativeHost.exe");
-    expect(verifyCodesignScript).toContain("YTMTray.Setup.exe");
+    expect(verifyCodesignScript).toContain("Get-ChildItem");
+    expect(verifyCodesignScript).toContain("-Filter *.exe");
+    expect(verifyCodesignScript).toContain("Signed executable was not found");
     expect(verifyCodesignScript).toContain('$Signature.Status -ne "Valid"');
     expect(packageJson.scripts["windows-tray:signing:secrets"]).toBeUndefined();
 
     expect(releaseDocs).toContain("windows-tray-vX.Y.Z");
     expect(releaseDocs).toContain("YTM-Tray-<version>-win-x64.zip");
+    expect(releaseDocs).toContain("YTM-Tray-<version>-Setup.exe");
     expect(releaseDocs).toContain("YTM-Tray-update.json");
+    expect(releaseDocs).toContain("selects x64 or ARM64 automatically");
     expect(releaseDocs).toContain("Windows Settings > Apps > Installed apps");
     expect(releaseDocs).toContain("YTMTray.Setup.exe");
     expect(releaseDocs).not.toContain("Uninstall YTM Tray.cmd");

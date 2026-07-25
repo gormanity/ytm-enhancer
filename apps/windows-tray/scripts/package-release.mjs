@@ -286,4 +286,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   }
 }
 
-export { archiveReleasePayload, buildReleasePayload, packageRelease };
+export {
+  archiveReleasePayload,
+  buildReleasePayload,
+  maybeSignPayload,
+  packageRelease,
+};

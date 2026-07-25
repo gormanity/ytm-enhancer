@@ -83,7 +83,7 @@ function Invoke-SignTool {
   }
 }
 
-if (-not (Test-Path -LiteralPath $PayloadRoot)) {
+if (-not (Test-Path -LiteralPath $PayloadRoot -PathType Container)) {
   throw "Payload root was not found: $PayloadRoot"
 }
 
@@ -102,16 +102,22 @@ if ([string]::IsNullOrWhiteSpace($VerifyMode)) {
 }
 
 $FilesToSign = @(
-  Join-Path $PayloadRoot "YTMTray.exe"
-  Join-Path $PayloadRoot "YTMTray.NativeHost.exe"
-  Join-Path $PayloadRoot "YTMTray.Setup.exe"
+  Get-ChildItem `
+    -LiteralPath $PayloadRoot `
+    -Filter *.exe `
+    -File `
+    -Recurse |
+    Sort-Object FullName
 )
 
-foreach ($FileToSign in $FilesToSign) {
-  if (-not (Test-Path -LiteralPath $FileToSign)) {
-    throw "File to sign was not found: $FileToSign"
-  }
+# Release payloads contain YTMTray.exe, YTMTray.NativeHost.exe, and
+# YTMTray.Setup.exe. The combined installer root contains the versioned setup
+# executable. Discovering executables keeps both signing paths fail-closed.
+if ($FilesToSign.Count -eq 0) {
+  throw "Executable to sign was not found under: $PayloadRoot"
+}
 
+foreach ($FileToSign in $FilesToSign) {
   $SignArguments = @(
     "sign",
     "/fd",
@@ -142,16 +148,18 @@ foreach ($FileToSign in $FilesToSign) {
   $SignArguments += @(
     "/d",
     "YTM Tray",
-    $FileToSign
+    $FileToSign.FullName
   )
 
   Invoke-SignTool -SignToolPath $SignTool -Arguments $SignArguments
   if ($VerifyMode -eq "signature") {
-    $Signature = Get-AuthenticodeSignature -FilePath $FileToSign
+    $Signature = Get-AuthenticodeSignature -FilePath $FileToSign.FullName
     if ($Signature.Status -eq "NotSigned" -or $null -eq $Signature.SignerCertificate) {
-      throw "Signed file has no Authenticode signer certificate: $FileToSign"
+      throw "Signed file has no Authenticode signer certificate: $($FileToSign.FullName)"
     }
   } else {
-    Invoke-SignTool -SignToolPath $SignTool -Arguments @("verify", "/pa", "/all", $FileToSign)
+    Invoke-SignTool `
+      -SignToolPath $SignTool `
+      -Arguments @("verify", "/pa", "/all", $FileToSign.FullName)
   }
 }

@@ -14,6 +14,7 @@ on:
       - "apps/windows-tray/release/**"
       - "package.json"
       - "pnpm-lock.yaml"
+      - "scripts/ci/resolve-published-windows-tray-release.sh"
       - "store/screenshots/**"
   workflow_dispatch:
   workflow_run:
@@ -27,6 +28,7 @@ permissions:
 
 concurrency:
   group: pages
+  queue: max
   cancel-in-progress: false
 
 jobs:
@@ -72,24 +74,7 @@ jobs:
       - name: Resolve published Windows tray release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="$(
-            gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-              --jq '.[] | select(.draft == false and (.tag_name | test("^windows-tray-v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' |
-              sort -V |
-              tail -n 1
-          )"
-          if [ -z "$tag" ]; then
-            echo "::error::No published Windows tray release was found."
-            exit 1
-          fi
-          version="${tag#windows-tray-v}"
-          IFS=. read -r major minor patch <<< "$version"
-          build_number=$((major * 1000000 + minor * 1000 + patch))
-          {
-            echo "YTM_WINDOWS_TRAY_VERSION=$version"
-            echo "YTM_WINDOWS_TRAY_BUILD_NUMBER=$build_number"
-          } >> "$GITHUB_ENV"
+        run: sh scripts/ci/resolve-published-windows-tray-release.sh
 
       - name: Build product pages
         run: pnpm run site:build

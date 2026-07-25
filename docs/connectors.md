@@ -270,9 +270,16 @@ The first-party Windows tray connector lives in `apps/windows-tray`. It is a
 modern .NET WinForms tray app that communicates with the extension through
 native messaging. It mirrors the macOS menu bar connector's user-facing role on
 Windows: current playback status, tray/menu controls, open or focus YouTube
-Music, and connection diagnostics. Direct release installs can check GitHub
-component releases in the background, verify the runtime package checksum, and
-hand off to the signed `YTMTray.Setup.exe` installer after user confirmation.
+Music, and connection diagnostics. Website users download one
+`YTM-Tray-<version>-Setup.exe` offline installer. It detects the Windows
+operating system architecture and selects the native x64 or ARM64 app and host
+automatically.
+
+Architecture-specific zips remain updater assets. Direct release installs can
+check GitHub component releases in the background.
+
+They verify the runtime package checksum before handing off to the signed
+`YTMTray.Setup.exe` inside the selected zip after user confirmation.
 
 The Windows tray app is separate from the CLI. Windows users get a native tray
 surface; PowerShell or WSL CLI support is intentionally not part of the Windows
@@ -296,8 +303,9 @@ The local development script publishes a self-contained `YTMTray.exe` plus
 `YTMTray.NativeHost.exe`, writes a native messaging manifest that points at the
 native-host relay under `%LOCALAPPDATA%\YTM Enhancer\Tray`, and registers
 user-level native messaging keys for Google Chrome, Microsoft Edge, and Firefox.
-Release users instead run the signed native `YTMTray.Setup.exe`; the app, native
-host, and setup executable are signed through Microsoft Artifact Signing.
+Release users instead run the versioned combined installer. Microsoft Artifact
+Signing first signs both architecture payloads, then signs the outer installer
+after it embeds those signed payloads.
 
 ## Release Status
 

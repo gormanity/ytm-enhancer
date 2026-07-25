@@ -1860,6 +1860,13 @@ describe("menu bar connector app scaffold", () => {
           releaseUrl: string;
           installPage: string;
           minimumWindowsVersion: string;
+          channels: {
+            direct: {
+              asset: string;
+              packageUrl: string;
+              runtimes: string[];
+            };
+          };
         };
         cli: {
           protocolVersion: string;
@@ -1952,6 +1959,18 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.windowsTray.minimumWindowsVersion).toBe(
       "Windows 11",
     );
+    expect(releaseIndex.products.windowsTray.channels.direct.asset).toBe(
+      "YTM-Tray-0.1.8-Setup.exe",
+    );
+    expect(
+      releaseIndex.products.windowsTray.channels.direct.packageUrl,
+    ).toContain(
+      "/releases/download/windows-tray-v0.1.8/YTM-Tray-0.1.8-Setup.exe",
+    );
+    expect(releaseIndex.products.windowsTray.channels.direct.runtimes).toEqual([
+      "win-x64",
+      "win-arm64",
+    ]);
     expect(releaseIndex.products.cli.protocolVersion).toBe("1.0.0");
     expect(releaseIndex.products.cli.installPage).toBe(
       "https://gormanity.github.io/ytm-enhancer/cli/",
@@ -1973,9 +1992,16 @@ describe("menu bar connector app scaffold", () => {
       /Browser support: Chrome, Microsoft Edge, and Firefox/,
     );
     expect(windowsTrayPage).toContain(
-      `href="${releaseIndex.products.windowsTray.releaseUrl}">Download for Windows</a>`,
+      `href="${releaseIndex.products.windowsTray.channels.direct.packageUrl}">Download for Windows</a>`,
     );
     expect(windowsTrayPage).not.toContain("releases?q=");
+    expect(windowsTrayPage).toContain(
+      "The installer selects the native x64 or ARM64 build automatically.",
+    );
+    expect(windowsTrayPage).not.toContain(
+      "Download and extract the release zip",
+    );
+    expect(windowsTrayPage).not.toContain("for your Windows runtime");
     expect(windowsTrayPage).toContain("Windows Settings > Apps");
     expect(windowsTrayPage).toContain("YTMTray.Setup.exe");
     expect(windowsTrayPage).not.toContain("Uninstall YTM Tray.cmd");
@@ -2067,9 +2093,15 @@ describe("menu bar connector app scaffold", () => {
     const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
     const previousVersion = process.env.YTM_WINDOWS_TRAY_VERSION;
     const previousBuildNumber = process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER;
+    const previousInstallerUrl = process.env.YTM_WINDOWS_TRAY_INSTALLER_URL;
+    const previousInstallerAvailable =
+      process.env.YTM_WINDOWS_TRAY_INSTALLER_AVAILABLE;
 
     process.env.YTM_WINDOWS_TRAY_VERSION = "9.8.7";
     process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER = "9008007";
+    process.env.YTM_WINDOWS_TRAY_INSTALLER_URL =
+      "https://downloads.example.test/YTM-Tray-9.8.7-Setup.exe";
+    process.env.YTM_WINDOWS_TRAY_INSTALLER_AVAILABLE = "true";
 
     try {
       generateLandingPages({
@@ -2085,6 +2117,12 @@ describe("menu bar connector app scaffold", () => {
             latestVersion: string;
             buildNumber: string;
             tag: string;
+            installerAvailable: boolean;
+            channels: {
+              direct: {
+                packageUrl: string;
+              };
+            };
           };
         };
       };
@@ -2096,9 +2134,13 @@ describe("menu bar connector app scaffold", () => {
       expect(releaseIndex.products.windowsTray.latestVersion).toBe("9.8.7");
       expect(releaseIndex.products.windowsTray.buildNumber).toBe("9008007");
       expect(releaseIndex.products.windowsTray.tag).toBe("windows-tray-v9.8.7");
+      expect(releaseIndex.products.windowsTray.installerAvailable).toBe(true);
+      expect(releaseIndex.products.windowsTray.channels.direct.packageUrl).toBe(
+        "https://downloads.example.test/YTM-Tray-9.8.7-Setup.exe",
+      );
       expect(windowsTrayPage).toContain("Latest version: 9.8.7");
       expect(windowsTrayPage).toContain(
-        'href="https://github.com/gormanity/ytm-enhancer/releases/tag/windows-tray-v9.8.7"',
+        'href="https://downloads.example.test/YTM-Tray-9.8.7-Setup.exe"',
       );
     } finally {
       if (previousVersion === undefined) {
@@ -2110,6 +2152,94 @@ describe("menu bar connector app scaffold", () => {
         delete process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER;
       } else {
         process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER = previousBuildNumber;
+      }
+      if (previousInstallerUrl === undefined) {
+        delete process.env.YTM_WINDOWS_TRAY_INSTALLER_URL;
+      } else {
+        process.env.YTM_WINDOWS_TRAY_INSTALLER_URL = previousInstallerUrl;
+      }
+      if (previousInstallerAvailable === undefined) {
+        delete process.env.YTM_WINDOWS_TRAY_INSTALLER_AVAILABLE;
+      } else {
+        process.env.YTM_WINDOWS_TRAY_INSTALLER_AVAILABLE =
+          previousInstallerAvailable;
+      }
+    }
+  });
+
+  it("labels a release-page fallback without advertising a direct installer", async () => {
+    const { generateLandingPages } = (await import(
+      pathToFileURL(resolve(appRoot, "scripts/generate-appcast.mjs")).href
+    )) as {
+      generateLandingPages: (options: {
+        outputPath: string;
+        releaseBaseUrl: string;
+      }) => string;
+    };
+    const outputRoot = mkdtempSync(join(tmpdir(), "ytm-tray-fallback-"));
+    const outputPath = resolve(outputRoot, "site/menu-bar/appcast.xml");
+    const environmentNames = [
+      "YTM_WINDOWS_TRAY_VERSION",
+      "YTM_WINDOWS_TRAY_BUILD_NUMBER",
+      "YTM_WINDOWS_TRAY_INSTALLER_URL",
+      "YTM_WINDOWS_TRAY_INSTALLER_AVAILABLE",
+    ] as const;
+    const previousEnvironment = Object.fromEntries(
+      environmentNames.map((name) => [name, process.env[name]]),
+    );
+
+    process.env.YTM_WINDOWS_TRAY_VERSION = "9.8.7";
+    process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER = "9008007";
+    process.env.YTM_WINDOWS_TRAY_INSTALLER_URL =
+      "https://github.com/example/ytm-enhancer/releases/tag/windows-tray-v9.8.7";
+    process.env.YTM_WINDOWS_TRAY_INSTALLER_AVAILABLE = "false";
+
+    try {
+      generateLandingPages({
+        outputPath,
+        releaseBaseUrl: "https://example.test/releases/download",
+      });
+
+      const releaseIndex = JSON.parse(
+        readFileSync(resolve(outputRoot, "site/releases.json"), "utf-8"),
+      ) as {
+        products: {
+          windowsTray: {
+            installerAvailable: boolean;
+            channels: {
+              direct?: {
+                asset: string;
+                packageUrl: string;
+              };
+            };
+          };
+        };
+      };
+      const windowsTrayPage = readFileSync(
+        resolve(outputRoot, "site/windows-tray/install.html"),
+        "utf-8",
+      );
+
+      expect(releaseIndex.products.windowsTray.installerAvailable).toBe(false);
+      expect(releaseIndex.products.windowsTray.channels.direct).toBeUndefined();
+      expect(windowsTrayPage).toContain(
+        'href="https://github.com/example/ytm-enhancer/releases/tag/windows-tray-v9.8.7"',
+      );
+      expect(windowsTrayPage).toContain("View current Windows release");
+      expect(windowsTrayPage).toContain(
+        "The unified installer is not yet available in this published release.",
+      );
+      expect(windowsTrayPage).not.toContain(
+        "The installer selects the native x64 or ARM64 build automatically.",
+      );
+    } finally {
+      for (const name of environmentNames) {
+        const previousValue = previousEnvironment[name];
+        if (previousValue === undefined) {
+          delete process.env[name];
+        } else {
+          process.env[name] = previousValue;
+        }
       }
     }
   });
@@ -2326,6 +2456,13 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain("Notarize Homebrew package");
     expect(workflow).toContain("menu-bar:notarize");
     expect(workflow).toContain('--app="apps/menu-bar/.build/release-apps');
+    expect(workflow).toContain("group: pages");
+    expect(workflow).toContain("queue: max");
+    expect(workflow).toContain("cancel-in-progress: false");
+    expect(workflow).toContain("Resolve published Windows tray release");
+    expect(workflow).toContain(
+      "scripts/ci/resolve-published-windows-tray-release.sh",
+    );
     expect(workflow).toContain("Generate appcast");
     expect(workflow).toContain(
       "apps/menu-bar/.build/packages/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.pkg",

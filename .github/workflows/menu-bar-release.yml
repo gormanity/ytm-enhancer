@@ -5,6 +5,11 @@ on:
     tags:
       - "menu-bar-v*"
 
+concurrency:
+  group: pages
+  queue: max
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pages: write
@@ -63,6 +68,11 @@ jobs:
             echo "YTM_MENU_BAR_BUILD_NUMBER=$build_number"
             echo "PREVIOUS_MENU_BAR_TAG=$previous_tag"
           } >> "$GITHUB_ENV"
+
+      - name: Resolve published Windows tray release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh scripts/ci/resolve-published-windows-tray-release.sh
 
       - name: Run menu bar tests
         run: |

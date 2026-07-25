@@ -35,8 +35,8 @@ YTM Tray:
 - Tag format: `windows-tray-vX.Y.Z`.
 - Version source: `apps/windows-tray/release/metadata.json`.
 - Release workflow: `.github/workflows/windows-tray-release.yml`.
-- Distribution: direct `win-x64` and `win-arm64` release zips plus update
-  manifest.
+- Distribution: one combined offline installer for direct downloads plus
+  architecture-specific updater zips and an update manifest.
 - GitHub Releases: component-scoped artifact pages only.
 
 ## Tag Policy
@@ -82,7 +82,9 @@ Human-facing discovery should be component-specific:
 - Connected Apps beta users should use
   `https://gormanity.github.io/ytm-enhancer/connected-apps/`.
 - Windows tray users should use
-  `https://gormanity.github.io/ytm-enhancer/windows-tray/install.html`.
+  `https://gormanity.github.io/ytm-enhancer/windows-tray/install.html`. That
+  page links directly to `YTM-Tray-<version>-Setup.exe`, which selects x64 or
+  ARM64 automatically.
 - CLI users should use `https://gormanity.github.io/ytm-enhancer/cli/` until
   public packaging exists.
 - Developers should use `docs/menu-bar-release.md` and component READMEs.
@@ -91,8 +93,9 @@ Automated discovery should use native channel mechanisms:
 
 - Sparkle uses `menu-bar/appcast.xml`.
 - Homebrew uses the generated cask in `gormanity/homebrew-tap`.
-- YTM Tray uses component-scoped GitHub Releases plus a per-release checksum
-  update manifest.
+- YTM Tray direct installs use the combined offline EXE. In-app updates use
+  component-scoped GitHub Releases, architecture-specific zips, and a
+  per-release checksum manifest.
 - Browser stores own browser extension updates.
 - Component-aware tooling can read
   `https://gormanity.github.io/ytm-enhancer/releases.json`.

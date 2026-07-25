@@ -2,13 +2,13 @@
 set -eu
 
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-archive_path="${1:-}"
+installer_path="${1:-}"
 ui_ready_timeout="${YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS:-60}"
 operation_timeout="${YTM_WINDOWS_TRAY_SAC_OPERATION_TIMEOUT_SECONDS:-60}"
 
 usage() {
-  echo "Usage: $0 <windows-archive-path>" >&2
-  echo "The archive must already exist outside REMOTE_QA_WINDOWS_WORK_ROOT on the Windows target." >&2
+  echo "Usage: $0 <windows-installer-path>" >&2
+  echo "The installer must already exist outside REMOTE_QA_WINDOWS_WORK_ROOT on the Windows target." >&2
 }
 
 ps_quote() {
@@ -32,7 +32,7 @@ validate_timeout() {
   fi
 }
 
-if [ "$#" -ne 1 ] || [ -z "$archive_path" ]; then
+if [ "$#" -ne 1 ] || [ -z "$installer_path" ]; then
   usage
   exit 2
 fi
@@ -45,7 +45,7 @@ validate_timeout \
   "$operation_timeout"
 
 windows_script="& .\scripts\windows-qa\tray-sac-smoke.ps1"
-windows_script="$windows_script -ArchivePath $(ps_quote "$archive_path")"
+windows_script="$windows_script -InstallerPath $(ps_quote "$installer_path")"
 windows_script="$windows_script -UiReadyTimeoutSeconds $ui_ready_timeout"
 windows_script="$windows_script -OperationTimeoutSeconds $operation_timeout"
 

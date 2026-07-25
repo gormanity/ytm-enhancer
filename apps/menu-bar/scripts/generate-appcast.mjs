@@ -85,6 +85,27 @@ function packageUrl({ metadata, releaseBaseUrl, packageName }) {
   return `${releaseBaseUrl}/${tag}/${packageName}`;
 }
 
+function windowsTrayInstallerAsset(metadata) {
+  return `${metadata.assetPrefix}-${metadata.version}-Setup.exe`;
+}
+
+function windowsTrayInstallerUrl({ metadata, releaseBaseUrl }) {
+  return (
+    process.env.YTM_WINDOWS_TRAY_INSTALLER_URL ??
+    packageUrl({
+      metadata,
+      releaseBaseUrl,
+      packageName: windowsTrayInstallerAsset(metadata),
+    })
+  );
+}
+
+function windowsTrayInstallerAvailable() {
+  const configured =
+    process.env.YTM_WINDOWS_TRAY_INSTALLER_AVAILABLE?.trim().toLowerCase();
+  return configured === undefined || !["0", "false", "no"].includes(configured);
+}
+
 function homebrewInstallCommand() {
   return "brew install --cask gormanity/tap/ytm-menu-bar";
 }
@@ -147,6 +168,12 @@ function writeReleaseIndex({ metadata, outputPath, releaseBaseUrl }) {
   const windowsTrayTag = `${windowsTrayMetadata.githubReleaseTagPrefix}${windowsTrayMetadata.version}`;
   const directPackageName = `YTM-Menu-Bar-${metadata.version}.pkg`;
   const homebrewPackageName = `YTM-Menu-Bar-Homebrew-${metadata.version}.pkg`;
+  const windowsTrayInstaller = windowsTrayInstallerAsset(windowsTrayMetadata);
+  const windowsTrayPackageUrl = windowsTrayInstallerUrl({
+    metadata: windowsTrayMetadata,
+    releaseBaseUrl,
+  });
+  const windowsInstallerAvailable = windowsTrayInstallerAvailable();
   const indexPath = resolve(dirname(outputPath), "..", "releases.json");
   const index = {
     schemaVersion: 1,
@@ -210,12 +237,17 @@ function writeReleaseIndex({ metadata, outputPath, releaseBaseUrl }) {
         installPage: windowsTrayMetadata.installUrl,
         releaseList: windowsTrayMetadata.githubReleaseListUrl,
         minimumWindowsVersion: windowsTrayMetadata.minimumWindowsVersion,
-        channels: {
-          direct: {
-            runtimes: windowsTrayMetadata.runtimes,
-            releaseList: windowsTrayMetadata.githubReleaseListUrl,
-          },
-        },
+        installerAvailable: windowsInstallerAvailable,
+        channels: windowsInstallerAvailable
+          ? {
+              direct: {
+                asset: windowsTrayInstaller,
+                packageUrl: windowsTrayPackageUrl,
+                runtimes: windowsTrayMetadata.runtimes,
+                releaseList: windowsTrayMetadata.githubReleaseListUrl,
+              },
+            }
+          : {},
       },
       cli: {
         id: "cli",
@@ -649,15 +681,27 @@ function writeSitePage(path, html) {
   writeFileSync(path, html);
 }
 
-function writeSitePages({ metadata, outputPath }) {
+function writeSitePages({ metadata, outputPath, releaseBaseUrl }) {
   const siteRoot = resolve(dirname(outputPath), "..");
   const iconSvg = readExtensionIconSvg();
   const extensionVersion = readExtensionVersion();
   const cliProtocolVersion = readCliProtocolVersion();
   const windowsTrayMetadata = readWindowsTrayMetadata();
   const stores = extensionStoreUrls();
-  const windowsTrayTag = `${windowsTrayMetadata.githubReleaseTagPrefix}${windowsTrayMetadata.version}`;
-  const windowsReleaseUrl = releasePageUrl(windowsTrayTag);
+  const windowsInstallerUrl = windowsTrayInstallerUrl({
+    metadata: windowsTrayMetadata,
+    releaseBaseUrl,
+  });
+  const windowsInstallerAvailable = windowsTrayInstallerAvailable();
+  const windowsDownloadLabel = windowsInstallerAvailable
+    ? "Download for Windows"
+    : "View current Windows release";
+  const windowsSetupCopy = windowsInstallerAvailable
+    ? "Download and run the signed installer, then enable Connected Apps from the YTM Enhancer extension popup. The installer selects the native x64 or ARM64 build automatically."
+    : "The unified installer is not yet available in this published release. View the current release page for available Windows downloads.";
+  const windowsArchitectureCopy = windowsInstallerAvailable
+    ? "Architectures: x64 and ARM64 (selected automatically)"
+    : "Architectures: x64 and ARM64";
   const windowsTrayScreenshotSourcePath = resolve(
     repoRoot,
     "apps/windows-tray/release/windows-tray-screenshot.png",
@@ -939,7 +983,7 @@ function writeSitePages({ metadata, outputPath }) {
               YouTube Music.
             </p>
             <div class="actions" aria-label="Install YTM Tray">
-              <a class="button button-primary" href="${escapeHtml(windowsReleaseUrl)}">Download for Windows</a>
+              <a class="button button-primary" href="${escapeHtml(windowsInstallerUrl)}">${escapeHtml(windowsDownloadLabel)}</a>
               <a class="button" href="../connected-apps/">Connected Apps Beta</a>
               <a class="button" href="#uninstall">Uninstall</a>
             </div>
@@ -963,16 +1007,14 @@ function writeSitePages({ metadata, outputPath }) {
             <div class="section-header">
               <h2 id="setup-title">Setup</h2>
               <p>
-                Download and extract the release zip for your Windows runtime,
-                run <code>YTMTray.Setup.exe</code>, then enable Connected Apps
-                from the YTM Enhancer extension popup.
+                ${windowsSetupCopy}
               </p>
             </div>
             <ul class="meta-list" aria-label="YTM Tray details">
               <li>Latest version: ${escapeHtml(windowsTrayMetadata.version)}</li>
               <li>Minimum Windows version: ${escapeHtml(windowsTrayMetadata.minimumWindowsVersion)}</li>
               <li>Browser support: Chrome, Microsoft Edge, and Firefox</li>
-              <li>Runtimes: ${windowsTrayMetadata.runtimes.map(escapeHtml).join(", ")}</li>
+              <li>${windowsArchitectureCopy}</li>
               <li>Update channel: component-scoped GitHub Releases</li>
             </ul>
           </div>
@@ -991,15 +1033,14 @@ function writeSitePages({ metadata, outputPath }) {
             <div class="section-header">
               <h2 id="uninstall-title">Uninstall</h2>
               <p>
-                Release packages register YTM Tray as a user-level Windows app.
-                Remove it from Windows Settings, the Start Menu, or the signed
-                setup executable.
+                The installer registers YTM Tray as a user-level Windows app.
+                Remove it from Windows Settings or the Start Menu. The installed
+                <code>YTMTray.Setup.exe</code> also supports uninstallation.
               </p>
             </div>
             <ul class="meta-list" aria-label="YTM Tray uninstall options">
               <li>Windows Settings > Apps > Installed apps > YTM Tray > Uninstall</li>
               <li>Start Menu > YTM Enhancer > Uninstall YTM Tray</li>
-              <li>Extracted release zip: <code>YTMTray.Setup.exe uninstall</code></li>
             </ul>
           </div>
           <article class="card">
@@ -1507,7 +1548,7 @@ export function generateLandingPages({
   mkdirSync(dirname(outputPath), { recursive: true });
   writeDefaultReleaseNotesIfMissing({ metadata, outputPath });
   writeInstallPage({ metadata, outputPath, releaseBaseUrl });
-  writeSitePages({ metadata, outputPath });
+  writeSitePages({ metadata, outputPath, releaseBaseUrl });
   writeReleaseIndex({ metadata, outputPath, releaseBaseUrl });
   return resolve(dirname(outputPath), "..");
 }
@@ -1566,7 +1607,7 @@ export function generateAppcast({
     writeDefaultReleaseNotes({ metadata, outputPath });
   }
   writeInstallPage({ metadata, outputPath, releaseBaseUrl });
-  writeSitePages({ metadata, outputPath });
+  writeSitePages({ metadata, outputPath, releaseBaseUrl });
   writeReleaseIndex({ metadata, outputPath, releaseBaseUrl });
   return outputPath;
 }

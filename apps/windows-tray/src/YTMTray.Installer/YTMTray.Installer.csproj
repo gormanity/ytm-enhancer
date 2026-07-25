@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>YTMTray.Installer</AssemblyName>
+    <ApplicationIcon>..\..\assets\YTMEnhancer.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\YTMTray.Core\YTMTray.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup
+    Condition="'$(YTMTrayInstallerX64Package)' != '' and '$(YTMTrayInstallerArm64Package)' != ''"
+  >
+    <EmbeddedResource
+      Include="$(YTMTrayInstallerX64Package)"
+      LogicalName="YTMTray.Installer.Payload.win-x64.zip"
+    />
+    <EmbeddedResource
+      Include="$(YTMTrayInstallerArm64Package)"
+      LogicalName="YTMTray.Installer.Payload.win-arm64.zip"
+    />
+  </ItemGroup>
+  <Target
+    Name="ValidateBundledPackages"
+    BeforeTargets="PrepareResources"
+    Condition="'$(YTMTrayInstallerX64Package)' != '' or '$(YTMTrayInstallerArm64Package)' != ''"
+  >
+    <Error
+      Condition="'$(YTMTrayInstallerX64Package)' == '' or !Exists('$(YTMTrayInstallerX64Package)')"
+      Text="The win-x64 YTM Tray package was not found."
+    />
+    <Error
+      Condition="'$(YTMTrayInstallerArm64Package)' == '' or !Exists('$(YTMTrayInstallerArm64Package)')"
+      Text="The win-arm64 YTM Tray package was not found."
+    />
+  </Target>
+</Project>

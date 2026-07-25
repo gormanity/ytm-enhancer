@@ -9,4 +9,7 @@
     <AssemblyName>YTMTray.Setup</AssemblyName>
     <ApplicationIcon>..\..\assets\YTMEnhancer.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\YTMTray.Core\YTMTray.Core.csproj" />
+  </ItemGroup>
 </Project>

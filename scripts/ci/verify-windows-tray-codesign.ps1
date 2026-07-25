@@ -5,25 +5,28 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if (-not (Test-Path -LiteralPath $PayloadRoot)) {
+if (-not (Test-Path -LiteralPath $PayloadRoot -PathType Container)) {
   throw "Windows tray package payload was not found: $PayloadRoot"
 }
 
 $FilesToVerify = @(
-  Join-Path $PayloadRoot "YTMTray.exe"
-  Join-Path $PayloadRoot "YTMTray.NativeHost.exe"
-  Join-Path $PayloadRoot "YTMTray.Setup.exe"
+  Get-ChildItem `
+    -LiteralPath $PayloadRoot `
+    -Filter *.exe `
+    -File `
+    -Recurse |
+    Sort-Object FullName
 )
 
+if ($FilesToVerify.Count -eq 0) {
+  throw "Signed executable was not found under: $PayloadRoot"
+}
+
 foreach ($FileToVerify in $FilesToVerify) {
-  if (-not (Test-Path -LiteralPath $FileToVerify)) {
-    throw "Signed file was not found: $FileToVerify"
-  }
-
-  $Signature = Get-AuthenticodeSignature -FilePath $FileToVerify
+  $Signature = Get-AuthenticodeSignature -FilePath $FileToVerify.FullName
   if ($Signature.Status -ne "Valid" -or $null -eq $Signature.SignerCertificate) {
-    throw "Signed file does not have a valid Authenticode signature: $FileToVerify ($($Signature.Status))"
+    throw "Signed file does not have a valid Authenticode signature: $($FileToVerify.FullName) ($($Signature.Status))"
   }
 
-  Write-Output "Verified Authenticode signature for $FileToVerify."
+  Write-Output "Verified Authenticode signature for $($FileToVerify.FullName)."
 }

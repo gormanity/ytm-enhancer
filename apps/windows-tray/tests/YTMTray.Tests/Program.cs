@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -34,6 +35,10 @@ var tests = new (string Name, Func<Task> Run)[]
     ("popup placement stays attached to tray anchors", PopupPlacementStaysAttachedToTrayAnchors),
     ("tray icon layout enlarges only idle glyph", TrayIconLayoutEnlargesOnlyIdleGlyph),
     ("artwork layout preserves source aspect ratios", ArtworkLayoutPreservesAspectRatios),
+    (
+        "Windows runtime identifiers follow the operating system architecture",
+        WindowsRuntimeIdentifiersFollowOperatingSystemArchitecture
+    ),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
     ("update options use packaged release version", UpdateOptionsUsePackagedReleaseVersion),
@@ -43,6 +48,24 @@ var tests = new (string Name, Func<Task> Run)[]
     ("update service rejects unsafe package entries", UpdateServiceRejectsUnsafePackageEntries),
     ("update service rejects unsafe package names", UpdateServiceRejectsUnsafePackageNames)
 };
+
+static Task WindowsRuntimeIdentifiersFollowOperatingSystemArchitecture()
+{
+    AssertEqual(
+        "win-x64",
+        WindowsRuntimeIdentifier.FromArchitecture(Architecture.X64)
+    );
+    AssertEqual(
+        "win-arm64",
+        WindowsRuntimeIdentifier.FromArchitecture(Architecture.Arm64)
+    );
+    AssertThrows<PlatformNotSupportedException>(
+        () => WindowsRuntimeIdentifier.FromArchitecture(Architecture.X86),
+        "x86"
+    );
+
+    return Task.CompletedTask;
+}
 
 var failures = new List<string>();
 foreach (var test in tests)
@@ -1141,6 +1164,27 @@ static void AssertNotNull(object? value, string label)
     {
         throw new InvalidOperationException($"{label} was null");
     }
+}
+
+static void AssertThrows<T>(Action action, string expectedMessage)
+    where T : Exception
+{
+    try
+    {
+        action();
+    }
+    catch (T error)
+        when (error.Message.Contains(
+            expectedMessage,
+            StringComparison.OrdinalIgnoreCase
+        ))
+    {
+        return;
+    }
+
+    throw new InvalidOperationException(
+        $"expected {typeof(T).Name} containing {expectedMessage}"
+    );
 }
 
 static async Task AssertThrowsAsync<T>(Func<Task> action, string expectedMessage)

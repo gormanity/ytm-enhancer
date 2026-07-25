@@ -24,8 +24,8 @@ artifact uploads to PR QA workflows.
 Hosted CI covers deterministic checks that do not need a logged-in desktop:
 
 - `Browser E2E` runs Chromium and Firefox extension E2E on `ubuntu-latest`.
-- `Windows QA` runs non-GUI Windows tray scaffold, manifest, registry, package,
-  and update-manifest smokes on `windows-latest`.
+- `Windows QA` runs non-GUI Windows tray scaffold, manifest, registry, runtime
+  package, combined-installer, and update-manifest smokes on `windows-latest`.
 - `Menu Bar Update Path Tests` runs package and update-path checks on
   `macos-latest`.
 
@@ -599,8 +599,9 @@ the target is locked.
 Probe the running agent through the configured transport:
 
 ```sh
-scripts/remote/windows-qa/run.sh --shell \
-  '& "$env:LOCALAPPDATA\YTM Enhancer\WindowsQaAgent\invoke-ui-agent.ps1" -Action Probe -LaunchProbe'
+agent='$env:LOCALAPPDATA\YTM Enhancer\WindowsQaAgent'
+probe="& '$agent\invoke-ui-agent.ps1' -Action Probe -LaunchProbe"
+scripts/remote/windows-qa/run.sh --shell "$probe"
 ```
 
 Run the Windows SSH preflight before a full Windows QA sync:
@@ -730,10 +731,11 @@ Run the same smoke through the configured Windows transport:
 scripts/remote/windows-qa/tray-package-smoke.sh
 ```
 
-This builds the release zip for the target architecture, generates
-`YTM-Tray-update.json`, extracts the package, installs from the prebuilt
-executables, validates the package metadata and manifest, and removes the smoke
-install.
+This builds both architecture-specific updater zips, generates
+`YTM-Tray-update.json`, runs `pnpm run windows-tray:installer`, and installs
+through the combined offline EXE. It verifies that the installer selected the
+native runtime, validates both archives plus the package metadata and manifest,
+and removes the smoke install.
 
 Run the Windows tray published release E2E smoke:
 
@@ -748,11 +750,12 @@ Run the same smoke through the configured Windows transport:
 scripts/remote/windows-qa/tray-release-e2e.sh
 ```
 
-This downloads published `windows-tray-v*` release zips from GitHub, installs
-the baseline release, fetches the target release's `YTM-Tray-update.json`,
-verifies the runtime package checksum, installs the target release over the
-baseline, validates files, Authenticode signers, registry keys, native host
-manifests, Start Menu shortcuts, and uninstall metadata, then runs the installed
+This deliberately uses the architecture-specific updater zips. It downloads
+published `windows-tray-v*` assets from GitHub, installs the baseline release,
+fetches the target release's `YTM-Tray-update.json`, verifies the runtime
+package checksum, and installs the target release over the baseline. It
+validates files, Authenticode signers, registry keys, native host manifests,
+Start Menu shortcuts, and uninstall metadata, then runs the installed
 uninstaller and verifies cleanup. Pass `-BaselineVersion` and `-TargetVersion`
 to validate a different release pair.
 
@@ -778,7 +781,7 @@ the popup update action, accepts the update dialogs, waits for the target
 release to replace the baseline, validates the installed files and native host
 registrations, then uninstalls and verifies cleanup. It intentionally uses the
 default `%LOCALAPPDATA%\YTM Enhancer\Tray` path because the in-app updater hands
-off to the packaged installer exactly as users receive it.
+off to the native setup inside the selected architecture-specific updater zip.
 
 The remote wrapper also accepts `YTM_WINDOWS_TRAY_BASELINE_VERSION` and
 `YTM_WINDOWS_TRAY_TARGET_VERSION` when positional arguments are not convenient.
@@ -801,13 +804,15 @@ Run the same smoke through the configured Windows transport:
 scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.8
 ```
 
-This downloads the published release zip, installs it to the real user-level
-`%LOCALAPPDATA%\YTM Enhancer\Tray` location, verifies Authenticode signers,
-native host manifests, browser registrations, Start Menu shortcuts, and the
-Windows uninstall entry, launches YTM Tray through the Windows QA UI agent, and
-opens Google Chrome to YouTube Music. It intentionally does not uninstall or
-quit the tray app. Use it after destructive install/update/uninstall smokes when
-you want the target left ready for hands-on operational testing.
+This downloads the published `YTM-Tray-<version>-Setup.exe`, verifies its
+Authenticode signer, and installs through the same combined offline installer
+linked from the website. The installer selects x64 or ARM64 automatically. The
+smoke validates the native installed files, native host manifests, browser
+registrations, Start Menu shortcuts, and Windows uninstall entry, launches YTM
+Tray through the Windows QA UI agent, and opens Google Chrome to YouTube Music.
+It intentionally does not uninstall or quit the tray app. Use it after
+destructive install/update/uninstall smokes when you want the target left ready
+for hands-on operational testing.
 
 Set `YTM_WINDOWS_TRAY_OPERATIONAL_PLAYBACK_URL` to open a specific YouTube Music
 URL, or `YTM_WINDOWS_TRAY_OPERATIONAL_SKIP_CHROME=1` to leave Chrome untouched
@@ -827,46 +832,45 @@ scripts/remote/windows-qa/tray-signing-smoke.sh
 ```
 
 This creates a disposable self-signed code-signing certificate in the Windows QA
-user stores, exports a temporary PFX, builds the release zip with signing
-required, verifies the packaged tray executable and native host have
-Authenticode signatures from the disposable signer, and removes the temporary
-certificate. It validates the signing plumbing without installing production
-signing secrets on the QA target.
+user stores and exports a temporary PFX. It builds and signs both runtime
+packages, verifies every inner executable, runs
+`pnpm run windows-tray:installer`, and verifies the combined installer's
+signature. It then removes the temporary certificate. This validates both
+signing passes without installing production signing secrets on the QA target.
 
-Run the Windows tray Smart App Control smoke against a public-trust-signed
-archive from the `windows-tray-signed-candidate` signing-check artifact or an
-already-published release:
+Run the Windows tray Smart App Control smoke against the public-trust-signed
+combined EXE from the `windows-tray-signed-candidate` signing-check artifact or
+an already-published release:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-sac-smoke.ps1 `
-  -ArchivePath "$env:USERPROFILE\Downloads\YTM-Tray-0.1.8-win-x64.zip"
+  -InstallerPath "$env:USERPROFILE\Downloads\YTM-Tray-0.1.8-Setup.exe"
 ```
 
-The remote wrapper accepts a path on the Windows target. Keep the archive
+The remote wrapper accepts a path on the Windows target. Keep the installer
 outside `REMOTE_QA_WINDOWS_WORK_ROOT`, because the wrapper replaces that
 disposable checkout when it syncs:
 
 ```sh
 scripts/remote/windows-qa/tray-sac-smoke.sh \
-  'C:\Users\<windows-qa-user>\Downloads\YTM-Tray-0.1.8-win-x64.zip'
+  'C:\Users\<windows-qa-user>\Downloads\YTM-Tray-0.1.8-Setup.exe'
 ```
 
 The smoke requires Smart App Control enforcement to already be on
 (`VerifiedAndReputablePolicyState=1`) and an unlocked desktop with the Windows
 QA UI agent running. The target must not have an existing YTM Tray install; the
 smoke fails rather than replacing user state. It does not change Smart App
-Control state, download an archive, create a certificate, or sign binaries. It
-extracts the supplied ZIP, adds Internet-zone Mark of the Web to every payload
-file, requires valid Authenticode signatures on `YTMTray.exe`,
-`YTMTray.NativeHost.exe`, and `YTMTray.Setup.exe`, and captures Code Integrity
-and AppLocker event-log cursors. It then launches the marked native setup
-through the logged-in desktop agent, validates the installed files and registry
-entries, and confirms that no CMD or PowerShell scripts were installed. It
-starts the installed tray and native host in the desktop session, requires a
-real native-host-to-tray bridge handshake, runs the installed native
-uninstaller, and verifies cleanup. The smoke fails if new blocking events
-identify any release executable, CMD, or PowerShell.
+Control state, download an installer, create a certificate, or sign binaries. It
+adds Internet-zone Mark of the Web to the supplied EXE, requires a valid
+public-trust Authenticode signature, and captures Code Integrity and AppLocker
+event-log cursors. It then launches the marked combined installer through the
+logged-in desktop agent, confirms that it selected the native runtime, validates
+the signed installed files and registry entries, and confirms that no CMD or
+PowerShell scripts were installed. It starts the installed tray and native host
+in the desktop session, requires a real native-host-to-tray bridge handshake,
+runs the installed native uninstaller, and verifies cleanup. The smoke fails if
+new blocking events identify any release executable, CMD, or PowerShell.
 
 Set `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS` to control the desktop readiness
 wait. Set `YTM_WINDOWS_TRAY_SAC_OPERATION_TIMEOUT_SECONDS` to control install

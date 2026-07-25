@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
+using YTMTray.Core;
 
 namespace YTMTray.Setup;
 
@@ -340,9 +341,7 @@ internal sealed record SetupOptions(
         );
 
     private static string DefaultRuntimeIdentifier() =>
-        RuntimeInformation.ProcessArchitecture == Architecture.Arm64
-            ? "win-arm64"
-            : "win-x64";
+        WindowsRuntimeIdentifier.CurrentOperatingSystem();
 }
 
 internal sealed class SetupLogger

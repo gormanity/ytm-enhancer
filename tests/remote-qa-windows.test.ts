@@ -309,11 +309,14 @@ describe("Windows remote QA scaffold", () => {
 
     expect(packageSmoke).toContain('ensure-pnpm.ps1"');
     expect(packageSmoke).toContain("Invoke-Pnpm install --frozen-lockfile");
-    expect(packageSmoke).toContain("Invoke-Pnpm run $PackageScript");
-    expect(packageSmoke).toContain("windows-tray:package:$RuntimeIdentifier");
+    expect(packageSmoke).toContain("windows-tray:package:win-x64");
+    expect(packageSmoke).toContain("windows-tray:package:win-arm64");
+    expect(packageSmoke).toContain("windows-tray:installer");
     expect(packageSmoke).toContain("windows-tray:update-manifest");
     expect(packageSmoke).toContain("--package=$ArchivePath");
+    expect(packageSmoke).toContain("Invoke-Pnpm @ManifestCommand");
     expect(packageSmoke).toContain("YTM-Tray-update.json");
+    expect(packageSmoke).toContain("YTM-Tray-$($Metadata.version)-Setup.exe");
     expect(packageSmoke).toContain("assert-explorer-archive-compatible.ps1");
     expect(packageSmoke).toContain("-FilePath powershell.exe");
     expect(packageSmoke).toContain("-Arguments @(");
@@ -327,6 +330,7 @@ describe("Windows remote QA scaffold", () => {
     expect(packageSmoke).toContain("Expand-Archive");
     expect(packageSmoke).toContain("install-native-hosts.ps1");
     expect(packageSmoke).toContain("YTMTray.Setup.exe");
+    expect(packageSmoke).toContain("-FilePath $CombinedInstallerPath");
     expect(packageSmoke).toContain("-FilePath $FilePath");
     expect(packageSmoke).toContain("-Wait");
     expect(packageSmoke).toContain("$Process.ExitCode");
@@ -460,6 +464,8 @@ describe("Windows remote QA scaffold", () => {
     expect(operationalSmoke).toContain("Wait-WindowsQaUiAgentReady");
     expect(operationalSmoke).toContain("Invoke-InteractivePowerShell");
     expect(operationalSmoke).toContain("Get-AuthenticodeSignature");
+    expect(operationalSmoke).toContain("YTM-Tray-$ResolvedVersion-Setup.exe");
+    expect(operationalSmoke).not.toContain("Expand-ReleasePackage");
     expect(operationalSmoke).toContain("Google Chrome");
     expect(operationalSmoke).toContain("Left YTM Tray installed");
     expect(operationalSmoke).toContain(
@@ -484,7 +490,7 @@ describe("Windows remote QA scaffold", () => {
     expect(docs).toContain("quit the tray app");
   });
 
-  it("validates a public Windows tray archive under Smart App Control", () => {
+  it("validates the public Windows tray installer under Smart App Control", () => {
     const sacSmoke = read("scripts/windows-qa/tray-sac-smoke.ps1");
     const sacSmokeShell = read("scripts/remote/windows-qa/tray-sac-smoke.sh");
     const docs = read("docs/remote-qa.md");
@@ -492,7 +498,10 @@ describe("Windows remote QA scaffold", () => {
     expect(sacSmoke).toContain("VerifiedAndReputablePolicyState");
     expect(sacSmoke).toContain("ZoneId=3");
     expect(sacSmoke).toContain("Get-AuthenticodeSignature");
-    expect(sacSmoke).toContain("YTMTray.Setup.exe");
+    expect(sacSmoke).toContain("[string] $InstallerPath");
+    expect(sacSmoke).toContain("YTM-Tray-");
+    expect(sacSmoke).toContain("-Setup.exe");
+    expect(sacSmoke).not.toContain("Expand-Archive");
     expect(sacSmoke).toContain("Wait-WindowsQaUiAgentReady");
     expect(sacSmoke).toContain("Invoke-InteractivePowerShell");
     expect(sacSmoke).toContain("-FilePath $SetupPath");
@@ -506,7 +515,7 @@ describe("Windows remote QA scaffold", () => {
     expect(sacSmoke).toContain("Microsoft-Windows-CodeIntegrity/Operational");
     expect(sacSmoke).toContain("Microsoft-Windows-AppLocker/MSI and Script");
     expect(sacSmoke).toContain('".cmd", ".ps1"');
-    expect(sacSmokeShell).toContain("-ArchivePath");
+    expect(sacSmokeShell).toContain("-InstallerPath");
     expect(sacSmokeShell).toContain("scripts\\windows-qa\\tray-sac-smoke.ps1");
     expect(docs).toContain("scripts/remote/windows-qa/tray-sac-smoke.sh");
     expect(docs).toContain("windows-tray-signed-candidate");
@@ -535,6 +544,8 @@ describe("Windows remote QA scaffold", () => {
     expect(signingSmoke).toContain("YTM_WINDOWS_TRAY_CODESIGN_TIMESTAMP_URL");
     expect(signingSmoke).toContain("Assert-SignedFile");
     expect(signingSmoke).toContain("Get-AuthenticodeSignature");
+    expect(signingSmoke).toContain("windows-tray:installer");
+    expect(signingSmoke).toContain("YTM-Tray-$($Metadata.version)-Setup.exe");
     expect(signingSmoke).toContain("Remove-CertificateByThumbprint");
     expect(signingSmokeShell).toContain(
       "scripts\\windows-qa\\tray-signing-smoke.ps1",

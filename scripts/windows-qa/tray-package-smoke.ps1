@@ -8,7 +8,11 @@ function Invoke-Native {
     [string[]] $Arguments
   )
 
-  if ([IO.Path]::GetFileName($FilePath) -ieq "YTMTray.Setup.exe") {
+  $FileName = [IO.Path]::GetFileName($FilePath)
+  if (
+    $FileName -ieq "YTMTray.Setup.exe" -or
+    $FileName -like "YTM-Tray-*-Setup.exe"
+  ) {
     $CommandLine = @(
       $Arguments | ForEach-Object {
         if ($_ -notmatch '[\s"]' -and $_.Length -gt 0) {
@@ -182,14 +186,22 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
 
 $Metadata = Get-Content -LiteralPath "apps/windows-tray/release/metadata.json" -Raw |
   ConvertFrom-Json
-$RuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
+$RuntimeIdentifier = if (
+  $env:PROCESSOR_ARCHITECTURE -eq "ARM64" -or
+  $env:PROCESSOR_ARCHITEW6432 -eq "ARM64"
+) {
   "win-arm64"
 } else {
   "win-x64"
 }
-$PackageScript = "windows-tray:package:$RuntimeIdentifier"
+$RuntimeIdentifiers = @("win-x64", "win-arm64")
+$ArchivePaths = @(
+  $RuntimeIdentifiers | ForEach-Object {
+    "apps/windows-tray/.build/packages/YTM-Tray-$($Metadata.version)-$_.zip"
+  }
+)
 $ArchivePath = "apps/windows-tray/.build/packages/YTM-Tray-$($Metadata.version)-$RuntimeIdentifier.zip"
-$PayloadRoot = "apps/windows-tray/.build/package-work/$RuntimeIdentifier/payload"
+$CombinedInstallerPath = "apps/windows-tray/.build/installer/YTM-Tray-$($Metadata.version)-Setup.exe"
 $ExplorerArchiveCheck = Join-Path $PSScriptRoot "assert-explorer-archive-compatible.ps1"
 $UpdateManifestPath = "apps/windows-tray/.build/update-manifest/YTM-Tray-update.json"
 $QaTempRoot = (Get-Item -LiteralPath $env:TEMP).FullName
@@ -206,27 +218,47 @@ $env:CI = "true"
 . "$PSScriptRoot\ensure-pnpm.ps1"
 Ensure-Pnpm
 Invoke-Pnpm install --frozen-lockfile
-Invoke-Pnpm run $PackageScript
-Invoke-Pnpm run windows-tray:update-manifest -- "--package=$ArchivePath"
+Invoke-Pnpm run windows-tray:package:win-x64
+Invoke-Pnpm run windows-tray:package:win-arm64
+Invoke-Pnpm run windows-tray:installer
+$ManifestArguments = @()
+foreach ($ArchivePath in $ArchivePaths) {
+  $ManifestArguments += "--package=$ArchivePath"
+}
+$ManifestCommand = @(
+  "run",
+  "windows-tray:update-manifest",
+  "--"
+) + $ManifestArguments
+Invoke-Pnpm @ManifestCommand
+$ArchivePath =
+  "apps/windows-tray/.build/packages/YTM-Tray-$($Metadata.version)-$RuntimeIdentifier.zip"
 
-Assert-PathExists $ArchivePath
-Assert-PathExists $PayloadRoot
+foreach ($CurrentRuntimeIdentifier in $RuntimeIdentifiers) {
+  $CurrentArchivePath =
+    "apps/windows-tray/.build/packages/YTM-Tray-$($Metadata.version)-$CurrentRuntimeIdentifier.zip"
+  $CurrentPayloadRoot =
+    "apps/windows-tray/.build/package-work/$CurrentRuntimeIdentifier/payload"
+  Assert-PathExists $CurrentArchivePath
+  Assert-PathExists $CurrentPayloadRoot
+  Invoke-Native `
+    -FilePath powershell.exe `
+    -Arguments @(
+      "-NoLogo",
+      "-NoProfile",
+      "-STA",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      $ExplorerArchiveCheck,
+      "-ArchivePath",
+      $CurrentArchivePath,
+      "-PayloadRoot",
+      $CurrentPayloadRoot
+    )
+}
+Assert-PathExists $CombinedInstallerPath
 Assert-PathExists $UpdateManifestPath
-Invoke-Native `
-  -FilePath powershell.exe `
-  -Arguments @(
-    "-NoLogo",
-    "-NoProfile",
-    "-STA",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    $ExplorerArchiveCheck,
-    "-ArchivePath",
-    $ArchivePath,
-    "-PayloadRoot",
-    $PayloadRoot
-  )
 
 $UpdateManifest = Get-Content -LiteralPath $UpdateManifestPath -Raw |
   ConvertFrom-Json
@@ -252,12 +284,10 @@ try {
   Assert-PathExists (Join-Path $ExtractRoot "install-native-hosts.ps1")
 
   Invoke-Native `
-    -FilePath $PackageSetupPath `
+    -FilePath $CombinedInstallerPath `
     -Arguments @(
       "install",
       "--quiet",
-      "--runtime-identifier",
-      $RuntimeIdentifier,
       "--install-root",
       $InstallRoot
     )
@@ -295,8 +325,12 @@ try {
 
   $PackageMetadata = Get-Content -LiteralPath (Join-Path $ExtractRoot "release.json") -Raw |
     ConvertFrom-Json
+  $InstalledMetadata = Get-Content -LiteralPath (Join-Path $InstallRoot "release.json") -Raw |
+    ConvertFrom-Json
   Assert-Equal $RuntimeIdentifier $PackageMetadata.runtimeIdentifier "package runtime"
+  Assert-Equal $RuntimeIdentifier $InstalledMetadata.runtimeIdentifier "installed runtime"
   Assert-Equal $Metadata.version $PackageMetadata.version "package version"
+  Assert-Equal $Metadata.version $InstalledMetadata.version "installed version"
   Assert-Equal $Metadata.githubReleaseListUrl $PackageMetadata.releaseListUrl "package release list URL"
   Assert-Equal "YTM-Tray-update.json" $PackageMetadata.updateManifestAssetName "package update manifest asset"
 
@@ -321,10 +355,14 @@ try {
   $RestoredTrayBytes = Read-FilePrefixBytes (Join-Path $InstallRoot "YTMTray.exe") 16
   Assert-Equal ($ExistingTrayBytes -join ",") ($RestoredTrayBytes -join ",") "restored tray executable"
 } finally {
-  $PackageSetupPath = Join-Path $ExtractRoot "YTMTray.Setup.exe"
-  if (Test-Path -LiteralPath $PackageSetupPath) {
+  $CleanupSetupPath = if (Test-Path -LiteralPath $InstalledSetupPath) {
+    $InstalledSetupPath
+  } else {
+    Join-Path $ExtractRoot "YTMTray.Setup.exe"
+  }
+  if (Test-Path -LiteralPath $CleanupSetupPath) {
     Invoke-Native `
-      -FilePath $PackageSetupPath `
+      -FilePath $CleanupSetupPath `
       -Arguments @(
         "uninstall",
         "--quiet",

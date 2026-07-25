@@ -77,6 +77,17 @@ describe("GitHub Actions workflow linting", () => {
       resolve(process.cwd(), ".github/workflows/pages.yml"),
       "utf-8",
     );
+    const menuBarWorkflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
+      "utf-8",
+    );
+    const resolver = readFileSync(
+      resolve(
+        process.cwd(),
+        "scripts/ci/resolve-published-windows-tray-release.sh",
+      ),
+      "utf-8",
+    );
     const packageJson = JSON.parse(
       readFileSync(resolve(process.cwd(), "package.json"), "utf-8"),
     ) as { scripts: Record<string, string> };
@@ -93,14 +104,33 @@ describe("GitHub Actions workflow linting", () => {
     expect(workflow).toContain("pages: write");
     expect(workflow).toContain("id-token: write");
     expect(workflow).toContain("cancel-in-progress: false");
+    expect(workflow).toContain("queue: max");
     expect(workflow).toContain("Preserve release-owned menu bar feed");
     expect(workflow).toContain(
       "gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
     );
     expect(workflow).toContain("YTM_MENU_BAR_VERSION=$version");
     expect(workflow).toContain("Resolve published Windows tray release");
-    expect(workflow).toContain("YTM_WINDOWS_TRAY_VERSION=$version");
-    expect(workflow).toContain("YTM_WINDOWS_TRAY_BUILD_NUMBER=$build_number");
+    expect(workflow).toContain(
+      "scripts/ci/resolve-published-windows-tray-release.sh",
+    );
+    expect(menuBarWorkflow).toContain(
+      "scripts/ci/resolve-published-windows-tray-release.sh",
+    );
+    expect(menuBarWorkflow).toContain("group: pages");
+    expect(menuBarWorkflow).toContain("queue: max");
+    expect(menuBarWorkflow).toContain("cancel-in-progress: false");
+    expect(resolver).toContain("YTM_WINDOWS_TRAY_VERSION=$version");
+    expect(resolver).toContain("YTM_WINDOWS_TRAY_BUILD_NUMBER=$build_number");
+    expect(resolver).toContain(
+      'installer_asset="YTM-Tray-${version}-Setup.exe"',
+    );
+    expect(resolver).toContain("browser_download_url");
+    expect(resolver).toContain("YTM_WINDOWS_TRAY_INSTALLER_URL=$installer_url");
+    expect(resolver).toContain(
+      "YTM_WINDOWS_TRAY_INSTALLER_AVAILABLE=$installer_available",
+    );
+    expect(resolver).toContain("html_url");
     expect(workflow).toContain("pnpm run site:build");
     expect(workflow).toContain(
       "apps/menu-bar/.build/appcast/menu-bar/appcast.xml",

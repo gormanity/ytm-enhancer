@@ -1,7 +1,7 @@
 param(
   [Parameter(Mandatory = $true)]
   [ValidateNotNullOrEmpty()]
-  [string] $ArchivePath,
+  [string] $InstallerPath,
   [string] $WorkRoot = (Join-Path $env:TEMP "ytm-tray-sac-smoke"),
   [int] $UiReadyTimeoutSeconds = 60,
   [int] $OperationTimeoutSeconds = 60
@@ -20,14 +20,13 @@ $UninstallRegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninsta
 $StartMenuFolder = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\YTM Enhancer"
 $TrayShortcutPath = Join-Path $StartMenuFolder "YTM Tray.lnk"
 $UninstallShortcutPath = Join-Path $StartMenuFolder "Uninstall YTM Tray.lnk"
-$ExtractRoot = Join-Path $WorkRoot "extract"
 $InstallResultPath = Join-Path $WorkRoot "install-result.json"
 $RuntimeResultPath = Join-Path $WorkRoot "runtime-result.json"
 $UninstallResultPath = Join-Path $WorkRoot "uninstall-result.json"
 $TrayRuntimeLogPath = Join-Path $WorkRoot "tray-runtime.log"
 $NativeHostRuntimeLogPath = Join-Path $WorkRoot "native-host-runtime.log"
 $ProtectedProcessPattern =
-  "(?i)(YTMTray(?:\.NativeHost|\.Setup)?(?:\.exe)?|cmd\.exe|powershell\.exe|pwsh\.exe)"
+  "(?i)(YTM-Tray-[^\\/:]+-Setup\.exe|YTMTray(?:\.NativeHost|\.Setup)?(?:\.exe)?|cmd\.exe|powershell\.exe|pwsh\.exe)"
 $BlockingEventLogs = @(
   [pscustomobject] @{
     Name = "Microsoft-Windows-CodeIntegrity/Operational"
@@ -145,28 +144,22 @@ function Test-InstallStateRemaining {
 }
 
 function Set-MarkOfTheWeb {
-  param([Parameter(Mandatory = $true)][string] $Root)
+  param([Parameter(Mandatory = $true)][string] $Path)
 
-  $PayloadFiles = @(Get-ChildItem -LiteralPath $Root -Recurse -File)
-  if ($PayloadFiles.Count -eq 0) {
-    throw "The extracted release archive is empty."
-  }
+  Assert-PathExists $Path
+  Set-Content `
+    -LiteralPath $Path `
+    -Stream "Zone.Identifier" `
+    -Value "[ZoneTransfer]`r`nZoneId=3`r`n" `
+    -Encoding ASCII `
+    -NoNewline
 
-  foreach ($File in $PayloadFiles) {
-    Set-Content `
-      -LiteralPath $File.FullName `
-      -Stream "Zone.Identifier" `
-      -Value "[ZoneTransfer]`r`nZoneId=3`r`n" `
-      -Encoding ASCII `
-      -NoNewline
-
-    $ZoneIdentifier = Get-Content `
-      -LiteralPath $File.FullName `
-      -Stream "Zone.Identifier" `
-      -Raw
-    if ($ZoneIdentifier -notmatch "(?m)^ZoneId=3\r?$") {
-      throw "Could not apply Internet-zone Mark of the Web to $($File.FullName)."
-    }
+  $ZoneIdentifier = Get-Content `
+    -LiteralPath $Path `
+    -Stream "Zone.Identifier" `
+    -Raw
+  if ($ZoneIdentifier -notmatch "(?m)^ZoneId=3\r?$") {
+    throw "Could not apply Internet-zone Mark of the Web to $Path."
   }
 }
 
@@ -543,19 +536,24 @@ if ($OperationTimeoutSeconds -le 0) {
   throw "-OperationTimeoutSeconds must be greater than zero."
 }
 
-$ResolvedArchivePath = (Resolve-Path -LiteralPath $ArchivePath).ProviderPath
-if ([IO.Path]::GetExtension($ResolvedArchivePath) -ine ".zip") {
-  throw "-ArchivePath must point to a Windows tray ZIP archive."
+$ResolvedInstallerPath = (Resolve-Path -LiteralPath $InstallerPath).ProviderPath
+$InstallerFileName = [IO.Path]::GetFileName($ResolvedInstallerPath)
+if (
+  [IO.Path]::GetExtension($ResolvedInstallerPath) -ine ".exe" -or
+  $InstallerFileName -notmatch "^YTM-Tray-(?<Version>[0-9]+\.[0-9]+\.[0-9]+)-Setup\.exe$"
+) {
+  throw "-InstallerPath must point to a versioned YTM-Tray-X.Y.Z-Setup.exe."
 }
+$ExpectedVersion = $Matches.Version
 
 $ResolvedWorkRoot = [IO.Path]::GetFullPath($WorkRoot)
 if (
-  $ResolvedArchivePath.StartsWith(
+  $ResolvedInstallerPath.StartsWith(
     $ResolvedWorkRoot + [IO.Path]::DirectorySeparatorChar,
     [StringComparison]::OrdinalIgnoreCase
   )
 ) {
-  throw "-ArchivePath must be outside the disposable WorkRoot."
+  throw "-InstallerPath must be outside the disposable WorkRoot."
 }
 
 $SacPolicy = Get-ItemProperty `
@@ -579,7 +577,7 @@ Assert-CleanInstallState
 if (Test-Path -LiteralPath $WorkRoot) {
   Remove-Item -LiteralPath $WorkRoot -Recurse -Force
 }
-New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $WorkRoot | Out-Null
 
 $PrimaryError = $null
 $CleanupError = $null
@@ -588,50 +586,38 @@ $BlockingEvents = @()
 $SmokePassed = $false
 
 try {
-  Write-SmokeStep "Extracting the supplied public release archive."
-  Expand-Archive `
-    -LiteralPath $ResolvedArchivePath `
-    -DestinationPath $ExtractRoot `
-    -Force
+  Write-SmokeStep "Applying Internet-zone Mark of the Web to the installer."
+  Set-MarkOfTheWeb -Path $ResolvedInstallerPath
 
-  Write-SmokeStep "Applying Internet-zone Mark of the Web to the payload."
-  Set-MarkOfTheWeb -Root $ExtractRoot
+  Write-SmokeStep "Verifying the public-trust installer signature."
+  Assert-AuthenticodeValid $ResolvedInstallerPath
 
-  $PackageTrayPath = Join-Path $ExtractRoot "YTMTray.exe"
-  $PackageNativeHostPath = Join-Path $ExtractRoot "YTMTray.NativeHost.exe"
-  $PackageSetupPath = Join-Path $ExtractRoot "YTMTray.Setup.exe"
-  $PackageMetadataPath = Join-Path $ExtractRoot "release.json"
-
-  Write-SmokeStep "Verifying public-trust Authenticode signatures."
-  Assert-AuthenticodeValid $PackageTrayPath
-  Assert-AuthenticodeValid $PackageNativeHostPath
-  Assert-AuthenticodeValid $PackageSetupPath
-  Assert-PathExists $PackageMetadataPath
-
-  $PackageMetadata = Get-Content -LiteralPath $PackageMetadataPath -Raw |
-    ConvertFrom-Json
-  $ExpectedRuntimeIdentifier = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
+  $ExpectedRuntimeIdentifier = if (
+    $env:PROCESSOR_ARCHITECTURE -eq "ARM64" -or
+    $env:PROCESSOR_ARCHITEW6432 -eq "ARM64"
+  ) {
     "win-arm64"
   } else {
     "win-x64"
-  }
-  Assert-Equal `
-    $ExpectedRuntimeIdentifier `
-    $PackageMetadata.runtimeIdentifier `
-    "package runtime"
-  if ([string]::IsNullOrWhiteSpace([string] $PackageMetadata.version)) {
-    throw "The release metadata does not include a version."
   }
 
   Write-SmokeStep "Capturing App Control event log cursors."
   $EventLogCursors = Get-BlockingEventLogCursors
 
-  Write-SmokeStep "Launching the marked native installer through the desktop agent."
+  Write-SmokeStep "Launching the marked combined installer through the desktop agent."
   Invoke-SetupThroughUiAgent `
     -Action "install" `
-    -SetupPath $PackageSetupPath `
+    -SetupPath $ResolvedInstallerPath `
     -ResultPath $InstallResultPath
-  Assert-InstalledRelease -ExpectedVersion $PackageMetadata.version
+  Assert-InstalledRelease -ExpectedVersion $ExpectedVersion
+  $InstalledMetadata = Get-Content `
+    -LiteralPath (Join-Path $InstallRoot "release.json") `
+    -Raw |
+    ConvertFrom-Json
+  Assert-Equal `
+    $ExpectedRuntimeIdentifier `
+    $InstalledMetadata.runtimeIdentifier `
+    "installed runtime"
 
   Write-SmokeStep "Starting the installed tray and native host."
   $RuntimeResult = Invoke-InstalledRuntimeThroughUiAgent

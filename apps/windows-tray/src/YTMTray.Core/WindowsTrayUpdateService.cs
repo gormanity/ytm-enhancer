@@ -1,7 +1,5 @@
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -73,9 +71,7 @@ public sealed record WindowsTrayUpdateOptions(
     }
 
     public static string CurrentRuntimeIdentifier() =>
-        RuntimeInformation.ProcessArchitecture == Architecture.Arm64
-            ? "win-arm64"
-            : "win-x64";
+        WindowsRuntimeIdentifier.CurrentOperatingSystem();
 }
 
 public sealed record WindowsTrayUpdateCheckResult(
@@ -195,7 +191,7 @@ public sealed class WindowsTrayUpdateService
         VerifyChecksum(packagePath, asset.Sha256);
 
         var extractDirectory = Path.Combine(updateRoot, "payload");
-        ExtractZipSafely(packagePath, extractDirectory);
+        ZipPackageExtractor.Extract(packagePath, extractDirectory);
 
         var installerExecutablePath = Path.Combine(extractDirectory, "YTMTray.Setup.exe");
         if (!File.Exists(installerExecutablePath))
@@ -328,45 +324,6 @@ public sealed class WindowsTrayUpdateService
         }
     }
 
-    private static void ExtractZipSafely(string archivePath, string destinationDirectory)
-    {
-        var destinationRoot = Path.GetFullPath(destinationDirectory);
-        Directory.CreateDirectory(destinationRoot);
-
-        using var archive = ZipFile.OpenRead(archivePath);
-        foreach (var entry in archive.Entries)
-        {
-            var targetPath = Path.GetFullPath(Path.Combine(destinationRoot, entry.FullName));
-            if (!IsInsideDirectory(destinationRoot, targetPath))
-            {
-                throw new InvalidDataException("Update package contains an unsafe package path.");
-            }
-
-            if (string.IsNullOrEmpty(entry.Name))
-            {
-                Directory.CreateDirectory(targetPath);
-                continue;
-            }
-
-            var targetDirectory = Path.GetDirectoryName(targetPath);
-            if (targetDirectory is null)
-            {
-                throw new InvalidDataException("Update package contains an unsafe package path.");
-            }
-
-            Directory.CreateDirectory(targetDirectory);
-            entry.ExtractToFile(targetPath, overwrite: false);
-        }
-    }
-
-    private static bool IsInsideDirectory(string directory, string path)
-    {
-        var normalizedDirectory = directory.EndsWith(Path.DirectorySeparatorChar)
-            ? directory
-            : $"{directory}{Path.DirectorySeparatorChar}";
-        return path.StartsWith(normalizedDirectory, PathComparison);
-    }
-
     private static string GetSafePackagePath(
         string updateRoot,
         string assetName,
@@ -449,10 +406,20 @@ public sealed class WindowsTrayUpdateService
         return new Version(0, 0, 0, 0);
     }
 
-    private static StringComparison PathComparison =>
-        OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
+    private static bool IsInsideDirectory(string directory, string path)
+    {
+        var normalizedDirectory = directory.EndsWith(
+            Path.DirectorySeparatorChar
+        )
+            ? directory
+            : $"{directory}{Path.DirectorySeparatorChar}";
+        return path.StartsWith(
+            normalizedDirectory,
+            OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal
+        );
+    }
 }
 
 public sealed class WindowsTrayUpdateManifest
