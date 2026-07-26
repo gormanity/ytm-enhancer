@@ -245,6 +245,13 @@ describe("Windows tray connector scaffold", () => {
       "TrayPopupPlacement.Calculate(workingArea, popup.Size, anchorPoint)",
     );
     expect(nativeTests).toContain("PopupPlacementStaysAttachedToTrayAnchors");
+    expect(nativeTests).toContain("new Size(424, 532)");
+    expect(nativeTests).toContain("new Point(1488, 518)");
+    expect(nativeTests).toContain("new Point(8, 518)");
+    expect(nativeTests).toContain("new Point(1488, 8)");
+    expect(nativeTests).toContain("new Point(1488, 538)");
+    expect(nativeTests).toContain("new Point(1488, 498)");
+    expect(nativeTests).toContain("new Point(-432, 518)");
     expect(nativeTests).toContain("new Rectangle(-1920, 0, 1920, 1080)");
     expect(nativeTests).toContain("new Rectangle(0, 0, 1920, 1040)");
     expect(trayController).not.toContain("TaskbarFlyoutClearance");
@@ -257,6 +264,7 @@ describe("Windows tray connector scaffold", () => {
   it("keeps the About dialog focused on useful status and actions", () => {
     const aboutDialog = read("src/YTMTray/AboutDialogForm.cs");
     const trayController = read("src/YTMTray/TrayController.cs");
+    const updateSession = read("src/YTMTray.Core/WindowsTrayUpdateSession.cs");
 
     expect(aboutDialog).toContain("About YTM Tray");
     expect(aboutDialog).toContain('"Beta"');
@@ -264,6 +272,9 @@ describe("Windows tray connector scaffold", () => {
       "See what's playing and control YouTube Music from the Windows taskbar.",
     );
     expect(aboutDialog).toContain("WindowsTrayAboutUpdateStatus");
+    expect(aboutDialog).toContain(
+      "public static WindowsTrayAboutUpdateStatus Downloading()",
+    );
     expect(aboutDialog).toContain("Updates");
     expect(aboutDialog).toContain("Check for Updates");
     expect(aboutDialog).toContain("Install Update");
@@ -273,6 +284,37 @@ describe("Windows tray connector scaffold", () => {
     expect(aboutDialog).toContain(
       "ClientSize = new Size(DefaultClientWidth, DefaultClientHeight)",
     );
+    expect(aboutDialog).toContain(
+      "private Size defaultClientSize = new(DefaultClientWidth, DefaultClientHeight)",
+    );
+    expect(aboutDialog).toContain(
+      "protected override void OnLoad(EventArgs eventArgs)",
+    );
+    expect(aboutDialog).toContain(
+      "if (ClientSize.Width > 0 && ClientSize.Height > 0)",
+    );
+    expect(aboutDialog).toContain("defaultClientSize = ClientSize");
+    expect(aboutDialog).not.toContain(
+      "protected override void OnShown(EventArgs eventArgs)",
+    );
+    const onLoadIndex = aboutDialog.indexOf(
+      "protected override void OnLoad(EventArgs eventArgs)",
+    );
+    const baseOnLoadIndex = aboutDialog.indexOf(
+      "base.OnLoad(eventArgs)",
+      onLoadIndex,
+    );
+    const baselineCaptureIndex = aboutDialog.indexOf(
+      "defaultClientSize = ClientSize",
+      onLoadIndex,
+    );
+    const fitToContentIndex = aboutDialog.indexOf(
+      "FitToContent()",
+      baselineCaptureIndex,
+    );
+    expect(baseOnLoadIndex).toBeGreaterThan(onLoadIndex);
+    expect(baselineCaptureIndex).toBeGreaterThan(baseOnLoadIndex);
+    expect(fitToContentIndex).toBeGreaterThan(baselineCaptureIndex);
     expect(aboutDialog).toContain("AutoScroll = true");
     expect(aboutDialog).toContain("scrollViewport.Controls.Add(content)");
     expect(aboutDialog).toContain("layout.Controls.Add(scrollViewport, 0, 0)");
@@ -285,12 +327,35 @@ describe("Windows tray connector scaffold", () => {
     expect(aboutDialog).not.toContain("First-party Windows tray controls");
     expect(aboutDialog).toContain("OnCheckForUpdates");
     expect(trayController).toContain("SetAboutUpdateStatus");
+    expect(trayController).toContain("WindowsTrayUpdateSession");
     expect(trayController).toContain("WindowsTrayAboutUpdateStatus.Checking()");
     expect(trayController).toContain("WindowsTrayAboutUpdateStatus.UpToDate()");
     expect(trayController).toContain(
-      "WindowsTrayAboutUpdateStatus.UpdateAvailable(latestVersion)",
+      "WindowsTrayAboutUpdateStatus.UpdateAvailable(",
     );
     expect(trayController).toContain("WindowsTrayAboutUpdateStatus.Failed");
+    expect(trayController).toContain("aboutMenuItem");
+    expect(trayController).not.toContain("updateMenuItem");
+    expect(trayController).toContain('"About YTM Tray - Update Available"');
+    expect(trayController).toContain(
+      "CheckForUpdatesAsync(aboutDialog, userInitiated: false)",
+    );
+    expect(trayController).not.toContain("ShowBalloonTip");
+    expect(trayController).not.toContain(
+      "YTM Tray is already checking for updates.",
+    );
+    expect(trayController).not.toContain(
+      "YTM Tray could not check for updates.",
+    );
+    expect(trayController).toContain("CurrentOwner(owner)");
+    expect(updateSession).toContain("TryBeginCheck");
+    expect(updateSession).toContain("public enum WindowsTrayUpdatePhase");
+    expect(updateSession).toContain(
+      "public sealed class WindowsTrayUpdateSession",
+    );
+    expect(updateSession).toContain("AvailableUpdate = null");
+    expect(updateSession).toContain("WindowsTrayUpdatePhase.Failed");
+    expect(updateSession).toContain("WindowsTrayUpdatePhase.Downloading");
   });
 
   it("uses a custom tray flyout instead of default dialog controls", () => {
@@ -326,7 +391,7 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(popupForm).toContain("pendingSeek.DisplayProgress");
     expect(popupForm).toContain("metadata scroll advanced");
-    expect(popupForm).toContain("ClientSize = new Size(424, 562)");
+    expect(popupForm).toContain("ClientSize = new Size(424, 532)");
     expect(popupForm).toContain("currentArtwork.SetBounds(24, 24, 92, 92)");
     expect(popupForm).toContain("titleLabel.SetBounds(140, 26, 244, 28)");
     expect(popupForm).toContain("albumLabel.SetBounds(140, 57, 244, 22)");
@@ -340,9 +405,16 @@ describe("Windows tray connector scaffold", () => {
       /PopupActionIcon\.Focus,\r?\n {8}"Open YouTube Music"/,
     );
     expect(popupForm).toContain("SetYouTubeMusicTabAvailable");
-    expect(popupForm).toContain('"Check for Updates"');
-    expect(popupForm).toContain("Install Update {version}");
+    expect(popupForm).not.toContain('"Check for Updates"');
+    expect(popupForm).not.toContain("Install Update {version}");
+    expect(popupForm).not.toContain("PopupActionIcon.Update");
+    expect(popupForm).not.toContain("OnCheckForUpdates");
+    expect(popupForm).toContain("SetAboutUpdateAvailable");
+    expect(popupForm).toContain('"About YTM Tray - Update Available"');
     expect(popupForm).toContain('"About YTM Tray"');
+    expect(popupForm).toContain("ConfigureActionRow(focusRow, 438");
+    expect(popupForm).toContain("ConfigureActionRow(aboutRow, 468");
+    expect(popupForm).toContain("ConfigureActionRow(quitRow, 498");
     expect(popupForm).toContain("ToolTip controlTips");
     expect(popupForm).toContain("private bool hasPlayableTrack");
     expect(popupForm).toContain("HasPlayableState(state)");
@@ -722,17 +794,63 @@ describe("Windows tray connector scaffold", () => {
     expect(visualSmoke).toContain("Save-RectangleScreenshot");
     expect(visualSmoke).toContain("$PopupWindow.Current.BoundingRectangle");
     expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
+    expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH");
+    expect(buttonSmoke).toContain("Get-AuthenticodeSignature");
+    expect(buttonSmoke).toContain("--additional-allowed-origin");
+    expect(buttonSmoke).not.toContain("--runtime-identifier");
+    expect(buttonSmoke).toContain("function signedTrayInstallScript");
+    expect(buttonSmoke).toContain("function signedTrayUninstallScript");
+    expect(buttonSmoke).toContain(
+      '$SetupPath = Join-Path $InstallRoot "YTMTray.Setup.exe"',
+    );
+    expect(buttonSmoke).toContain(
+      ".\\\\apps\\\\windows-tray\\\\scripts\\\\install-native-hosts.ps1",
+    );
+    expect(buttonSmoke).toContain(": trayInstallScript(");
+    expect(buttonSmoke).toContain(": trayUninstallScript(installRoot)");
     expect(buttonSmoke).toContain('YTM_TRAY_TEST_OPEN_POPUP = "1"');
     expect(buttonSmoke).toContain("Invoke-ElementDefaultAction");
     expect(buttonSmoke).toContain("InvokePattern");
     expect(buttonSmoke).toContain("Send-ElementWindowClick");
     expect(buttonSmoke).toContain("SendMessage");
     expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL");
+    expect(buttonSmoke).not.toContain(
+      "const playbackPage = await extension.context.newPage()",
+    );
+    expect(buttonSmoke).toContain('classList.contains("ad-showing")');
+    expect(buttonSmoke).toContain("video.duration >= 60");
+    expect(buttonSmoke).not.toContain(
+      "const restoredPage = await browserContext.newPage()",
+    );
+    expect(buttonSmoke).not.toContain(
+      'loadYtmFixtureThroughExtension(restoredPage, "player-loaded-paused")',
+    );
+    expect(
+      buttonSmoke.indexOf("await captureLiveTrayPromoScreenshot("),
+    ).toBeGreaterThan(
+      buttonSmoke.indexOf("await publishPartialPlaybackMetadata"),
+    );
+    const screenshotCaptureIndex = buttonSmoke.indexOf(
+      "await captureLiveTrayPromoScreenshot(",
+    );
+    expect(
+      buttonSmoke.indexOf('"quit"', screenshotCaptureIndex),
+    ).toBeGreaterThan(screenshotCaptureIndex);
     expect(buttonSmoke).toContain("current artwork displayed url=");
     expect(buttonSmoke).toContain("Save-TrayPopupScreenshot");
     expect(buttonSmoke).toContain("ExpectedAboutText");
+    expect(buttonSmoke).toContain(
+      "UIAutomationClientsideProviders.UIAutomationClientSideProviders",
+    );
+    expect(buttonSmoke).toContain(
+      "ClientSettings]::RegisterClientSideProviderAssembly",
+    );
     expect(buttonSmoke).toContain('"Close"');
     expect(buttonSmoke).toContain("Save-RectangleScreenshot");
+    expect(buttonSmoke).toContain("$ClientRect.Width -lt 400");
+    expect(buttonSmoke).toContain("function Dismiss-ShellOverlays");
+    expect(buttonSmoke).toContain("Dismiss-ShellOverlays");
+    expect(buttonSmoke).toContain("Activate-Window $Dialog");
     expect(buttonSmoke).toContain("Move-CursorAwayFromRectangle");
     expect(buttonSmoke).toContain("tray-screenshot.json");
     expect(pausedFixture).toContain('video class="html5-main-video"');
@@ -753,6 +871,11 @@ describe("Windows tray connector scaffold", () => {
       "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
     );
     expect(releaseScreenshot).toContain(
+      "YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH",
+    );
+    expect(releaseScreenshot).toContain("[string] $SignedInstallerPath");
+    expect(releaseScreenshot).toContain("Get-AuthenticodeSignature");
+    expect(releaseScreenshot).toContain(
       "approved Creative Commons YouTube Music track",
     );
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_VISUAL_DEMO");
@@ -765,6 +888,10 @@ describe("Windows tray connector scaffold", () => {
     expect(remoteReleaseScreenshot).toContain(
       "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
     );
+    expect(remoteReleaseScreenshot).toContain(
+      "YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH",
+    );
+    expect(remoteReleaseScreenshot).toContain("-SignedInstallerPath");
     expect(remoteReleaseScreenshot).toContain("-PlaybackUrl");
     expect(remoteReleaseScreenshot).toContain("YTME_SCREENSHOT_BASE64_CHUNK");
     expect(remoteReleaseScreenshot).toContain("final = block");
@@ -874,6 +1001,7 @@ describe("Windows tray connector scaffold", () => {
     expect(connectorSmoke).toContain("setWindowsTrayLifecycleEnabled");
     expect(connectorSmoke).toContain('"No YouTube Music tab"');
     expect(connectorSmoke).toContain('"Not connected to a browser."');
+    expect(connectorSmoke).toContain('"Checking..."');
     expect(contentionSmoke).toContain("YTME_WINDOWS_TRAY_HOLD_RELEASE_PATH");
     expect(contentionSmoke).toContain("Wait-ActiveBrowserOwner");
     expect(contentionSmoke).toContain("--project=edge");
@@ -1316,13 +1444,13 @@ describe("Windows tray connector scaffold", () => {
 
     expect(trayController).toContain("StartBackgroundUpdateCheck");
     expect(trayController).toContain("CheckForUpdatesAsync");
-    expect(trayController).toContain("ShowBalloonTip");
+    expect(trayController).not.toContain("ShowBalloonTip");
     expect(trayController).toContain("DownloadAndPrepareUpdateAsync");
     expect(trayController).toContain("StartInstaller");
     expect(trayController).toContain("Uninstall YTM Tray...");
     expect(trayController).toContain("StartUninstaller");
     expect(trayController).toContain("RequestUninstall");
-    expect(popupForm).toContain("OnCheckForUpdates");
+    expect(popupForm).not.toContain("OnCheckForUpdates");
     expect(appContext).toContain("trayController.StartBackgroundUpdateCheck()");
   });
 
@@ -1509,6 +1637,10 @@ describe("Windows tray connector scaffold", () => {
     expect(releaseDocs).toContain("component release that does not replace");
     expect(releaseDocs).toContain("Checksum-Verified In-App Updates");
     expect(releaseDocs).toContain("Check for Updates");
+    expect(releaseDocs).toContain("About YTM Tray - Update Available");
+    expect(releaseDocs).not.toContain(
+      "Use `Check for Updates` from the tray popup",
+    );
     expect(releaseDocs).toContain("Microsoft Artifact Signing");
     expect(releaseDocs).toContain("windows-signing");
     expect(releaseDocs).toContain("windows-tray-signed-candidate");

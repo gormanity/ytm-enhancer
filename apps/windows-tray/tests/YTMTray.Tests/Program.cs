@@ -41,6 +41,14 @@ var tests = new (string Name, Func<Task> Run)[]
     ),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
+    (
+        "update session clears stale availability after a failed refresh",
+        UpdateSessionClearsStaleAvailabilityAfterFailedRefresh
+    ),
+    (
+        "update session reuses availability only for an install action",
+        UpdateSessionReusesAvailabilityOnlyForInstallAction
+    ),
     ("update options use packaged release version", UpdateOptionsUsePackagedReleaseVersion),
     ("update service prepares verified package", UpdateServicePreparesVerifiedPackage),
     ("update service launches native setup directly", UpdateServiceLaunchesNativeSetupDirectly),
@@ -656,14 +664,14 @@ static async Task ConnectorAppAcceptsRepeatUpdateAfterStaleTimeout()
 static Task PopupPlacementStaysAttachedToTrayAnchors()
 {
     var primaryWorkingArea = new Rectangle(0, 0, 1920, 1080);
-    var popupSize = new Size(424, 562);
+    var popupSize = new Size(424, 532);
 
     AssertEqual(
-        new Point(1488, 488),
+        new Point(1488, 518),
         TrayPopupPlacement.Calculate(primaryWorkingArea, popupSize, new Point(1900, 1060))
     );
     AssertEqual(
-        new Point(8, 488),
+        new Point(8, 518),
         TrayPopupPlacement.Calculate(primaryWorkingArea, popupSize, new Point(10, 1060))
     );
     AssertEqual(
@@ -671,13 +679,13 @@ static Task PopupPlacementStaysAttachedToTrayAnchors()
         TrayPopupPlacement.Calculate(primaryWorkingArea, popupSize, new Point(1900, 20))
     );
     AssertEqual(
-        new Point(1488, 508),
+        new Point(1488, 538),
         TrayPopupPlacement.Calculate(primaryWorkingArea, popupSize)
     );
 
     var taskbarWorkingArea = new Rectangle(0, 0, 1920, 1040);
     AssertEqual(
-        new Point(1488, 468),
+        new Point(1488, 498),
         TrayPopupPlacement.Calculate(
             taskbarWorkingArea,
             popupSize,
@@ -687,7 +695,7 @@ static Task PopupPlacementStaysAttachedToTrayAnchors()
 
     var leftMonitorWorkingArea = new Rectangle(-1920, 0, 1920, 1080);
     AssertEqual(
-        new Point(-432, 488),
+        new Point(-432, 518),
         TrayPopupPlacement.Calculate(
             leftMonitorWorkingArea,
             popupSize,
@@ -844,6 +852,74 @@ static async Task UpdateServiceIgnoresCurrentTrayRelease()
 
     AssertEqual(false, update.IsUpdateAvailable);
     AssertEqual("0.1.0", update.LatestVersion);
+}
+
+static Task UpdateSessionClearsStaleAvailabilityAfterFailedRefresh()
+{
+    var update = new WindowsTrayUpdateCheckResult(
+        true,
+        "0.1.0",
+        "0.2.0",
+        "windows-tray-v0.2.0",
+        new Uri("https://example.com/release"),
+        new Uri("https://example.com/update.json")
+    );
+    var session = new WindowsTrayUpdateSession();
+
+    AssertEqual(true, session.TryBeginCheck(reuseAvailableUpdate: false, out var cached));
+    AssertEqual<WindowsTrayUpdateCheckResult?>(null, cached);
+    session.ApplyResult(update);
+    session.CompleteCheck();
+    AssertEqual(WindowsTrayUpdatePhase.UpdateAvailable, session.Phase);
+    AssertEqual(true, session.HasUpdateAvailable);
+
+    AssertEqual(true, session.TryBeginCheck(reuseAvailableUpdate: false, out cached));
+    AssertEqual<WindowsTrayUpdateCheckResult?>(null, cached);
+    AssertEqual(WindowsTrayUpdatePhase.Checking, session.Phase);
+    AssertEqual(false, session.HasUpdateAvailable);
+
+    session.Fail("network unavailable");
+    session.CompleteCheck();
+    AssertEqual(WindowsTrayUpdatePhase.Failed, session.Phase);
+    AssertEqual("network unavailable", session.Error);
+    AssertEqual(false, session.HasUpdateAvailable);
+    AssertEqual<WindowsTrayUpdateCheckResult?>(null, session.AvailableUpdate);
+
+    AssertEqual(true, session.TryBeginCheck(reuseAvailableUpdate: true, out cached));
+    AssertEqual<WindowsTrayUpdateCheckResult?>(null, cached);
+    session.CompleteCheck();
+
+    return Task.CompletedTask;
+}
+
+static Task UpdateSessionReusesAvailabilityOnlyForInstallAction()
+{
+    var update = new WindowsTrayUpdateCheckResult(
+        true,
+        "0.1.0",
+        "0.2.0",
+        "windows-tray-v0.2.0",
+        new Uri("https://example.com/release"),
+        new Uri("https://example.com/update.json")
+    );
+    var session = new WindowsTrayUpdateSession();
+
+    AssertEqual(true, session.TryBeginCheck(reuseAvailableUpdate: false, out _));
+    session.ApplyResult(update);
+    session.CompleteCheck();
+
+    AssertEqual(true, session.TryBeginCheck(reuseAvailableUpdate: true, out var cached));
+    AssertEqual(update, cached);
+    AssertEqual(WindowsTrayUpdatePhase.Checking, session.Phase);
+    AssertEqual(false, session.HasUpdateAvailable);
+
+    session.ApplyResult(cached!);
+    session.BeginDownload();
+    AssertEqual(WindowsTrayUpdatePhase.Downloading, session.Phase);
+    AssertEqual(true, session.HasUpdateAvailable);
+    session.CompleteCheck();
+
+    return Task.CompletedTask;
 }
 
 static Task UpdateOptionsUsePackagedReleaseVersion()

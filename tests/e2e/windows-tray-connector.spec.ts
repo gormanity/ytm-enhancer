@@ -15,6 +15,7 @@ import {
 const execFile = promisify(execFileCallback);
 const SCREENSHOT_PATH_ENV = "YTME_WINDOWS_TRAY_SCREENSHOT_PATH";
 const SCREENSHOT_PLAYBACK_URL_ENV = "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL";
+const SIGNED_INSTALLER_PATH_ENV = "YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH";
 const HOLD_RELEASE_PATH_ENV = "YTME_WINDOWS_TRAY_HOLD_RELEASE_PATH";
 const HOLD_TIMEOUT_ENV = "YTME_WINDOWS_TRAY_HOLD_TIMEOUT_SECONDS";
 
@@ -41,6 +42,10 @@ function screenshotPlaybackUrl(): string | null {
     );
   }
   return url.toString();
+}
+
+function signedInstallerPath(): string | null {
+  return process.env[SIGNED_INSTALLER_PATH_ENV]?.trim() || null;
 }
 
 function psLiteral(value: string): string {
@@ -106,6 +111,105 @@ Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
   Stop-Process -Force
 & .\\apps\\windows-tray\\scripts\\uninstall-native-hosts.ps1 \`
   -InstallRoot ${psLiteral(installRoot)}
+`;
+}
+
+function signedTrayInstallScript(
+  installRoot: string,
+  extensionId: string,
+  projectName: string,
+  installerPath: string,
+  setupLogPath: string,
+): string {
+  const extensionOrigin = `chrome-extension://${extensionId}/`;
+  const additionalOriginArguments =
+    projectName === "firefox"
+      ? ""
+      : `,
+  "--additional-allowed-origin",
+  ${psLiteral(extensionOrigin)}`;
+  return `
+$ErrorActionPreference = "Stop"
+$SignedInstallerPath = ${psLiteral(installerPath)}
+$InstallRoot = ${psLiteral(installRoot)}
+$SetupLogPath = ${psLiteral(setupLogPath)}
+if (-not (Test-Path -LiteralPath $SignedInstallerPath -PathType Leaf)) {
+  throw "Signed YTM Tray installer was not found: $SignedInstallerPath"
+}
+$Signature = Get-AuthenticodeSignature -LiteralPath $SignedInstallerPath
+if (
+  $Signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -or
+  $null -eq $Signature.SignerCertificate
+) {
+  throw "Expected a valid Authenticode signature on $SignedInstallerPath; got $($Signature.Status): $($Signature.StatusMessage)"
+}
+Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
+  Stop-Process -Force
+$InstallArguments = @(
+  "install",
+  "--quiet",
+  "--install-root",
+  $InstallRoot,
+  "--log-path",
+  $SetupLogPath${additionalOriginArguments}
+)
+$InstallProcess = Start-Process -FilePath $SignedInstallerPath -ArgumentList $InstallArguments -Wait -PassThru
+if ($InstallProcess.ExitCode -ne 0) {
+  throw "$SignedInstallerPath exited with code $($InstallProcess.ExitCode)"
+}
+$InstalledPaths = @(
+  (Join-Path $InstallRoot "YTMTray.exe"),
+  (Join-Path $InstallRoot "YTMTray.NativeHost.exe"),
+  (Join-Path $InstallRoot "YTMTray.Setup.exe")
+)
+foreach ($InstalledPath in $InstalledPaths) {
+  $InstalledSignature = Get-AuthenticodeSignature -LiteralPath $InstalledPath
+  if (
+    $InstalledSignature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -or
+    $null -eq $InstalledSignature.SignerCertificate
+  ) {
+    throw "Expected a valid Authenticode signature on $InstalledPath; got $($InstalledSignature.Status): $($InstalledSignature.StatusMessage)"
+  }
+}
+`;
+}
+
+function signedTrayUninstallScript(
+  installRoot: string,
+  setupLogPath: string,
+): string {
+  return `
+$ErrorActionPreference = "Stop"
+Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
+  Stop-Process -Force
+$InstallRoot = ${psLiteral(installRoot)}
+$SetupLogPath = ${psLiteral(setupLogPath)}
+$SetupPath = Join-Path $InstallRoot "YTMTray.Setup.exe"
+if (-not (Test-Path -LiteralPath $SetupPath -PathType Leaf)) {
+  throw "Installed signed YTM Tray setup was not found: $SetupPath"
+}
+$UninstallArguments = @(
+  "uninstall",
+  "--quiet",
+  "--install-root",
+  $InstallRoot,
+  "--log-path",
+  $SetupLogPath
+)
+$UninstallProcess = Start-Process -FilePath $SetupPath -ArgumentList $UninstallArguments -Wait -PassThru
+if ($UninstallProcess.ExitCode -ne 0) {
+  throw "$SetupPath exited with code $($UninstallProcess.ExitCode)"
+}
+$Deadline = (Get-Date).AddSeconds(60)
+while (
+  (Get-Date) -lt $Deadline -and
+  (Test-Path -LiteralPath $InstallRoot)
+) {
+  Start-Sleep -Milliseconds 250
+}
+if (Test-Path -LiteralPath $InstallRoot) {
+  throw "Signed YTM Tray uninstall did not remove $InstallRoot."
+}
 `;
 }
 
@@ -231,6 +335,17 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+Add-Type -AssemblyName UIAutomationClientsideProviders
+$ClientSideProviderAssemblyName = [UIAutomationClientsideProviders.UIAutomationClientSideProviders].Assembly.GetName()
+try {
+  [System.Windows.Automation.ClientSettings]::RegisterClientSideProviderAssembly(
+    $ClientSideProviderAssemblyName
+  )
+} catch {
+  [System.Windows.Automation.ClientSettings]::RegisterClientSideProviderAssembly(
+    $ClientSideProviderAssemblyName
+  )
+}
 $NativeInputSource = @'
 using System;
 using System.Runtime.InteropServices;
@@ -335,14 +450,22 @@ function Find-RootButtonByName {
 }
 
 function Find-RootWindowByName {
-  param([Parameter(Mandatory = $true)][string] $Name)
+  param(
+    [Parameter(Mandatory = $true)][string] $Name,
+    [int] $ExpectedProcessId = 0
+  )
   $Root = [System.Windows.Automation.AutomationElement]::RootElement
   $WindowCondition = New-Object System.Windows.Automation.PropertyCondition(
     [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
     [System.Windows.Automation.ControlType]::Window
   )
   foreach ($Window in $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $WindowCondition)) {
-    if ($Window.Current.Name -like "*$Name*") { return $Window }
+    if (
+      $Window.Current.Name -like "*$Name*" -and
+      ($ExpectedProcessId -eq 0 -or $Window.Current.ProcessId -eq $ExpectedProcessId)
+    ) {
+      return $Window
+    }
   }
   return $null
 }
@@ -362,18 +485,22 @@ function Wait-RootButtonByName {
 }
 
 function Find-WindowByName {
-  param([Parameter(Mandatory = $true)][string] $Name)
-  return Find-RootWindowByName $Name
+  param(
+    [Parameter(Mandatory = $true)][string] $Name,
+    [int] $ExpectedProcessId = 0
+  )
+  return Find-RootWindowByName $Name $ExpectedProcessId
 }
 
 function Wait-WindowByName {
   param(
     [Parameter(Mandatory = $true)][string] $Name,
-    [int] $TimeoutMilliseconds = 8000
+    [int] $TimeoutMilliseconds = 8000,
+    [int] $ExpectedProcessId = 0
   )
   $Deadline = (Get-Date).AddMilliseconds($TimeoutMilliseconds)
   do {
-    $Window = Find-WindowByName $Name
+    $Window = Find-WindowByName $Name $ExpectedProcessId
     if ($null -ne $Window) { return $Window }
     Start-Sleep -Milliseconds 250
   } while ((Get-Date) -lt $Deadline)
@@ -483,6 +610,17 @@ function Activate-Window {
   Start-Sleep -Milliseconds 150
 }
 
+function Dismiss-ShellOverlays {
+  try {
+    [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
+    Start-Sleep -Milliseconds 150
+    [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
+    Start-Sleep -Milliseconds 150
+  } catch {
+    # Continue when no interactive shell surface currently accepts keyboard input.
+  }
+}
+
 function Open-TrayPopup {
   $PopupWindow = Find-WindowByName "YTM Tray"
   if ($null -ne $PopupWindow -and (Test-VisibleWindow $PopupWindow)) {
@@ -490,6 +628,7 @@ function Open-TrayPopup {
     return $PopupWindow
   }
 
+  Dismiss-ShellOverlays
   $TrayButton = Wait-RootButtonByName "YTM Enhancer" 5000
   if ($null -eq $TrayButton) {
     $HiddenIconsButton = Find-RootButtonByName "Show Hidden Icons"
@@ -694,11 +833,28 @@ async function loadLivePlaybackForScreenshot(
   await page
     .waitForLoadState("networkidle", { timeout: 30_000 })
     .catch(() => undefined);
-  await page.waitForTimeout(5000);
+  await page.waitForFunction(
+    () => {
+      const video = document.querySelector<HTMLVideoElement>(
+        "video.html5-main-video",
+      );
+      const player = document.querySelector<HTMLElement>("#movie_player");
+      return (
+        video !== null &&
+        Number.isFinite(video.duration) &&
+        video.duration >= 60 &&
+        video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+        !player?.classList.contains("ad-showing")
+      );
+    },
+    undefined,
+    { timeout: 180_000 },
+  );
+  await page.waitForTimeout(3500);
 }
 
 async function captureLiveTrayPromoScreenshot(
-  extension: ExtensionTestContext,
+  playbackPage: Page,
   resultPath: string,
   screenshotPath: string,
   trayLogPath: string,
@@ -711,33 +867,56 @@ async function captureLiveTrayPromoScreenshot(
     );
   }
 
-  const playbackPage = await extension.context.newPage();
-  try {
-    await loadLivePlaybackForScreenshot(playbackPage, playbackUrl);
-    await expectTrayLogContains(trayLogPath, "current artwork displayed url=");
-    await captureTrayPromoScreenshot(resultPath, screenshotPath);
-  } finally {
-    await playbackPage.close().catch(() => undefined);
-  }
+  await loadLivePlaybackForScreenshot(playbackPage, playbackUrl);
+  await expectTrayLogContains(trayLogPath, "current artwork displayed url=");
+  await captureTrayPromoScreenshot(resultPath, screenshotPath);
 }
 
 async function clickAboutAndClose(
   resultPath: string,
   expectedConnectionSummary: string,
+  trayProcessId: number,
 ): Promise<void> {
+  const screenshotPath = resultPath.replace(/\.json$/i, ".png");
   await runTrayUiAction("about", resultPath, [
-    'Click-PopupElementByName "About YTM Tray"',
-    '$Dialog = Wait-WindowByName "About YTM Tray" 8000',
+    "$PopupWindow = Open-TrayPopup",
+    "Activate-Window $PopupWindow",
+    '$AboutAction = Wait-ElementByName $PopupWindow "About YTM Tray - Update Available" 8000',
+    'if ($null -eq $AboutAction) { $AboutAction = Wait-ElementByName $PopupWindow "About YTM Tray" 3000 }',
+    'if ($null -eq $AboutAction) { throw "About action was not found in the tray popup." }',
+    "Click-Element $AboutAction",
+    `$Dialog = Wait-WindowByName "About YTM Tray" 8000 ${trayProcessId}`,
     "if ($null -eq $Dialog) { throw \"About dialog was not shown. Visible windows: $((Get-VisibleWindowNames) -join ', ')\" }",
+    "Activate-Window $Dialog",
+    "$DialogRect = $Dialog.Current.BoundingRectangle",
+    "$DialogHandle = [IntPtr]$Dialog.Current.NativeWindowHandle",
+    "$ClientRect = Get-ClientScreenRectangle $DialogHandle",
+    `$AboutScreenshotPath = ${psLiteral(screenshotPath)}`,
+    "if (Test-VisibleWindow $Dialog) {",
+    "  Save-RectangleScreenshot -Path $AboutScreenshotPath -Rect $DialogRect",
+    "}",
+    "if ($ClientRect.Width -lt 400) {",
+    '  throw "About dialog client width collapsed to $($ClientRect.Width) pixels."',
+    "}",
+    "$DialogDescendantNames = @(",
+    "  $Dialog.FindAll(",
+    "    [System.Windows.Automation.TreeScope]::Descendants,",
+    "    [System.Windows.Automation.Condition]::TrueCondition",
+    "  ) |",
+    "    ForEach-Object { $_.Current.Name } |",
+    "    Where-Object { $_ }",
+    ")",
+    "$DialogDiagnostic = \"processId=$($Dialog.Current.ProcessId) offscreen=$($Dialog.Current.IsOffscreen) handle=$DialogHandle rect=$DialogRect descendants=$($DialogDescendantNames -join ', ')\"",
     `$ExpectedAboutText = @("Beta", "Updates", ${psLiteral(expectedConnectionSummary)})`,
     "foreach ($Name in $ExpectedAboutText) {",
     "  if ($null -eq (Find-ElementByName $Dialog $Name)) {",
-    "    throw \"About dialog text '$Name' was not found. Visible elements: $((Get-VisibleElementNames) -join ', ')\"",
+    "    throw \"About dialog text '$Name' was not found. $DialogDiagnostic. Visible elements: $((Get-VisibleElementNames) -join ', ')\"",
     "  }",
     "}",
     'if ($null -ne (Find-ElementByName $Dialog "How updates work")) { throw "About dialog still exposes internal update details." }',
     '$UpdateAction = Find-ElementByName $Dialog "Check for Updates"',
     'if ($null -eq $UpdateAction) { $UpdateAction = Find-ElementByName $Dialog "Check Again" }',
+    'if ($null -eq $UpdateAction) { $UpdateAction = Find-ElementByName $Dialog "Checking..." }',
     "if ($null -eq $UpdateAction) {",
     "  $Descendants = $Dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)",
     "  foreach ($Element in $Descendants) {",
@@ -750,9 +929,6 @@ async function clickAboutAndClose(
     'if ($null -eq $UpdateAction) { throw "About dialog update action was not found." }',
     '$CloseButton = Find-ElementByName $Dialog "Close"',
     'if ($null -eq $CloseButton) { throw "About dialog Close button was not found." }',
-    "$DialogRect = $Dialog.Current.BoundingRectangle",
-    "$DialogHandle = [IntPtr]$Dialog.Current.NativeWindowHandle",
-    "$ClientRect = Get-ClientScreenRectangle $DialogHandle",
     "$WorkingArea = [System.Windows.Forms.Screen]::FromHandle($DialogHandle).WorkingArea",
     "if (",
     "  $DialogRect.Left -lt $WorkingArea.Left -or",
@@ -950,7 +1126,7 @@ async function expectWindowsTrayConnected(
 // Playwright requires the first callback parameter to be a destructured fixture object.
 // eslint-disable-next-line no-empty-pattern
 test("routes Windows tray buttons through the browser native messaging host", async ({}, testInfo) => {
-  test.setTimeout(420_000);
+  test.setTimeout(process.env[SCREENSHOT_PATH_ENV] ? 600_000 : 420_000);
   test.skip(
     !windowsTraySmokeEnabled(),
     "Set YTME_E2E_WINDOWS_TRAY=1 to run the Windows tray connector smoke.",
@@ -968,16 +1144,25 @@ test("routes Windows tray buttons through the browser native messaging host", as
   const executablePath = `${installRoot}\\YTMTray.exe`;
   const trayLogPath = testInfo.outputPath("tray.log");
   const promoScreenshotPath = process.env[SCREENSHOT_PATH_ENV];
+  const signedInstaller = signedInstallerPath();
   let extension: Awaited<ReturnType<typeof launchExtensionContext>> | undefined;
 
   try {
     extension = await launchExtensionContext(testInfo);
     await runPowerShell(
-      trayInstallScript(
-        installRoot,
-        extension.extensionId,
-        testInfo.project.name,
-      ),
+      signedInstaller
+        ? signedTrayInstallScript(
+            installRoot,
+            extension.extensionId,
+            testInfo.project.name,
+            signedInstaller,
+            testInfo.outputPath("tray-setup.log"),
+          )
+        : trayInstallScript(
+            installRoot,
+            extension.extensionId,
+            testInfo.project.name,
+          ),
       300_000,
     );
     const trayProcessId = await launchTrayApp(
@@ -986,7 +1171,7 @@ test("routes Windows tray buttons through the browser native messaging host", as
       trayLogPath,
     );
 
-    const ytmPage = await extension.context.newPage();
+    let ytmPage = await extension.context.newPage();
     await loadYtmFixtureThroughExtension(ytmPage, "player-loaded-paused");
 
     await enableConnectedApps(extension);
@@ -1098,6 +1283,7 @@ test("routes Windows tray buttons through the browser native messaging host", as
     await clickAboutAndClose(
       testInfo.outputPath("tray-about.json"),
       browserSource,
+      trayProcessId,
     );
     await expect
       .poll(async () =>
@@ -1109,15 +1295,6 @@ test("routes Windows tray buttons through the browser native messaging host", as
         ).trim(),
       )
       .toBe(String(trayProcessId));
-    if (promoScreenshotPath && testInfo.project.name === "edge") {
-      await captureLiveTrayPromoScreenshot(
-        extension,
-        testInfo.outputPath("tray-screenshot.json"),
-        promoScreenshotPath,
-        trayLogPath,
-      );
-    }
-
     await publishPartialPlaybackMetadata(ytmPage);
     await expect
       .poll(
@@ -1159,6 +1336,7 @@ test("routes Windows tray buttons through the browser native messaging host", as
       await clickAboutAndClose(
         testInfo.outputPath("tray-about-disabled.json"),
         "Not connected to a browser.",
+        trayProcessId,
       );
 
       await setWindowsTrayLifecycleEnabled(extension, true);
@@ -1216,6 +1394,13 @@ test("routes Windows tray buttons through the browser native messaging host", as
         { timeout: 15_000 },
       )
       .toBe(1);
+    const openedYtmPage = extension.context
+      .pages()
+      .find((page) => page.url().startsWith("https://music.youtube.com/"));
+    if (!openedYtmPage) {
+      throw new Error("The tray did not open a YouTube Music page.");
+    }
+    ytmPage = openedYtmPage;
     await expect
       .poll(
         () =>
@@ -1227,6 +1412,15 @@ test("routes Windows tray buttons through the browser native messaging host", as
         { timeout: 15_000 },
       )
       .toMatchObject({ enabled: true, name: "Focus YouTube Music" });
+
+    if (promoScreenshotPath && testInfo.project.name === "edge") {
+      await captureLiveTrayPromoScreenshot(
+        ytmPage,
+        testInfo.outputPath("tray-screenshot.json"),
+        promoScreenshotPath,
+        trayLogPath,
+      );
+    }
 
     await clickTrayPopupElement(
       "quit",
@@ -1245,8 +1439,14 @@ test("routes Windows tray buttons through the browser native messaging host", as
       .toBe("");
   } finally {
     await extension?.context.close().catch(() => undefined);
-    await runPowerShell(trayUninstallScript(installRoot), 120_000).catch(
-      () => undefined,
-    );
+    await runPowerShell(
+      signedInstaller
+        ? signedTrayUninstallScript(
+            installRoot,
+            testInfo.outputPath("tray-uninstall.log"),
+          )
+        : trayUninstallScript(installRoot),
+      120_000,
+    ).catch(() => undefined);
   }
 });

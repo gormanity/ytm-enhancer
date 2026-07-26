@@ -61,7 +61,6 @@ internal static class PopupActionSvgIconRenderer
         new Dictionary<PopupActionIcon, string>
         {
             [PopupActionIcon.Focus] = "action-focus",
-            [PopupActionIcon.Update] = "action-update",
             [PopupActionIcon.Info] = "action-info",
             [PopupActionIcon.Quit] = "action-quit"
         };

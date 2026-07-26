@@ -76,11 +76,12 @@ The user-facing release path is:
    matching native app and native host, then opens YTM Tray.
 3. Open YTM Enhancer > Connected Apps and enable Connected Apps plus the YTM
    Tray card.
-4. Use `Check for Updates` from the tray popup or About window. The app checks
-   the `windows-tray-v*` GitHub release list, downloads `YTM-Tray-update.json`,
-   selects and verifies the architecture-specific updater zip, and hands off to
-   its packaged installer. The installer reopens YTM Tray when the update
-   finishes.
+4. Open About to review update status. The app silently checks the
+   `windows-tray-v*` GitHub release list and changes the popup and tray menu
+   action to `About YTM Tray - Update Available` when a newer version exists.
+   The About window downloads `YTM-Tray-update.json`, selects and verifies the
+   architecture-specific updater zip, and hands off to its packaged installer.
+   The installer reopens YTM Tray when the update finishes.
 5. Uninstall from Windows Settings > Apps > Installed apps, Start Menu > YTM
    Enhancer > Uninstall YTM Tray, or run the installed
    `YTMTray.Setup.exe uninstall`.
@@ -155,9 +156,12 @@ installer is not an updater-manifest asset.
 
 ## Checksum-Verified In-App Updates
 
-The tray app checks the GitHub release list in the background and marks the tray
-menu and flyout when a newer `windows-tray-v*` release is available. Users can
-also choose `Check for Updates` manually.
+The tray app silently checks the GitHub release list in the background. When a
+newer `windows-tray-v*` release is available, the popup and tray menu change
+their About action to `About YTM Tray - Update Available`. Update status,
+checking, retry, and installation remain in the About window rather than a
+separate update row or menu item. The About window offers `Check for Updates`
+and `Check Again` for manual refreshes.
 
 When the user accepts an update, the tray app:
 

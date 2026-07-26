@@ -253,6 +253,7 @@ describe("Windows remote QA scaffold", () => {
       "apps/windows-tray/scripts/mask-release-screenshot.mjs",
     );
     const trayE2e = read("tests/e2e/windows-tray-connector.spec.ts");
+    const docs = read("docs/remote-qa.md");
 
     expect(releaseScreenshot).toContain(
       "$env:YTME_WINDOWS_TRAY_SCREENSHOT_PATH",
@@ -260,6 +261,11 @@ describe("Windows remote QA scaffold", () => {
     expect(releaseScreenshot).toContain(
       "$env:YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
     );
+    expect(releaseScreenshot).toContain(
+      "$env:YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH",
+    );
+    expect(releaseScreenshot).toContain("[string] $SignedInstallerPath");
+    expect(releaseScreenshot).toContain("Get-AuthenticodeSignature");
     expect(releaseScreenshot).toContain(
       "approved Creative Commons YouTube Music track",
     );
@@ -275,6 +281,10 @@ describe("Windows remote QA scaffold", () => {
       "scripts\\windows-qa\\tray-release-screenshot.ps1",
     );
     expect(releaseScreenshotShell).toContain("-PlaybackUrl");
+    expect(releaseScreenshotShell).toContain(
+      "YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH",
+    );
+    expect(releaseScreenshotShell).toContain("-SignedInstallerPath");
     expect(releaseScreenshotShell).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
     expect(releaseScreenshotShell).toContain("YTME_SCREENSHOT_BASE64_CHUNK");
     expect(releaseScreenshotShell).toContain("final = block");
@@ -288,6 +298,37 @@ describe("Windows remote QA scaffold", () => {
     expect(releaseScreenshotMask).toContain('blend: "dest-in"');
     expect(trayE2e).toContain("Save-TrayPopupScreenshot");
     expect(trayE2e).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
+    expect(trayE2e).toContain("YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH");
+    expect(trayE2e).toContain("Get-AuthenticodeSignature");
+    expect(trayE2e).toContain("--additional-allowed-origin");
+    expect(trayE2e).not.toContain("--runtime-identifier");
+    expect(trayE2e).toContain("function signedTrayInstallScript");
+    expect(trayE2e).toContain("function signedTrayUninstallScript");
+    expect(trayE2e).toContain(
+      "UIAutomationClientsideProviders.UIAutomationClientSideProviders",
+    );
+    expect(trayE2e).toContain(
+      "ClientSettings]::RegisterClientSideProviderAssembly",
+    );
+    expect(trayE2e).toContain(
+      "$InstallProcess = Start-Process -FilePath $SignedInstallerPath",
+    );
+    expect(trayE2e).toContain(
+      "$UninstallProcess = Start-Process -FilePath $SetupPath",
+    );
+    expect(trayE2e).toContain("-Wait -PassThru");
+    expect(trayE2e).toContain("$InstallProcess.ExitCode -ne 0");
+    expect(trayE2e).toContain("$UninstallProcess.ExitCode -ne 0");
+    expect(trayE2e).not.toContain("& $SignedInstallerPath");
+    expect(trayE2e).not.toContain("& $SetupPath");
+    expect(trayE2e).toContain(
+      '$SetupPath = Join-Path $InstallRoot "YTMTray.Setup.exe"',
+    );
+    expect(trayE2e).toContain(": trayInstallScript(");
+    expect(trayE2e).toContain(": trayUninstallScript(installRoot)");
+    expect(docs).toContain("YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH");
+    expect(docs).toContain("outside the Windows remote QA");
+    expect(docs).toContain("work root. Then provide that path");
   });
 
   it("preflights the .NET 10 runtime needed by tray unit smoke", () => {
@@ -408,6 +449,7 @@ describe("Windows remote QA scaffold", () => {
     const liveUpdateSmokeShell = read(
       "scripts/remote/windows-qa/tray-live-update-smoke.sh",
     );
+    const docs = read("docs/remote-qa.md");
 
     expect(liveUpdateSmoke).toContain('$BaselineVersion = "0.0.2"');
     expect(liveUpdateSmoke).toContain('$TargetVersion = "0.1.0"');
@@ -417,6 +459,12 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmoke).toContain("ui-agent-client.ps1");
     expect(liveUpdateSmoke).toContain("Wait-WindowsQaUiAgentReady");
     expect(liveUpdateSmoke).toContain("Invoke-InteractivePowerShell");
+    expect(liveUpdateSmoke).toContain(
+      "UIAutomationClientsideProviders.UIAutomationClientSideProviders",
+    );
+    expect(liveUpdateSmoke).toContain(
+      "ClientSettings]::RegisterClientSideProviderAssembly",
+    );
     expect(liveUpdateSmoke).toContain("UiReadyTimeoutSeconds");
     expect(liveUpdateSmoke).not.toContain("New-ScheduledTaskPrincipal");
     expect(liveUpdateSmoke).toContain("Start-ReleasedTrayApp");
@@ -425,8 +473,27 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmoke).toContain("GetClickablePoint");
     expect(liveUpdateSmoke).toContain("Invoke-Element");
     expect(liveUpdateSmoke).toContain("SendKeys");
-    expect(liveUpdateSmoke).toContain("popup root");
-    expect(liveUpdateSmoke).toContain("Install Update $TargetVersion");
+    expect(liveUpdateSmoke).toContain("About YTM Tray - Update Available");
+    expect(liveUpdateSmoke).toContain("About YTM Tray");
+    expect(liveUpdateSmoke).toContain("$ExpectAboutOnlyUpdateUi");
+    expect(liveUpdateSmoke).toContain(
+      "Target popup still exposes a standalone update action.",
+    );
+    expect(liveUpdateSmoke).toContain(
+      "Target context menu still exposes a standalone update action.",
+    );
+    expect(liveUpdateSmoke).toContain(
+      "Target About window did not expose its update action.",
+    );
+    expect(liveUpdateSmoke).toContain(
+      '$UpdateElement = Wait-ElementByName $PopupWindow "Install Update $TargetVersion" 60000',
+    );
+    expect(liveUpdateSmoke).toContain('$ActionSurface = "Popup"');
+    expect(liveUpdateSmoke).not.toContain('$ActionSurface = "Root"');
+    expect(liveUpdateSmoke).not.toContain('$ActionSurface = "ContextMenu"');
+    expect(liveUpdateSmoke).toContain(
+      '$ExpectAboutOnlyUpdateUi = [version]$ComparableTargetVersion -ge [version]"0.1.11"',
+    );
     expect(liveUpdateSmoke).toContain("Check for Updates");
     expect(liveUpdateSmoke).toContain("Wait-DialogButton");
     expect(liveUpdateSmoke).toContain("Update YTM Tray");
@@ -463,6 +530,11 @@ describe("Windows remote QA scaffold", () => {
     expect(liveUpdateSmokeShell).toContain("-BaselineVersion");
     expect(liveUpdateSmokeShell).toContain("-TargetVersion");
     expect(liveUpdateSmokeShell).toContain("-UiReadyTimeoutSeconds");
+    expect(docs).toContain("-BaselineVersion 0.1.10");
+    expect(docs).toContain("-TargetVersion 0.1.11");
+    expect(docs).toContain(
+      "scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.10 0.1.11",
+    );
   });
 
   it("installs a published Windows tray build for operational QA", () => {

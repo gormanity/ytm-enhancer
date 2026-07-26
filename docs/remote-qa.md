@@ -764,26 +764,29 @@ Run the Windows tray live-update UI smoke:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-live-update-smoke.ps1 `
-  -BaselineVersion 0.1.1 `
-  -TargetVersion 0.1.2 `
+  -BaselineVersion 0.1.10 `
+  -TargetVersion 0.1.11 `
   -UiReadyTimeoutSeconds 60
 ```
 
 Run the same smoke through the configured Windows transport:
 
 ```sh
-scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.1 0.1.2
+scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.10 0.1.11
 ```
 
 This installs the published baseline release into the real user-level install
 location, launches the released tray app through the Windows QA UI agent, clicks
-the popup update action, accepts the update dialogs, waits for the target
-release to replace the baseline, and confirms that the updated app relaunches as
-a new process in the same desktop session and completes startup. It validates
-the installed files and native host registrations, then uninstalls and verifies
-cleanup. It intentionally uses the default `%LOCALAPPDATA%\YTM Enhancer\Tray`
-path because the in-app updater hands off to the native setup inside the
-selected architecture-specific updater zip.
+the baseline's legacy popup after it exposes the target's install action,
+accepts the update dialogs, waits for the target release to replace the
+baseline, and confirms that the updated app relaunches as a new process in the
+same desktop session and completes startup. For targets at version 0.1.11 or
+newer, it also verifies that the popup and context menu expose updates only
+through their update-aware About action, then confirms the About window owns the
+update action. It validates the installed files and native host registrations,
+then uninstalls and verifies cleanup. It intentionally uses the default
+`%LOCALAPPDATA%\YTM Enhancer\Tray` path because the in-app updater hands off to
+the native setup inside the selected architecture-specific updater zip.
 
 The remote wrapper also accepts `YTM_WINDOWS_TRAY_BASELINE_VERSION` and
 `YTM_WINDOWS_TRAY_TARGET_VERSION` when positional arguments are not convenient.
@@ -907,11 +910,16 @@ verifies long metadata scrolls, and removes the smoke install.
 Regenerate the Windows tray release screenshot from the same active Windows
 desktop session. Use the approved Creative Commons YouTube Music track URL so
 the checked-in promo image shows live artwork read through the connector, not
-fixture artwork:
+fixture artwork. On a machine enforcing Smart App Control, first download the
+Microsoft-signed candidate installer. Store it outside the Windows remote QA
+work root. Then provide that path so the connector smoke does not replace it
+with unsigned source-built binaries:
 
 ```powershell
 $env:YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL = `
   "https://music.youtube.com/watch?v=<approved-track-id>"
+$env:YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH = `
+  "C:\path\to\YTM-Tray-X.Y.Z-Setup.exe"
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-release-screenshot.ps1
 ```
@@ -921,6 +929,8 @@ Run the same capture through the configured Windows transport:
 ```sh
 YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL=\
 "https://music.youtube.com/watch?v=<approved-track-id>" \
+YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH=\
+'C:\path\to\YTM-Tray-X.Y.Z-Setup.exe' \
 scripts/remote/windows-qa/tray-release-screenshot.sh
 ```
 
@@ -928,7 +938,12 @@ This runs the real Windows tray app against the Edge Connected Apps smoke,
 verifies button behavior against the local fixture, switches to the approved
 live YouTube Music track for the screenshot, captures the tray popup after
 artwork has been downloaded by the tray app, and copies the PNG back to
-`apps/windows-tray/release/windows-tray-screenshot.png`.
+`apps/windows-tray/release/windows-tray-screenshot.png`. The signed candidate
+mode verifies the installer's Authenticode signature, installs its embedded
+runtime to the smoke's temporary root, and uninstalls it through the installed
+signed setup executable. When the signed-installer variable is omitted, the same
+smoke retains its normal source-build path for development environments that
+permit unsigned local binaries.
 
 Run the Windows tray button smoke from an active Windows desktop session:
 
@@ -1056,6 +1071,8 @@ The remote QA scripts accept these variables:
 - `REMOTE_QA_WINDOWS_WORK_ROOT`
 - `REMOTE_QA_WINDOWS_SSH_KEY`
 - `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS`
+- `YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL`
+- `YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH`
 
 Keep real values local. If the remote address changes, update `.remote-qa.env`
 or your shell environment.

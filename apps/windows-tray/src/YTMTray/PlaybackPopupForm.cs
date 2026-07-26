@@ -39,10 +39,6 @@ internal sealed class PlaybackPopupForm : Form
         PopupActionIcon.Focus,
         "Open YouTube Music"
     );
-    private readonly PopupActionRowControl updateRow = new(
-        PopupActionIcon.Update,
-        "Check for Updates"
-    );
     private readonly PopupActionRowControl aboutRow = new(PopupActionIcon.Info, "About YTM Tray");
     private readonly PopupActionRowControl quitRow = new(PopupActionIcon.Quit, "Quit");
     private readonly NativeAppLogger? logger;
@@ -74,9 +70,6 @@ internal sealed class PlaybackPopupForm : Form
     public Action? OnFocusYouTubeMusic { get; set; }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Action? OnCheckForUpdates { get; set; }
-
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Action? OnAbout { get; set; }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -102,7 +95,7 @@ internal sealed class PlaybackPopupForm : Form
         BackColor = TrayTheme.CurrentApp.PopupSurfaceColor;
         ForeColor = TrayTheme.CurrentApp.PrimaryTextColor;
         Font = new Font("Segoe UI", 9f, FontStyle.Regular);
-        ClientSize = new Size(424, 562);
+        ClientSize = new Size(424, 532);
         DoubleBuffered = true;
 
         ConfigureCurrentTrack();
@@ -202,13 +195,13 @@ internal sealed class PlaybackPopupForm : Form
         SetControlsEnabled(hasPlayableState);
     }
 
-    public void SetUpdateAvailable(string? version)
+    public void SetAboutUpdateAvailable(bool available)
     {
-        updateRow.Text = string.IsNullOrWhiteSpace(version)
-            ? "Check for Updates"
-            : $"Install Update {version}";
-        updateRow.AccessibleName = updateRow.Text;
-        updateRow.Invalidate();
+        aboutRow.Text = available
+            ? "About YTM Tray - Update Available"
+            : "About YTM Tray";
+        aboutRow.AccessibleName = aboutRow.Text;
+        aboutRow.Invalidate();
     }
 
     public void SetYouTubeMusicTabAvailable(bool available)
@@ -427,9 +420,8 @@ internal sealed class PlaybackPopupForm : Form
     private void ConfigureActionRows()
     {
         ConfigureActionRow(focusRow, 438, () => OnFocusYouTubeMusic?.Invoke());
-        ConfigureActionRow(updateRow, 468, () => OnCheckForUpdates?.Invoke());
-        ConfigureActionRow(aboutRow, 498, () => OnAbout?.Invoke());
-        ConfigureActionRow(quitRow, 528, () => OnQuit?.Invoke());
+        ConfigureActionRow(aboutRow, 468, () => OnAbout?.Invoke());
+        ConfigureActionRow(quitRow, 498, () => OnQuit?.Invoke());
     }
 
     private void ApplyTheme()
@@ -473,7 +465,7 @@ internal sealed class PlaybackPopupForm : Form
             button.ApplyTheme();
         }
 
-        foreach (var row in new[] { focusRow, updateRow, aboutRow, quitRow })
+        foreach (var row in new[] { focusRow, aboutRow, quitRow })
         {
             row.ApplyTheme();
         }
@@ -1720,7 +1712,6 @@ internal sealed class PlaybackButtonControl : Control
 internal enum PopupActionIcon
 {
     Focus,
-    Update,
     Info,
     Quit
 }

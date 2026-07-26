@@ -1,6 +1,7 @@
 param(
   [string] $OutputPath = (Join-Path (Get-Location) "apps/windows-tray/release/windows-tray-screenshot.png"),
-  [string] $PlaybackUrl = $env:YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL
+  [string] $PlaybackUrl = $env:YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL,
+  [string] $SignedInstallerPath = $env:YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,6 +28,34 @@ if ($OutputDirectory) {
 
 if ([string]::IsNullOrWhiteSpace($PlaybackUrl)) {
   throw "Set -PlaybackUrl or YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL to the approved Creative Commons YouTube Music track."
+}
+
+if ([string]::IsNullOrWhiteSpace($SignedInstallerPath)) {
+  Remove-Item `
+    Env:YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH `
+    -ErrorAction SilentlyContinue
+} else {
+  $ResolvedSignedInstallerPath = (
+    Resolve-Path -LiteralPath $SignedInstallerPath
+  ).ProviderPath
+  if (
+    [IO.Path]::GetExtension($ResolvedSignedInstallerPath) -ine ".exe"
+  ) {
+    throw "Signed YTM Tray installer must be an executable: $ResolvedSignedInstallerPath"
+  }
+
+  $Signature = Get-AuthenticodeSignature `
+    -LiteralPath $ResolvedSignedInstallerPath
+  if (
+    $Signature.Status -ne
+      [System.Management.Automation.SignatureStatus]::Valid -or
+    $null -eq $Signature.SignerCertificate
+  ) {
+    throw "Expected a valid Authenticode signature on $ResolvedSignedInstallerPath; got $($Signature.Status): $($Signature.StatusMessage)"
+  }
+
+  $env:YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH = `
+    $ResolvedSignedInstallerPath
 }
 
 $env:CI = "true"

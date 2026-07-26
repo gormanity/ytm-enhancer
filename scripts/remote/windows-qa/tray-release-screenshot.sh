@@ -5,6 +5,7 @@ script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 repo_root="$(CDPATH= cd -- "$script_dir/../../.." && pwd)"
 output_path="${1:-$repo_root/apps/windows-tray/release/windows-tray-screenshot.png}"
 playback_url="${YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL:-}"
+signed_installer_path="${YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH:-}"
 log_file="$(mktemp)"
 encoded_file="$(mktemp)"
 decoded_file="$(mktemp)"
@@ -23,9 +24,14 @@ if [ -n "$playback_url" ]; then
   playback_argument=" -PlaybackUrl $(ps_quote "$playback_url")"
 fi
 
+signed_installer_argument=""
+if [ -n "$signed_installer_path" ]; then
+  signed_installer_argument=" -SignedInstallerPath $(ps_quote "$signed_installer_path")"
+fi
+
 if ! "$script_dir/run.sh" --shell '
 $OutputPath = Join-Path (Get-Location) "apps/windows-tray/release/windows-tray-screenshot.png"
-& .\scripts\windows-qa\tray-release-screenshot.ps1 -OutputPath $OutputPath'"$playback_argument"'
+& .\scripts\windows-qa\tray-release-screenshot.ps1 -OutputPath $OutputPath'"$playback_argument$signed_installer_argument"'
 Write-Output "YTME_SCREENSHOT_BASE64_BEGIN"
 $EncodedScreenshot = [Convert]::ToBase64String([IO.File]::ReadAllBytes($OutputPath))
 $ChunkSize = 4096

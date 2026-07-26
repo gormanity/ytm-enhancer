@@ -12,6 +12,7 @@ internal enum WindowsTrayAboutUpdateStatusKind
     Checking,
     UpToDate,
     UpdateAvailable,
+    Downloading,
     Failed
 }
 
@@ -59,6 +60,15 @@ internal sealed record WindowsTrayAboutUpdateStatus(
             true
         );
 
+    public static WindowsTrayAboutUpdateStatus Downloading() =>
+        new(
+            WindowsTrayAboutUpdateStatusKind.Downloading,
+            "Downloading update.",
+            "Verifying the YTM Tray update package.",
+            "Downloading...",
+            false
+        );
+
     public static WindowsTrayAboutUpdateStatus Failed(string _) =>
         new(
             WindowsTrayAboutUpdateStatusKind.Failed,
@@ -88,7 +98,7 @@ internal sealed class AboutDialogForm : Form
     private readonly Button closeButton = new();
     private readonly List<Action<TrayTheme>> themeBindings = [];
     private ConnectorSource? currentBrowserSource;
-    private Size defaultClientSize;
+    private Size defaultClientSize = new(DefaultClientWidth, DefaultClientHeight);
     private WindowsTrayAboutUpdateStatus currentUpdateStatus =
         WindowsTrayAboutUpdateStatus.Idle();
 
@@ -154,10 +164,13 @@ internal sealed class AboutDialogForm : Form
         Invalidate(true);
     }
 
-    protected override void OnShown(EventArgs eventArgs)
+    protected override void OnLoad(EventArgs eventArgs)
     {
-        base.OnShown(eventArgs);
-        defaultClientSize = ClientSize;
+        base.OnLoad(eventArgs);
+        if (ClientSize.Width > 0 && ClientSize.Height > 0)
+        {
+            defaultClientSize = ClientSize;
+        }
         FitToContent();
     }
 

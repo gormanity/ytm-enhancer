@@ -14,19 +14,16 @@ internal sealed class TrayController : ITrayController, IDisposable
     private Icon idleIcon;
     private Icon playingIcon;
     private readonly WindowsTrayUpdateService updateService;
+    private readonly WindowsTrayUpdateSession updateSession = new();
     private readonly NativeAppLogger? logger;
     private readonly CancellationTokenSource updateCancellation = new();
     private ToolStripMenuItem? focusMenuItem;
-    private ToolStripMenuItem? updateMenuItem;
+    private ToolStripMenuItem? aboutMenuItem;
     private AboutDialogForm? aboutDialog;
-    private WindowsTrayUpdateCheckResult? availableUpdate;
     private ConnectorSource? browserSource;
-    private string? updateCheckError;
     private PopupDismissMouseHook? popupDismissMouseHook;
     private DateTime suppressTrayClickUntil = DateTime.MinValue;
     private bool isPlaying;
-    private bool updateCheckInProgress;
-    private bool updateCheckCompleted;
 
     public Action? OnShuffle { get; set; }
     public Action? OnPrevious { get; set; }
@@ -56,7 +53,6 @@ internal sealed class TrayController : ITrayController, IDisposable
         popup.OnRepeat = () => OnRepeat?.Invoke();
         popup.OnSeek = time => OnSeek?.Invoke(time);
         popup.OnFocusYouTubeMusic = () => OnFocusYouTubeMusic?.Invoke();
-        popup.OnCheckForUpdates = () => _ = CheckForUpdatesAsync(popup, userInitiated: true);
         popup.OnAbout = () => ShowAbout(popup);
         popup.OnQuit = () => OnQuit?.Invoke();
         popup.ThemeChanged += (_, _) => aboutDialog?.ApplyTheme();
@@ -171,13 +167,13 @@ internal sealed class TrayController : ITrayController, IDisposable
         );
         focusMenuItem.AccessibleName = focusMenuItem.Text;
         menu.Items.Add(focusMenuItem);
-        updateMenuItem = new ToolStripMenuItem(
-            "Check for Updates",
+        aboutMenuItem = new ToolStripMenuItem(
+            "About YTM Tray",
             null,
-            (_, _) => _ = CheckForUpdatesAsync(owner: null, userInitiated: true)
+            (_, _) => ShowAbout()
         );
-        menu.Items.Add(updateMenuItem);
-        menu.Items.Add("About YTM Tray", null, (_, _) => ShowAbout());
+        aboutMenuItem.AccessibleName = aboutMenuItem.Text;
+        menu.Items.Add(aboutMenuItem);
         menu.Items.Add("Uninstall YTM Tray...", null, (_, _) => StartUninstaller());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Quit", null, (_, _) => OnQuit?.Invoke());
@@ -197,42 +193,29 @@ internal sealed class TrayController : ITrayController, IDisposable
 
     private async Task CheckForUpdatesAsync(IWin32Window? owner, bool userInitiated)
     {
-        if (updateCheckInProgress)
+        if (
+            !updateSession.TryBeginCheck(
+                reuseAvailableUpdate: userInitiated,
+                out var cachedUpdate
+            )
+        )
         {
-            if (userInitiated)
-            {
-                ShowUpdateMessage(
-                    owner,
-                    "YTM Tray is already checking for updates.",
-                    MessageBoxIcon.Information
-                );
-            }
             return;
         }
 
-        updateCheckInProgress = true;
-        updateCheckError = null;
-        SetAboutUpdateStatus(WindowsTrayAboutUpdateStatus.Checking());
+        ApplyUpdatePresentation();
         var cancellationToken = updateCancellation.Token;
 
         try
         {
             var update =
-                availableUpdate?.IsUpdateAvailable == true
-                    ? availableUpdate
-                    : await updateService.CheckForUpdateAsync(cancellationToken);
-            ApplyUpdateAvailability(update, showNotification: !userInitiated);
+                cachedUpdate
+                ?? await updateService.CheckForUpdateAsync(cancellationToken);
+            updateSession.ApplyResult(update);
+            ApplyUpdatePresentation();
 
-            if (!update.IsUpdateAvailable)
+            if (!updateSession.HasUpdateAvailable)
             {
-                if (userInitiated)
-                {
-                    ShowUpdateMessage(
-                        owner,
-                        "YTM Tray is up to date.",
-                        MessageBoxIcon.Information
-                    );
-                }
                 return;
             }
 
@@ -242,7 +225,7 @@ internal sealed class TrayController : ITrayController, IDisposable
             }
 
             var installChoice = MessageBox.Show(
-                owner,
+                CurrentOwner(owner),
                 $"YTM Tray {update.LatestVersion} is available.\n\nDownload and install it now? YTM Tray will quit while the installer runs.",
                 "Update YTM Tray",
                 MessageBoxButtons.YesNo,
@@ -250,12 +233,14 @@ internal sealed class TrayController : ITrayController, IDisposable
             );
             if (installChoice != DialogResult.Yes) return;
 
+            updateSession.BeginDownload();
+            ApplyUpdatePresentation();
             var preparedUpdate = await updateService.DownloadAndPrepareUpdateAsync(
                 update,
                 cancellationToken: cancellationToken
             );
             MessageBox.Show(
-                owner,
+                CurrentOwner(owner),
                 "The update package was verified. YTM Tray will quit and run the installer now.",
                 "Update YTM Tray",
                 MessageBoxButtons.OK,
@@ -271,20 +256,12 @@ internal sealed class TrayController : ITrayController, IDisposable
         catch (Exception error)
         {
             logger?.Log($"windows tray update check failed: {error.Message}");
-            updateCheckError = error.Message;
-            SetAboutUpdateStatus(WindowsTrayAboutUpdateStatus.Failed(error.Message));
-            if (userInitiated)
-            {
-                ShowUpdateMessage(
-                    owner,
-                    $"YTM Tray could not check for updates.\n\n{error.Message}",
-                    MessageBoxIcon.Warning
-                );
-            }
+            updateSession.Fail(error.Message);
+            ApplyUpdatePresentation();
         }
         finally
         {
-            updateCheckInProgress = false;
+            updateSession.CompleteCheck();
         }
     }
 
@@ -301,58 +278,41 @@ internal sealed class TrayController : ITrayController, IDisposable
         }
     }
 
-    private void ApplyUpdateAvailability(
-        WindowsTrayUpdateCheckResult update,
-        bool showNotification
+    private void ApplyUpdatePresentation()
+    {
+        var updateAvailable = updateSession.HasUpdateAvailable;
+        var aboutUpdateStatus = CurrentAboutUpdateStatus();
+        SetAboutUpdateStatus(aboutUpdateStatus, updateAvailable);
+    }
+
+    private void SetAboutUpdateStatus(
+        WindowsTrayAboutUpdateStatus status,
+        bool updateAvailable
     )
     {
-        availableUpdate = update.IsUpdateAvailable ? update : null;
-        updateCheckError = null;
-        updateCheckCompleted = true;
-        var latestVersion = update.LatestVersion;
-        var aboutUpdateStatus =
-            update.IsUpdateAvailable && !string.IsNullOrWhiteSpace(latestVersion)
-                ? WindowsTrayAboutUpdateStatus.UpdateAvailable(latestVersion)
-                : WindowsTrayAboutUpdateStatus.UpToDate();
         RunOnUiThread(() =>
         {
-            var updateLabel =
-                update.IsUpdateAvailable && !string.IsNullOrWhiteSpace(latestVersion)
-                    ? $"Install Update {latestVersion}"
-                    : "Check for Updates";
-            if (updateMenuItem is not null)
+            var aboutLabel = updateAvailable
+                ? "About YTM Tray - Update Available"
+                : "About YTM Tray";
+            if (aboutMenuItem is not null)
             {
-                updateMenuItem.Text = updateLabel;
+                aboutMenuItem.Text = aboutLabel;
+                aboutMenuItem.AccessibleName = aboutLabel;
             }
-            popup.SetUpdateAvailable(update.IsUpdateAvailable ? latestVersion : null);
-            aboutDialog?.SetUpdateStatus(aboutUpdateStatus);
-
-            if (showNotification && update.IsUpdateAvailable)
-            {
-                notifyIcon.ShowBalloonTip(
-                    10000,
-                    "YTM Tray update available",
-                    $"Version {update.LatestVersion} can be installed from the tray menu.",
-                    ToolTipIcon.Info
-                );
-            }
+            popup.SetAboutUpdateAvailable(updateAvailable);
+            aboutDialog?.SetUpdateStatus(status);
         });
     }
 
-    private static void ShowUpdateMessage(
-        IWin32Window? owner,
-        string message,
-        MessageBoxIcon icon
-    )
+    private static IWin32Window? CurrentOwner(IWin32Window? owner)
     {
-        const string title = "Update YTM Tray";
-        if (owner is null)
+        if (owner is Control control && (control.IsDisposed || control.Disposing))
         {
-            MessageBox.Show(message, title, MessageBoxButtons.OK, icon);
-            return;
+            return null;
         }
 
-        MessageBox.Show(owner, message, title, MessageBoxButtons.OK, icon);
+        return owner;
     }
 
     private void StartUninstaller(IWin32Window? owner = null)
@@ -491,35 +451,25 @@ internal sealed class TrayController : ITrayController, IDisposable
         action();
     }
 
-    private void SetAboutUpdateStatus(WindowsTrayAboutUpdateStatus status)
-    {
-        RunOnUiThread(() => aboutDialog?.SetUpdateStatus(status));
-    }
-
     private WindowsTrayAboutUpdateStatus CurrentAboutUpdateStatus()
     {
-        if (updateCheckInProgress)
+        switch (updateSession.Phase)
         {
-            return WindowsTrayAboutUpdateStatus.Checking();
+            case WindowsTrayUpdatePhase.Checking:
+                return WindowsTrayAboutUpdateStatus.Checking();
+            case WindowsTrayUpdatePhase.UpToDate:
+                return WindowsTrayAboutUpdateStatus.UpToDate();
+            case WindowsTrayUpdatePhase.UpdateAvailable:
+                return WindowsTrayAboutUpdateStatus.UpdateAvailable(
+                    updateSession.AvailableUpdate!.LatestVersion!
+                );
+            case WindowsTrayUpdatePhase.Downloading:
+                return WindowsTrayAboutUpdateStatus.Downloading();
+            case WindowsTrayUpdatePhase.Failed:
+                return WindowsTrayAboutUpdateStatus.Failed(updateSession.Error ?? "");
+            default:
+                return WindowsTrayAboutUpdateStatus.Idle();
         }
-
-        var availableVersion = availableUpdate?.LatestVersion;
-        if (
-            availableUpdate?.IsUpdateAvailable == true
-            && !string.IsNullOrWhiteSpace(availableVersion)
-        )
-        {
-            return WindowsTrayAboutUpdateStatus.UpdateAvailable(availableVersion);
-        }
-
-        if (!string.IsNullOrWhiteSpace(updateCheckError))
-        {
-            return WindowsTrayAboutUpdateStatus.Failed(updateCheckError);
-        }
-
-        return updateCheckCompleted
-            ? WindowsTrayAboutUpdateStatus.UpToDate()
-            : WindowsTrayAboutUpdateStatus.Idle();
     }
 
     private void ShowAbout(IWin32Window? owner = null)
@@ -549,5 +499,6 @@ internal sealed class TrayController : ITrayController, IDisposable
 
         aboutDialog.BringToFront();
         aboutDialog.Activate();
+        _ = CheckForUpdatesAsync(aboutDialog, userInitiated: false);
     }
 }
