@@ -197,6 +197,29 @@ describe("Windows tray connector scaffold", () => {
     expect(trayController).not.toContain('"uninstall-native-hosts.ps1"');
   });
 
+  it("isolates setup process shutdown to the target installation", () => {
+    const setup = read("src/YTMTray.Setup/Program.cs");
+    const processScope = read("src/YTMTray.Core/WindowsTrayProcessScope.cs");
+
+    expect(processScope).toContain(
+      "public static class WindowsTrayProcessScope",
+    );
+    expect(processScope).toContain("IsInstalledExecutable");
+    expect(setup).toContain("process.MainModule?.FileName");
+    expect(setup).toContain("WindowsTrayProcessScope.IsInstalledExecutable");
+    expect(setup).toMatch(
+      /catch \(Win32Exception error\)\s*when \(error\.NativeErrorCode == 5\)/,
+    );
+    expect(setup).toContain("skipping inaccessible");
+    const packageSmoke = readRepo("scripts/windows-qa/tray-package-smoke.ps1");
+    expect(packageSmoke).toContain(
+      '$ForeignTrayPath = Join-Path $ForeignProcessRoot "YTMTray.exe"',
+    );
+    expect(packageSmoke).toContain(
+      '"The foreign YTMTray process was stopped during setup."',
+    );
+  });
+
   it("uses the connector protocol over native messaging stdio", () => {
     const sources = listFiles("src").map(read).join("\n");
 

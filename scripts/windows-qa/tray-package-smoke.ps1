@@ -257,6 +257,8 @@ $UpdateManifestPath = "apps/windows-tray/.build/update-manifest/YTM-Tray-update.
 $QaTempRoot = (Get-Item -LiteralPath $env:TEMP).FullName
 $ExtractRoot = Join-Path $QaTempRoot "ytm-tray-package-smoke"
 $InstallRoot = Join-Path $QaTempRoot "ytm-tray-package-install"
+$ForeignProcessRoot = Join-Path $QaTempRoot "ytm-tray-package-foreign"
+$ForeignTrayPath = Join-Path $ForeignProcessRoot "YTMTray.exe"
 $InstalledSetupPath = Join-Path $InstallRoot "YTMTray.Setup.exe"
 $UninstallRegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\YTMTray"
 $StartMenuFolder = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\YTM Enhancer"
@@ -338,7 +340,23 @@ if (Test-Path -LiteralPath $ExtractRoot) {
 if (Test-Path -LiteralPath $InstallRoot) {
   Remove-QaTree $InstallRoot
 }
+if (Test-Path -LiteralPath $ForeignProcessRoot) {
+  Remove-QaTree $ForeignProcessRoot
+}
 New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $ForeignProcessRoot | Out-Null
+
+Copy-Item `
+  -LiteralPath (Join-Path $env:SystemRoot "System32\ping.exe") `
+  -Destination $ForeignTrayPath
+$ForeignTrayProcess = Start-Process `
+  -FilePath $ForeignTrayPath `
+  -ArgumentList @("-t", "127.0.0.1") `
+  -WindowStyle Hidden `
+  -PassThru
+Start-Sleep -Milliseconds 500
+$ForeignTrayProcess.Refresh()
+Assert-Equal "YTMTray" $ForeignTrayProcess.ProcessName "foreign process name"
 
 try {
   Expand-Archive -LiteralPath $ArchivePath -DestinationPath $ExtractRoot -Force
@@ -373,6 +391,10 @@ try {
   Assert-LogExcludes `
     -Path $QuietSetupLogPath `
     -Unexpected "launched installed YTM Tray process"
+  $ForeignTrayProcess.Refresh()
+  if ($ForeignTrayProcess.HasExited) {
+    throw "The foreign YTMTray process was stopped during setup."
+  }
   Assert-PathExists (Join-Path $ExtractRoot "release.json")
   Assert-PathExists $UninstallRegistryKey
   Assert-Shortcut `
@@ -435,6 +457,19 @@ try {
   $RestoredTrayBytes = Read-FilePrefixBytes (Join-Path $InstallRoot "YTMTray.exe") 16
   Assert-Equal ($ExistingTrayBytes -join ",") ($RestoredTrayBytes -join ",") "restored tray executable"
 } finally {
+  if ($null -ne $ForeignTrayProcess) {
+    try {
+      $ForeignTrayProcess.Refresh()
+      if (-not $ForeignTrayProcess.HasExited) {
+        Stop-Process -Id $ForeignTrayProcess.Id -Force
+      }
+    } catch {
+      Write-Warning "Could not stop foreign tray sentinel: $($_.Exception.Message)"
+    } finally {
+      $ForeignTrayProcess.Dispose()
+    }
+  }
+
   $CleanupSetupPath = if (Test-Path -LiteralPath $InstalledSetupPath) {
     $InstalledSetupPath
   } else {
@@ -459,5 +494,8 @@ try {
 
   if (Test-Path -LiteralPath $ExtractRoot) {
     Remove-QaTree $ExtractRoot
+  }
+  if (Test-Path -LiteralPath $ForeignProcessRoot) {
+    Remove-QaTree $ForeignProcessRoot
   }
 }

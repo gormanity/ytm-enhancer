@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -1025,6 +1026,21 @@ internal sealed class WindowsTrayInstaller
                 {
                     try
                     {
+                        var executablePath = process.MainModule?.FileName;
+                        if (
+                            !WindowsTrayProcessScope.IsInstalledExecutable(
+                                executablePath,
+                                options.InstallRoot
+                            )
+                        )
+                        {
+                            logger.Write(
+                                $"leaving {processName} process {process.Id} "
+                                    + "outside the target installation"
+                            );
+                            continue;
+                        }
+
                         if (process.HasExited)
                         {
                             continue;
@@ -1046,6 +1062,14 @@ internal sealed class WindowsTrayInstaller
                     catch (InvalidOperationException)
                     {
                         // The process exited between enumeration and inspection.
+                    }
+                    catch (Win32Exception error)
+                        when (error.NativeErrorCode == 5)
+                    {
+                        logger.Write(
+                            $"skipping inaccessible {processName} process "
+                                + $"{process.Id}: {error.Message}"
+                        );
                     }
                 }
             }

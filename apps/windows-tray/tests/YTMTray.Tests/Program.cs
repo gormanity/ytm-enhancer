@@ -39,6 +39,10 @@ var tests = new (string Name, Func<Task> Run)[]
         "Windows runtime identifiers follow the operating system architecture",
         WindowsRuntimeIdentifiersFollowOperatingSystemArchitecture
     ),
+    (
+        "setup process scope isolates the target installation",
+        SetupProcessScopeIsolatesTargetInstallation
+    ),
     ("update service finds newest tray release", UpdateServiceFindsNewestTrayRelease),
     ("update service ignores current tray release", UpdateServiceIgnoresCurrentTrayRelease),
     (
@@ -78,6 +82,61 @@ static Task WindowsRuntimeIdentifiersFollowOperatingSystemArchitecture()
     AssertThrows<PlatformNotSupportedException>(
         () => WindowsRuntimeIdentifier.FromArchitecture(Architecture.X86),
         "x86"
+    );
+
+    return Task.CompletedTask;
+}
+
+static Task SetupProcessScopeIsolatesTargetInstallation()
+{
+    var profileRoot = Path.Combine(
+        Path.GetTempPath(),
+        "ytm-tray-process-scope"
+    );
+    var installRoot = Path.Combine(
+        profileRoot,
+        "gorma",
+        "YTM Enhancer",
+        "Tray"
+    );
+    var otherUserRoot = Path.Combine(
+        profileRoot,
+        "codex",
+        "YTM Enhancer",
+        "Tray"
+    );
+
+    AssertEqual(
+        true,
+        WindowsTrayProcessScope.IsInstalledExecutable(
+            Path.Combine(installRoot, "YTMTray.exe"),
+            installRoot
+        )
+    );
+    AssertEqual(
+        true,
+        WindowsTrayProcessScope.IsInstalledExecutable(
+            Path.Combine(installRoot, "YTMTray.NativeHost.exe"),
+            installRoot
+        )
+    );
+    AssertEqual(
+        false,
+        WindowsTrayProcessScope.IsInstalledExecutable(
+            Path.Combine(otherUserRoot, "YTMTray.exe"),
+            installRoot
+        )
+    );
+    AssertEqual(
+        false,
+        WindowsTrayProcessScope.IsInstalledExecutable(
+            Path.Combine($"{installRoot}-other", "YTMTray.exe"),
+            installRoot
+        )
+    );
+    AssertEqual(
+        false,
+        WindowsTrayProcessScope.IsInstalledExecutable(null, installRoot)
     );
 
     return Task.CompletedTask;
