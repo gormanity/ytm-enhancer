@@ -1072,7 +1072,7 @@ describe("Windows tray connector scaffold", () => {
 
     expect(metadata.appName).toBe("YTM Tray");
     expect(metadata.nativeHostName).toBe("com.gormanity.ytm_enhancer.tray");
-    expect(metadata.version).toBe("0.1.11");
+    expect(metadata.version).toBe("0.1.12");
     expect(metadata.githubReleaseTagPrefix).toBe("windows-tray-v");
     expect(metadata.githubReleaseListUrl).toBe(
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
@@ -1338,9 +1338,9 @@ describe("Windows tray connector scaffold", () => {
     const outputRoot = mkdtempSync(
       join(tmpdir(), "ytm-windows-tray-manifest-test-"),
     );
-    const expectedVersion = process.env.YTM_WINDOWS_TRAY_VERSION ?? "0.1.11";
+    const expectedVersion = process.env.YTM_WINDOWS_TRAY_VERSION ?? "0.1.12";
     const expectedBuildNumber = Number(
-      process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER ?? "1011",
+      process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER ?? "1012",
     );
     const x64Package = join(
       outputRoot,
@@ -1436,10 +1436,10 @@ describe("Windows tray connector scaffold", () => {
     const coreProject = read("src/YTMTray.Core/YTMTray.Core.csproj");
 
     expect(protocol).toContain("AssemblyInformationalVersionAttribute");
-    expect(protocol).not.toContain('ConnectorVersion = "0.1.11"');
-    expect(coreProject).toContain("<Version>0.1.11</Version>");
+    expect(protocol).not.toContain('ConnectorVersion = "0.1.12"');
+    expect(coreProject).toContain("<Version>0.1.12</Version>");
     expect(coreProject).toContain(
-      "<InformationalVersion>0.1.11</InformationalVersion>",
+      "<InformationalVersion>0.1.12</InformationalVersion>",
     );
   });
 

@@ -1809,9 +1809,18 @@ describe("menu bar connector app scaffold", () => {
     const menuBarMetadata = readJson<{ version: string }>(
       "release/metadata.json",
     );
+    const windowsTrayMetadata = JSON.parse(
+      readFileSync(
+        resolve(process.cwd(), "apps/windows-tray/release/metadata.json"),
+        "utf-8",
+      ),
+    ) as { version: string };
     const menuBarVersion =
       process.env.YTM_MENU_BAR_VERSION ?? menuBarMetadata.version;
     const menuBarTag = `menu-bar-v${menuBarVersion}`;
+    const windowsTrayVersion =
+      process.env.YTM_WINDOWS_TRAY_VERSION ?? windowsTrayMetadata.version;
+    const windowsTrayTag = `windows-tray-v${windowsTrayVersion}`;
     const outputRoot = mkdtempSync(join(tmpdir(), "ytm-release-index-"));
     const archivePath = resolve(
       outputRoot,
@@ -1951,8 +1960,10 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.menuBar.channels.homebrew.updateCommand).toBe(
       "brew update && brew upgrade --cask ytm-menu-bar",
     );
-    expect(releaseIndex.products.windowsTray.latestVersion).toBe("0.1.11");
-    expect(releaseIndex.products.windowsTray.tag).toBe("windows-tray-v0.1.11");
+    expect(releaseIndex.products.windowsTray.latestVersion).toBe(
+      windowsTrayVersion,
+    );
+    expect(releaseIndex.products.windowsTray.tag).toBe(windowsTrayTag);
     expect(releaseIndex.products.windowsTray.installPage).toBe(
       "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
     );
@@ -1960,12 +1971,12 @@ describe("menu bar connector app scaffold", () => {
       "Windows 11",
     );
     expect(releaseIndex.products.windowsTray.channels.direct.asset).toBe(
-      "YTM-Tray-0.1.11-Setup.exe",
+      `YTM-Tray-${windowsTrayVersion}-Setup.exe`,
     );
     expect(
       releaseIndex.products.windowsTray.channels.direct.packageUrl,
     ).toContain(
-      "/releases/download/windows-tray-v0.1.11/YTM-Tray-0.1.11-Setup.exe",
+      `/releases/download/${windowsTrayTag}/YTM-Tray-${windowsTrayVersion}-Setup.exe`,
     );
     expect(releaseIndex.products.windowsTray.channels.direct.runtimes).toEqual([
       "win-x64",
