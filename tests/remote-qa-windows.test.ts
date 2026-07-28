@@ -21,6 +21,15 @@ function read(path: string): string {
 }
 
 function runWindowsPowerShell(script: string) {
+  const environment = { ...process.env };
+  if (process.platform === "win32") {
+    for (const key of Object.keys(environment)) {
+      if (key.toLowerCase() === "psmodulepath") {
+        delete environment[key];
+      }
+    }
+  }
+
   return spawnSync(
     "powershell.exe",
     [
@@ -28,7 +37,7 @@ function runWindowsPowerShell(script: string) {
       "-EncodedCommand",
       Buffer.from(script, "utf16le").toString("base64"),
     ],
-    { encoding: "utf8" },
+    { encoding: "utf8", env: environment },
   );
 }
 
@@ -76,6 +85,45 @@ try {
     const result = runWindowsPowerShell(fixture);
 
     expect(result.status, result.stderr).toBe(0);
+  });
+
+  it("normalizes native Windows PowerShell module paths for Node fixtures", () => {
+    if (process.platform !== "win32") {
+      return;
+    }
+
+    const modulePathEntries = Object.entries(process.env).filter(
+      ([key]) => key.toLowerCase() === "psmodulepath",
+    );
+    for (const [key] of modulePathEntries) {
+      delete process.env[key];
+    }
+    process.env.PSModulePath = "Z:\\ytme-missing-modules";
+
+    try {
+      const result = runWindowsPowerShell(`
+$ErrorActionPreference = "Stop"
+$modulePaths = @($env:PSModulePath -split ";")
+$nativeModulePath = Join-Path $PSHOME "Modules"
+if ($modulePaths -contains "Z:\\ytme-missing-modules") {
+  throw "The inherited module path reached Windows PowerShell."
+}
+if ($modulePaths -notcontains $nativeModulePath) {
+  throw "Windows PowerShell did not reconstruct its native module path."
+}
+`);
+
+      expect(result.status, result.stderr).toBe(0);
+    } finally {
+      for (const key of Object.keys(process.env)) {
+        if (key.toLowerCase() === "psmodulepath") {
+          delete process.env[key];
+        }
+      }
+      for (const [key, value] of modulePathEntries) {
+        process.env[key] = value;
+      }
+    }
   });
 
   it("uses generic remote QA account labels", () => {
