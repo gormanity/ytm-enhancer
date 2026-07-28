@@ -19,6 +19,9 @@ describe("GitHub Actions workflow linting", () => {
       /^actionlint = "([^"]+)"$/m,
     );
     const actionlintVersion = actionlintVersionMatch?.[1] ?? "";
+    const jjVersionMatch = miseConfig.match(/^jj = "([^"]+)"$/m);
+    const jjVersion = jjVersionMatch?.[1] ?? "";
+    const checkJob = ciWorkflow.slice(ciWorkflow.indexOf("  check:"));
 
     expect(ciWorkflow).toContain("workflow-lint:");
     expect(ciWorkflow).toContain('mkdir -p "$HOME/.local/bin"');
@@ -29,6 +32,12 @@ describe("GitHub Actions workflow linting", () => {
     expect(ciWorkflow).toContain("Lint GitHub Actions workflows");
     expect(ciWorkflow).toContain("pnpm run workflow:check");
     expect(packageJson.scripts["workflow:check"]).toBe("actionlint");
+    expect(jjVersion).toBe("0.43.0");
+    expect(checkJob).toContain("jdx/mise-action@v4");
+    expect(checkJob).toContain("install_args: jj");
+    expect(checkJob.indexOf("jdx/mise-action@v4")).toBeLessThan(
+      checkJob.indexOf("pnpm run test"),
+    );
   });
 
   it("runs hosted browser E2E without paid runners or default artifacts", () => {

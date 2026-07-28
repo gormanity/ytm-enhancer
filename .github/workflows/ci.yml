@@ -51,6 +51,10 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: jj
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
