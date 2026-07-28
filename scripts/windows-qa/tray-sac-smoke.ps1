@@ -914,9 +914,7 @@ Write-SmokeStep "Smart App Control is in enforcement mode."
 Write-SmokeStep "Waiting for the unlocked Windows QA desktop agent."
 $UiAgent = Wait-WindowsQaUiAgentReady `
   -TimeoutSeconds $UiReadyTimeoutSeconds
-$CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-Assert-Equal $CurrentUser $UiAgent.userName "desktop agent user"
-Write-SmokeStep "Desktop agent is ready in session $($UiAgent.sessionId)."
+Write-SmokeStep "Desktop agent is ready."
 
 Assert-CleanInstallState
 
@@ -1016,7 +1014,7 @@ try {
   if ($SmokePassed) {
     Remove-Item -LiteralPath $WorkRoot -Recurse -Force
   } else {
-    Write-Warning "Retained Smart App Control smoke artifacts at $WorkRoot"
+    Write-Warning "Retained Smart App Control smoke artifacts."
   }
 }
 

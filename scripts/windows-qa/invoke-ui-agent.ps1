@@ -45,15 +45,14 @@ if ($Action -eq "Launch") {
 $Client = [System.IO.Pipes.NamedPipeClientStream]::new(
   ".",
   $PipeName,
-  [System.IO.Pipes.PipeDirection]::InOut,
-  [System.IO.Pipes.PipeOptions]::None
+  [System.IO.Pipes.PipeDirection]::InOut
 )
 
 try {
   try {
     $Client.Connect($TimeoutSeconds * 1000)
   } catch {
-    throw "Cannot connect to Windows QA UI agent on pipe '$PipeName'. Start scripts/windows-qa/start-ui-agent.ps1 from the logged-in Windows desktop session first. $($_.Exception.Message)"
+    throw "Cannot connect to Windows QA UI agent. Start scripts/windows-qa/start-ui-agent.ps1 from the logged-in Windows desktop session first."
   }
 
   $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
@@ -80,7 +79,7 @@ try {
 
   $Response = $ResponseJson | ConvertFrom-Json
   if (-not $Response.ok) {
-    throw "Windows QA UI agent failed: $($Response.error)`n$($Response.scriptStack)"
+    throw "Windows QA UI agent failed: $($Response.error) Type: $($Response.errorType)"
   }
 
   $Response | ConvertTo-Json -Depth 8

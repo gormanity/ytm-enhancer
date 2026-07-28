@@ -178,7 +178,7 @@ function Save-ReleaseAsset {
   )
 
   $AssetUrl = Get-ReleaseAssetUrl -Version $Version -AssetName $AssetName
-  Write-Host "Downloading $AssetUrl"
+  Write-Host "Downloading the published release asset."
   Invoke-WebRequest -UseBasicParsing -Uri $AssetUrl -OutFile $DestinationPath
 }
 
@@ -926,7 +926,7 @@ try {
     -TimeoutSeconds $UiReadyTimeoutSeconds `
     -ProbeTimeoutSeconds 10
   $ActiveSessionId = $AgentProbe.sessionId
-  Write-Host "Using Windows QA UI agent desktop session $ActiveSessionId."
+  Write-Host "Using the Windows QA UI agent."
 
   Invoke-InstalledUninstaller
   Remove-QaTree -Path $InstallRoot
@@ -944,7 +944,7 @@ try {
   Write-Host "Installing YTM Tray $BaselineVersion from published release."
   Install-ReleasePackage -ExtractRoot $BaselineExtractRoot -Version $BaselineVersion
 
-  Write-Host "Launching YTM Tray $BaselineVersion in desktop session $ActiveSessionId."
+  Write-Host "Launching YTM Tray $BaselineVersion in the unlocked desktop session."
   $Launch = Start-ReleasedTrayApp
   Assert-Equal $ActiveSessionId $Launch.sessionId "tray process session"
 
@@ -987,6 +987,6 @@ try {
   if (-not $KeepArtifacts -and $SmokePassed) {
     Remove-QaTree -Path $WorkRoot
   } elseif (Test-Path -LiteralPath $WorkRoot) {
-    Write-Host "Retained Windows tray live-update smoke artifacts: $WorkRoot"
+    Write-Host "Retained Windows tray live-update smoke artifacts."
   }
 }

@@ -79,4 +79,4 @@ if (-not (Test-Path -LiteralPath $ResolvedOutputPath)) {
   throw "Expected Windows tray screenshot was not created: $ResolvedOutputPath"
 }
 
-Write-Output "Windows tray release screenshot: $ResolvedOutputPath"
+Write-Output "Windows tray release screenshot captured."

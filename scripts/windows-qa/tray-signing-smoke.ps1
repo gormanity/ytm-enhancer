@@ -205,7 +205,7 @@ try {
     $ArchivePath =
       Join-Path $PackageRoot "YTM-Tray-$($Metadata.version)-$RuntimeIdentifier.zip"
     $RuntimeExtractRoot = Join-Path $ExtractRoot $RuntimeIdentifier
-    Write-SmokeStep "Extracting $ArchivePath."
+    Write-SmokeStep "Extracting the signed $RuntimeIdentifier release package."
     Expand-Archive `
       -LiteralPath $ArchivePath `
       -DestinationPath $RuntimeExtractRoot `

@@ -1,5 +1,14 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
 function read(path: string): string {
@@ -7,10 +16,17 @@ function read(path: string): string {
 }
 
 describe("macOS remote QA scaffold", () => {
-  it("documents the bowfin macOS smoke path and scripts", () => {
+  it("documents the remote macOS smoke path and scripts", () => {
     const docs = read("docs/remote-qa.md");
+    const project = read("PROJECT.md");
 
-    expect(docs).toContain("bowfin");
+    expect(docs).toContain("## Remote macOS QA Host");
+    expect(docs).toContain(
+      "Run the same smoke on the configured remote macOS host through Crabbox",
+    );
+    expect(project).toContain(
+      "Windows validation through a remote macOS-hosted VM",
+    );
     expect(docs).toContain("scripts/macos-qa/menu-bar-button-smoke.sh");
     expect(docs).toContain("scripts/remote/macos-qa/menu-bar-package-smoke.sh");
     expect(docs).toContain("scripts/remote/macos-qa/menu-bar-button-smoke.sh");
@@ -26,6 +42,124 @@ describe("macOS remote QA scaffold", () => {
       "The menu bar connector smoke supports Chromium, Edge, and Firefox",
     );
     expect(docs).toContain("REMOTE_QA_LINUX_CLI_CONNECTOR_PROJECTS");
+  });
+
+  it("does not print configured SSH credential paths", () => {
+    const runner = read("scripts/remote/macos-qa/crabbox-run.sh");
+
+    expect(runner).toContain(
+      'echo "Remote QA SSH key not found or not readable." >&2',
+    );
+    expect(runner).not.toMatch(
+      /echo\s+"[^"\n]*\$(?:host|user|work_root|ssh_key)\b/,
+    );
+  });
+
+  it("redacts configured target values from Crabbox output", () => {
+    if (process.platform === "win32") {
+      return;
+    }
+
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "ytme-crabbox-redaction-"));
+    const fakeBin = join(fixtureRoot, "bin");
+    const keyPath = join(fixtureRoot, "private-qa-key");
+    const host = "private-host.fixture.invalid";
+    const user = "private-fixture-user";
+    const workRoot = "/private/fixture/work-root";
+    const hostMixedCase = "PrIvAtE-HoSt.FiXtUrE.InVaLiD";
+    const userMixedCase = "PrIvAtE-FiXtUrE-UsEr";
+    const workRootMixedCase = "/PrIvAtE/FiXtUrE/WoRk-RoOt";
+    const windowsHost = "private-windows-host.fixture.invalid";
+    const windowsUser = "private-windows-fixture-user";
+    const windowsWorkRoot = "C:\\Private\\Fixture\\WorkRoot";
+    const windowsKeyPath = join(fixtureRoot, "private-windows-qa-key");
+    const keyPathMixedCase = keyPath.toUpperCase();
+    try {
+      mkdirSync(fakeBin);
+      writeFileSync(keyPath, "fixture key material never leaves this test");
+      writeFileSync(
+        windowsKeyPath,
+        "fixture Windows key material never leaves this test",
+      );
+      const fakeCrabbox = join(fakeBin, "crabbox");
+      writeFileSync(
+        fakeCrabbox,
+        [
+          "#!/usr/bin/env sh",
+          'printf "host=%s user=%s root=%s\\n" \\',
+          '  "$REMOTE_QA_HOST" "$REMOTE_QA_USER" "$REMOTE_QA_WORK_ROOT"',
+          'printf "key=%s\\n" "$CRABBOX_SSH_KEY" >&2',
+          'printf "mixed-host=%s mixed-user=%s mixed-root=%s\\n" \\',
+          '  "$YTME_PRIVATE_HOST_MIXED_CASE" \\',
+          '  "$YTME_PRIVATE_USER_MIXED_CASE" \\',
+          '  "$YTME_PRIVATE_WORK_ROOT_MIXED_CASE"',
+          'printf "mixed-key=%s\\n" "$YTME_PRIVATE_KEY_MIXED_CASE" >&2',
+          'printf "windows-host=%s windows-user=%s windows-root=%s\\n" \\',
+          '  "$REMOTE_QA_WINDOWS_HOST" "$REMOTE_QA_WINDOWS_USER" \\',
+          '  "$REMOTE_QA_WINDOWS_WORK_ROOT"',
+          'printf "windows-key=%s\\n" "$REMOTE_QA_WINDOWS_SSH_KEY" >&2',
+          "exit 23",
+          "",
+        ].join("\n"),
+      );
+      chmodSync(fakeCrabbox, 0o755);
+
+      const result = spawnSync(
+        "sh",
+        [resolve(process.cwd(), "scripts/remote/macos-qa/crabbox-run.sh")],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+            REMOTE_QA_CONFIG: "/dev/null",
+            REMOTE_QA_HOST: host,
+            REMOTE_QA_USER: user,
+            REMOTE_QA_PORT: "22",
+            REMOTE_QA_WORK_ROOT: workRoot,
+            REMOTE_QA_SSH_KEY: keyPath,
+            YTME_PRIVATE_HOST_MIXED_CASE: hostMixedCase,
+            YTME_PRIVATE_USER_MIXED_CASE: userMixedCase,
+            YTME_PRIVATE_WORK_ROOT_MIXED_CASE: workRootMixedCase,
+            YTME_PRIVATE_KEY_MIXED_CASE: keyPathMixedCase,
+            REMOTE_QA_WINDOWS_HOST: windowsHost,
+            REMOTE_QA_WINDOWS_USER: windowsUser,
+            REMOTE_QA_WINDOWS_WORK_ROOT: windowsWorkRoot,
+            REMOTE_QA_WINDOWS_SSH_KEY: windowsKeyPath,
+          },
+        },
+      );
+
+      expect(result.status).toBe(23);
+      const output = `${result.stdout}${result.stderr}`;
+      for (const privateValue of [
+        host,
+        user,
+        workRoot,
+        keyPath,
+        windowsHost,
+        windowsUser,
+        windowsWorkRoot,
+        windowsKeyPath,
+        hostMixedCase,
+        userMixedCase,
+        workRootMixedCase,
+        keyPathMixedCase,
+      ]) {
+        expect(output).not.toContain(privateValue);
+      }
+      expect(output).toContain("[remote-host]");
+      expect(output).toContain("[remote-user]");
+      expect(output).toContain("[remote-work-root]");
+      expect(output).toContain("[remote-ssh-key]");
+      expect(output).toContain("[windows-remote-host]");
+      expect(output).toContain("[windows-remote-user]");
+      expect(output).toContain("[windows-remote-work-root]");
+      expect(output).toContain("[windows-remote-ssh-key]");
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 
   it("automates macOS menu bar release package smoke", () => {

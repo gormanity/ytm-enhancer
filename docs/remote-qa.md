@@ -29,9 +29,9 @@ Hosted CI covers deterministic checks that do not need a logged-in desktop:
 - `Menu Bar Update Path Tests` runs package and update-path checks on
   `macos-latest`.
 
-Bowfin, UTM, macOS Accessibility automation, and Windows UI Automation remain
-local-development QA paths. Keep menu bar button smoke, Windows tray visual
-smoke, and Windows tray button smoke out of hosted PR CI.
+Dedicated remote macOS hosts, UTM, macOS Accessibility automation, and Windows
+UI Automation remain local-development QA paths. Keep menu bar button smoke,
+Windows tray visual smoke, and Windows tray button smoke out of hosted PR CI.
 
 ## Local Configuration
 
@@ -66,10 +66,10 @@ ssh <remote-qa-alias> '
 This proves the persistent remote checkout can refresh from `main`, install with
 the pinned package manager, and build the development extension targets.
 
-## macOS On Bowfin
+## Remote macOS QA Host
 
-Bowfin is the default remote macOS QA host for this project. Keep its concrete
-hostname, username, SSH key path, and work root in `.remote-qa.env` or shell
+Use a dedicated remote macOS QA host for this project. Keep its concrete
+hostname, username, SSH key path, and work root in `.remote-qa.env` or the shell
 environment only; do not commit them.
 
 ## Crabbox Smoke
@@ -87,7 +87,9 @@ brew install openclaw/tap/crabbox
 
 Crabbox static SSH does not automatically inherit the `IdentityFile` from an
 OpenSSH host alias. Provide the private key through `.remote-qa.env`,
-`REMOTE_QA_SSH_KEY`, or `CRABBOX_SSH_KEY`.
+`REMOTE_QA_SSH_KEY`, or `CRABBOX_SSH_KEY`. The wrapper captures command output
+privately and replaces configured macOS and nested Windows host, user,
+work-root, and key-path values before replaying it.
 
 Run a minimal smoke:
 
@@ -136,15 +138,15 @@ Accessibility path is unavailable, the test still validates the browser native
 messaging connection and then reports the menu-item click portion as skipped
 with the System Events error.
 
-Run the same smoke on bowfin through Crabbox:
+Run the same smoke on the configured remote macOS host through Crabbox:
 
 ```sh
 scripts/remote/macos-qa/menu-bar-button-smoke.sh
 ```
 
-The remote wrapper only syncs the checkout to bowfin and runs the local smoke
-script there. Keep machine-specific endpoint details in ignored environment
-configuration.
+The remote wrapper only syncs the checkout to the configured remote macOS host
+and runs the local smoke script there. Keep machine-specific endpoint details in
+ignored environment configuration.
 
 Require the actual menu bar button clicks to run:
 
@@ -430,8 +432,8 @@ Disk: 80+ GB
 ```
 
 For a physical Windows PC, create a dedicated non-admin QA account such as
-`codex`, log into that desktop account at least once so its user profile exists,
-and keep an administrator account separate for machine setup.
+`<windows-qa-user>`, log into that desktop account at least once so its user
+profile exists, and keep an administrator account separate for machine setup.
 
 Enable OpenSSH on the Windows target:
 
@@ -440,7 +442,8 @@ Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
 Start-Service sshd
 Set-Service -Name sshd -StartupType Automatic
 New-NetFirewallRule -Name sshd -DisplayName "OpenSSH Server" `
-  -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+  -Enabled True -Direction Inbound -Protocol TCP -Action Allow `
+  -LocalPort 22 -Profile Private -RemoteAddress LocalSubnet
 ```
 
 For a non-admin QA account, add the public key to the user's own profile and
@@ -474,6 +477,152 @@ the local machine:
 For an administrator QA account, Windows OpenSSH reads keys from
 `$env:ProgramData\ssh\administrators_authorized_keys`; prefer a non-admin QA
 account for repeatable validation unless a smoke explicitly needs elevation.
+
+### Harden Windows OpenSSH
+
+Treat SSH hardening as a local-console operation, not as an ordinary remote QA
+command. Run each manual mutating phase from an elevated, 64-bit PowerShell
+console under a separate local recovery administrator. Keep that console open
+during hardening, and do not add the recovery account to the SSH allow group.
+
+The hardening helper uses five explicit phases:
+
+1. `Audit` reports only generalized configuration and firewall status.
+2. `Prepare` creates a protected backup, installs a comment-free copy of the
+   standard-user public key inside the protected hardening state directory,
+   creates a dedicated SSH allow group, validates a candidate `sshd_config`, and
+   adds a restricted firewall rule alongside existing rules. It arms a timed
+   `SYSTEM` rollback before making those live preparation changes.
+3. `Apply` resets the timed rollback window, temporarily disables the QA
+   account, checks again for interactive logon sessions, removes the account
+   from Administrators, re-enables it, and then activates the candidate.
+4. `Verify` checks effective OpenSSH policy, non-admin group membership, and
+   firewall scope. It finalizes the firewall only after the first fresh key-only
+   connection, then commits only after a second fresh connection through every
+   supported route.
+5. `Rollback` restores the previous configuration, firewall enablement,
+   allow-group state, prior administrator membership, and shared administrator
+   key entry when necessary.
+
+Before preparing, review enabled inbound allow rules whose port ranges cover 22.
+The helper automatically disables only generic exact TCP/22 rules or rules
+scoped to `sshd`. It refuses generic `Any` or ranged-port rules with no program,
+service, or package scope, and never disables unrelated application rules.
+
+Run `Audit` first from the local elevated recovery console:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/harden-openssh.ps1 -Mode Audit
+```
+
+Keep the private key on the SSH client. Copy only its public `.pub` file to a
+temporary local path on Windows, then prepare a transaction with placeholders
+replaced locally:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/harden-openssh.ps1 `
+  -Mode Prepare `
+  -QaUser "<windows-qa-user>" `
+  -PublicKeyPath "C:\path\to\qa-key.pub" `
+  -RemoteAddress LocalSubnet `
+  -ConfirmLocalRecovery
+```
+
+Use an exact management-host address or private CIDR instead of `LocalSubnet`
+when that source is stable. Never use `Any`. `Prepare` returns a nonsensitive
+state identifier. The state, authorized-key file, and rollback copy are stored
+under `ProgramData` with access limited to `SYSTEM` and Administrators. The
+helper refuses a preexisting state tree unless its marker, ownership, access
+rules, and complete contents prove that the helper created and protected it. The
+rollback timer starts during `Prepare`; if it expires before `Apply`, it
+restores the live group and restricted firewall changes. The protected
+transaction record remains for recovery and audit.
+
+Before `Prepare`, fully sign out the QA account and confirm that it has no
+interactive logon session or remaining processes. Keep the QA account signed out
+through `Apply`. Do not manually remove it from the built-in Administrators
+group. Keep the recovery administrator signed in. `Apply` first resets the
+rollback window, temporarily disables the QA account to close the relogin race,
+checks again for an interactive session, removes the account from
+Administrators, re-enables it, and activates the candidate:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/harden-openssh.ps1 `
+  -Mode Apply `
+  -StateId "<state-id>" `
+  -ConfirmLocalRecovery
+```
+
+The candidate requires public-key authentication, uses the exact absolute
+`AuthorizedKeysFile` inside protected transaction state, denies password and
+keyboard-interactive authentication, allows only the dedicated QA SSH group,
+denies the built-in Administrators group, and disables SSH forwarding. It does
+not create or modify the QA profile's `.ssh` directory. The re-armed one-shot
+rollback task can run on battery power, retries after a transient launch
+failure, has a bounded execution time, and restores the prior state 15 minutes
+after `Apply` unless verification commits the change.
+
+From a new client terminal, open a fresh key-only SSH connection, run the
+no-sync probe and a harmless remote PowerShell command, and confirm that the
+session is non-admin. Do not finalize the firewall until that connection
+succeeds. Then return to the local recovery console and attest to that result
+while finalizing the firewall:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/harden-openssh.ps1 `
+  -Mode Verify `
+  -StateId "<state-id>" `
+  -FinalizeFirewall `
+  -ConfirmInitialKeyConnection `
+  -ConfirmLocalRecovery
+```
+
+Open another fresh key-only connection through every supported path. Then sign
+into the QA desktop account again so it receives a standard-user token, restart
+the UI agent, and run its readiness probe. Commit only after all of those checks
+pass:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/harden-openssh.ps1 `
+  -Mode Verify `
+  -StateId "<state-id>" `
+  -RequirePreviousRulesDisabled `
+  -Commit `
+  -ConfirmFinalKeyConnection `
+  -ConfirmLocalRecovery
+```
+
+The connection confirmation switches are operator attestations. They record that
+the recovery administrator performed the required fresh connection tests; the
+helper does not make those client connections on the operator's behalf. During
+commit, the helper transactionally removes the QA key's algorithm and key blob
+from `administrators_authorized_keys` while preserving unrelated keys and the
+file's access control list. It cancels rollback only after all commit checks and
+cleanup succeed. Committing does not delete the protected hardening state
+directory or its authorized-key file because the active `sshd_config` continues
+to reference that exact protected path.
+
+If any check fails, let the timed task run or roll back immediately from the
+local recovery console:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/harden-openssh.ps1 `
+  -Mode Rollback `
+  -StateId "<state-id>" `
+  -ConfirmLocalRecovery
+```
+
+Manual rollback requires the local recovery confirmation. The timed rollback is
+the sole exception: it runs automatically as `SYSTEM` from the protected state
+copy, so it does not use an operator confirmation switch. After a committed
+cutover, reboot once and repeat the SSH, firewall, and UI-agent probes before
+treating hardening as complete.
 
 Install the Windows toolchain on the target:
 
@@ -536,8 +685,49 @@ When `REMOTE_QA_WINDOWS_TRANSPORT=direct`, the key path is read on the local
 machine. When `REMOTE_QA_WINDOWS_TRANSPORT=macos`, the key path is read on the
 remote macOS intermediary because the second SSH hop starts there.
 
-`REMOTE_QA_WINDOWS_WORK_ROOT` is deleted and recreated on every run. Point it at
-a disposable repository checkout directory, not a broad parent directory.
+On an ordinary run, `REMOTE_QA_WINDOWS_WORK_ROOT` is deleted and recreated.
+Point it at a disposable repository checkout directory, not a broad parent
+directory. The runner refuses system, profile, shallow, reparse-point, and
+unmarked existing directories.
+
+To migrate an existing disposable QA checkout once, review the configured path
+locally, then adopt it without deleting its contents:
+
+```sh
+scripts/remote/windows-qa/run.sh \
+  --preserve-apps \
+  --adopt-work-root \
+  --shell 'Write-Output "Windows QA work root adopted."'
+```
+
+After that one-time command, omit `--adopt-work-root`. Only files tracked by the
+current Jujutsu working-copy revision are eligible for synchronization. Before
+archiving, a fail-closed manifest validator excludes private instruction files
+and rejects environment files, package-manager credentials, SSH material,
+private-key and certificate formats, VCS or local-agent metadata,
+Windows-normalized path aliases, noncanonical Unicode paths, case-equivalent
+duplicates, `node_modules`, non-regular files, and multiply linked files. An
+archive gate independently requires every tar member to be a regular file.
+Ignored files, including `.remote-qa.env` and build artifacts, are never
+archived.
+
+The direct transport uploads a random helper, archive, and command file through
+SFTP into a protected directory in the QA user's profile. A short PowerShell
+bootstrap verifies every file's type, length, and SHA-256 digest before use, and
+normal completion or a handled failure deletes the files. Signal handling also
+attempts remote cleanup. A later run prunes strictly named transfer files and
+source staging directories once they are more than one hour old, covering an
+uncatchable client or remote-process termination. The archive is extracted into
+a fresh sibling staging directory, where its file set must exactly match the
+validated manifest before the work root changes.
+
+Preserve-app syncs retain app and build files but remove stale environment
+files, agent instructions, VCS metadata, SSH material, package-manager
+credentials, private keys, and certificates from the QA work root. Cleanup never
+follows a reparse point. Existing unrelated pnpm junctions may remain, but the
+runner refuses an incoming destination whose path crosses a reparse point. It
+preflights the entire merge before changing the work root. A full sync unlinks
+reparse points without following them before replacing the disposable work root.
 
 Windows UI smoke tests need a small QA agent running inside the logged-in QA
 user's desktop session. Install or update the stable per-user agent copy from
@@ -586,7 +776,8 @@ UI smoke is the exception: Windows does not expose the notification area or
 popup UI from the lock screen. The UI smoke scripts wait up to
 `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS` seconds for the QA desktop to unlock
 before launching the tray app, then fail with a clear `LogonUI` message if the
-desktop is still locked.
+desktop is still locked. Their status output uses generic artifact and session
+labels instead of printing machine-specific paths, process IDs, or session IDs.
 
 Treat the unlocked desktop as an explicit contract for UI smoke. The SSH user,
 the logged-in desktop user, and the UI agent user should be the same non-admin
@@ -600,7 +791,8 @@ Probe the running agent through the configured transport:
 
 ```sh
 agent='$env:LOCALAPPDATA\YTM Enhancer\WindowsQaAgent'
-probe="& '$agent\invoke-ui-agent.ps1' -Action Probe -LaunchProbe"
+probe="& '$agent\invoke-ui-agent.ps1' -Action Probe -LaunchProbe | Out-Null; \
+  Write-Output 'Windows QA UI agent is ready.'"
 scripts/remote/windows-qa/run.sh --shell "$probe"
 ```
 
@@ -629,36 +821,22 @@ before authentication with `Connection timed out during banner exchange` or
 `kex_exchange_identification`, the wrapper has reached the Windows target and
 the failure is inside Windows. From the Windows desktop, double-click
 `scripts/windows-qa/repair-openssh.cmd` to request administrator permission,
-repair OpenSSH Server, restore the firewall rule, fix
-`administrators_authorized_keys` ACLs when that file exists, and write a log to
-the Desktop.
+repair the OpenSSH capability, host keys, and service, and write a log to the
+Desktop. It does not change firewall or authorized-key policy by default.
 
-If a manual repair is easier, run this in an elevated Windows PowerShell
-session:
+Firewall recovery is an explicit operation. A missing rule is recreated for the
+Private profile and local subnet. An existing rule is enabled without widening a
+narrower profile or remote-address scope. Universal, blank, or broad dynamic
+address scopes are replaced with `LocalSubnet` before the rule is enabled:
 
 ```powershell
-Set-Service sshd -StartupType Automatic
-Start-Service sshd
-
-$ruleName = "OpenSSH-Server-In-TCP"
-if (Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue) {
-  Enable-NetFirewallRule -Name $ruleName
-  Set-NetFirewallRule -Name $ruleName -Profile Any -Action Allow
-} else {
-  New-NetFirewallRule `
-    -Name $ruleName `
-    -DisplayName "OpenSSH Server (sshd)" `
-    -Enabled True `
-    -Direction Inbound `
-    -Protocol TCP `
-    -Action Allow `
-    -LocalPort 22 `
-    -Profile Any
-}
-
-Get-Service sshd
-Get-NetTCPConnection -LocalPort 22 -State Listen
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  scripts/windows-qa/repair-openssh.ps1 -RepairFirewall
 ```
+
+Use `-RepairAdministratorKeys` only when intentionally recovering administrator
+SSH access. Normal Windows QA uses the standard user's own
+`.ssh\authorized_keys` and the hardened allow group.
 
 Run the Windows build/unit check:
 

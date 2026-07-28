@@ -34,6 +34,47 @@ function ConvertTo-StringArray {
   return @([string] $Value)
 }
 
+function ConvertTo-WindowsCommandLineArgument {
+  param(
+    [Parameter(Mandatory = $true)]
+    [AllowEmptyString()]
+    [string] $Value
+  )
+
+  if ($Value.Length -gt 0 -and $Value -notmatch '[\s"]') {
+    return $Value
+  }
+
+  $Builder = [Text.StringBuilder]::new()
+  [void] $Builder.Append([char] 34)
+  $BackslashCount = 0
+  foreach ($Character in $Value.ToCharArray()) {
+    if ([int] $Character -eq 92) {
+      $BackslashCount += 1
+      continue
+    }
+    if ([int] $Character -eq 34) {
+      if ($BackslashCount -gt 0) {
+        [void] $Builder.Append([char] 92, ($BackslashCount * 2))
+      }
+      [void] $Builder.Append([char] 92)
+      [void] $Builder.Append([char] 34)
+      $BackslashCount = 0
+      continue
+    }
+    if ($BackslashCount -gt 0) {
+      [void] $Builder.Append([char] 92, $BackslashCount)
+      $BackslashCount = 0
+    }
+    [void] $Builder.Append($Character)
+  }
+  if ($BackslashCount -gt 0) {
+    [void] $Builder.Append([char] 92, ($BackslashCount * 2))
+  }
+  [void] $Builder.Append([char] 34)
+  return $Builder.ToString()
+}
+
 function Invoke-AgentProbe {
   param([Parameter(Mandatory = $true)] $Request)
 
@@ -46,17 +87,24 @@ function Invoke-AgentProbe {
       -Value "Start-Sleep -Seconds 5" `
       -Encoding UTF8
 
+    $ProbeArguments = @(
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-WindowStyle",
+      "Hidden",
+      "-File",
+      $ProbeScriptPath
+    )
+    $ProbeCommandLine = (
+      $ProbeArguments |
+        ForEach-Object {
+          ConvertTo-WindowsCommandLineArgument ([string] $_)
+        }
+    ) -join " "
     $ProbeProcess = Start-Process `
       -FilePath "powershell.exe" `
-      -ArgumentList @(
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-WindowStyle",
-        "Hidden",
-        "-File",
-        $ProbeScriptPath
-      ) `
+      -ArgumentList $ProbeCommandLine `
       -WindowStyle Hidden `
       -PassThru
 
@@ -91,7 +139,6 @@ function Invoke-AgentProbe {
   return @{
     ok = $true
     action = "probe"
-    userName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
     processId = $PID
     sessionId = $AgentSessionId
     explorerSessionIds = $ExplorerSessions
@@ -100,7 +147,6 @@ function Invoke-AgentProbe {
     lockAppSessionIds = $LockAppSessions
     hasLogonUiInAgentSession = $LogonUiSessions -contains $AgentSessionId
     launchedProbeSessionId = $ProbeSessionId
-    pipeName = $PipeName
   }
 }
 
@@ -158,7 +204,12 @@ function Invoke-AgentLaunch {
     }
 
     if ($Arguments.Count -gt 0) {
-      $StartArguments.ArgumentList = $Arguments
+      $StartArguments.ArgumentList = (
+        $Arguments |
+          ForEach-Object {
+            ConvertTo-WindowsCommandLineArgument ([string] $_)
+          }
+      ) -join " "
     }
 
     if (-not [string]::IsNullOrWhiteSpace($Request.workingDirectory)) {
@@ -186,7 +237,6 @@ function Invoke-AgentLaunch {
       processId = $StartedProcess.Id
       processStillRunning = $null -ne $ObservedProcess
       sessionId = $ObservedSessionId
-      filePath = [string] $Request.filePath
     }
   } finally {
     foreach ($Name in $PreviousEnvironment.Keys) {
@@ -234,8 +284,8 @@ function New-AgentResponse {
   } catch {
     return @{
       ok = $false
-      error = $_.Exception.ToString()
-      scriptStack = $_.ScriptStackTrace
+      error = "Windows QA UI agent request failed."
+      errorType = $_.Exception.GetType().Name
     }
   }
 }
@@ -243,10 +293,8 @@ function New-AgentResponse {
 $Ready = @{
   ok = $true
   event = "ready"
-  pipeName = $PipeName
   processId = $PID
   sessionId = $Process.SessionId
-  userName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 }
 Write-Host (ConvertTo-AgentJson $Ready)
 
@@ -262,12 +310,16 @@ while ($true) {
     break
   }
 
+  $PipeSecurity = New-WindowsQaAgentPipeSecurity
   $Server = [System.IO.Pipes.NamedPipeServerStream]::new(
     $PipeName,
     [System.IO.Pipes.PipeDirection]::InOut,
     1,
     [System.IO.Pipes.PipeTransmissionMode]::Byte,
-    [System.IO.Pipes.PipeOptions]::None
+    [System.IO.Pipes.PipeOptions]::None,
+    4096,
+    4096,
+    $PipeSecurity
   )
 
   try {

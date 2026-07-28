@@ -95,13 +95,13 @@ static Task SetupProcessScopeIsolatesTargetInstallation()
     );
     var installRoot = Path.Combine(
         profileRoot,
-        "gorma",
+        "install-user",
         "YTM Enhancer",
         "Tray"
     );
     var otherUserRoot = Path.Combine(
         profileRoot,
-        "codex",
+        "other-user",
         "YTM Enhancer",
         "Tray"
     );

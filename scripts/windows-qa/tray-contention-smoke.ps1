@@ -30,12 +30,6 @@ function Get-SourceDisplayName {
   return [string] $Source.name
 }
 
-function ConvertTo-PreflightJson {
-  param([Parameter(Mandatory = $true)] $Summary)
-
-  return $Summary | ConvertTo-Json -Depth 6 -Compress
-}
-
 function Write-StatusLine {
   param([Parameter(Mandatory = $true)][string] $Message)
 
@@ -44,16 +38,11 @@ function Write-StatusLine {
 
 function Get-ActiveBrowserSummary {
   $Summary = [ordered]@{
-    activeBrowserPath = $ActiveBrowserPath
-    connectedAt = $null
     exists = $false
     processId = $null
     processRunning = $false
     readError = $null
     sourceDisplayName = $null
-    sourceExtensionId = $null
-    sourceIsDevBuild = $null
-    sourceName = $null
   }
 
   if (-not (Test-Path -LiteralPath $ActiveBrowserPath)) {
@@ -65,17 +54,13 @@ function Get-ActiveBrowserSummary {
     $Connection = Get-Content -LiteralPath $ActiveBrowserPath -Raw |
       ConvertFrom-Json
   } catch {
-    $Summary.readError = $_.Exception.Message
+    $Summary.readError = $true
     return [pscustomobject] $Summary
   }
 
-  $Summary.connectedAt = $Connection.connectedAt
   $Summary.processId = $Connection.processId
   if ($Connection.source) {
     $Summary.sourceDisplayName = Get-SourceDisplayName $Connection.source
-    $Summary.sourceExtensionId = $Connection.source.extensionId
-    $Summary.sourceIsDevBuild = $Connection.source.isDevBuild
-    $Summary.sourceName = $Connection.source.name
   }
 
   if ($Connection.processId) {
@@ -99,12 +84,11 @@ function Write-PreflightSummary {
   }
 
   Write-StatusLine (
-    "YTM Tray contention preflight: expectedOwner='{0}'; activeOwner='{1}'; processId='{2}'; processRunning='{3}'; activeBrowserPath='{4}'" -f
+    "YTM Tray contention preflight: expectedOwner='{0}'; activeOwner='{1}'; connected='{2}'; processRunning='{3}'" -f
       $ExpectedOwner,
       $ActiveOwner,
-      $Summary.processId,
-      $Summary.processRunning,
-      $Summary.activeBrowserPath
+      $Summary.exists,
+      $Summary.processRunning
   )
 }
 
@@ -131,38 +115,22 @@ function Assert-ActiveBrowserOwner {
   Write-PreflightSummary -Summary $Summary -ExpectedOwner $ExpectedOwner
 
   if (-not $Summary.exists) {
-    throw "YTM Tray is not connected to a browser. Preflight summary: $(ConvertTo-PreflightJson $Summary)"
+    throw "YTM Tray is not connected to a browser."
   }
 
   if ($Summary.readError) {
-    throw "Could not read YTM Tray active browser file. Preflight summary: $(ConvertTo-PreflightJson $Summary)"
+    throw "Could not read the YTM Tray active browser state."
   }
 
   if ($Summary.sourceDisplayName -ne $ExpectedOwner) {
-    throw "YTM Tray active browser owner mismatch. Expected '$ExpectedOwner'. Preflight summary: $(ConvertTo-PreflightJson $Summary)"
+    throw "YTM Tray active browser owner did not match the expected browser."
   }
 
   if (-not $Summary.processRunning) {
-    throw "YTM Tray active browser process is not running. Preflight summary: $(ConvertTo-PreflightJson $Summary)"
+    throw "YTM Tray active browser process is not running."
   }
 
   return $Summary
-}
-
-function Read-ProcessLogs {
-  param(
-    [Parameter(Mandatory = $true)][string] $StandardOutputPath,
-    [Parameter(Mandatory = $true)][string] $StandardErrorPath
-  )
-
-  return @(
-    if (Test-Path -LiteralPath $StandardOutputPath) {
-      Get-Content -LiteralPath $StandardOutputPath -Raw
-    }
-    if (Test-Path -LiteralPath $StandardErrorPath) {
-      Get-Content -LiteralPath $StandardErrorPath -Raw
-    }
-  ) -join "`n"
 }
 
 function Wait-ActiveBrowserOwner {
@@ -170,8 +138,6 @@ function Wait-ActiveBrowserOwner {
     [Parameter(Mandatory = $true)][string] $ExpectedOwner,
     [Parameter(Mandatory = $true)][System.Diagnostics.Process] $OwnerProcess,
     [Parameter(Mandatory = $true)][datetime] $OwnerStartedAfter,
-    [Parameter(Mandatory = $true)][string] $StandardOutputPath,
-    [Parameter(Mandatory = $true)][string] $StandardErrorPath,
     [int] $TimeoutSeconds = 120
   )
 
@@ -179,8 +145,7 @@ function Wait-ActiveBrowserOwner {
   do {
     $OwnerProcess.Refresh()
     if ($OwnerProcess.HasExited) {
-      $Logs = Read-ProcessLogs $StandardOutputPath $StandardErrorPath
-      throw "Edge tray owner smoke exited before it acquired the tray connection (code $($OwnerProcess.ExitCode)).`n$Logs"
+      throw "Edge tray owner smoke exited before it acquired the tray connection."
     }
 
     $Summary = Get-ActiveBrowserSummary
@@ -202,9 +167,7 @@ function Wait-ActiveBrowserOwner {
     Start-Sleep -Milliseconds 500
   } while ((Get-Date) -lt $Deadline)
 
-  $Summary = Get-ActiveBrowserSummary
-  $Logs = Read-ProcessLogs $StandardOutputPath $StandardErrorPath
-  throw "Edge tray owner smoke did not acquire the tray connection. Preflight summary: $(ConvertTo-PreflightJson $Summary)`n$Logs"
+  throw "Edge tray owner smoke did not acquire the tray connection."
 }
 
 function Assert-FirefoxNativeHostRegistered {
@@ -221,7 +184,7 @@ function Assert-FirefoxNativeHostRegistered {
     try {
       $ManifestPath = [string] $Key.GetValue("")
       if ([string]::IsNullOrWhiteSpace($ManifestPath) -or -not (Test-Path -LiteralPath $ManifestPath)) {
-        throw "Firefox native messaging host points to a missing manifest: $ManifestPath"
+        throw "Firefox native messaging host points to a missing manifest."
       }
     } finally {
       $Key.Dispose()
@@ -298,9 +261,7 @@ try {
   Wait-ActiveBrowserOwner `
     -ExpectedOwner $ExpectedOwner `
     -OwnerProcess $EdgeProcess `
-    -OwnerStartedAfter $OwnerStartedAfter `
-    -StandardOutputPath $EdgeStandardOutputPath `
-    -StandardErrorPath $EdgeStandardErrorPath |
+    -OwnerStartedAfter $OwnerStartedAfter |
     Out-Null
   Assert-FirefoxNativeHostRegistered
   Invoke-Pnpm exec playwright test tests/e2e/windows-tray-contention.spec.ts --project=firefox --workers=1 --output $FirefoxOutputPath
@@ -323,29 +284,28 @@ try {
         $EdgeExitCodeText = Get-Content -LiteralPath $EdgeExitCodePath -Raw
         $EdgeExitCode = 0
         if (-not [int]::TryParse($EdgeExitCodeText.Trim(), [ref] $EdgeExitCode)) {
-          $EdgeFailure = "Edge tray owner smoke recorded an invalid exit code: $EdgeExitCodeText"
+          $EdgeFailure = "Edge tray owner smoke recorded an invalid exit code."
         } elseif ($EdgeExitCode -ne 0) {
           $EdgeFailure = "Edge tray owner smoke exited with code $EdgeExitCode."
         }
       }
     } catch {
-      $EdgeFailure = $_.Exception.Message
+      $EdgeFailure = "Edge tray owner validation raised an unexpected error."
       Stop-Process -Id $EdgeProcess.Id -Force -ErrorAction SilentlyContinue
     }
   }
 }
 
-$EdgeLogs = Read-ProcessLogs $EdgeStandardOutputPath $EdgeStandardErrorPath
 Remove-Item -LiteralPath $HoldReleasePath -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $EdgeStandardOutputPath -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $EdgeStandardErrorPath -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $EdgeExitCodePath -Force -ErrorAction SilentlyContinue
 
 if ($ContentionFailure) {
-  throw "Tray contention validation failed: $($ContentionFailure.Exception.Message)`n$EdgeLogs"
+  throw "Tray contention validation failed."
 }
 if ($EdgeFailure) {
-  throw "Edge tray owner validation failed: $EdgeFailure`n$EdgeLogs"
+  throw "Edge tray owner validation failed: $EdgeFailure"
 }
 
 Remove-Item -LiteralPath $EdgeOutputPath -Recurse -Force -ErrorAction SilentlyContinue

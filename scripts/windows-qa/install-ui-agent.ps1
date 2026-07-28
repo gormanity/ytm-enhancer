@@ -40,6 +40,5 @@ Set-Content -LiteralPath $LauncherPath -Value $LauncherLines -Encoding ascii
 
 [pscustomobject]@{
   ok = $true
-  agentRoot = $AgentRoot
-  launcherPath = $LauncherPath
+  installed = $true
 } | ConvertTo-Json -Depth 4

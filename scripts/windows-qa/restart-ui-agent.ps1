@@ -14,37 +14,41 @@ $InvokeAgentPath = Join-Path $AgentRoot "invoke-ui-agent.ps1"
 $StartAgentPath = Join-Path $AgentRoot "start-ui-agent.ps1"
 
 if (-not (Test-Path -LiteralPath $InvokeAgentPath)) {
-  throw "Windows QA UI agent client is missing: $InvokeAgentPath"
+  throw "Windows QA UI agent client is missing."
 }
 
 if (-not (Test-Path -LiteralPath $StartAgentPath)) {
-  throw "Windows QA UI agent launcher is missing: $StartAgentPath"
+  throw "Windows QA UI agent launcher is missing."
 }
+
+# Let an agent-launched restart request finish before connecting back to it.
+Start-Sleep -Seconds 2
 
 try {
   & $InvokeAgentPath `
     -Action Shutdown `
     -TimeoutSeconds $ShutdownTimeoutSeconds | Out-Null
 } catch {
-  Write-Warning "Existing Windows QA UI agent did not shut down cleanly: $($_.Exception.Message)"
+  Write-Warning "Existing Windows QA UI agent did not shut down cleanly."
 }
 
 Start-Sleep -Seconds 1
 
+$QuotedStartAgentPath = (
+  '"' +
+  $StartAgentPath.Replace('"', '\"') +
+  '"'
+)
 $StartedProcess = Start-Process `
   -FilePath "powershell.exe" `
-  -ArgumentList @(
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    $StartAgentPath
+  -ArgumentList (
+    "-NoProfile -ExecutionPolicy Bypass " +
+    "-File $QuotedStartAgentPath"
   ) `
   -WindowStyle Hidden `
   -PassThru
 
 [pscustomobject] @{
   ok = $true
-  agentRoot = $AgentRoot
   processId = $StartedProcess.Id
 } | ConvertTo-Json -Depth 4

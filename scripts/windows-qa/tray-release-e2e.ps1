@@ -147,7 +147,7 @@ function Save-ReleaseAsset {
   )
 
   $AssetUrl = Get-ReleaseAssetUrl -Version $Version -AssetName $AssetName
-  Write-Host "Downloading $AssetUrl"
+  Write-Host "Downloading the published release asset."
   Invoke-WebRequest -UseBasicParsing -Uri $AssetUrl -OutFile $DestinationPath
 }
 
@@ -324,7 +324,7 @@ function Get-VerifiedUpdatePackage {
   }
 
   $ArchivePath = Join-Path $WorkRoot $Asset.name
-  Write-Host "Downloading $($Asset.url)"
+  Write-Host "Downloading the published runtime asset."
   Invoke-WebRequest -UseBasicParsing -Uri $Asset.url -OutFile $ArchivePath
 
   $ActualSha256 = Get-FileSha256 -Path $ArchivePath

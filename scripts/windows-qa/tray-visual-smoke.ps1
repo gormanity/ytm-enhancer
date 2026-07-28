@@ -311,16 +311,16 @@ try {
     -TimeoutSeconds $TimeoutSeconds
 
   Write-Output "Windows tray visual smoke passed."
-  Write-Output "tray process session: $($Launch.sessionId)"
+  Write-Output "tray process launched in the unlocked desktop session"
   Write-Output "tray icon: $($Visual.trayName)"
   Write-Output "popup: $($Visual.popupName)"
-  Write-Output "scroll log: $($Visual.scrollLog)"
+  Write-Output "visual smoke diagnostics captured"
   Write-Output "screenshots:"
-  Write-Output "  desktop: $DesktopScreenshotPath"
+  Write-Output "  desktop captured"
   if ($Visual.screenshots.overflow) {
-    Write-Output "  overflow: $OverflowScreenshotPath"
+    Write-Output "  overflow captured"
   }
-  Write-Output "  popup: $PopupScreenshotPath"
+  Write-Output "  popup captured"
 } finally {
   Get-Process YTMTray, YTMTray.NativeHost -ErrorAction SilentlyContinue |
     Stop-Process -Force

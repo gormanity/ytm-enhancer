@@ -1,14 +1,44 @@
 $ErrorActionPreference = "Stop"
 
-function Get-WindowsQaAgentPipeName {
+function Get-WindowsQaAgentUserFingerprint {
   $Identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-  $UserToken = if ($Identity.User) {
-    $Identity.User.Value.Replace("-", "_")
+  $IdentityValue = if ($Identity.User) {
+    $Identity.User.Value
   } else {
-    $env:USERNAME.Replace(" ", "_")
+    $Identity.Name
+  }
+  $IdentityBytes = [System.Text.Encoding]::UTF8.GetBytes($IdentityValue)
+  $Hasher = [System.Security.Cryptography.SHA256]::Create()
+
+  try {
+    $Hash = $Hasher.ComputeHash($IdentityBytes)
+    return [System.BitConverter]::ToString($Hash).Replace("-", "").ToLowerInvariant()
+  } finally {
+    $Hasher.Dispose()
+  }
+}
+
+function Get-WindowsQaAgentPipeName {
+  $UserFingerprint = Get-WindowsQaAgentUserFingerprint
+  return "ytm-enhancer-windows-qa-$($UserFingerprint.Substring(0, 24))"
+}
+
+function New-WindowsQaAgentPipeSecurity {
+  $Identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+  if ($null -eq $Identity.User) {
+    throw "Windows QA UI agent could not resolve the current user SID."
   }
 
-  return "ytm-enhancer-windows-qa-$UserToken"
+  $Security = [System.IO.Pipes.PipeSecurity]::new()
+  $Security.SetAccessRuleProtection($true, $false)
+  $Security.SetOwner($Identity.User)
+  $AccessRule = [System.IO.Pipes.PipeAccessRule]::new(
+    $Identity.User,
+    [System.IO.Pipes.PipeAccessRights]::FullControl,
+    [System.Security.AccessControl.AccessControlType]::Allow
+  )
+  [void] $Security.AddAccessRule($AccessRule)
+  return $Security
 }
 
 function ConvertTo-AgentJson {

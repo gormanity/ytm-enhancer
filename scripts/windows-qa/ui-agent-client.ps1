@@ -147,13 +147,13 @@ function Get-WindowsQaUiAgentReadiness {
     $Message = "Windows QA UI agent is running in session 0. Start it from the logged-in Windows desktop session."
   } elseif (-not $Probe.hasExplorerInAgentSession) {
     $Ready = $false
-    $Message = "Windows QA UI agent session $($Probe.sessionId) does not have an explorer.exe desktop shell. Explorer sessions: $($Probe.explorerSessionIds -join ', ')"
+    $Message = "Windows QA UI agent does not have an Explorer desktop shell."
   } elseif ($Probe.hasLogonUiInAgentSession) {
     $Ready = $false
-    $Message = "Windows QA UI agent session $($Probe.sessionId) is locked or at the Windows sign-in screen. Unlock the Windows QA desktop session before running UI smoke. LogonUI sessions: $($Probe.logonUiSessionIds -join ', ')"
+    $Message = "Windows QA UI agent is locked or at the Windows sign-in screen. Unlock the Windows QA desktop session before running UI smoke."
   } elseif ($Probe.launchedProbeSessionId -ne $Probe.sessionId) {
     $Ready = $false
-    $Message = "Windows QA UI agent probe launched in session $($Probe.launchedProbeSessionId), expected $($Probe.sessionId)."
+    $Message = "Windows QA UI agent could not launch in its desktop session."
   }
 
   return [pscustomobject] @{
@@ -181,7 +181,6 @@ function Wait-WindowsQaUiAgentReady {
   )
 
   $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-  $LastMessage = ""
 
   while ((Get-Date) -lt $Deadline) {
     try {
@@ -190,19 +189,14 @@ function Wait-WindowsQaUiAgentReady {
       if ($Readiness.ok) {
         return $Readiness.probe
       }
-      $LastMessage = $Readiness.message
     } catch {
-      $LastMessage = $_.Exception.Message
+      # Connection and payload details may contain machine-specific paths.
     }
 
     Start-Sleep -Seconds 2
   }
 
-  if ([string]::IsNullOrWhiteSpace($LastMessage)) {
-    $LastMessage = "No readiness probe completed."
-  }
-
-  throw "Windows QA UI agent was not ready after $TimeoutSeconds seconds. $LastMessage"
+  throw "Windows QA UI agent was not ready before the timeout. Start the agent from an unlocked desktop session and retry."
 }
 
 function Invoke-InteractivePowerShell {
@@ -242,23 +236,19 @@ function Invoke-InteractivePowerShell {
     }
 
     if (-not (Test-Path -LiteralPath $ResultPath)) {
-      $ProcessState = Get-Process -Id $Launch.processId -ErrorAction SilentlyContinue
-      $ProcessDescription = if ($ProcessState) {
-        "running pid=$($ProcessState.Id) session=$($ProcessState.SessionId)"
-      } else {
-        "not running pid=$($Launch.processId) session=$($Launch.sessionId)"
-      }
-
-      throw "$Name did not create $ResultPath. Agent-launched process is $ProcessDescription."
+      throw "$Name did not produce a result in the Windows desktop session."
     }
 
     $Payload = Get-Content -LiteralPath $ResultPath -Raw | ConvertFrom-Json
     if (-not $Payload.ok) {
-      throw "$Name failed: $($Payload.error)`n$($Payload.scriptStack)"
+      throw "$Name failed in the Windows desktop session."
     }
 
     return $Payload
   } finally {
+    if (Test-Path -LiteralPath $ResultPath) {
+      Remove-Item -LiteralPath $ResultPath -Force
+    }
     if (Test-Path -LiteralPath $ScriptPath) {
       Remove-Item -LiteralPath $ScriptPath -Force
     }

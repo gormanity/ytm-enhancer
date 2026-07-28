@@ -189,7 +189,7 @@ function Save-ReleaseAsset {
   )
 
   $AssetUrl = "$ReleaseDownloadRoot/windows-tray-v$ReleaseVersion/$AssetName"
-  Write-Host "Downloading $AssetUrl"
+  Write-Host "Downloading the published release asset."
   Invoke-WebRequest -UseBasicParsing -Uri $AssetUrl -OutFile $DestinationPath
 }
 
@@ -386,7 +386,7 @@ $AgentProbe = Wait-WindowsQaUiAgentReady `
   -TimeoutSeconds $UiReadyTimeoutSeconds `
   -ProbeTimeoutSeconds 10
 $ActiveSessionId = $AgentProbe.sessionId
-Write-Host "Using Windows QA UI agent desktop session $ActiveSessionId."
+Write-Host "Using the Windows QA UI agent."
 
 Invoke-InstalledUninstaller
 if (Test-Path -LiteralPath $InstallRoot) {
@@ -405,13 +405,13 @@ Install-ReleasePackage `
   -InstallerPath $InstallerPath `
   -ReleaseVersion $ResolvedVersion
 
-Write-Host "Launching YTM Tray $ResolvedVersion in desktop session $ActiveSessionId."
+Write-Host "Launching YTM Tray $ResolvedVersion in the unlocked desktop session."
 $Launch = Start-OperationalDesktopSession -ExpectedSessionId $ActiveSessionId
 
 Write-Host "Windows tray operational smoke passed: $ResolvedVersion ($RuntimeIdentifier)."
-Write-Host "YTM Tray pid: $($Launch.trayPid)"
+Write-Host "YTM Tray launched."
 if (-not $SkipChromeLaunch) {
-  Write-Host "Opened Google Chrome to $PlaybackUrl"
+  Write-Host "Opened Google Chrome to the configured playback page."
 }
-Write-Host "Left YTM Tray installed at $InstallRoot for manual testing."
-Write-Host "Operational smoke artifacts: $WorkRoot"
+Write-Host "Left YTM Tray installed for manual testing."
+Write-Host "Operational smoke artifacts were retained."

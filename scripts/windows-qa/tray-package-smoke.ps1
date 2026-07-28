@@ -464,7 +464,7 @@ try {
         Stop-Process -Id $ForeignTrayProcess.Id -Force
       }
     } catch {
-      Write-Warning "Could not stop foreign tray sentinel: $($_.Exception.Message)"
+      Write-Warning "Could not stop the foreign tray sentinel."
     } finally {
       $ForeignTrayProcess.Dispose()
     }

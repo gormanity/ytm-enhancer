@@ -113,7 +113,7 @@ function Assert-ExplorerArchiveCompatible {
     }
   }
 
-  Write-Output "Windows Explorer archive validation passed: $ResolvedArchivePath"
+  Write-Output "Windows Explorer archive validation passed."
 }
 
 Assert-ExplorerArchiveCompatible `
