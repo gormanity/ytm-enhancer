@@ -33,6 +33,51 @@ function runWindowsPowerShell(script: string) {
 }
 
 describe("Windows remote QA scaffold", () => {
+  it("hashes files without Get-FileHash on Windows PowerShell 5.1", () => {
+    if (process.platform !== "win32") {
+      return;
+    }
+
+    const hardenPath = resolve(
+      process.cwd(),
+      "scripts/windows-qa/harden-openssh.ps1",
+    ).replaceAll("'", "''");
+    const fixture = `
+$ErrorActionPreference = "Stop"
+$sourceText = [IO.File]::ReadAllText('${hardenPath}')
+$start = $sourceText.IndexOf("function Get-YtmeFileSha256")
+$end = $sourceText.IndexOf("function Assert-AdministrativePathAcl")
+if ($start -lt 0 -or $end -le $start) {
+  throw "Portable hash helper boundary was not found."
+}
+. ([scriptblock]::Create($sourceText.Substring($start, $end - $start)))
+
+$root = Join-Path ([IO.Path]::GetTempPath()) (
+  "ytme-portable-hash-" + [guid]::NewGuid().ToString("N")
+)
+$path = Join-Path $root "fixture.txt"
+try {
+  New-Item -ItemType Directory -Path $root | Out-Null
+  [IO.File]::WriteAllText($path, "abc", [Text.Encoding]::ASCII)
+  function Get-FileHash {
+    throw "Get-FileHash must not be used."
+  }
+  $actual = Get-YtmeFileSha256 -Path $path
+  if (
+    $actual -ne
+      "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD"
+  ) {
+    throw "Portable SHA-256 result was incorrect."
+  }
+} finally {
+  Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+}
+`;
+    const result = runWindowsPowerShell(fixture);
+
+    expect(result.status, result.stderr).toBe(0);
+  });
+
   it("uses generic remote QA account labels", () => {
     const docs = read("docs/remote-qa.md");
     const trayTests = read("apps/windows-tray/tests/YTMTray.Tests/Program.cs");
@@ -626,6 +671,8 @@ if (Test-UnsafeFirewallRemoteAddress "LocalSubnet") {
     expect(harden).toContain("function Assert-SshGroupContainsOnlyQa");
     expect(harden).toContain("function Assert-AdministrativePathAcl");
     expect(harden).toContain("function Assert-ProtectedStateTree");
+    expect(harden).toContain("function Get-YtmeFileSha256");
+    expect(harden).not.toContain("Get-FileHash");
     expect(harden).toContain("Win32_Service");
     expect(harden).toContain("LocalSystem");
     expect(harden).toContain(
@@ -687,7 +734,7 @@ if (Test-UnsafeFirewallRemoteAddress "LocalSubnet") {
     expect(stateResolution).not.toContain("Initialize-StateRoot");
     expect(stateRollback).not.toContain("Restore-AuthorizedKey");
     expect(rollbackRegistration).toContain("Replace-FileAtomically");
-    expect(rollbackRegistration).toContain("Get-FileHash");
+    expect(rollbackRegistration).toContain("Get-YtmeFileSha256");
     expect(harden).toContain("[IO.FileShare]::None");
     expect(autoDisableRule).toContain("Test-RuleHasGenericApplicationScope");
     expect(harden).toContain("configModified = $false");
@@ -1880,9 +1927,7 @@ try {
     configModified = $true
     configBackupPath = $backupPath
     configSddl = "fixture-sddl"
-    configSha256 = (
-      Get-FileHash -LiteralPath $backupPath -Algorithm SHA256
-    ).Hash
+    configSha256 = (Get-YtmeFileSha256 -Path $backupPath)
   }
   function Set-FileAclFromSddl {
     throw "Injected staging failure."
@@ -1994,8 +2039,8 @@ try {
     administratorKeyPath = $administratorKeyPath
     administratorKeyBackupPath = $backupPath
     administratorKeyBackupSha256 = (
-      Get-FileHash -LiteralPath $backupPath -Algorithm SHA256
-    ).Hash
+      Get-YtmeFileSha256 -Path $backupPath
+    )
     administratorKeySddl = (Get-Acl -LiteralPath $administratorKeyPath).Sddl
     protectedAuthorizedKeysPath = $protectedKeyPath
   }
@@ -2123,9 +2168,7 @@ try {
     configModified = $true
     configBackupPath = $backupPath
     configSddl = "fixture-sddl"
-    configSha256 = (
-      Get-FileHash -LiteralPath $backupPath -Algorithm SHA256
-    ).Hash
+    configSha256 = (Get-YtmeFileSha256 -Path $backupPath)
   }
   function Assert-ConfigUnchangedSincePrepare {}
   function Set-FileAclFromSddl {}
@@ -2245,8 +2288,11 @@ try {
     expect(runner).toContain("archive-\\$id.tar.gz.tmp");
     expect(runner).toContain("command-\\$id.ps1.tmp");
     expect(runner).toContain("Assert-TransportFile");
-    expect(runner).toContain("Get-FileHash");
+    expect(runner).toContain("[Security.Cryptography.SHA256]::Create()");
+    expect(runner).not.toContain("Get-FileHash");
     expect(runner).toContain("run_script_sha256");
+    expect(syncSource).toContain("function Get-YtmeFileSha256");
+    expect(syncSource).not.toContain("Get-FileHash");
     expect(runner).toContain("assert_short_encoded_command");
     expect(runner).toContain('if [ "${#1}" -gt 6500 ]; then');
     expect(runner).toContain("cleanup_ssh_diagnostics");
@@ -2706,6 +2752,15 @@ try {
     const fixture = `
 $ErrorActionPreference = "Stop"
 $sourcePath = '${syncSourcePath}'
+$sourceText = [IO.File]::ReadAllText($sourcePath)
+$hashStart = $sourceText.IndexOf("function Get-YtmeFileSha256")
+$hashEnd = $sourceText.IndexOf("function Get-NormalizedQaPath")
+if ($hashStart -lt 0 -or $hashEnd -le $hashStart) {
+  throw "Source hash helper boundary was not found."
+}
+. ([scriptblock]::Create(
+  $sourceText.Substring($hashStart, $hashEnd - $hashStart)
+))
 $root = Join-Path ([IO.Path]::GetTempPath()) (
   "ytme-safe-sync-" + [guid]::NewGuid().ToString("N")
 )
@@ -2805,9 +2860,7 @@ try {
     $ExpectedArchiveLength = (
       Get-Item -LiteralPath $ArchivePath -Force
     ).Length
-    $ExpectedArchiveSha256 = (
-      Get-FileHash -LiteralPath $ArchivePath -Algorithm SHA256
-    ).Hash
+    $ExpectedArchiveSha256 = Get-YtmeFileSha256 -Path $ArchivePath
     $ManifestText = (
       [string]::Join([char] 0, $ManifestPaths) +
       [char] 0
@@ -3539,7 +3592,8 @@ try {
     expect(releaseE2e).toContain('$TargetVersion = "0.1.0"');
     expect(releaseE2e).toContain("Invoke-WebRequest");
     expect(releaseE2e).toContain("YTM-Tray-update.json");
-    expect(releaseE2e).toContain("Get-FileHash");
+    expect(releaseE2e).toContain("[Security.Cryptography.SHA256]::Create()");
+    expect(releaseE2e).not.toContain("Get-FileHash");
     expect(releaseE2e).toContain("Expand-Archive");
     expect(releaseE2e).toContain("Install-ReleasePackage");
     expect(releaseE2e).toContain("Assert-AuthenticodeSigner");

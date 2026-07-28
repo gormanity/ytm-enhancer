@@ -122,6 +122,26 @@ function Assert-PathHasNoReparsePoint {
   }
 }
 
+function Get-YtmeFileSha256 {
+  param([Parameter(Mandatory = $true)][string] $Path)
+
+  $Stream = [IO.File]::Open(
+    [IO.Path]::GetFullPath($Path),
+    [IO.FileMode]::Open,
+    [IO.FileAccess]::Read,
+    [IO.FileShare]::Read
+  )
+  $Hasher = [Security.Cryptography.SHA256]::Create()
+  try {
+    return [BitConverter]::ToString(
+      $Hasher.ComputeHash($Stream)
+    ).Replace("-", "")
+  } finally {
+    $Hasher.Dispose()
+    $Stream.Dispose()
+  }
+}
+
 function Assert-AdministrativePathAcl {
   param(
     [Parameter(Mandatory = $true)][string] $Path,
@@ -859,16 +879,12 @@ function Install-ProtectedAuthorizedKey {
       $Ascii
     )
     Set-AdministrativeFileAcl $TemporaryPath
-    $StagedSha256 = (
-      Get-FileHash -LiteralPath $TemporaryPath -Algorithm SHA256
-    ).Hash
+    $StagedSha256 = Get-YtmeFileSha256 -Path $TemporaryPath
     Replace-FileAtomically `
       -SourcePath $TemporaryPath `
       -DestinationPath $FullDestinationPath `
       -AllowMissingDestination
-    $InstalledSha256 = (
-      Get-FileHash -LiteralPath $FullDestinationPath -Algorithm SHA256
-    ).Hash
+    $InstalledSha256 = Get-YtmeFileSha256 -Path $FullDestinationPath
     if (-not [string]::Equals(
         $InstalledSha256,
         $StagedSha256,
@@ -2007,9 +2023,7 @@ function Assert-ConfigUnchangedSincePrepare {
   if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
     throw "The OpenSSH configuration changed after Prepare."
   }
-  $CurrentSha256 = (
-    Get-FileHash -LiteralPath $ConfigPath -Algorithm SHA256
-  ).Hash
+  $CurrentSha256 = Get-YtmeFileSha256 -Path $ConfigPath
   if (-not [string]::Equals(
       $CurrentSha256,
       [string] $State.configSha256,
@@ -2214,9 +2228,7 @@ function Register-Rollback {
   $RollbackToolPath = Join-Path $StateDirectory "harden-openssh.ps1"
   $SourceToolPath = [IO.Path]::GetFullPath($PSCommandPath)
   $ProtectedToolPath = [IO.Path]::GetFullPath($RollbackToolPath)
-  $SourceSha256 = (
-    Get-FileHash -LiteralPath $SourceToolPath -Algorithm SHA256
-  ).Hash
+  $SourceSha256 = Get-YtmeFileSha256 -Path $SourceToolPath
   if (
     -not [string]::Equals(
       $SourceToolPath,
@@ -2232,12 +2244,8 @@ function Register-Rollback {
         -LiteralPath $SourceToolPath `
         -Destination $TemporaryToolPath `
         -ErrorAction Stop
-      $StagedSha256 = (
-        Get-FileHash -LiteralPath $TemporaryToolPath -Algorithm SHA256
-      ).Hash
-      $CurrentSourceSha256 = (
-        Get-FileHash -LiteralPath $SourceToolPath -Algorithm SHA256
-      ).Hash
+      $StagedSha256 = Get-YtmeFileSha256 -Path $TemporaryToolPath
+      $CurrentSourceSha256 = Get-YtmeFileSha256 -Path $SourceToolPath
       if (
         -not [string]::Equals(
           $StagedSha256,
@@ -2264,9 +2272,7 @@ function Register-Rollback {
         -ErrorAction SilentlyContinue
     }
   }
-  $ProtectedSha256 = (
-    Get-FileHash -LiteralPath $ProtectedToolPath -Algorithm SHA256
-  ).Hash
+  $ProtectedSha256 = Get-YtmeFileSha256 -Path $ProtectedToolPath
   if (-not [string]::Equals(
       $ProtectedSha256,
       $SourceSha256,
@@ -2542,9 +2548,7 @@ function Get-OriginalAdministratorKeySegmentsBase64 {
     throw "The administrator authorized-key backup is missing."
   }
   Assert-AdministrativePathAcl -Path $ActualBackupPath
-  $BackupSha256 = (
-    Get-FileHash -LiteralPath $ActualBackupPath -Algorithm SHA256
-  ).Hash
+  $BackupSha256 = Get-YtmeFileSha256 -Path $ActualBackupPath
   if (-not [string]::Equals(
       $BackupSha256,
       [string] $State.administratorKeyBackupSha256,
@@ -2964,17 +2968,13 @@ function Install-SshdConfiguration {
     if (-not (Test-Path -LiteralPath $CandidatePath -PathType Leaf)) {
       throw "The candidate OpenSSH configuration is missing."
     }
-    $CandidateSha256 = (
-      Get-FileHash -LiteralPath $CandidatePath -Algorithm SHA256
-    ).Hash
+    $CandidateSha256 = Get-YtmeFileSha256 -Path $CandidatePath
     Copy-Item `
       -LiteralPath $CandidatePath `
       -Destination $TemporaryPath `
       -Force `
       -ErrorAction Stop
-    $StagedSha256 = (
-      Get-FileHash -LiteralPath $TemporaryPath -Algorithm SHA256
-    ).Hash
+    $StagedSha256 = Get-YtmeFileSha256 -Path $TemporaryPath
     if (-not [string]::Equals(
         $StagedSha256,
         $CandidateSha256,
@@ -3015,11 +3015,7 @@ function Restore-SshdConfiguration {
       )) {
       throw "The configuration backup is missing."
     }
-    $BackupSha256 = (
-      Get-FileHash `
-        -LiteralPath $State.configBackupPath `
-        -Algorithm SHA256
-    ).Hash
+    $BackupSha256 = Get-YtmeFileSha256 -Path $State.configBackupPath
     if (-not [string]::Equals(
         $BackupSha256,
         [string] $State.configSha256,
@@ -3032,11 +3028,7 @@ function Restore-SshdConfiguration {
       -Destination $TemporaryPath `
       -Force `
       -ErrorAction Stop
-    $StagedSha256 = (
-      Get-FileHash `
-        -LiteralPath $TemporaryPath `
-        -Algorithm SHA256
-    ).Hash
+    $StagedSha256 = Get-YtmeFileSha256 -Path $TemporaryPath
     if (-not [string]::Equals(
         $StagedSha256,
         [string] $State.configSha256,
@@ -3375,9 +3367,7 @@ function Invoke-Prepare {
   $ConfigBackupPath = Join-Path $StateDirectory "sshd_config.original"
   $CandidatePath = Join-Path $StateDirectory "sshd_config.candidate"
   $ConfigSddl = (Get-Acl -LiteralPath $ConfigPath).Sddl
-  $ConfigSha256 = (
-    Get-FileHash -LiteralPath $ConfigPath -Algorithm SHA256
-  ).Hash
+  $ConfigSha256 = Get-YtmeFileSha256 -Path $ConfigPath
   Copy-Item -LiteralPath $ConfigPath -Destination $ConfigBackupPath
   Set-AdministrativeFileAcl $ConfigBackupPath
 
@@ -3411,11 +3401,8 @@ function Invoke-Prepare {
       -Destination $AdministratorKeyBackupPath
     Set-AdministrativeFileAcl $AdministratorKeyBackupPath
     Assert-AdministrativePathAcl -Path $AdministratorKeyBackupPath
-    $AdministratorKeyBackupSha256 = (
-      Get-FileHash `
-        -LiteralPath $AdministratorKeyBackupPath `
-        -Algorithm SHA256
-    ).Hash
+    $AdministratorKeyBackupSha256 = Get-YtmeFileSha256 `
+      -Path $AdministratorKeyBackupPath
   }
   $AdministratorKeyContainedQaKey = (
     $AdministratorKeyExisted -and

@@ -1,6 +1,26 @@
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
+function Get-YtmeFileSha256 {
+  param([Parameter(Mandatory = $true)][string] $Path)
+
+  $Stream = [IO.File]::Open(
+    [IO.Path]::GetFullPath($Path),
+    [IO.FileMode]::Open,
+    [IO.FileAccess]::Read,
+    [IO.FileShare]::Read
+  )
+  $Hasher = [Security.Cryptography.SHA256]::Create()
+  try {
+    return [BitConverter]::ToString(
+      $Hasher.ComputeHash($Stream)
+    ).Replace("-", "")
+  } finally {
+    $Hasher.Dispose()
+    $Stream.Dispose()
+  }
+}
+
 function Get-NormalizedQaPath {
   param([Parameter(Mandatory = $true)][string] $Path)
 
@@ -533,9 +553,7 @@ function Assert-QaArchiveIntegrity {
     ) -eq 0 -and
     $ArchiveItem.Length -eq $ExpectedLength
   ) {
-    $ActualSha256 = (
-      Get-FileHash -LiteralPath $Path -Algorithm SHA256
-    ).Hash
+    $ActualSha256 = Get-YtmeFileSha256 -Path $Path
     if ([string]::Equals(
         $ActualSha256,
         $ExpectedSha256,

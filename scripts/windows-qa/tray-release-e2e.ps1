@@ -136,7 +136,21 @@ function Get-ReleaseAssetUrl {
 function Get-FileSha256 {
   param([Parameter(Mandatory = $true)][string] $Path)
 
-  return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  $Stream = [IO.File]::Open(
+    [IO.Path]::GetFullPath($Path),
+    [IO.FileMode]::Open,
+    [IO.FileAccess]::Read,
+    [IO.FileShare]::Read
+  )
+  $Hasher = [Security.Cryptography.SHA256]::Create()
+  try {
+    return [BitConverter]::ToString(
+      $Hasher.ComputeHash($Stream)
+    ).Replace("-", "").ToLowerInvariant()
+  } finally {
+    $Hasher.Dispose()
+    $Stream.Dispose()
+  }
 }
 
 function Save-ReleaseAsset {

@@ -691,14 +691,16 @@ $transport_cleanup_function
 \$helperPath = Join-Path \$root (\"helper-\$id.ps1.tmp\")
 \$archivePath = Join-Path \$root (\"archive-\$id.tar.gz.tmp\")
 \$commandPath = Join-Path \$root (\"command-\$id.ps1.tmp\")
-function Assert-TransportFile {
-  param(\$Path, [long] \$ExpectedLength, \$ExpectedHash)
-  \$item = Get-Item -LiteralPath \$Path -Force -EA Stop
-  if (\$item.PSIsContainer -or (\$item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or \$item.Length -ne \$ExpectedLength) {
+function Assert-TransportFile{
+  param(\$p,[long]\$l,\$h)
+  \$i=Get-Item -LiteralPath \$p -Force -EA Stop
+  if(\$i.PSIsContainer -or (\$i.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or \$i.Length -ne \$l){
     throw 'Invalid file.'
   }
-  \$actualHash = (Get-FileHash -LiteralPath \$Path -Algorithm SHA256).Hash
-  if (-not [string]::Equals(\$actualHash, \$ExpectedHash, [StringComparison]::OrdinalIgnoreCase)) {
+  \$s=[IO.File]::OpenRead(\$p)
+  \$g=[Security.Cryptography.SHA256]::Create()
+  try{\$a=[BitConverter]::ToString(\$g.ComputeHash(\$s)).Replace('-','')}finally{\$g.Dispose();\$s.Dispose()}
+  if(\$a -ne \$h){
     throw 'Invalid file.'
   }
 }

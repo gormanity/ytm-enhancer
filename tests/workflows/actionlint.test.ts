@@ -35,7 +35,12 @@ describe("GitHub Actions workflow linting", () => {
     expect(jjVersion).toBe("0.43.0");
     expect(checkJob).toContain("jdx/mise-action@v4");
     expect(checkJob).toContain("install_args: jj");
+    expect(checkJob).toContain("name: Initialize Jujutsu workspace");
+    expect(checkJob).toContain("run: jj git init --colocate");
     expect(checkJob.indexOf("jdx/mise-action@v4")).toBeLessThan(
+      checkJob.indexOf("Initialize Jujutsu workspace"),
+    );
+    expect(checkJob.indexOf("Initialize Jujutsu workspace")).toBeLessThan(
       checkJob.indexOf("pnpm run test"),
     );
   });
