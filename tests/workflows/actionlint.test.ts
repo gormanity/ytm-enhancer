@@ -65,6 +65,24 @@ describe("GitHub Actions workflow linting", () => {
     expect(workflow).not.toContain("upload-artifact");
   });
 
+  it("prepares Jujutsu before running extension release checks", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/release.yml"),
+      "utf-8",
+    );
+
+    expect(workflow).toContain("jdx/mise-action@v4");
+    expect(workflow).toContain("install_args: jj");
+    expect(workflow).toContain("name: Initialize Jujutsu workspace");
+    expect(workflow).toContain("run: jj git init --colocate");
+    expect(workflow.indexOf("jdx/mise-action@v4")).toBeLessThan(
+      workflow.indexOf("Initialize Jujutsu workspace"),
+    );
+    expect(workflow.indexOf("Initialize Jujutsu workspace")).toBeLessThan(
+      workflow.indexOf("name: Run checks"),
+    );
+  });
+
   it("runs hosted Windows tray QA without desktop automation", () => {
     const workflow = readFileSync(
       resolve(process.cwd(), ".github/workflows/windows-qa.yml"),

@@ -28,6 +28,13 @@ jobs:
         with:
           go-version: "1.24"
 
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: jj
+
+      - name: Initialize Jujutsu workspace
+        run: jj git init --colocate
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
