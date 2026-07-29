@@ -23,11 +23,10 @@ fully-featured listening experience, this extension is for you.
 
 - Playback Controls: control playback, switch YouTube Music tabs, seek, adjust
   volume, change speed/quality, and toggle shuffle/repeat from one panel
-- Auto Play: optionally start playback automatically when YouTube Music loads
-- Auto Skip Disliked: automatically skip disliked tracks when they appear
+- Automation: optionally start playback automatically and skip disliked tracks
 - Audio Visualizer: configurable visualizer overlays
-- Connected Apps: optional local integration with the YTM Menu Bar macOS app,
-  YTM Tray Windows app, and YTM Enhancer CLI
+- Connected Apps: see what's playing and control YouTube Music from the macOS
+  menu bar, Windows taskbar, or terminal
 - Hotkeys: playback, tab focus, and module action shortcuts
 - Mini Player: compact extension Picture-in-Picture control window while
   multitasking
@@ -75,7 +74,7 @@ Public URL: `https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md`
 YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` by adding
 optional playback controls, tab switching, automation, notifications, keyboard
 shortcuts, Picture-in-Picture controls, interface improvements, and opt-in local
-playback integration with first-party companion apps on your device.
+playback integration with enabled companion apps on your device.
 
 ---
 
@@ -102,7 +101,7 @@ playback integration with first-party companion apps on your device.
 YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` with
 optional playback controls, tab switching, automation, notifications, keyboard
 shortcuts, Picture-in-Picture controls, interface improvements, and opt-in local
-playback integration with first-party companion apps on your device.
+playback integration with enabled companion apps on your device.
 
 #### Permission Justification
 
@@ -125,9 +124,8 @@ reminders, and the "remind me" shortcut.
 
 Used only when Connected Apps is enabled to exchange playback state, track
 metadata, and user-requested playback or tab-focus commands with enabled
-first-party companion apps on your device. Native messaging is local
-communication between the browser and app and does not route data through
-project-operated servers.
+companion apps on your device. Native messaging is local communication between
+the browser and app and does not route data through project-operated servers.
 
 ##### `scripting`
 
@@ -176,6 +174,13 @@ those resources are not executed as code.
 - music
 - streaming
 
+#### `tabs` Permission
+
+Firefox requires the explicit `tabs` permission to find existing YouTube Music
+tabs, select the playback source, and open or focus YouTube Music when the user
+invokes a control. YTM Enhancer does not use this permission to read unrelated
+browsing history.
+
 ### Source Code Requirement
 
 Firefox Add-ons may require source code when the uploaded package contains
@@ -214,6 +219,8 @@ YouTube Music web app in-page.
 - Open YouTube Music in a tab before testing the popup or features.
 - Connected Apps is opt-in. Its native messaging permission supports the YTM
   Menu Bar, YTM Tray, and YTM Enhancer CLI companion apps on the user's device.
+- Firefox's `tabs` permission is used only to find, select, open, or focus
+  YouTube Music tabs in response to extension and Connected Apps controls.
 - Some features are browser-dependent by design.
 - In Firefox, Chromium-only Picture-in-Picture capabilities are not available,
   and the extension degrades gracefully.

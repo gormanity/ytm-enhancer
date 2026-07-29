@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280" />
+    <title>YTM Enhancer — Connected Apps</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+      }
+
+      body {
+        position: relative;
+        background: #050505;
+        color: #fff;
+        font-family: "Roboto", "Arial", sans-serif;
+      }
+
+      .background {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at 15% 65%,
+            rgba(255, 0, 51, 0.12),
+            transparent 33%
+          ),
+          radial-gradient(
+            circle at 84% 48%,
+            rgba(51, 174, 255, 0.1),
+            transparent 36%
+          ),
+          linear-gradient(180deg, #0b0b0d 0%, #030303 100%);
+      }
+
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.025) 1px,
+            transparent 1px
+          );
+        background-size: 48px 48px;
+        mask-image: linear-gradient(to bottom, transparent, black, transparent);
+      }
+
+      .hero {
+        position: absolute;
+        top: 44px;
+        left: 0;
+        right: 0;
+        text-align: center;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        color: #b9b9bf;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 1.7px;
+        text-transform: uppercase;
+      }
+
+      .eyebrow svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: #ff3158;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2;
+      }
+
+      h1 {
+        margin-top: 15px;
+        font-size: 43px;
+        font-weight: 700;
+        letter-spacing: -1.2px;
+      }
+
+      .hero p {
+        margin-top: 11px;
+        color: #a8a8ae;
+        font-size: 19px;
+      }
+
+      .apps {
+        position: absolute;
+        top: 188px;
+        left: 48px;
+        right: 48px;
+        bottom: 46px;
+        display: grid;
+        grid-template-columns: 1fr 0.88fr 1.22fr;
+        gap: 22px;
+      }
+
+      .app-card {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.11);
+        border-radius: 18px;
+        background: rgba(15, 15, 17, 0.92);
+        box-shadow:
+          0 24px 55px rgba(0, 0, 0, 0.48),
+          inset 0 1px rgba(255, 255, 255, 0.04);
+      }
+
+      .app-card::before {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        content: "";
+      }
+
+      .app-card.macos::before {
+        background: linear-gradient(90deg, #ff3158, #ff8c42);
+      }
+
+      .app-card.windows::before {
+        background: linear-gradient(90deg, #39a9ff, #4ce0c2);
+      }
+
+      .app-card.terminal::before {
+        background: linear-gradient(90deg, #9d6cff, #39a9ff);
+      }
+
+      .card-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 23px 24px 17px;
+      }
+
+      .card-heading h2 {
+        font-size: 21px;
+        font-weight: 650;
+      }
+
+      .platform {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.055);
+        color: #a9a9b0;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        padding: 6px 10px;
+        text-transform: uppercase;
+      }
+
+      .shot {
+        display: flex;
+        min-height: 0;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        margin: 0 18px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        background: #050506;
+      }
+
+      .shot img {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .macos .shot img {
+        width: 310px;
+      }
+
+      .windows .shot img {
+        height: 385px;
+      }
+
+      .terminal .shot {
+        flex: 0 0 244px;
+        padding: 12px;
+      }
+
+      .terminal .shot img {
+        width: 100%;
+        border-radius: 8px;
+      }
+
+      .benefit {
+        min-height: 78px;
+        padding: 17px 23px 20px;
+        color: #9d9da4;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .benefit strong {
+        color: #efeff2;
+        font-weight: 600;
+      }
+
+      .commands {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 15px 18px 0;
+      }
+
+      .command {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #babac1;
+        font-family: "SFMono-Regular", "Consolas", monospace;
+        font-size: 12px;
+        padding: 10px 11px;
+      }
+
+      .command::before {
+        margin-right: 7px;
+        color: #ff3158;
+        content: "$";
+      }
+
+      .accent {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          #ff0033 30%,
+          #397cff 70%,
+          transparent
+        );
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="background"></div>
+    <div class="grid"></div>
+
+    <header class="hero">
+      <div class="eyebrow">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect width="7" height="7" x="3" y="3" rx="1.5" />
+          <rect width="7" height="7" x="14" y="3" rx="1.5" />
+          <rect width="7" height="7" x="8.5" y="14" rx="1.5" />
+          <path d="M10 6.5h4" />
+          <path d="M7.5 10v2.5l2.5 2.5" />
+          <path d="M16.5 10v2.5L14 15" />
+        </svg>
+        Connected Apps
+      </div>
+      <h1>Control YouTube Music without switching windows</h1>
+      <p>Use the macOS menu bar, Windows taskbar, or your terminal.</p>
+    </header>
+
+    <main class="apps">
+      <section class="app-card macos">
+        <div class="card-heading">
+          <h2>YTM Menu Bar</h2>
+          <span class="platform">macOS</span>
+        </div>
+        <div class="shot">
+          <img
+            src="../../apps/menu-bar/release/menu-bar-screenshot.png"
+            alt="YTM Menu Bar playback controls"
+          />
+        </div>
+        <p class="benefit">
+          <strong>See what is playing and control it</strong> from the menu bar.
+        </p>
+      </section>
+
+      <section class="app-card windows">
+        <div class="card-heading">
+          <h2>YTM Tray</h2>
+          <span class="platform">Windows</span>
+        </div>
+        <div class="shot">
+          <img
+            src="../../apps/windows-tray/release/windows-tray-screenshot.png"
+            alt="YTM Tray playback controls"
+          />
+        </div>
+        <p class="benefit">
+          <strong>Keep playback close</strong> in the Windows taskbar.
+        </p>
+      </section>
+
+      <section class="app-card terminal">
+        <div class="card-heading">
+          <h2>YTM Enhancer CLI</h2>
+          <span class="platform">macOS + Linux</span>
+        </div>
+        <div class="shot">
+          <img
+            src="../../apps/cli/release/cli-demo-poster.png"
+            alt="YTM Enhancer CLI terminal controls"
+          />
+        </div>
+        <div class="commands" aria-hidden="true">
+          <div class="command">ytme status</div>
+          <div class="command">ytme pause</div>
+          <div class="command">ytme next</div>
+          <div class="command">ytme watch</div>
+        </div>
+        <p class="benefit">
+          <strong>Control playback from scripts and shells</strong> without
+          leaving the terminal.
+        </p>
+      </section>
+    </main>
+
+    <div class="accent"></div>
+  </body>
+</html>

@@ -12,565 +12,195 @@
         margin: 0;
         padding: 0;
       }
+
       html,
       body {
         width: 1400px;
         height: 560px;
         overflow: hidden;
       }
+
       body {
-        font-family: "Roboto", "Arial", sans-serif;
+        position: relative;
         background: #030303;
         color: #fff;
-        position: relative;
+        font-family: "Roboto", "Arial", sans-serif;
       }
 
-      /* Subtle background gradient */
-      .bg-gradient {
+      .background {
         position: absolute;
         inset: 0;
         background:
           radial-gradient(
-            ellipse at 20% 50%,
-            rgba(51, 255, 255, 0.04) 0%,
-            transparent 50%
+            circle at 18% 52%,
+            rgba(255, 0, 51, 0.11),
+            transparent 35%
           ),
           radial-gradient(
-            ellipse at 80% 40%,
-            rgba(255, 0, 0, 0.03) 0%,
-            transparent 40%
+            circle at 82% 45%,
+            rgba(48, 139, 255, 0.11),
+            transparent 38%
           ),
-          #030303;
+          linear-gradient(110deg, #08080a 0%, #020202 58%, #07070a 100%);
       }
 
-      /* Left section: branding */
-      .brand-section {
+      .brand {
         position: absolute;
-        left: 80px;
         top: 50%;
+        left: 78px;
+        z-index: 5;
+        width: 520px;
         transform: translateY(-50%);
-        display: flex;
-        flex-direction: column;
-        z-index: 2;
       }
+
       .brand-icon {
-        width: 96px;
-        height: 96px;
-        margin-bottom: 24px;
+        width: 92px;
+        height: 92px;
+        margin-bottom: 22px;
+        filter: drop-shadow(0 12px 28px rgba(255, 0, 51, 0.18));
       }
-      .brand-icon svg {
-        width: 100%;
-        height: 100%;
+
+      h1 {
+        font-size: 45px;
+        font-weight: 720;
+        letter-spacing: -1px;
       }
-      .brand-title {
-        font-size: 44px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-      }
-      .brand-tagline {
-        font-size: 18px;
-        color: #aaa;
-        margin-top: 8px;
-        max-width: 380px;
+
+      .tagline {
+        max-width: 470px;
+        margin-top: 12px;
+        color: #a9a9af;
+        font-size: 19px;
         line-height: 1.5;
       }
-      .brand-features {
+
+      .features {
         display: flex;
-        gap: 20px;
-        margin-top: 32px;
         flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 29px;
       }
-      .brand-feature {
+
+      .feature {
         display: flex;
         align-items: center;
         gap: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.045);
+        color: #d0d0d4;
         font-size: 13px;
-        color: #ccc;
-        padding: 6px 14px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 20px;
+        padding: 8px 13px;
       }
-      .brand-feature svg {
+
+      .feature svg {
         width: 16px;
         height: 16px;
-        stroke: #ff4444;
         fill: none;
-        stroke-width: 2;
+        stroke: #ff3158;
         stroke-linecap: round;
         stroke-linejoin: round;
+        stroke-width: 2;
       }
 
-      /* Right section: overlapping popup screenshots */
-      .screenshots {
+      .surfaces {
         position: absolute;
-        right: 40px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 720px;
-        height: 480px;
+        top: 38px;
+        right: 35px;
+        width: 735px;
+        height: 484px;
       }
 
-      .screenshot {
+      .surface {
         position: absolute;
-        width: 320px;
-        height: 420px;
-        background: #0a0a0a;
-        border-radius: 12px;
         overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        background: #070708;
         box-shadow:
-          0 16px 48px rgba(0, 0, 0, 0.6),
-          0 0 0 1px rgba(255, 255, 255, 0.06);
+          0 28px 65px rgba(0, 0, 0, 0.65),
+          inset 0 1px rgba(255, 255, 255, 0.04);
       }
 
-      /* Screenshot 1 (back left) - Hotkeys */
-      .ss-1 {
-        left: 0;
-        top: 50px;
-        z-index: 1;
-        opacity: 0.7;
+      .surface img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
       }
-      /* Screenshot 2 (center, front) - Playback Controls */
-      .ss-2 {
-        left: 190px;
-        top: 20px;
-        z-index: 3;
-      }
-      /* Screenshot 3 (back right) - Sleep Timer */
-      .ss-3 {
-        left: 390px;
-        top: 50px;
+
+      .surface-label {
+        position: absolute;
+        top: 12px;
+        left: 13px;
         z-index: 2;
-        opacity: 0.7;
-      }
-
-      /* Mini popup content inside screenshots */
-      .ss-sidebar {
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 120px;
-        background: #0f0f0f;
-        border-right: 1px solid #2a2a2a;
-        padding-top: 10px;
-      }
-      .ss-nav-item {
-        padding: 5px 10px;
-        font-size: 8px;
-        color: #888;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        white-space: nowrap;
-        overflow: hidden;
-      }
-      .ss-nav-item.active {
-        color: #fff;
-        background: #3f3f3f;
-        border-radius: 0 14px 14px 0;
-        margin-right: 6px;
-      }
-      .ss-nav-item svg {
-        width: 12px;
-        height: 12px;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        flex-shrink: 0;
-      }
-      .ss-header-item {
-        padding: 0 10px 8px;
-        margin-bottom: 6px;
-        border-bottom: 1px solid #2a2a2a;
-      }
-      .ss-header-item h1 {
-        font-size: 8px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #fff;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-      }
-      .ss-logo {
-        width: 14px;
-        height: 14px;
-      }
-
-      .ss-main {
-        position: absolute;
-        left: 120px;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        padding: 14px;
-        overflow: hidden;
-      }
-      .ss-main h2 {
-        font-size: 13px;
-        font-weight: 500;
-        margin-bottom: 10px;
-      }
-      .ss-main h3 {
-        font-size: 8px;
-        color: #aaa;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin: 8px 0 6px;
-      }
-      .ss-2 .ss-main {
-        padding: 12px 14px;
-      }
-      .ss-2 .ss-main h2 {
-        margin-bottom: 8px;
-      }
-
-      .ss-card {
-        background: #0f0f0f;
-        border: 1px solid #2a2a2a;
-        border-radius: 6px;
-        padding: 6px 8px;
-        margin-bottom: 6px;
-      }
-      .ss-source-label {
-        color: #aaa;
-        font-size: 7px;
-        letter-spacing: 0.5px;
-        margin-bottom: 5px;
-        text-transform: uppercase;
-      }
-      .ss-source-tabs {
-        display: flex;
-        gap: 5px;
-      }
-      .ss-source-tab {
-        width: 24px;
-        height: 24px;
-        border: 1.5px solid transparent;
-        border-radius: 4px;
-        background: linear-gradient(135deg, #2a1a4a, #4a2a6a);
-      }
-      .ss-source-tab.active {
-        border-color: #ff0000;
-        background: linear-gradient(135deg, #c41010, #ff4040);
-      }
-      .ss-toggle-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 0;
-        font-size: 9px;
-      }
-      .ss-toggle-row + .ss-toggle-row {
-        border-top: 1px solid #2a2a2a;
-      }
-      .ss-toggle {
-        width: 22px;
-        height: 12px;
-        border-radius: 6px;
-        position: relative;
-      }
-      .ss-toggle-on {
-        background: #ff0000;
-      }
-      .ss-toggle-off {
-        background: #3f3f3f;
-      }
-      .ss-toggle::after {
-        content: "";
-        position: absolute;
-        width: 8px;
-        height: 8px;
-        background: #fff;
-        border-radius: 50%;
-        top: 2px;
-      }
-      .ss-toggle-on::after {
-        left: 12px;
-      }
-      .ss-toggle-off::after {
-        left: 2px;
-      }
-
-      /* Now playing mini card */
-      .ss-np-row {
-        display: flex;
-        gap: 7px;
-        align-items: flex-start;
-      }
-      .ss-np-art {
-        width: 34px;
-        height: 34px;
-        border-radius: 4px;
-        background: linear-gradient(135deg, #c41010, #ff4040);
-        flex-shrink: 0;
-      }
-      .ss-np-meta {
-        flex: 1;
-        min-width: 0;
-      }
-      .ss-np-title {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        background: rgba(10, 10, 12, 0.84);
+        color: #d8d8dc;
         font-size: 10px;
-        font-weight: 600;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .ss-np-artist {
-        font-size: 8px;
-        color: #aaa;
-        margin-top: 1px;
-      }
-      .ss-np-controls {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        margin-top: 4px;
-        align-items: center;
-        width: 100%;
-      }
-      .ss-np-btn {
-        width: 17px;
-        height: 17px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        justify-self: center;
-      }
-      .ss-np-btn svg {
-        width: 10px;
-        height: 10px;
-        stroke: #fff;
-        fill: none;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .ss-np-btn-play {
-        width: 20px;
-        height: 20px;
-        background: #fff;
-        border-radius: 50%;
-        color: #000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .ss-np-btn-play svg {
-        stroke: #000;
-        width: 10px;
-        height: 10px;
-      }
-      .ss-np-progress {
-        margin-top: 4px;
-      }
-      .ss-np-progress-track {
-        height: 3px;
-        border-radius: 2px;
-        background: #3f3f3f;
-        overflow: hidden;
-      }
-      .ss-np-progress-fill {
-        width: 37%;
-        height: 100%;
-        background: #ff0000;
-      }
-      .ss-np-progress-times {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 3px;
-        color: #aaa;
-        font-size: 7px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        padding: 6px 9px;
+        text-transform: uppercase;
       }
 
-      /* Volume bar */
-      .ss-vol-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 8px;
+      .mac {
+        top: 54px;
+        left: 0;
+        z-index: 1;
+        width: 300px;
+        height: 314px;
+        opacity: 0.78;
+        transform: rotate(-2deg);
       }
-      .ss-vol-label {
-        color: #aaa;
+
+      .windows {
+        top: 10px;
+        left: 250px;
+        z-index: 3;
+        width: 270px;
+        height: 338px;
+        transform: rotate(1.2deg);
       }
-      .ss-vol-val {
-        font-weight: 600;
+
+      .terminal {
+        right: 0;
+        bottom: 8px;
+        z-index: 4;
+        width: 430px;
+        height: 242px;
+        transform: rotate(-0.8deg);
       }
-      .ss-vol-bar {
-        width: 100%;
-        height: 4px;
-        background: #3f3f3f;
-        border-radius: 2px;
-        margin-top: 4px;
-        position: relative;
+
+      .terminal img {
+        padding: 10px;
       }
-      .ss-vol-fill {
-        width: 72%;
-        height: 100%;
-        background: #ff0000;
-        border-radius: 2px;
-      }
-      .ss-vol-thumb {
+
+      .connection {
         position: absolute;
-        top: -3px;
-        left: calc(72% - 5px);
-        width: 10px;
-        height: 10px;
+        z-index: 0;
         border-radius: 50%;
-        background: #fff;
+        opacity: 0.45;
       }
 
-      /* Shortcut row */
-      .ss-shortcut-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 0;
-        font-size: 8px;
-      }
-      .ss-shortcut-row + .ss-shortcut-row {
-        border-top: 1px solid #2a2a2a;
-      }
-      .ss-shortcut-label {
-        color: #aaa;
-      }
-      .ss-key {
-        background: #333;
-        padding: 1px 3px;
-        border-radius: 2px;
-        font-size: 7px;
-        border: 1px solid #444;
-        color: #eee;
-        box-shadow: 0 1px 0 #111;
-      }
-      .ss-key-muted {
-        color: #aaa;
-        min-width: 26px;
-        text-align: center;
-      }
-      .ss-keys {
-        display: flex;
-        gap: 2px;
-        align-items: center;
-      }
-      .ss-key-sep {
-        font-size: 6px;
-        color: #666;
+      .connection.one {
+        top: 122px;
+        left: 166px;
+        width: 245px;
+        height: 245px;
+        border: 1px solid rgba(255, 49, 88, 0.28);
       }
 
-      /* Sleep timer */
-      .ss-field-select {
-        width: 100%;
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
-        color: #fff;
-        padding: 3px 6px;
-        border-radius: 3px;
-        font-size: 8px;
-        outline: none;
-      }
-      .ss-preset-group {
-        display: flex;
-        gap: 3px;
-        margin-top: 5px;
-        flex-wrap: wrap;
-      }
-      .ss-preset-btn {
-        padding: 2px 7px;
-        border-radius: 10px;
-        border: 1px solid #2a2a2a;
-        background: #1a1a1a;
-        color: #fff;
-        font-size: 8px;
-      }
-      .ss-preset-btn.selected {
-        background: #ff0000;
-        border-color: #ff0000;
-      }
-      .ss-duration-row {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-top: 5px;
-      }
-      .ss-time-input {
-        width: 28px;
-        padding: 2px 4px;
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
-        border-radius: 3px;
-        color: #fff;
-        font-size: 9px;
-        text-align: center;
-      }
-      .ss-time-colon {
-        color: #aaa;
-        font-weight: 600;
-        font-size: 9px;
-      }
-      .ss-status-text {
-        font-size: 9px;
-        color: #ff4444;
-        font-weight: 500;
-        margin-top: 6px;
-      }
-      .ss-btn-row {
-        display: flex;
-        gap: 4px;
-        margin-top: 6px;
-      }
-      .ss-btn-primary {
-        flex: 1;
-        padding: 5px;
-        background: #ff0000;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        font-weight: 600;
-        font-size: 8px;
-        text-align: center;
-      }
-      .ss-btn-secondary {
-        flex: 1;
-        padding: 5px;
-        border-radius: 4px;
-        border: 1px solid #2a2a2a;
-        background: #0f0f0f;
-        color: #fff;
-        font-size: 8px;
-        text-align: center;
+      .connection.two {
+        right: 52px;
+        bottom: 32px;
+        width: 280px;
+        height: 280px;
+        border: 1px solid rgba(57, 124, 255, 0.25);
       }
 
-      /* Mini select for playback controls */
-      .ss-inline-row {
-        display: flex;
-        gap: 6px;
-      }
-      .ss-compact-select {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-      }
-      .ss-compact-label {
-        font-size: 7px;
-        color: #aaa;
-      }
-      .ss-compact-dropdown {
-        width: 100%;
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
-        color: #fff;
-        padding: 3px 5px;
-        border-radius: 3px;
-        font-size: 8px;
-        outline: none;
-      }
-
-      /* Bottom accent */
-      .accent-line {
+      .accent {
         position: absolute;
         bottom: 0;
         left: 0;
@@ -578,130 +208,58 @@
         height: 3px;
         background: linear-gradient(
           90deg,
-          transparent 0%,
-          #ff0000 20%,
-          #ff0000 80%,
-          transparent 100%
+          transparent,
+          #ff0033 28%,
+          #397cff 72%,
+          transparent
         );
-        opacity: 0.5;
+        opacity: 0.72;
       }
     </style>
   </head>
   <body>
-    <div class="bg-gradient"></div>
+    <div class="background"></div>
 
-    <!-- Left: branding -->
-    <div class="brand-section">
-      <div class="brand-icon">
-        <svg viewBox="0 0 128 128">
-          <defs>
-            <linearGradient
-              id="disc"
-              x1="32"
-              y1="32"
-              x2="96"
-              y2="96"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop offset="0%" stop-color="#F03030" />
-              <stop offset="100%" stop-color="#C41010" />
-            </linearGradient>
-            <clipPath id="boundary"><circle cx="64" cy="64" r="63" /></clipPath>
-            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur
-                in="SourceGraphic"
-                stdDeviation="2"
-                result="blur"
-              />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <circle cx="64" cy="64" r="63" fill="#0A0A16" />
-          <g
-            stroke-width="1.8"
-            stroke-linecap="round"
-            fill="none"
-            clip-path="url(#boundary)"
-            filter="url(#glow)"
-          >
-            <line x1="64.0" y1="23.0" x2="64.0" y2="12.0" stroke="#33ffff" />
-            <line x1="72.5" y1="23.9" x2="76.1" y2="7.3" stroke="#33edff" />
-            <line x1="80.7" y1="26.5" x2="89.2" y2="7.4" stroke="#33dbff" />
-            <line x1="88.1" y1="30.8" x2="96.9" y2="18.7" stroke="#33c9ff" />
-            <line x1="94.5" y1="36.6" x2="108.6" y2="23.9" stroke="#33b6ff" />
-            <line x1="99.5" y1="43.5" x2="110.8" y2="37.0" stroke="#33a4ff" />
-            <line x1="103.0" y1="51.3" x2="110.6" y2="48.9" stroke="#3392ff" />
-            <line x1="105.0" y1="64.0" x2="125.0" y2="64.0" stroke="#3377ff" />
-            <line x1="104.1" y1="72.5" x2="117.8" y2="75.4" stroke="#3365ff" />
-            <line x1="101.5" y1="80.7" x2="107.9" y2="83.5" stroke="#3353ff" />
-            <line x1="91.4" y1="94.5" x2="97.5" y2="101.2" stroke="#3833ff" />
-            <line x1="84.5" y1="99.5" x2="87.5" y2="104.7" stroke="#4a33ff" />
-            <line x1="76.7" y1="103.0" x2="80.1" y2="113.5" stroke="#5c33ff" />
-            <line x1="64.0" y1="105.0" x2="64.0" y2="122.0" stroke="#7733ff" />
-            <line x1="55.5" y1="104.1" x2="52.8" y2="116.8" stroke="#8933ff" />
-            <line x1="47.3" y1="101.5" x2="44.5" y2="107.9" stroke="#9b33ff" />
-            <line x1="39.9" y1="97.2" x2="34.0" y2="105.3" stroke="#ad33ff" />
-            <line x1="33.5" y1="91.4" x2="29.1" y2="95.4" stroke="#c033ff" />
-            <line x1="25.0" y1="76.7" x2="16.4" y2="79.5" stroke="#e433ff" />
-            <line x1="23.0" y1="64.0" x2="2.0" y2="64.0" stroke="#ff33ff" />
-            <line x1="23.9" y1="55.5" x2="6.3" y2="51.7" stroke="#ff33ed" />
-            <line x1="26.5" y1="47.3" x2="5.5" y2="38.0" stroke="#ff33db" />
-            <line x1="36.6" y1="33.5" x2="23.2" y2="18.7" stroke="#ff33b6" />
-            <line x1="43.5" y1="28.5" x2="35.0" y2="13.8" stroke="#ff33a4" />
-            <line x1="51.3" y1="25.0" x2="46.4" y2="9.8" stroke="#ff3392" />
-            <line x1="59.7" y1="23.2" x2="57.7" y2="4.3" stroke="#ff3380" />
-          </g>
-          <circle
-            cx="64"
-            cy="64"
-            r="41"
-            fill="none"
-            stroke="#FFFFFF"
-            stroke-opacity="0.12"
-            stroke-width="1"
-          />
-          <circle cx="64" cy="64" r="39" fill="url(#disc)" />
-          <polygon points="54,45 54,83 82,64" fill="#FFFFFF" />
-        </svg>
-      </div>
-      <div class="brand-title">YTM Enhancer</div>
-      <div class="brand-tagline">
+    <section class="brand">
+      <img
+        class="brand-icon"
+        src="../../src/assets/icon.svg"
+        alt="YTM Enhancer"
+      />
+      <h1>YTM Enhancer</h1>
+      <p class="tagline">
         Smarter controls, automation, notifications, and visual upgrades for
-        YouTube Music
-      </div>
-      <div class="brand-features">
-        <div class="brand-feature">
-          <svg viewBox="0 0 24 24">
+        YouTube Music.
+      </p>
+      <div class="features">
+        <div class="feature">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="m10 8 6 4-6 4V8z" />
+          </svg>
+          Automation
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect width="18" height="18" x="3" y="3" rx="2" />
             <path d="M21 15V5a2 2 0 0 0-2-2H9" />
             <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
           </svg>
           Mini Player
         </div>
-        <div class="brand-feature">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 20v-8" />
-            <path d="M18 20V10" />
-            <path d="M6 20V4" />
+        <div class="feature">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect width="7" height="7" x="3" y="3" rx="1.5" />
+            <rect width="7" height="7" x="14" y="3" rx="1.5" />
+            <rect width="7" height="7" x="8.5" y="14" rx="1.5" />
+            <path d="M10 6.5h4" />
+            <path d="M7.5 10v2.5l2.5 2.5" />
+            <path d="M16.5 10v2.5L14 15" />
           </svg>
-          Visualizer
+          Connected Apps
         </div>
-        <div class="brand-feature">
-          <svg viewBox="0 0 24 24">
-            <rect width="20" height="16" x="2" y="4" rx="2" />
-            <path d="M6 8h.01" />
-            <path d="M10 8h.01" />
-            <path d="M14 8h.01" />
-            <path d="M18 8h.01" />
-            <path d="M8 16h8" />
-          </svg>
-          Hotkeys
-        </div>
-        <div class="brand-feature">
-          <svg viewBox="0 0 24 24">
+        <div class="feature">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="13" r="8" />
             <path d="M12 9v4l2 2" />
             <path d="M5 3 2 6" />
@@ -710,572 +268,37 @@
           Sleep Timer
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Right: fanned screenshots -->
-    <div class="screenshots">
-      <!-- Screenshot 1: Hotkeys (back left) -->
-      <div class="screenshot ss-1">
-        <div class="ss-sidebar">
-          <div class="ss-header-item">
-            <h1>
-              <svg class="ss-logo" viewBox="0 0 128 128">
-                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
-                <g stroke-width="1.8" stroke-linecap="round" fill="none">
-                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
-                  <line
-                    x1="80.7"
-                    y1="26.5"
-                    x2="89.2"
-                    y2="7.4"
-                    stroke="#33dbff"
-                  />
-                  <line
-                    x1="94.5"
-                    y1="36.6"
-                    x2="108.6"
-                    y2="23.9"
-                    stroke="#33b6ff"
-                  />
-                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
-                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
-                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
-                  <line
-                    x1="36.6"
-                    y1="33.5"
-                    x2="23.2"
-                    y2="18.7"
-                    stroke="#ff33b6"
-                  />
-                </g>
-                <circle cx="64" cy="64" r="39" fill="#C41010" />
-                <polygon points="54,45 54,83 82,64" fill="#FFF" />
-              </svg>
-              YTM Enhancer
-            </h1>
-          </div>
-          <!-- Playback Controls -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path
-                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-              />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            Playback Controls
-          </div>
-          <!-- Auto Play -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" />
-              <path d="m10 8 6 4-6 4V8z" />
-            </svg>
-            Auto Play
-          </div>
-          <!-- Auto Skip -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="m3 5 9 7-9 7V5Z" />
-              <path d="m12 5 9 7-9 7V5Z" />
-            </svg>
-            Auto Skip
-          </div>
-          <!-- Visualizer -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 20v-8" />
-              <path d="M18 20V10" />
-              <path d="M6 20V4" />
-            </svg>
-            Visualizer
-          </div>
-          <!-- Hotkeys (active) -->
-          <div class="ss-nav-item active">
-            <svg viewBox="0 0 24 24">
-              <rect width="20" height="16" x="2" y="4" rx="2" />
-              <path d="M6 8h.01" />
-              <path d="M10 8h.01" />
-              <path d="M14 8h.01" />
-              <path d="M18 8h.01" />
-              <path d="M6 12h.01" />
-              <path d="M18 12h.01" />
-              <path d="M10 12h.01" />
-              <path d="M14 12h.01" />
-              <path d="M8 16h8" />
-            </svg>
-            Hotkeys
-          </div>
-          <!-- Mini Player -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="M21 15V5a2 2 0 0 0-2-2H9" />
-              <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
-            </svg>
-            Mini Player
-          </div>
-          <!-- Notifications -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-            </svg>
-            Notifications
-          </div>
-          <!-- Sleep Timer -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="13" r="8" />
-              <path d="M12 9v4l2 2" />
-              <path d="M5 3 2 6" />
-              <path d="m22 6-3-3" />
-              <path d="M6.38 18.7 4 21" />
-              <path d="M17.64 18.67 20 21" />
-            </svg>
-            Sleep Timer
-          </div>
-        </div>
-        <div class="ss-main">
-          <h2>Hotkeys</h2>
-          <h3>Playback</h3>
-          <div class="ss-card">
-            <div class="ss-shortcut-row">
-              <span class="ss-shortcut-label">Play / Pause</span>
-              <div class="ss-keys">
-                <span class="ss-key">Alt</span><span class="ss-key-sep">+</span
-                ><span class="ss-key">Shift</span
-                ><span class="ss-key-sep">+</span><span class="ss-key">P</span>
-              </div>
-            </div>
-            <div class="ss-shortcut-row">
-              <span class="ss-shortcut-label">Next</span>
-              <div class="ss-keys">
-                <span class="ss-key">Alt</span><span class="ss-key-sep">+</span
-                ><span class="ss-key">Shift</span
-                ><span class="ss-key-sep">+</span><span class="ss-key">N</span>
-              </div>
-            </div>
-            <div class="ss-shortcut-row">
-              <span class="ss-shortcut-label">Focus YTM Tab</span>
-              <div class="ss-keys">
-                <span class="ss-key">Alt</span><span class="ss-key-sep">+</span
-                ><span class="ss-key">Shift</span
-                ><span class="ss-key-sep">+</span><span class="ss-key">Y</span>
-              </div>
-            </div>
-          </div>
-          <h3>Alerts</h3>
-          <div class="ss-card">
-            <div class="ss-shortcut-row">
-              <span class="ss-shortcut-label">Remind Me</span>
-              <div class="ss-keys">
-                <span class="ss-key ss-key-muted">Not set</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <section class="surfaces" aria-label="Connected Apps">
+      <div class="connection one"></div>
+      <div class="connection two"></div>
+
+      <div class="surface mac">
+        <span class="surface-label">macOS</span>
+        <img
+          src="../../apps/menu-bar/release/menu-bar-screenshot.png"
+          alt="YTM Menu Bar"
+        />
       </div>
 
-      <!-- Screenshot 2: Playback Controls (center, front) -->
-      <div class="screenshot ss-2">
-        <div class="ss-sidebar">
-          <div class="ss-header-item">
-            <h1>
-              <svg class="ss-logo" viewBox="0 0 128 128">
-                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
-                <g stroke-width="1.8" stroke-linecap="round" fill="none">
-                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
-                  <line
-                    x1="80.7"
-                    y1="26.5"
-                    x2="89.2"
-                    y2="7.4"
-                    stroke="#33dbff"
-                  />
-                  <line
-                    x1="94.5"
-                    y1="36.6"
-                    x2="108.6"
-                    y2="23.9"
-                    stroke="#33b6ff"
-                  />
-                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
-                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
-                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
-                  <line
-                    x1="36.6"
-                    y1="33.5"
-                    x2="23.2"
-                    y2="18.7"
-                    stroke="#ff33b6"
-                  />
-                </g>
-                <circle cx="64" cy="64" r="39" fill="#C41010" />
-                <polygon points="54,45 54,83 82,64" fill="#FFF" />
-              </svg>
-              YTM Enhancer
-            </h1>
-          </div>
-          <!-- Playback Controls (active) -->
-          <div class="ss-nav-item active">
-            <svg viewBox="0 0 24 24">
-              <path
-                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-              />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            Playback Controls
-          </div>
-          <!-- Auto Play -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" />
-              <path d="m10 8 6 4-6 4V8z" />
-            </svg>
-            Auto Play
-          </div>
-          <!-- Auto Skip -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="m3 5 9 7-9 7V5Z" />
-              <path d="m12 5 9 7-9 7V5Z" />
-            </svg>
-            Auto Skip
-          </div>
-          <!-- Visualizer -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 20v-8" />
-              <path d="M18 20V10" />
-              <path d="M6 20V4" />
-            </svg>
-            Visualizer
-          </div>
-          <!-- Hotkeys -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <rect width="20" height="16" x="2" y="4" rx="2" />
-              <path d="M6 8h.01" />
-              <path d="M10 8h.01" />
-              <path d="M14 8h.01" />
-              <path d="M18 8h.01" />
-              <path d="M6 12h.01" />
-              <path d="M18 12h.01" />
-              <path d="M10 12h.01" />
-              <path d="M14 12h.01" />
-              <path d="M8 16h8" />
-            </svg>
-            Hotkeys
-          </div>
-          <!-- Mini Player -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="M21 15V5a2 2 0 0 0-2-2H9" />
-              <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
-            </svg>
-            Mini Player
-          </div>
-          <!-- Notifications -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-            </svg>
-            Notifications
-          </div>
-          <!-- Sleep Timer -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="13" r="8" />
-              <path d="M12 9v4l2 2" />
-              <path d="M5 3 2 6" />
-              <path d="m22 6-3-3" />
-              <path d="M6.38 18.7 4 21" />
-              <path d="M17.64 18.67 20 21" />
-            </svg>
-            Sleep Timer
-          </div>
-        </div>
-        <div class="ss-main">
-          <h2>Playback Controls</h2>
-          <div class="ss-card">
-            <div class="ss-source-label">Music Source</div>
-            <div class="ss-source-tabs">
-              <div class="ss-source-tab active"></div>
-              <div class="ss-source-tab"></div>
-            </div>
-          </div>
-          <h3>Now Playing</h3>
-          <div class="ss-card">
-            <div class="ss-np-row">
-              <div class="ss-np-art"></div>
-              <div class="ss-np-meta">
-                <div class="ss-np-title">Starlight Echoes</div>
-                <div class="ss-np-artist">Crystal Waves</div>
-                <div class="ss-np-controls">
-                  <div class="ss-np-btn">
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.45 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"
-                        fill="currentColor"
-                        stroke="none"
-                      />
-                    </svg>
-                  </div>
-                  <div class="ss-np-btn">
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M6 6h2v12H6zm3.5 6 8.5 6V6z"
-                        fill="currentColor"
-                        stroke="none"
-                      />
-                    </svg>
-                  </div>
-                  <div class="ss-np-btn-play">
-                    <svg viewBox="0 0 24 24">
-                      <rect
-                        x="6"
-                        y="5"
-                        width="4"
-                        height="14"
-                        rx="1"
-                        fill="currentColor"
-                        stroke="none"
-                      />
-                      <rect
-                        x="14"
-                        y="5"
-                        width="4"
-                        height="14"
-                        rx="1"
-                        fill="currentColor"
-                        stroke="none"
-                      />
-                    </svg>
-                  </div>
-                  <div class="ss-np-btn">
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"
-                        fill="currentColor"
-                        stroke="none"
-                      />
-                    </svg>
-                  </div>
-                  <div class="ss-np-btn">
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"
-                        fill="currentColor"
-                        stroke="none"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <div class="ss-np-progress">
-                  <div class="ss-np-progress-track">
-                    <div class="ss-np-progress-fill"></div>
-                  </div>
-                  <div class="ss-np-progress-times">
-                    <span>1:34</span>
-                    <span>4:12</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Volume</h3>
-          <div class="ss-card">
-            <div class="ss-vol-row">
-              <span class="ss-vol-label">Volume</span>
-              <span class="ss-vol-val">72%</span>
-            </div>
-            <div class="ss-vol-bar">
-              <div class="ss-vol-fill"></div>
-              <div class="ss-vol-thumb"></div>
-            </div>
-          </div>
-          <h3>Audio &amp; Playback</h3>
-          <div class="ss-card">
-            <div class="ss-inline-row">
-              <div class="ss-compact-select">
-                <span class="ss-compact-label">Playback Speed</span>
-                <select class="ss-compact-dropdown">
-                  <option selected>1x (Normal)</option>
-                </select>
-              </div>
-              <div class="ss-compact-select">
-                <span class="ss-compact-label">Stream Quality</span>
-                <select class="ss-compact-dropdown">
-                  <option selected>High (256 kbps)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="surface windows">
+        <span class="surface-label">Windows</span>
+        <img
+          src="../../apps/windows-tray/release/windows-tray-screenshot.png"
+          alt="YTM Tray"
+        />
       </div>
 
-      <!-- Screenshot 3: Sleep Timer (back right) -->
-      <div class="screenshot ss-3">
-        <div class="ss-sidebar">
-          <div class="ss-header-item">
-            <h1>
-              <svg class="ss-logo" viewBox="0 0 128 128">
-                <circle cx="64" cy="64" r="63" fill="#0A0A16" />
-                <g stroke-width="1.8" stroke-linecap="round" fill="none">
-                  <line x1="64" y1="23" x2="64" y2="12" stroke="#33ffff" />
-                  <line
-                    x1="80.7"
-                    y1="26.5"
-                    x2="89.2"
-                    y2="7.4"
-                    stroke="#33dbff"
-                  />
-                  <line
-                    x1="94.5"
-                    y1="36.6"
-                    x2="108.6"
-                    y2="23.9"
-                    stroke="#33b6ff"
-                  />
-                  <line x1="105" y1="64" x2="125" y2="64" stroke="#3377ff" />
-                  <line x1="64" y1="105" x2="64" y2="122" stroke="#7733ff" />
-                  <line x1="23" y1="64" x2="2" y2="64" stroke="#ff33ff" />
-                  <line
-                    x1="36.6"
-                    y1="33.5"
-                    x2="23.2"
-                    y2="18.7"
-                    stroke="#ff33b6"
-                  />
-                </g>
-                <circle cx="64" cy="64" r="39" fill="#C41010" />
-                <polygon points="54,45 54,83 82,64" fill="#FFF" />
-              </svg>
-              YTM Enhancer
-            </h1>
-          </div>
-          <!-- Playback Controls -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path
-                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-              />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            Playback Controls
-          </div>
-          <!-- Auto Play -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" />
-              <path d="m10 8 6 4-6 4V8z" />
-            </svg>
-            Auto Play
-          </div>
-          <!-- Auto Skip -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="m3 5 9 7-9 7V5Z" />
-              <path d="m12 5 9 7-9 7V5Z" />
-            </svg>
-            Auto Skip
-          </div>
-          <!-- Visualizer -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 20v-8" />
-              <path d="M18 20V10" />
-              <path d="M6 20V4" />
-            </svg>
-            Visualizer
-          </div>
-          <!-- Hotkeys -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <rect width="20" height="16" x="2" y="4" rx="2" />
-              <path d="M6 8h.01" />
-              <path d="M10 8h.01" />
-              <path d="M14 8h.01" />
-              <path d="M18 8h.01" />
-              <path d="M6 12h.01" />
-              <path d="M18 12h.01" />
-              <path d="M10 12h.01" />
-              <path d="M14 12h.01" />
-              <path d="M8 16h8" />
-            </svg>
-            Hotkeys
-          </div>
-          <!-- Mini Player -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="M21 15V5a2 2 0 0 0-2-2H9" />
-              <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
-            </svg>
-            Mini Player
-          </div>
-          <!-- Notifications -->
-          <div class="ss-nav-item">
-            <svg viewBox="0 0 24 24">
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-            </svg>
-            Notifications
-          </div>
-          <!-- Sleep Timer (active) -->
-          <div class="ss-nav-item active">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="13" r="8" />
-              <path d="M12 9v4l2 2" />
-              <path d="M5 3 2 6" />
-              <path d="m22 6-3-3" />
-              <path d="M6.38 18.7 4 21" />
-              <path d="M17.64 18.67 20 21" />
-            </svg>
-            Sleep Timer
-          </div>
-        </div>
-        <div class="ss-main">
-          <h2>Sleep Timer</h2>
-          <div class="ss-card">
-            <select class="ss-field-select">
-              <option selected>Duration</option>
-              <option>At time</option>
-            </select>
-          </div>
-          <div class="ss-preset-group">
-            <div class="ss-preset-btn">15m</div>
-            <div class="ss-preset-btn selected">30m</div>
-            <div class="ss-preset-btn">45m</div>
-            <div class="ss-preset-btn">60m</div>
-          </div>
-          <div style="font-size: 8px; color: #aaa; margin-top: 5px">
-            Duration (HH:MM)
-          </div>
-          <div class="ss-duration-row">
-            <input class="ss-time-input" type="text" value="00" readonly />
-            <span class="ss-time-colon">:</span>
-            <input class="ss-time-input" type="text" value="30" readonly />
-          </div>
-          <div class="ss-status-text">Timer active: 27:14 remaining</div>
-          <div class="ss-btn-row">
-            <div class="ss-btn-primary">Restart Timer</div>
-            <div class="ss-btn-secondary">Cancel</div>
-          </div>
-          <div class="ss-card" style="margin-top: 6px">
-            <div class="ss-toggle-row" style="padding: 0">
-              <span style="font-size: 8px"
-                >Show notification when timer ends</span
-              >
-              <div class="ss-toggle ss-toggle-on"></div>
-            </div>
-          </div>
-        </div>
+      <div class="surface terminal">
+        <span class="surface-label">Terminal</span>
+        <img
+          src="../../apps/cli/release/cli-demo-poster.png"
+          alt="YTM Enhancer CLI"
+        />
       </div>
-    </div>
+    </section>
 
-    <div class="accent-line"></div>
+    <div class="accent"></div>
   </body>
 </html>

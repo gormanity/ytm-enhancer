@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { copyFile, mkdir, readdir } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 import { chromium } from "playwright";
 
@@ -15,7 +15,7 @@ const ASSET_SIZES = new Map([
   ["02-mini-player", { width: 1280, height: 800 }],
   ["03-visualizer", { width: 1280, height: 800 }],
   ["04-sleep-timer", { width: 1280, height: 800 }],
-  ["05-hotkeys-notifications", { width: 1280, height: 800 }],
+  ["05-connected-apps", { width: 1280, height: 800 }],
   ["promo-marquee-1400x560", { width: 1400, height: 560 }],
   ["promo-small-440x280", { width: 440, height: 280 }],
 ]);
@@ -37,13 +37,23 @@ async function renderAsset(page, fileName) {
 
   const inputPath = resolve(sourceDir, fileName);
   const outputPath = resolve(outputDir, `${assetName}.png`);
+  const trackedPath = resolve(sourceDir, `${assetName}.png`);
   await page.setViewportSize(size);
   await page.goto(`file://${inputPath}`);
-  await page.screenshot({ path: outputPath, fullPage: false });
+  const screenshot = await page.screenshot({
+    animations: "disabled",
+    fullPage: false,
+    type: "png",
+  });
+  await Promise.all([
+    writeFile(outputPath, screenshot),
+    writeFile(trackedPath, screenshot),
+  ]);
   console.log(`Rendered ${assetName}.png (${size.width}x${size.height})`);
 }
 
 async function buildStoreAssets() {
+  await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
   await copyFile(canonicalCopy, resolve(outputDir, "STORE.md"));
   console.log("Copied STORE.md");
@@ -51,6 +61,13 @@ async function buildStoreAssets() {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
+    await page.addInitScript(() => {
+      let state = 0x1a2b3c4d;
+      Math.random = () => {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 0x100000000;
+      };
+    });
     for (const source of await listHtmlSources()) {
       await renderAsset(page, source);
     }
