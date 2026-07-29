@@ -20,6 +20,8 @@ const COMMAND_ACTION_MAP: Record<string, PlaybackAction> = {
   "previous-track": "previous",
 };
 
+export const DEFAULT_TAB_FAVICON_INDICATOR_ENABLED = false;
+
 export class PlaybackControlsModule implements FeatureModule {
   readonly id = "playback-controls";
   readonly name = "Playback Controls";
@@ -27,7 +29,7 @@ export class PlaybackControlsModule implements FeatureModule {
     "Now playing, volume, speed, quality, and tab management";
 
   private enabled = true;
-  private tabFaviconIndicatorEnabled = true;
+  private tabFaviconIndicatorEnabled = DEFAULT_TAB_FAVICON_INDICATOR_ENABLED;
   private hotkeyPlaybackController: PlaybackController | null = null;
   private tabChangeContext: ModuleContext | null = null;
   private readonly tabChangeListener = (): void => {

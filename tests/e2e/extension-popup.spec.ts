@@ -3,6 +3,7 @@ import {
   launchExtensionContext,
   type ExtensionTestContext,
 } from "./helpers/extension-context";
+import { loadYtmFixtureThroughExtension } from "./helpers/fixtures";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(60_000);
@@ -158,6 +159,17 @@ return { count: cards.length, openStates };
   expect(cardSnapshot.openStates).toEqual([true, true, true]);
 }
 
+async function readSelectedYtmFavicon(
+  extension: ExtensionTestContext,
+): Promise<string | null> {
+  return extension.popup.evaluate(async () => {
+    const [tab] = await chrome.tabs.query({
+      url: "https://music.youtube.com/*",
+    });
+    return tab?.favIconUrl ?? null;
+  });
+}
+
 // Playwright requires the first callback parameter to be a destructured fixture object.
 // eslint-disable-next-line no-empty-pattern
 test("renders the extension popup shell", async ({}, testInfo) => {
@@ -239,6 +251,55 @@ test("supports popup navigation and Connected Apps interactions", async ({}, tes
 
     expect(extension.popup.isClosed()).toBe(false);
     expect(pageErrors).toEqual([]);
+  } finally {
+    await extension.context.close();
+  }
+});
+
+// Playwright requires the first callback parameter to be a destructured fixture object.
+// eslint-disable-next-line no-empty-pattern
+test("restores the native favicon immediately when the indicator is disabled", async ({}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "firefox",
+    "This browser-level favicon assertion uses Chromium's tabs API.",
+  );
+
+  const extension = await launchExtensionContext(testInfo);
+  const ytmPage = await extension.context.newPage();
+
+  try {
+    await loadYtmFixtureThroughExtension(ytmPage, "playback-controls-loaded");
+
+    const nativeFavicon = await ytmPage
+      .locator('link[rel~="icon"]')
+      .first()
+      .evaluate((link: HTMLLinkElement) => link.href);
+    await expect
+      .poll(() => readSelectedYtmFavicon(extension))
+      .toBe(nativeFavicon);
+
+    const toggle = extension.popup.getByLabel(
+      "Show selected tab favicon indicator",
+    );
+    await expect(toggle).toBeVisible();
+    await expect(toggle).not.toBeChecked();
+    await toggle.check();
+
+    const indicatorFavicon = await ytmPage
+      .locator('link[data-ytm-enhancer-tab-favicon-indicator="true"]')
+      .evaluate((link: HTMLLinkElement) => link.href);
+    await expect
+      .poll(() => readSelectedYtmFavicon(extension))
+      .toBe(indicatorFavicon);
+
+    await toggle.uncheck();
+
+    await expect(
+      ytmPage.locator('link[data-ytm-enhancer-tab-favicon-indicator="true"]'),
+    ).toHaveCount(0);
+    await expect
+      .poll(() => readSelectedYtmFavicon(extension))
+      .toBe(nativeFavicon);
   } finally {
     await extension.context.close();
   }

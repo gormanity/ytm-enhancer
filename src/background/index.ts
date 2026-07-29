@@ -80,7 +80,10 @@ import { HotkeysModule } from "@/modules/hotkeys";
 import { MiniPlayerModule } from "@/modules/mini-player";
 import { NotificationsModule } from "@/modules/notifications";
 import type { NotificationFields } from "@/modules/notifications";
-import { PlaybackControlsModule } from "@/modules/playback-controls";
+import {
+  DEFAULT_TAB_FAVICON_INDICATOR_ENABLED,
+  PlaybackControlsModule,
+} from "@/modules/playback-controls";
 import { SleepTimerModule } from "@/modules/sleep-timer";
 
 const hotkeyRegistry = new HotkeyRegistry();
@@ -1025,7 +1028,10 @@ async function restoreModuleState(): Promise<void> {
     bool("mini-player.suppressNotificationsWhilePipOpen", false),
   );
   playbackControls.setTabFaviconIndicatorEnabled(
-    bool("playback-controls.tabFaviconIndicatorEnabled", true),
+    bool(
+      "playback-controls.tabFaviconIndicatorEnabled",
+      DEFAULT_TAB_FAVICON_INDICATOR_ENABLED,
+    ),
   );
   knownConnectors = new Map(
     normalizeKnownConnectors(state[CONNECTORS_KNOWN_STATE_KEY]).map(

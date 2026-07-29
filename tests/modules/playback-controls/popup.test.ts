@@ -166,7 +166,7 @@ describe("playback controls popup view", () => {
             callback?.({ ok: true, data: 50 });
             return;
           case "get-tab-favicon-indicator-enabled":
-            callback?.({ ok: true, data: true });
+            callback?.({ ok: true, data: false });
             return;
           case "get-playback-speed":
             callback?.({ ok: true, data: "1" });
@@ -297,13 +297,13 @@ describe("playback controls popup view", () => {
       return input!;
     });
 
-    expect(toggle.checked).toBe(true);
-    toggle.checked = false;
+    expect(toggle.checked).toBe(false);
+    toggle.checked = true;
     toggle.dispatchEvent(new Event("change", { bubbles: true }));
 
     expect(sendMessageMock).toHaveBeenCalledWith({
       type: "set-tab-favicon-indicator-enabled",
-      enabled: false,
+      enabled: true,
     });
 
     cleanup?.();

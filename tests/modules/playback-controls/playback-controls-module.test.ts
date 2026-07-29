@@ -69,8 +69,8 @@ describe("PlaybackControlsModule", () => {
     expect(module.isEnabled()).toBe(true);
   });
 
-  it("should show the tab favicon indicator by default", () => {
-    expect(module.getTabFaviconIndicatorEnabled()).toBe(true);
+  it("should hide the tab favicon indicator by default", () => {
+    expect(module.getTabFaviconIndicatorEnabled()).toBe(false);
   });
 
   it("should provide popup views", () => {
@@ -111,19 +111,19 @@ describe("PlaybackControlsModule", () => {
     const getResponse = await handlers.get(
       "get-tab-favicon-indicator-enabled",
     )!({}, {});
-    expect(getResponse).toEqual({ ok: true, data: true });
+    expect(getResponse).toEqual({ ok: true, data: false });
 
     const setResponse = await handlers.get(
       "set-tab-favicon-indicator-enabled",
-    )!({ enabled: false }, {});
+    )!({ enabled: true }, {});
 
     expect(setResponse).toEqual({ ok: true });
-    expect(module.getTabFaviconIndicatorEnabled()).toBe(false);
+    expect(module.getTabFaviconIndicatorEnabled()).toBe(true);
     expect(context.state.saveValue).toHaveBeenCalledWith(
       "playback-controls.tabFaviconIndicatorEnabled",
-      false,
+      true,
     );
-    expect(syncSelectedTabFaviconIndicator).toHaveBeenCalledWith(false);
+    expect(syncSelectedTabFaviconIndicator).toHaveBeenCalledWith(true);
   });
 
   it("should resync tab favicon indicators when YTM tab selection changes", () => {
@@ -135,7 +135,7 @@ describe("PlaybackControlsModule", () => {
     module.init(context);
     context.events.emit("ytm-tabs-changed", undefined);
 
-    expect(syncSelectedTabFaviconIndicator).toHaveBeenCalledWith(true);
+    expect(syncSelectedTabFaviconIndicator).toHaveBeenCalledWith(false);
 
     module.destroy();
     syncSelectedTabFaviconIndicator.mockClear();

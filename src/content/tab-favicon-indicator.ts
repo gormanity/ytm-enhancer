@@ -1,14 +1,10 @@
+import productIconSvg from "@/assets/icon.svg?raw";
+
 const INDICATOR_ATTRIBUTE = "data-ytm-enhancer-tab-favicon-indicator";
-const INDICATOR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="32" cy="32" r="30" fill="#ff0000"/>
-  <circle cx="32" cy="32" r="17" fill="#ffffff"/>
-  <path d="M27 22v20l17-10z" fill="#ff0000"/>
-  <circle cx="49" cy="15" r="11" fill="#111827"/>
-  <circle cx="49" cy="15" r="6" fill="#2dd4bf"/>
-</svg>`;
+const NATIVE_REL_ATTRIBUTE = "data-ytm-enhancer-tab-favicon-native-rel";
 
 function indicatorHref(): string {
-  return `data:image/svg+xml,${encodeURIComponent(INDICATOR_SVG)}`;
+  return `data:image/svg+xml,${encodeURIComponent(productIconSvg)}`;
 }
 
 export class TabFaviconIndicator {
@@ -28,6 +24,8 @@ export class TabFaviconIndicator {
   }
 
   private ensureIndicatorLink(): void {
+    this.suppressPageFavicons();
+
     if (this.link?.isConnected) return;
 
     const existing = document.head.querySelector<HTMLLinkElement>(
@@ -41,6 +39,7 @@ export class TabFaviconIndicator {
     const link = document.createElement("link");
     link.rel = "icon";
     link.type = "image/svg+xml";
+    link.setAttribute("sizes", "any");
     link.href = indicatorHref();
     link.setAttribute(INDICATOR_ATTRIBUTE, "true");
     document.head.appendChild(link);
@@ -58,5 +57,37 @@ export class TabFaviconIndicator {
       link.remove();
     }
     this.link = null;
+    this.restorePageFavicons();
+  }
+
+  private suppressPageFavicons(): void {
+    const links = Array.from(
+      document.head.querySelectorAll<HTMLLinkElement>("link[rel]"),
+    ).filter(
+      (link) =>
+        link.relList.contains("icon") &&
+        !link.hasAttribute(INDICATOR_ATTRIBUTE),
+    );
+
+    for (const link of links) {
+      link.setAttribute(NATIVE_REL_ATTRIBUTE, link.rel);
+      link.removeAttribute("rel");
+    }
+  }
+
+  private restorePageFavicons(): void {
+    const links = Array.from(
+      document.head.querySelectorAll<HTMLLinkElement>(
+        `link[${NATIVE_REL_ATTRIBUTE}]`,
+      ),
+    );
+
+    for (const link of links) {
+      const rel = link.getAttribute(NATIVE_REL_ATTRIBUTE);
+      link.removeAttribute(NATIVE_REL_ATTRIBUTE);
+      if (rel) {
+        link.rel = rel;
+      }
+    }
   }
 }
