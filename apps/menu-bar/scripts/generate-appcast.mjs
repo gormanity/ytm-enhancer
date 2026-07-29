@@ -35,6 +35,79 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;");
 }
 
+function renderInlineMarkdown(value) {
+  const escaped = escapeHtml(value);
+  return escaped.replaceAll(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function renderReleaseNotesMarkdown(markdown) {
+  const output = [];
+  const paragraph = [];
+  const listItem = [];
+  let listOpen = false;
+
+  const closeParagraph = () => {
+    if (paragraph.length === 0) {
+      return;
+    }
+    output.push(`<p>${renderInlineMarkdown(paragraph.join(" "))}</p>`);
+    paragraph.length = 0;
+  };
+  const closeListItem = () => {
+    if (listItem.length === 0) {
+      return;
+    }
+    output.push(`<li>${renderInlineMarkdown(listItem.join(" "))}</li>`);
+    listItem.length = 0;
+  };
+  const closeList = () => {
+    if (!listOpen) {
+      return;
+    }
+    closeListItem();
+    output.push("</ul>");
+    listOpen = false;
+  };
+
+  for (const rawLine of markdown.replaceAll("\r\n", "\n").split("\n")) {
+    const line = rawLine.trim();
+    if (!line) {
+      closeParagraph();
+      closeList();
+      continue;
+    }
+    if (listOpen && /^\s{2,}\S/.test(rawLine) && !line.startsWith("- ")) {
+      listItem.push(line);
+      continue;
+    }
+    const heading = /^(#{2,3})\s+(.+)$/.exec(line);
+    if (heading) {
+      closeParagraph();
+      closeList();
+      const level = heading[1].length;
+      output.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      continue;
+    }
+    const bullet = /^-\s+(.+)$/.exec(line);
+    if (bullet) {
+      closeParagraph();
+      if (!listOpen) {
+        output.push("<ul>");
+        listOpen = true;
+      }
+      closeListItem();
+      listItem.push(bullet[1]);
+      continue;
+    }
+    closeList();
+    paragraph.push(line);
+  }
+
+  closeParagraph();
+  closeList();
+  return output.join("\n    ");
+}
+
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf-8"));
 }
@@ -132,6 +205,42 @@ function readCliProtocolVersion() {
   return match?.[1] ?? "unknown";
 }
 
+function readCliVersion() {
+  const protocolSource = readFileSync(
+    resolve(repoRoot, "apps/cli/internal/protocol/protocol.go"),
+    "utf-8",
+  );
+  const match = protocolSource.match(/ConnectorVersion\s+=\s+"([^"]+)"/);
+
+  return process.env.YTM_CLI_VERSION ?? match?.[1] ?? "unknown";
+}
+
+function cliReleaseAvailable() {
+  const configured =
+    process.env.YTM_CLI_RELEASE_AVAILABLE?.trim().toLowerCase();
+  return ["1", "true", "yes"].includes(configured ?? "");
+}
+
+function cliReleasePackages({ releaseBaseUrl, version }) {
+  const tag = `cli-v${version}`;
+  const assets = {
+    linuxArm64: `YTM-Enhancer-CLI-${version}-linux-arm64.tar.gz`,
+    linuxX64: `YTM-Enhancer-CLI-${version}-linux-x64.tar.gz`,
+    macosArm64: `YTM-Enhancer-CLI-${version}-macos-arm64.zip`,
+    macosX64: `YTM-Enhancer-CLI-${version}-macos-x64.zip`,
+  };
+
+  return Object.fromEntries(
+    Object.entries(assets).map(([runtime, asset]) => [
+      runtime,
+      {
+        asset,
+        packageUrl: `${releaseBaseUrl}/${tag}/${asset}`,
+      },
+    ]),
+  );
+}
+
 function readWindowsTrayMetadata() {
   const metadata = readJson(
     resolve(repoRoot, "apps/windows-tray/release/metadata.json"),
@@ -162,6 +271,13 @@ function extensionStoreUrls() {
 function writeReleaseIndex({ metadata, outputPath, releaseBaseUrl }) {
   const extensionVersion = readExtensionVersion();
   const cliProtocolVersion = readCliProtocolVersion();
+  const cliVersion = readCliVersion();
+  const cliAvailable = cliReleaseAvailable();
+  const cliTag = `cli-v${cliVersion}`;
+  const cliPackages = cliReleasePackages({
+    releaseBaseUrl,
+    version: cliVersion,
+  });
   const windowsTrayMetadata = readWindowsTrayMetadata();
   const extensionTag = `v${extensionVersion}`;
   const menuBarTag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
@@ -249,13 +365,29 @@ function writeReleaseIndex({ metadata, outputPath, releaseBaseUrl }) {
             }
           : {},
       },
-      cli: {
-        id: "cli",
-        name: "YTM Enhancer CLI",
-        protocolVersion: cliProtocolVersion,
-        installPage: sitePageUrl(metadata, "cli/"),
-        distribution: "source",
-      },
+      cli: cliAvailable
+        ? {
+            id: "cli",
+            name: "YTM Enhancer CLI",
+            latestVersion: cliVersion,
+            tag: cliTag,
+            releaseUrl: releasePageUrl(cliTag),
+            protocolVersion: cliProtocolVersion,
+            installPage: sitePageUrl(metadata, "cli/"),
+            distribution: "github-release-assets",
+            channels: {
+              direct: {
+                packages: cliPackages,
+              },
+            },
+          }
+        : {
+            id: "cli",
+            name: "YTM Enhancer CLI",
+            protocolVersion: cliProtocolVersion,
+            installPage: sitePageUrl(metadata, "cli/"),
+            distribution: "source",
+          },
     },
   };
 
@@ -658,7 +790,7 @@ function siteDocument({ title, description, iconSvg, current, body }) {
       ${body}
       <footer class="site-footer">
         YTM Enhancer is private by design: no analytics, no tracking, and no
-        external backend service.
+        project-operated backend service.
       </footer>
     </div>
   </body>
@@ -686,6 +818,46 @@ function writeSitePages({ metadata, outputPath, releaseBaseUrl }) {
   const iconSvg = readExtensionIconSvg();
   const extensionVersion = readExtensionVersion();
   const cliProtocolVersion = readCliProtocolVersion();
+  const cliVersion = readCliVersion();
+  const cliAvailable = cliReleaseAvailable();
+  const cliTag = `cli-v${cliVersion}`;
+  const cliPackages = cliReleasePackages({
+    releaseBaseUrl,
+    version: cliVersion,
+  });
+  const cliInstallContent = cliAvailable
+    ? `<div class="card-grid" id="downloads">
+              <article class="card">
+                <h3>macOS Apple silicon</h3>
+                <p>For M-series Macs.</p>
+                <a class="card-link" href="${escapeHtml(cliPackages.macosArm64.packageUrl)}">Download arm64</a>
+              </article>
+              <article class="card">
+                <h3>macOS Intel</h3>
+                <p>For Intel-based Macs.</p>
+                <a class="card-link" href="${escapeHtml(cliPackages.macosX64.packageUrl)}">Download x64</a>
+              </article>
+              <article class="card">
+                <h3>Linux arm64</h3>
+                <p>For 64-bit Arm Linux systems.</p>
+                <a class="card-link" href="${escapeHtml(cliPackages.linuxArm64.packageUrl)}">Download arm64</a>
+              </article>
+              <article class="card">
+                <h3>Linux x64</h3>
+                <p>For 64-bit Intel and AMD Linux systems.</p>
+                <a class="card-link" href="${escapeHtml(cliPackages.linuxX64.packageUrl)}">Download x64</a>
+              </article>
+            </div>
+            <figure class="terminal-frame" aria-label="CLI install commands">
+              <code>unzip YTM-Enhancer-CLI-${escapeHtml(cliVersion)}-macos-arm64.zip
+cd YTM-Enhancer-CLI-${escapeHtml(cliVersion)}-macos-arm64
+./install.sh
+ytme doctor</code>
+            </figure>`
+    : `<p class="beta-note">
+              The first signed public packages are being prepared. Downloads
+              will appear here as soon as the CLI release finishes.
+            </p>`;
   const windowsTrayMetadata = readWindowsTrayMetadata();
   const stores = extensionStoreUrls();
   const windowsInstallerUrl = windowsTrayInstallerUrl({
@@ -918,7 +1090,7 @@ function writeSitePages({ metadata, outputPath, releaseBaseUrl }) {
                 Command-line playback controls for users who want scriptable
                 YouTube Music actions.
               </p>
-              <a class="card-link" href="../cli/">Install from source</a>
+              <a class="card-link" href="../cli/">Download for macOS or Linux</a>
             </article>
           </div>
         </section>
@@ -1088,18 +1260,14 @@ function writeSitePages({ metadata, outputPath, releaseBaseUrl }) {
         <section class="section split" aria-labelledby="install-title">
           <div>
             <div class="section-header">
-              <h2 id="install-title">Install From Source</h2>
+              <h2 id="install-title">Install</h2>
               <p>
-                Public CLI packaging is not published yet. For now, install it
-                from a local checkout and enable Connected Apps in the browser
-                extension.
+                Download the package for your operating system and architecture,
+                extract it, and run the included installer. It installs for
+                your user account without requiring Go or elevated access.
               </p>
             </div>
-            <figure class="terminal-frame" aria-label="CLI install commands">
-              <code>git clone https://github.com/gormanity/ytm-enhancer.git
-cd ytm-enhancer
-apps/cli/scripts/install-native-hosts.sh</code>
-            </figure>
+            ${cliInstallContent}
           </div>
           <div class="visual-stack">
             <article class="card">
@@ -1109,6 +1277,13 @@ apps/cli/scripts/install-native-hosts.sh</code>
                 and can read playback details, control playback, and focus
                 YouTube Music after you enable it from Connected Apps.
               </p>
+              ${
+                cliAvailable
+                  ? `<a class="card-link" href="${escapeHtml(releasePageUrl(cliTag))}">
+                View release ${escapeHtml(cliVersion)}
+              </a>`
+                  : ""
+              }
             </article>
             <article class="card">
               <h3>Browser Support</h3>
@@ -1132,6 +1307,22 @@ function writeDefaultReleaseNotes({ metadata, outputPath }) {
     "release-notes",
     `${metadata.version}.html`,
   );
+  const curatedNotesPath = resolve(
+    appRoot,
+    "release",
+    "notes",
+    `${metadata.version}.md`,
+  );
+  const curatedNotes = fileHasContent(curatedNotesPath)
+    ? readFileSync(curatedNotesPath, "utf-8")
+    : "";
+  const notesBody = curatedNotes
+    ? renderReleaseNotesMarkdown(curatedNotes)
+    : `<p>This release keeps the menu bar companion app up to date with YTM Enhancer.</p>
+    <ul>
+      <li>Includes the latest menu bar app improvements and maintenance fixes.</li>
+      <li>Recommended for all direct-install users.</li>
+    </ul>`;
   const notesHtml = `<!doctype html>
 <html lang="en">
   <head>
@@ -1156,6 +1347,16 @@ function writeDefaultReleaseNotes({ metadata, outputPath }) {
         font-size: 24px;
       }
 
+      h2 {
+        margin: 24px 0 12px;
+        font-size: 20px;
+      }
+
+      h3 {
+        margin: 20px 0 8px;
+        font-size: 17px;
+      }
+
       p,
       li {
         font-size: 15px;
@@ -1166,15 +1367,15 @@ function writeDefaultReleaseNotes({ metadata, outputPath }) {
         margin: 12px 0 0;
         padding-left: 20px;
       }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
     </style>
   </head>
   <body>
     <h1>${escapeHtml(metadata.appName)} ${escapeHtml(metadata.version)}</h1>
-    <p>This release keeps the menu bar companion app up to date with YTM Enhancer.</p>
-    <ul>
-      <li>Includes the latest menu bar app improvements and maintenance fixes.</li>
-      <li>Recommended for all direct-install users.</li>
-    </ul>
+    ${notesBody}
   </body>
 </html>
 `;

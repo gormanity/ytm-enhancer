@@ -24,11 +24,11 @@ YTM Menu Bar:
 
 YTM Enhancer CLI:
 
-- Tag format: `cli-vX.Y.Z` once public packaging exists.
+- Tag format: `cli-vX.Y.Z`.
 - Version source: `apps/cli/internal/protocol`.
-- Release workflow: not yet implemented.
-- Distribution: local development scripts now, Homebrew cask/formula later.
-- GitHub Releases: future component-scoped artifact pages only.
+- Release workflow: `.github/workflows/cli-release.yml`.
+- Distribution: prebuilt macOS and Linux packages for x64 and arm64.
+- GitHub Releases: component-scoped artifact pages only.
 
 YTM Tray:
 
@@ -63,10 +63,10 @@ repositories.
 For this repository:
 
 - Extension releases set `make_latest: true`.
-- Menu bar releases set `make_latest: false`.
+- Companion app releases set `make_latest: false`.
 - Connector users find current versions through component-specific surfaces.
-- Generated release notes compare against the previous tag for the same
-  component, not the previous repository tag.
+- Companion release notes are curated, versioned files so they can introduce a
+  product or explain an update without inheriting repository commit history.
 
 This keeps the repository latest badge meaningful for the primary browser
 extension while preserving independent connector releases.
@@ -85,8 +85,7 @@ Human-facing discovery should be component-specific:
   `https://gormanity.github.io/ytm-enhancer/windows-tray/install.html`. That
   page links directly to `YTM-Tray-<version>-Setup.exe`, which selects x64 or
   ARM64 automatically.
-- CLI users should use `https://gormanity.github.io/ytm-enhancer/cli/` until
-  public packaging exists.
+- CLI users should use `https://gormanity.github.io/ytm-enhancer/cli/`.
 - Developers should use `docs/menu-bar-release.md` and component READMEs.
 
 Automated discovery should use native channel mechanisms:
@@ -96,6 +95,8 @@ Automated discovery should use native channel mechanisms:
 - YTM Tray direct installs use the combined offline EXE. In-app updates use
   component-scoped GitHub Releases, architecture-specific zips, and a
   per-release checksum manifest.
+- YTM Enhancer CLI direct installs use component-scoped GitHub Releases with
+  checksummed macOS and Linux archives.
 - Browser stores own browser extension updates.
 - Component-aware tooling can read
   `https://gormanity.github.io/ytm-enhancer/releases.json`.
@@ -114,7 +115,7 @@ https://gormanity.github.io/ytm-enhancer/releases.json
 ```
 
 The generated pages cover the browser extension, Connected Apps beta, YTM Menu
-Bar, YTM Tray, and the source-installed CLI. The index lists products
-independently so consumers do not need to infer product identity from GitHub's
-repository-wide latest release. It is informational and does not replace
-Sparkle, Homebrew, Windows update manifests, or browser store update mechanisms.
+Bar, YTM Tray, and the packaged CLI. The index lists products independently so
+consumers do not need to infer product identity from GitHub's repository-wide
+latest release. It is informational and does not replace Sparkle, Homebrew,
+Windows update manifests, or browser store update mechanisms.

@@ -6,6 +6,29 @@ The CLI does not read YouTube Music pages, authenticate with YouTube, or play
 audio directly. It talks to the YTM Enhancer browser extension through the same
 connector protocol used by YTM Menu Bar.
 
+## Install
+
+Download the current package for macOS or Linux from:
+
+`https://gormanity.github.io/ytm-enhancer/cli/`
+
+Packages are available for x64 and arm64. Extract the archive and run:
+
+```sh
+./install.sh
+```
+
+The installer copies prebuilt `ytme` and `ytme-native-host` binaries into your
+user data directory, links `ytme` into `~/.local/bin`, and installs native
+messaging manifests for supported browsers. It does not require Go, `sudo`, or
+system-wide changes.
+
+Remove the packaged CLI with:
+
+```sh
+~/.local/share/ytm-enhancer-cli/uninstall.sh
+```
+
 ## Commands
 
 ```sh
@@ -63,8 +86,8 @@ updates.
 
 ## Local Development
 
-Install the local native host manifests and the `ytme` command on macOS or
-Linux:
+Contributors can build and install the native host manifests and `ytme` command
+from a local checkout:
 
 ```sh
 apps/cli/scripts/install-native-hosts.sh

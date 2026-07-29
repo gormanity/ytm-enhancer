@@ -73,7 +73,7 @@ apps on your device.
 - [YTM Tray](https://gormanity.github.io/ytm-enhancer/windows-tray/install.html)
   brings playback details and controls to the Windows taskbar.
 - [YTM Enhancer CLI](https://gormanity.github.io/ytm-enhancer/cli/) provides
-  terminal controls on macOS and Linux and is currently installed from source.
+  packaged terminal controls on macOS and Linux.
 
 Connected Apps are currently beta. The extension continues to own all YouTube
 Music page access.
@@ -192,6 +192,7 @@ Start with:
 | CI-equivalent check           | `pnpm run check`          |
 | Dev build for local optesting | `pnpm run dev:build`      |
 | Render CLI demo video         | `pnpm run cli:demo-video` |
+| Package a CLI runtime         | `pnpm run cli:package`    |
 | Production build              | `pnpm run build`          |
 | Package store zips            | `pnpm run package`        |
 

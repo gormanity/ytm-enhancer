@@ -1,6 +1,6 @@
 param(
-  [string] $BaselineVersion = "0.0.2",
-  [string] $TargetVersion = "0.1.0",
+  [Parameter(Mandatory = $true)][string] $BaselineVersion,
+  [Parameter(Mandatory = $true)][string] $TargetVersion,
   [string] $InstallRoot = (Join-Path $env:LOCALAPPDATA "YTM Enhancer\Tray"),
   [string] $WorkRoot = (Join-Path $env:TEMP "ytm-tray-live-update-smoke"),
   [int] $UiReadyTimeoutSeconds = 60,

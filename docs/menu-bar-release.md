@@ -283,9 +283,11 @@ pnpm run menu-bar:test
 swift build --package-path apps/menu-bar -c release
 ```
 
-4. Create a `menu-bar-vX.Y.Z` tag from the verified commit.
-5. Push the tag.
-6. Confirm the `Menu Bar Release` workflow publishes:
+4. Add user-facing notes at `apps/menu-bar/release/notes/X.Y.Z.md` and obtain
+   approval.
+5. Create a `menu-bar-vX.Y.Z` tag from the verified commit.
+6. Push the tag.
+7. Confirm the `Menu Bar Release` workflow publishes:
    - a GitHub Release named `YTM Menu Bar X.Y.Z`
    - a component release that does not replace GitHub's repo-wide latest release
    - signed, notarized, and stapled direct `.pkg`
@@ -300,18 +302,18 @@ swift build --package-path apps/menu-bar -c release
    - Windows tray install page at `windows-tray/install.html`
    - CLI install page at `cli/index.html`
    - machine-readable release index at `releases.json`
-7. Confirm GitHub Pages serves the updated install page, appcast, and release
+8. Confirm GitHub Pages serves the updated install page, appcast, and release
    notes. The appcast must link to the standalone release notes, not a full
    GitHub release page. The release index must list the browser extension,
    Connected Apps beta, menu bar app, Windows tray app, and CLI as separate
    products.
-8. Confirm the Homebrew tap cask was updated.
+9. Confirm the Homebrew tap cask was updated.
 
 The release workflow derives package, appcast, and cask versions from the
-`menu-bar-vX.Y.Z` tag and compares generated GitHub release notes against the
-previous `menu-bar-vX.Y.Z` tag, not the previous repository tag. Use a lower
-numeric tag, such as `menu-bar-v0.0.1`, for a throwaway release dry run rather
-than a suffix tag such as `menu-bar-v0.1.0-test`.
+`menu-bar-vX.Y.Z` tag. GitHub and Sparkle use the approved versioned notes file
+instead of generating a commit comparison. Use a lower numeric tag, such as
+`menu-bar-v0.0.1`, for a throwaway release dry run rather than a suffix tag such
+as `menu-bar-v0.1.0-test`.
 
 The workflow also publishes a stable install landing page at:
 

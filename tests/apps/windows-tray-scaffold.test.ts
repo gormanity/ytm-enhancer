@@ -1072,7 +1072,7 @@ describe("Windows tray connector scaffold", () => {
 
     expect(metadata.appName).toBe("YTM Tray");
     expect(metadata.nativeHostName).toBe("com.gormanity.ytm_enhancer.tray");
-    expect(metadata.version).toBe("0.1.12");
+    expect(metadata.version).toBe("0.2.0");
     expect(metadata.githubReleaseTagPrefix).toBe("windows-tray-v");
     expect(metadata.githubReleaseListUrl).toBe(
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
@@ -1338,9 +1338,14 @@ describe("Windows tray connector scaffold", () => {
     const outputRoot = mkdtempSync(
       join(tmpdir(), "ytm-windows-tray-manifest-test-"),
     );
-    const expectedVersion = process.env.YTM_WINDOWS_TRAY_VERSION ?? "0.1.12";
+    const metadata = JSON.parse(read("release/metadata.json")) as {
+      buildNumber: string;
+      version: string;
+    };
+    const expectedVersion =
+      process.env.YTM_WINDOWS_TRAY_VERSION ?? metadata.version;
     const expectedBuildNumber = Number(
-      process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER ?? "1012",
+      process.env.YTM_WINDOWS_TRAY_BUILD_NUMBER ?? metadata.buildNumber,
     );
     const x64Package = join(
       outputRoot,
@@ -1436,10 +1441,10 @@ describe("Windows tray connector scaffold", () => {
     const coreProject = read("src/YTMTray.Core/YTMTray.Core.csproj");
 
     expect(protocol).toContain("AssemblyInformationalVersionAttribute");
-    expect(protocol).not.toContain('ConnectorVersion = "0.1.12"');
-    expect(coreProject).toContain("<Version>0.1.12</Version>");
+    expect(protocol).not.toContain('ConnectorVersion = "0.2.0"');
+    expect(coreProject).toContain("<Version>0.2.0</Version>");
     expect(coreProject).toContain(
-      "<InformationalVersion>0.1.12</InformationalVersion>",
+      "<InformationalVersion>0.2.0</InformationalVersion>",
     );
   });
 
@@ -1522,9 +1527,9 @@ describe("Windows tray connector scaffold", () => {
     expect(workflow).toContain("windows-tray:archive:win-x64");
     expect(workflow).toContain("windows-tray:archive:win-arm64");
     expect(workflow).toContain("windows-tray:installer");
-    expect(workflow).toContain("Run `YTM-Tray-");
-    expect(workflow).toContain("-Setup.exe`");
-    expect(workflow).toContain("opens YTM Tray");
+    expect(workflow).toContain(
+      "body_path: apps/windows-tray/release/notes/${{ env.YTM_WINDOWS_TRAY_VERSION }}.md",
+    );
     expect(workflow).toContain("assert-explorer-archive-compatible.ps1");
     expect(workflow).toContain("windows-tray:update-manifest");
     expect(workflow).toContain("verify-windows-tray-codesign.ps1");

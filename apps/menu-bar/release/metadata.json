@@ -1,8 +1,8 @@
 {
   "appName": "YTM Menu Bar",
   "bundleIdentifier": "com.gormanity.ytm-enhancer.menu-bar",
-  "version": "0.1.3",
-  "buildNumber": "1003",
+  "version": "0.2.0",
+  "buildNumber": "2000",
   "minimumMacOSVersion": "13.0",
   "appcastUrl": "https://gormanity.github.io/ytm-enhancer/menu-bar/appcast.xml",
   "nativeHostExecutablePath": "/Applications/YTM Menu Bar.app/Contents/MacOS/YTMMenuBarConnector",

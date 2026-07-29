@@ -1,0 +1,6 @@
+{
+  "appName": "YTM Enhancer CLI",
+  "githubReleaseTagPrefix": "cli-v",
+  "assetPrefix": "YTM-Enhancer-CLI",
+  "runtimes": ["macos-x64", "macos-arm64", "linux-x64", "linux-arm64"]
+}

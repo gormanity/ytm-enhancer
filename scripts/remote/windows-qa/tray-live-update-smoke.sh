@@ -2,8 +2,8 @@
 set -eu
 
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-baseline_version="${1:-${YTM_WINDOWS_TRAY_BASELINE_VERSION:-0.0.2}}"
-target_version="${2:-${YTM_WINDOWS_TRAY_TARGET_VERSION:-0.1.0}}"
+baseline_version="${1:-${YTM_WINDOWS_TRAY_BASELINE_VERSION:-}}"
+target_version="${2:-${YTM_WINDOWS_TRAY_TARGET_VERSION:-}}"
 ui_ready_timeout="${YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS:-60}"
 
 usage() {
@@ -27,7 +27,7 @@ ps_quote() {
   printf "'%s'" "$(printf "%s" "$1" | sed "s/'/''/g")"
 }
 
-if [ "$#" -gt 2 ]; then
+if [ "$#" -gt 2 ] || [ -z "$baseline_version" ] || [ -z "$target_version" ]; then
   usage
   exit 2
 fi

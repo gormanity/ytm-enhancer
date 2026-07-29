@@ -3636,8 +3636,12 @@ try {
       "scripts/remote/windows-qa/tray-release-e2e.sh",
     );
 
-    expect(releaseE2e).toContain('$BaselineVersion = "0.0.2"');
-    expect(releaseE2e).toContain('$TargetVersion = "0.1.0"');
+    expect(releaseE2e).toContain(
+      "[Parameter(Mandatory = $true)][string] $BaselineVersion",
+    );
+    expect(releaseE2e).toContain(
+      "[Parameter(Mandatory = $true)][string] $TargetVersion",
+    );
     expect(releaseE2e).toContain("Invoke-WebRequest");
     expect(releaseE2e).toContain("YTM-Tray-update.json");
     expect(releaseE2e).toContain("[Security.Cryptography.SHA256]::Create()");
@@ -3671,8 +3675,12 @@ try {
     );
     const docs = read("docs/remote-qa.md");
 
-    expect(liveUpdateSmoke).toContain('$BaselineVersion = "0.0.2"');
-    expect(liveUpdateSmoke).toContain('$TargetVersion = "0.1.0"');
+    expect(liveUpdateSmoke).toContain(
+      "[Parameter(Mandatory = $true)][string] $BaselineVersion",
+    );
+    expect(liveUpdateSmoke).toContain(
+      "[Parameter(Mandatory = $true)][string] $TargetVersion",
+    );
     expect(liveUpdateSmoke).toContain(
       'Join-Path $env:LOCALAPPDATA "YTM Enhancer\\Tray"',
     );
@@ -3750,11 +3758,9 @@ try {
     expect(liveUpdateSmokeShell).toContain("-BaselineVersion");
     expect(liveUpdateSmokeShell).toContain("-TargetVersion");
     expect(liveUpdateSmokeShell).toContain("-UiReadyTimeoutSeconds");
-    expect(docs).toContain("-BaselineVersion 0.1.10");
-    expect(docs).toContain("-TargetVersion 0.1.11");
-    expect(docs).toContain(
-      "scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.10 0.1.11",
-    );
+    expect(docs).toContain("-BaselineVersion <baseline-version>");
+    expect(docs).toContain("-TargetVersion <target-version>");
+    expect(docs).toContain("<baseline-version> <target-version>");
   });
 
   it("installs a published Windows tray build for operational QA", () => {

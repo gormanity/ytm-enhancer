@@ -14,11 +14,12 @@ on:
       - "apps/windows-tray/release/**"
       - "package.json"
       - "pnpm-lock.yaml"
+      - "scripts/ci/resolve-published-cli-release.sh"
       - "scripts/ci/resolve-published-windows-tray-release.sh"
       - "store/screenshots/**"
   workflow_dispatch:
   workflow_run:
-    workflows: ["Windows Tray Release"]
+    workflows: ["Windows Tray Release", "CLI Release"]
     types: [completed]
 
 permissions:
@@ -75,6 +76,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: sh scripts/ci/resolve-published-windows-tray-release.sh
+
+      - name: Resolve published CLI release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh scripts/ci/resolve-published-cli-release.sh
 
       - name: Build product pages
         run: pnpm run site:build

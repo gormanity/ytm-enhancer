@@ -2030,7 +2030,9 @@ describe("menu bar connector app scaffold", () => {
     expect(cliPage).not.toContain("Read CLI README");
     expect(cliPage).toContain("Chrome, Chromium, Microsoft Edge, Brave, and");
     expect(cliPage).toMatch(/Chromium and Firefox\s+on supported/);
-    expect(cliPage).toContain("apps/cli/scripts/install-native-hosts.sh");
+    expect(cliPage).toContain(
+      "The first signed public packages are being prepared.",
+    );
     expect([...copiedWindowsTrayScreenshot.subarray(0, 8)]).toEqual([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
     ]);
@@ -2532,10 +2534,10 @@ describe("menu bar connector app scaffold", () => {
       "Extension releases set `make_latest: true`",
     );
     expect(releaseStrategy).toContain(
-      "Menu bar releases set `make_latest: false`",
+      "Companion app releases set `make_latest: false`",
     );
     expect(releaseStrategy).toContain(
-      "Generated release notes compare against the previous tag",
+      "Companion release notes are curated, versioned files",
     );
     expect(extensionWorkflow).toContain("fetch-depth: 0");
     expect(extensionWorkflow).toContain("Resolve extension release metadata");
@@ -2558,11 +2560,11 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(extensionWorkflow).toContain("make_latest: true");
     expect(menuBarWorkflow).toContain("fetch-depth: 0");
-    expect(menuBarWorkflow).toContain("PREVIOUS_MENU_BAR_TAG");
-    expect(menuBarWorkflow).toContain("git tag -l 'menu-bar-v[0-9]*'");
     expect(menuBarWorkflow).toContain(
-      "previous_tag: ${{ env.PREVIOUS_MENU_BAR_TAG }}",
+      "body_path: apps/menu-bar/release/notes/${{ env.YTM_MENU_BAR_VERSION }}.md",
     );
+    expect(menuBarWorkflow).not.toContain("PREVIOUS_MENU_BAR_TAG");
+    expect(menuBarWorkflow).not.toContain("previous_tag:");
     expect(menuBarWorkflow).toContain("make_latest: false");
   });
 

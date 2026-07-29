@@ -317,10 +317,10 @@ tray app in the active Windows desktop session, opens Chrome to YouTube Music,
 and intentionally leaves the app installed.
 
 The release workflow derives package and manifest versions from the
-`windows-tray-vX.Y.Z` tag and compares generated GitHub release notes against
-the previous `windows-tray-vX.Y.Z` tag, not the previous repository tag. Use a
-lower numeric tag, such as `windows-tray-v0.0.1`, for a throwaway release dry
-run rather than a suffix tag such as `windows-tray-v0.1.0-test`.
+`windows-tray-vX.Y.Z` tag and publishes the approved versioned notes at
+`apps/windows-tray/release/notes/X.Y.Z.md`. Use a lower numeric tag, such as
+`windows-tray-v0.0.1`, for a throwaway release dry run rather than a suffix tag
+such as `windows-tray-v0.1.0-test`.
 
 ## Manual Validation Policy
 

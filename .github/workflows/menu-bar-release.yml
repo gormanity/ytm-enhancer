@@ -61,18 +61,20 @@ jobs:
           fi
           IFS=. read -r major minor patch <<< "$version"
           build_number=$((major * 1000000 + minor * 1000 + patch))
-          previous_tag="$(git tag -l 'menu-bar-v[0-9]*' --sort=-v:refname | \
-            grep -v "^${GITHUB_REF_NAME}$" | head -n 1)"
           {
             echo "YTM_MENU_BAR_VERSION=$version"
             echo "YTM_MENU_BAR_BUILD_NUMBER=$build_number"
-            echo "PREVIOUS_MENU_BAR_TAG=$previous_tag"
           } >> "$GITHUB_ENV"
 
       - name: Resolve published Windows tray release
         env:
           GH_TOKEN: ${{ github.token }}
         run: sh scripts/ci/resolve-published-windows-tray-release.sh
+
+      - name: Resolve published CLI release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh scripts/ci/resolve-published-cli-release.sh
 
       - name: Run menu bar tests
         run: |
@@ -220,8 +222,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           name: YTM Menu Bar ${{ env.YTM_MENU_BAR_VERSION }}
-          generate_release_notes: true
-          previous_tag: ${{ env.PREVIOUS_MENU_BAR_TAG }}
+          body_path: apps/menu-bar/release/notes/${{ env.YTM_MENU_BAR_VERSION }}.md
           make_latest: false
           files: |
             apps/menu-bar/.build/packages/*.pkg

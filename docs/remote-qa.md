@@ -919,13 +919,16 @@ Run the Windows tray published release E2E smoke:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
-  scripts/windows-qa/tray-release-e2e.ps1
+  scripts/windows-qa/tray-release-e2e.ps1 `
+  -BaselineVersion <baseline-version> `
+  -TargetVersion <target-version>
 ```
 
 Run the same smoke through the configured Windows transport:
 
 ```sh
-scripts/remote/windows-qa/tray-release-e2e.sh
+scripts/remote/windows-qa/tray-release-e2e.sh \
+  <baseline-version> <target-version>
 ```
 
 This deliberately uses the architecture-specific updater zips. It downloads
@@ -942,15 +945,16 @@ Run the Windows tray live-update UI smoke:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-live-update-smoke.ps1 `
-  -BaselineVersion 0.1.10 `
-  -TargetVersion 0.1.11 `
+  -BaselineVersion <baseline-version> `
+  -TargetVersion <target-version> `
   -UiReadyTimeoutSeconds 60
 ```
 
 Run the same smoke through the configured Windows transport:
 
 ```sh
-scripts/remote/windows-qa/tray-live-update-smoke.sh 0.1.10 0.1.11
+scripts/remote/windows-qa/tray-live-update-smoke.sh \
+  <baseline-version> <target-version>
 ```
 
 This installs the published baseline release into the real user-level install
@@ -958,13 +962,13 @@ location, launches the released tray app through the Windows QA UI agent, clicks
 the baseline's legacy popup after it exposes the target's install action,
 accepts the update dialogs, waits for the target release to replace the
 baseline, and confirms that the updated app relaunches as a new process in the
-same desktop session and completes startup. For targets at version 0.1.11 or
-newer, it also verifies that the popup and context menu expose updates only
-through their update-aware About action, then confirms the About window owns the
-update action. It validates the installed files and native host registrations,
-then uninstalls and verifies cleanup. It intentionally uses the default
-`%LOCALAPPDATA%\YTM Enhancer\Tray` path because the in-app updater hands off to
-the native setup inside the selected architecture-specific updater zip.
+same desktop session and completes startup. For targets using the About-owned
+update flow, it also verifies that the popup and context menu expose updates
+only through their update-aware About action, then confirms the About window
+owns the update action. It validates the installed files and native host
+registrations, then uninstalls and verifies cleanup. It intentionally uses the
+default `%LOCALAPPDATA%\YTM Enhancer\Tray` path because the in-app updater hands
+off to the native setup inside the selected architecture-specific updater zip.
 
 The remote wrapper also accepts `YTM_WINDOWS_TRAY_BASELINE_VERSION` and
 `YTM_WINDOWS_TRAY_TARGET_VERSION` when positional arguments are not convenient.
@@ -977,14 +981,14 @@ candidate and keep it in place for manual testing:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-operational-smoke.ps1 `
-  -Version 0.1.9 `
+  -Version <release-version> `
   -UiReadyTimeoutSeconds 60
 ```
 
 Run the same smoke through the configured Windows transport:
 
 ```sh
-scripts/remote/windows-qa/tray-operational-smoke.sh 0.1.9
+scripts/remote/windows-qa/tray-operational-smoke.sh <release-version>
 ```
 
 This downloads the published `YTM-Tray-<version>-Setup.exe`, verifies its
@@ -1028,7 +1032,7 @@ an already-published release:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
   scripts/windows-qa/tray-sac-smoke.ps1 `
-  -InstallerPath "$env:USERPROFILE\Downloads\YTM-Tray-0.1.9-Setup.exe"
+  -InstallerPath "$env:USERPROFILE\Downloads\YTM-Tray-<version>-Setup.exe"
 ```
 
 The remote wrapper accepts a path on the Windows target. Keep the installer
@@ -1037,7 +1041,7 @@ disposable checkout when it syncs:
 
 ```sh
 scripts/remote/windows-qa/tray-sac-smoke.sh \
-  'C:\Users\<windows-qa-user>\Downloads\YTM-Tray-0.1.9-Setup.exe'
+  'C:\Users\<windows-qa-user>\Downloads\YTM-Tray-<version>-Setup.exe'
 ```
 
 The smoke requires Smart App Control enforcement to already be on

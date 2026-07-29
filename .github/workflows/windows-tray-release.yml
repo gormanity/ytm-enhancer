@@ -46,15 +46,9 @@ jobs:
           $buildNumber = ([int] $parts[0] * 1000000) +
             ([int] $parts[1] * 1000) +
             [int] $parts[2]
-          $previousTag = git tag -l "windows-tray-v[0-9]*" --sort=-v:refname |
-            Where-Object { $_ -ne $env:GITHUB_REF_NAME } |
-            Select-Object -First 1
-
           "YTM_WINDOWS_TRAY_VERSION=$version" |
             Out-File -FilePath $env:GITHUB_ENV -Append
           "YTM_WINDOWS_TRAY_BUILD_NUMBER=$buildNumber" |
-            Out-File -FilePath $env:GITHUB_ENV -Append
-          "PREVIOUS_WINDOWS_TRAY_TAG=$previousTag" |
             Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Run Windows tray tests
@@ -156,20 +150,8 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           name: YTM Tray ${{ env.YTM_WINDOWS_TRAY_VERSION }}
-          generate_release_notes: true
-          previous_tag: ${{ env.PREVIOUS_WINDOWS_TRAY_TAG }}
+          body_path: apps/windows-tray/release/notes/${{ env.YTM_WINDOWS_TRAY_VERSION }}.md
           make_latest: false
-          body: |
-            ## Install
-
-            1. Download `YTM-Tray-${{ env.YTM_WINDOWS_TRAY_VERSION }}-Setup.exe`.
-            2. Run `YTM-Tray-${{ env.YTM_WINDOWS_TRAY_VERSION }}-Setup.exe`.
-               It selects the native x64 or ARM64 app and opens YTM Tray
-               automatically.
-            3. Enable Connected Apps and YTM Tray in the YTM Enhancer extension.
-
-            YTM Tray installs for your Windows account and appears in Windows
-            Settings > Apps > Installed apps for normal uninstallation.
           files: |
             apps/windows-tray/.build/installer/*.exe
             apps/windows-tray/.build/packages/*.zip
