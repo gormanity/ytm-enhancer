@@ -10,28 +10,34 @@ the shared sections unless a browser-specific requirement forces different copy.
 
 ### Detailed Description
 
-YTM Enhancer supercharges YouTube Music to make it the best browser-based media
-player.
+Make YouTube Music work the way you listen. YTM Enhancer adds powerful playback
+controls and thoughtful quality-of-life features directly to the web app, so you
+can keep the service and library you already use.
 
-It upgrades YouTube Music in your browser with smarter controls, automation, and
-visual enhancements, without forcing you into a replacement app or wrapper.
+Control playback across tabs, fine-tune volume, speed, and stream quality, open
+a compact mini player, automate routine actions, and add visualizers,
+notifications, hotkeys, and a sleep timer.
 
-If you love the ubiquity of YouTube Music's service but want a more
-fully-featured listening experience, this extension is for you.
+Optional Connected Apps (Beta) bring now-playing details and playback controls
+to the macOS menu bar, Windows system tray, and terminal. They are disabled by
+default and communicate locally with the extension.
 
 ### Key Features
 
-- Playback Controls: control playback, switch YouTube Music tabs, seek, adjust
-  volume, change speed/quality, and toggle shuffle/repeat from one panel
-- Automation: optionally start playback automatically and skip disliked tracks
-- Audio Visualizer: configurable visualizer overlays
-- Connected Apps: see what's playing and control YouTube Music from the macOS
-  menu bar, Windows taskbar, or terminal
-- Hotkeys: playback, tab focus, and module action shortcuts
-- Mini Player: compact extension Picture-in-Picture control window while
-  multitasking
-- Notifications: track-change and playback-resumed desktop notifications
-- Sleep Timer: stop playback by duration or clock time
+- Playback Controls: control playback across YouTube Music tabs, seek, fine-tune
+  volume, speed, and quality, and manage shuffle/repeat
+- Automation: start playback automatically and skip disliked tracks when enabled
+- Audio Visualizer: add configurable visualizer overlays to the YouTube Music
+  player
+- Connected Apps (Beta): see what's playing and control YouTube Music from the
+  macOS menu bar, Windows system tray, or terminal
+- Hotkeys: control playback and trigger extension actions without opening the
+  popup
+- Mini Player: keep playback controls in a compact Picture-in-Picture window
+  while multitasking
+- Notifications: get optional desktop updates for track changes and
+  playback-resumed reminders
+- Sleep Timer: stop playback after a duration or at a chosen time
 
 ### Open Source and Privacy Positioning
 
@@ -39,7 +45,7 @@ YTM Enhancer is open source and private by design:
 
 - no analytics
 - no tracking
-- no external backend services
+- no project-operated backend services
 
 Repository: `https://github.com/gormanity/ytm-enhancer`
 
@@ -71,10 +77,10 @@ Public URL: `https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md`
 
 ### Single Purpose Statement
 
-YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` by adding
-optional playback controls, tab switching, automation, notifications, keyboard
-shortcuts, Picture-in-Picture controls, interface improvements, and opt-in local
-playback integration with enabled companion apps on your device.
+YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` with
+optional playback controls, automation, notifications, keyboard shortcuts,
+Picture-in-Picture controls, interface improvements, and local playback
+integration through the opt-in Connected Apps (Beta) feature.
 
 ---
 
@@ -99,9 +105,9 @@ playback integration with enabled companion apps on your device.
 #### Single Purpose Description
 
 YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` with
-optional playback controls, tab switching, automation, notifications, keyboard
-shortcuts, Picture-in-Picture controls, interface improvements, and opt-in local
-playback integration with enabled companion apps on your device.
+optional playback controls, automation, notifications, keyboard shortcuts,
+Picture-in-Picture controls, interface improvements, and local playback
+integration through the opt-in Connected Apps (Beta) feature.
 
 #### Permission Justification
 
@@ -122,10 +128,11 @@ reminders, and the "remind me" shortcut.
 
 ##### `nativeMessaging`
 
-Used only when Connected Apps is enabled to exchange playback state, track
-metadata, and user-requested playback or tab-focus commands with enabled
-companion apps on your device. Native messaging is local communication between
-the browser and app and does not route data through project-operated servers.
+Used only when the optional Connected Apps (Beta) feature is enabled to exchange
+playback state, track metadata, and user-requested playback or tab-focus
+commands with enabled companion apps on your device. Native messaging is local
+communication between the browser and app and does not route data through
+project-operated servers.
 
 ##### `scripting`
 
@@ -217,14 +224,15 @@ YouTube Music web app in-page.
 ### Reviewer Verification
 
 - Open YouTube Music in a tab before testing the popup or features.
-- Connected Apps is opt-in. Its native messaging permission supports the YTM
-  Menu Bar, YTM Tray, and YTM Enhancer CLI companion apps on the user's device.
+- The Connected Apps (Beta) feature is opt-in and disabled by default. Its
+  native messaging permission supports the YTM Menu Bar, YTM Tray, and YTM
+  Enhancer CLI companion apps on the user's device.
 - Firefox's `tabs` permission is used only to find, select, open, or focus
   YouTube Music tabs in response to extension and Connected Apps controls.
 - Some features are browser-dependent by design.
 - In Firefox, Chromium-only Picture-in-Picture capabilities are not available,
   and the extension degrades gracefully.
-- The add-on does not use remote code, external services, analytics, or
+- The add-on does not use remote code, project-operated services, analytics, or
   tracking.
 - No extension-specific accounts, authentication, or test credentials are
   required.

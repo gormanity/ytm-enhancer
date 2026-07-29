@@ -23,6 +23,32 @@ function normalizedText(element: Element): string {
 }
 
 describe("store assets", () => {
+  it("leads with concrete benefits and labels Connected Apps as beta", () => {
+    const storeCopy = read("store/STORE.md");
+    const expectedDescription =
+      "Upgrade YouTube Music with smarter controls, automation, a mini player, and optional Connected Apps (Beta).";
+    const manifestDescriptions = [
+      "src/manifests/chrome.json",
+      "src/manifests/edge.json",
+      "src/manifests/firefox.json",
+    ].map((path) => {
+      const manifest = JSON.parse(read(path)) as { description: string };
+      return manifest.description;
+    });
+
+    expect(storeCopy).toContain("Make YouTube Music work the way you listen.");
+    expect(storeCopy).toContain("Optional Connected Apps (Beta)");
+    expect(storeCopy).toContain("- Connected Apps (Beta):");
+    expect(storeCopy).toContain("no project-operated backend services");
+    expect(storeCopy).not.toContain("supercharges YouTube Music");
+    expect(storeCopy).not.toContain("best browser-based media player");
+    expect(manifestDescriptions).toEqual([
+      expectedDescription,
+      expectedDescription,
+      expectedDescription,
+    ]);
+  });
+
   it("shows the current popup navigation in the playback screenshot", () => {
     const document = new DOMParser().parseFromString(
       read("store/screenshots/01-playback-controls.html"),
@@ -46,6 +72,7 @@ describe("store assets", () => {
     expect(connectedApps).toContain(
       "Use the macOS menu bar, Windows taskbar, or your terminal.",
     );
+    expect(connectedApps).toContain("Connected Apps Beta");
     expect(connectedApps).toContain("YTM Menu Bar");
     expect(connectedApps).toContain("YTM Tray");
     expect(connectedApps).toContain("YTM Enhancer CLI");
@@ -62,7 +89,7 @@ describe("store assets", () => {
   it("features Connected Apps in the marquee without obsolete navigation", () => {
     const marquee = read("store/screenshots/promo-marquee-1400x560.html");
 
-    expect(marquee).toContain("Connected Apps");
+    expect(marquee).toContain("Connected Apps Beta");
     expect(marquee).toContain("macOS");
     expect(marquee).toContain("Windows");
     expect(marquee).toContain("Terminal");

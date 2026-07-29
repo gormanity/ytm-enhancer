@@ -32,7 +32,10 @@ describe("Connected Apps release disclosures", () => {
   it("describes Connected Apps and native messaging in store copy", () => {
     const storeListing = read("store/STORE.md");
 
-    expect(storeListing).toContain("Connected Apps:");
+    expect(storeListing).toContain("Connected Apps (Beta):");
+    expect(storeListing).toContain(
+      "The Connected Apps (Beta) feature is opt-in and disabled by default",
+    );
     expect(storeListing).toContain("##### `nativeMessaging`");
     expect(storeListing).toContain("enabled companion apps on your device");
     expect(storeListing).toContain("#### `tabs` Permission");
