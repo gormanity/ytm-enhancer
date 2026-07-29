@@ -80,4 +80,15 @@ describe("store assets", () => {
     expect(buildScript).toContain('animations: "disabled"');
     expect(buildScript).toContain("Math.random =");
   });
+
+  it("documents the Chrome nativeMessaging privacy submission step", () => {
+    const storeReadme = read("store/README.md");
+    const storeCopy = read("store/STORE.md");
+
+    expect(storeReadme).toContain("Privacy practices");
+    expect(storeReadme).toContain("nativeMessaging");
+    expect(storeCopy).toContain(
+      "verify Chrome Privacy practices permission justifications",
+    );
+  });
 });

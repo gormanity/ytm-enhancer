@@ -251,6 +251,8 @@ Use this checklist when publishing a new version.
 - update any changed listing copy
 - verify homepage, support, and privacy links
 - verify Chrome single purpose statement still matches functionality
+- verify Chrome Privacy practices permission justifications match the manifest,
+  including `nativeMessaging`, before entering them in the dashboard
 - verify Edge search terms are still appropriate
 - verify Edge privacy section permission justifications still match the manifest
 - verify Firefox categories and reviewer notes are still accurate

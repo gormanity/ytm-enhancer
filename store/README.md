@@ -19,7 +19,10 @@ This directory keeps browser store submission content under version control.
    `dist/store-assets/`.
 4. Keep privacy and support links aligned with `README.md` and `PRIVACY.md`.
 5. Build the browser package(s) so generated store assets are up to date.
-6. Submit browser-specific builds to matching stores:
+6. In the Chrome Web Store dashboard, open **Privacy practices** and enter the
+   permission justifications from `store/STORE.md`, including the
+   `nativeMessaging` justification.
+7. Submit browser-specific builds to matching stores:
    - Chrome -> `ytm-enhancer-<version>-chrome.zip`
    - Edge -> `ytm-enhancer-<version>-edge.zip`
    - Firefox -> `ytm-enhancer-<version>-firefox.zip`
