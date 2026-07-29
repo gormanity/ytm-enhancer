@@ -266,7 +266,8 @@ scripts/remote/windows-qa/tray-sac-smoke.sh \
 scripts/remote/windows-qa/tray-button-smoke.sh
 ```
 
-8. Draft user-facing release notes and obtain approval.
+8. Add user-facing notes at `apps/windows-tray/release/notes/X.Y.Z.md` and
+   obtain approval.
 9. Create a `windows-tray-vX.Y.Z` tag from the verified commit.
 10. Push the tag.
 11. Confirm the `Windows Tray Release` workflow publishes:
@@ -281,7 +282,7 @@ scripts/remote/windows-qa/tray-button-smoke.sh
 - a combined installer built after inner signing and signed in a second pass
 - no command launchers or packaged uninstall PowerShell script
 
-12. Add the approved notes to the published release and confirm Product Pages
+12. Confirm the published release uses the approved notes and Product Pages
     deploys with the new release link.
 13. Run the published operational smoke and leave the app installed for hands-on
     testing:

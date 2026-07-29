@@ -128,7 +128,9 @@ describe("GitHub Actions workflow linting", () => {
     expect(workflow).toContain("branches: [main]");
     expect(workflow).toContain("workflow_dispatch:");
     expect(workflow).toContain("workflow_run:");
-    expect(workflow).toContain('workflows: ["Windows Tray Release"]');
+    expect(workflow).toContain(
+      'workflows: ["Windows Tray Release", "CLI Release"]',
+    );
     expect(workflow).toContain("github.event.workflow_run.conclusion");
     expect(workflow).toContain("apps/cli/release/**");
     expect(workflow).toContain("apps/cli/scripts/render-demo-video.mjs");
@@ -146,6 +148,8 @@ describe("GitHub Actions workflow linting", () => {
     expect(workflow).toContain(
       "scripts/ci/resolve-published-windows-tray-release.sh",
     );
+    expect(workflow).toContain("Resolve published CLI release");
+    expect(workflow).toContain("scripts/ci/resolve-published-cli-release.sh");
     expect(menuBarWorkflow).toContain(
       "scripts/ci/resolve-published-windows-tray-release.sh",
     );

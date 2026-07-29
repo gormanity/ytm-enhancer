@@ -46,6 +46,32 @@ jobs:
           $buildNumber = ([int] $parts[0] * 1000000) +
             ([int] $parts[1] * 1000) +
             [int] $parts[2]
+          $metadataPath = "apps/windows-tray/release/metadata.json"
+          if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
+            Write-Error "Windows tray release metadata is missing: $metadataPath"
+            exit 1
+          }
+          $metadata = Get-Content -LiteralPath $metadataPath -Raw |
+            ConvertFrom-Json
+          $metadataVersion = [string] $metadata.version
+          $metadataBuildNumber = [string] $metadata.buildNumber
+          if ($metadataVersion -ne $version) {
+            Write-Error "Tag version $version does not match $metadataPath version $metadataVersion."
+            exit 1
+          }
+          if ($metadataBuildNumber -ne [string] $buildNumber) {
+            Write-Error "Build number $buildNumber does not match $metadataPath build number $metadataBuildNumber."
+            exit 1
+          }
+          $notesPath = "apps/windows-tray/release/notes/$version.md"
+          if (-not (Test-Path -LiteralPath $notesPath -PathType Leaf)) {
+            Write-Error "Windows tray release notes are missing: $notesPath"
+            exit 1
+          }
+          if ((Get-Item -LiteralPath $notesPath).Length -eq 0) {
+            Write-Error "Windows tray release notes are empty: $notesPath"
+            exit 1
+          }
           "YTM_WINDOWS_TRAY_VERSION=$version" |
             Out-File -FilePath $env:GITHUB_ENV -Append
           "YTM_WINDOWS_TRAY_BUILD_NUMBER=$buildNumber" |

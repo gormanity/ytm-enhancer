@@ -150,6 +150,7 @@ function preparePayload({ runtime, version }) {
   copyFileSync(resolve(cliRoot, "README.md"), resolve(outputRoot, "README.md"));
   copyFileSync(resolve(repoRoot, "LICENSE"), resolve(outputRoot, "LICENSE"));
   writeFileSync(resolve(outputRoot, "VERSION"), `${version}\n`);
+  writeFileSync(resolve(outputRoot, "RUNTIME"), `${runtime}\n`);
   return outputRoot;
 }
 

@@ -273,7 +273,7 @@ Homebrew CI:
    - Packaged releases read the app version from the generated bundle
      `Info.plist`.
    - Bare local executable builds report a timestamped version with the base
-     release included, for example `2026.06.20.1405 (base v0.1.3)`.
+     release included in the form `YYYY.MM.DD.HHMM (base vX.Y.Z)`.
 3. Run targeted tests:
 
 ```sh
@@ -284,7 +284,10 @@ swift build --package-path apps/menu-bar -c release
 ```
 
 4. Add user-facing notes at `apps/menu-bar/release/notes/X.Y.Z.md` and obtain
-   approval.
+   approval. The standalone Sparkle renderer supports level-two and level-three
+   headings, paragraphs, unordered lists with indented continuation lines, and
+   inline code. Keep the curated Markdown within that subset so GitHub and
+   Sparkle show the same content.
 5. Create a `menu-bar-vX.Y.Z` tag from the verified commit.
 6. Push the tag.
 7. Confirm the `Menu Bar Release` workflow publishes:

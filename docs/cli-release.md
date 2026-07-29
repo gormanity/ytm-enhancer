@@ -17,6 +17,17 @@ macOS binaries are signed with Developer ID and their archives are notarized.
 The installer writes only to the current user's data, configuration, and binary
 directories. It does not require Go, `sudo`, or system-wide changes.
 
+Every package contains `VERSION` and `RUNTIME` markers. The installer validates
+them before making changes, refuses to replace unmanaged commands, manifests, or
+install directories, and records the paths it owns. The installed uninstaller
+reads that managed state and removes only files that still belong to the same
+installation.
+
+Notarization tickets for ZIP archives cannot be stapled to the archive. The
+release workflow extracts the signed command-line binaries after Apple accepts
+the archive and uses Gatekeeper to resolve their notarization tickets online
+before publishing.
+
 The stable install page is:
 
 `https://gormanity.github.io/ytm-enhancer/cli/`
@@ -48,17 +59,55 @@ pnpm run cli:package -- --runtime=linux-x64
 pnpm run cli:package -- --runtime=linux-arm64
 ```
 
-4. Test install, `ytme --version`, `ytme doctor`, browser connection, and
-   uninstall from the packaged archive on macOS and Linux.
+4. Test install, `ytme --version`, `ytme doctor`, browser connection, failure
+   rollback, and uninstall from the packaged archive on macOS and Linux.
 5. Run the repository CI-equivalent checks and push the verified release change
    to `main`.
 6. Confirm GitHub Actions is green.
-7. Create and push `cli-vX.Y.Z`.
-8. Confirm `CLI Release` publishes all four archives and `SHA256SUMS` without
-   replacing the repository-wide latest extension release.
-9. Confirm Product Pages lists the published version and all four downloads.
-10. Download the published packages and repeat the macOS and Linux install,
+7. From the repository's default branch, run `CLI Release` manually with version
+   `X.Y.Z`. Confirm it passes signing, notarization, artifact validation, and
+   uploads the non-publishing candidate artifact.
+8. Download the candidate artifact and repeat the macOS and Linux install,
+   connection, command, and uninstall smoke.
+9. Create and push `cli-vX.Y.Z`.
+10. Confirm `CLI Release` publishes all four archives and `SHA256SUMS` without
+    replacing the repository-wide latest extension release.
+11. Confirm Product Pages lists the published version and all four downloads.
+12. Download the published packages and repeat the macOS and Linux install,
     connection, command, and uninstall smoke.
+
+After signing and notarization, the workflow runs
+`scripts/ci/validate-cli-release-artifacts.sh`. This CI-only validator checks
+the exact archive set, SHA-256 checksums, archive paths, runtime markers,
+executable architectures, macOS Developer ID signatures, Apple notarization, and
+a packaged install, rollback, and uninstall on the host Mac.
+
+Manual runs never publish a GitHub release. They retain the signed and notarized
+candidate packages as a workflow artifact for 14 days. Tag-triggered runs
+rebuild the packages and repeat the same validation before publishing, so
+signing timestamps mean the candidate and release archives are not expected to
+be byte-for-byte identical.
+
+## Checksums
+
+Download `SHA256SUMS` from the same GitHub release as the package. From the
+directory containing both files, set `archive` to the package you downloaded and
+verify only its checksum entry:
+
+```sh
+# macOS
+archive="YTM-Enhancer-CLI-X.Y.Z-macos-arm64.zip"
+awk -v archive="$archive" '$2 == archive' SHA256SUMS |
+  shasum -a 256 -c -
+
+# Linux
+archive="YTM-Enhancer-CLI-X.Y.Z-linux-x64.tar.gz"
+awk -v archive="$archive" '$2 == archive' SHA256SUMS |
+  sha256sum -c -
+```
+
+The release workflow performs the macOS form after signing and notarization and
+before uploading any assets.
 
 ## Manual Validation Policy
 

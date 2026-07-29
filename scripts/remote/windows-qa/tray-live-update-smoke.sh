@@ -7,7 +7,7 @@ target_version="${2:-${YTM_WINDOWS_TRAY_TARGET_VERSION:-}}"
 ui_ready_timeout="${YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS:-60}"
 
 usage() {
-  echo "Usage: $0 [baseline-version target-version]" >&2
+  echo "Usage: $0 <baseline-version> <target-version>" >&2
 }
 
 validate_version() {

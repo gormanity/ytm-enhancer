@@ -14,13 +14,32 @@ tag="$(
       [
         .[]
         | select(.draft == false)
+        | select(.prerelease == false)
         | .tag_name as $tag
         | select($tag | test("^cli-v[0-9]+\\.[0-9]+\\.[0-9]+$"))
+        | ($tag | sub("^cli-v"; "")) as $version_string
+        | [
+            "YTM-Enhancer-CLI-\($version_string)-macos-x64.zip",
+            "YTM-Enhancer-CLI-\($version_string)-macos-arm64.zip",
+            "YTM-Enhancer-CLI-\($version_string)-linux-x64.tar.gz",
+            "YTM-Enhancer-CLI-\($version_string)-linux-arm64.tar.gz",
+            "SHA256SUMS"
+          ] as $required_assets
+        | . as $release
+        | select(
+            all(
+              $required_assets[];
+              . as $required_name
+              | any(
+                  $release.assets[];
+                  .name == $required_name and .size > 0
+                )
+            )
+          )
         | {
             tag: $tag,
             version: (
-              $tag
-              | sub("^cli-v"; "")
+              $version_string
               | split(".")
               | map(tonumber)
             )
@@ -34,7 +53,7 @@ tag="$(
 
 if [ -z "$tag" ]; then
   echo "YTM_CLI_RELEASE_AVAILABLE=false" >>"$GITHUB_ENV"
-  echo "::notice::No published CLI release was found; keeping source-install guidance."
+  echo "::notice::No complete published CLI release was found; keeping source-install guidance."
   exit 0
 fi
 
@@ -59,7 +78,22 @@ for asset in \
   fi
 done
 
+checksum_url="$(
+  printf '%s\n' "$release" |
+    jq --raw-output '
+      .assets[]
+      | select(.name == "SHA256SUMS")
+      | .browser_download_url
+    ' |
+    head -n 1
+)"
+if [ -z "$checksum_url" ]; then
+  echo "::error::Published CLI release ${tag} has no checksum download URL."
+  exit 1
+fi
+
 {
   echo "YTM_CLI_VERSION=$version"
   echo "YTM_CLI_RELEASE_AVAILABLE=true"
+  echo "YTM_CLI_CHECKSUM_URL=$checksum_url"
 } >>"$GITHUB_ENV"

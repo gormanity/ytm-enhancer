@@ -9,17 +9,26 @@ usage() {
   echo "Usage: $0 <baseline-version> <target-version>" >&2
 }
 
+validate_version() {
+  label="$1"
+  version="$2"
+
+  case "$version" in
+    "" | *[!0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.+-]*)
+      echo "Invalid $label version: $version" >&2
+      echo "Use a tag version such as 0.1.1 or 0.1.2-beta.1." >&2
+      exit 2
+      ;;
+  esac
+}
+
 if [ "$#" -gt 2 ] || [ -z "$baseline_version" ] || [ -z "$target_version" ]; then
   usage
   exit 2
 fi
 
-case "$baseline_version:$target_version" in
-  *[!0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.+:-]*)
-    usage
-    exit 2
-    ;;
-esac
+validate_version "baseline" "$baseline_version"
+validate_version "target" "$target_version"
 
 ps_quote() {
   printf "'%s'" "$(printf "%s" "$1" | sed "s/'/''/g")"

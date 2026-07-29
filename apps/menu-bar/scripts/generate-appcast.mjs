@@ -241,6 +241,13 @@ function cliReleasePackages({ releaseBaseUrl, version }) {
   );
 }
 
+function cliReleaseChecksumUrl({ releaseBaseUrl, version }) {
+  return (
+    process.env.YTM_CLI_CHECKSUM_URL?.trim() ||
+    `${releaseBaseUrl}/cli-v${version}/SHA256SUMS`
+  );
+}
+
 function readWindowsTrayMetadata() {
   const metadata = readJson(
     resolve(repoRoot, "apps/windows-tray/release/metadata.json"),
@@ -275,6 +282,10 @@ function writeReleaseIndex({ metadata, outputPath, releaseBaseUrl }) {
   const cliAvailable = cliReleaseAvailable();
   const cliTag = `cli-v${cliVersion}`;
   const cliPackages = cliReleasePackages({
+    releaseBaseUrl,
+    version: cliVersion,
+  });
+  const cliChecksumUrl = cliReleaseChecksumUrl({
     releaseBaseUrl,
     version: cliVersion,
   });
@@ -372,6 +383,7 @@ function writeReleaseIndex({ metadata, outputPath, releaseBaseUrl }) {
             latestVersion: cliVersion,
             tag: cliTag,
             releaseUrl: releasePageUrl(cliTag),
+            checksumUrl: cliChecksumUrl,
             protocolVersion: cliProtocolVersion,
             installPage: sitePageUrl(metadata, "cli/"),
             distribution: "github-release-assets",
@@ -790,7 +802,7 @@ function siteDocument({ title, description, iconSvg, current, body }) {
       ${body}
       <footer class="site-footer">
         YTM Enhancer is private by design: no analytics, no tracking, and no
-        project-operated backend service.
+        project-operated backend services.
       </footer>
     </div>
   </body>
@@ -817,7 +829,6 @@ function writeSitePages({ metadata, outputPath, releaseBaseUrl }) {
   const siteRoot = resolve(dirname(outputPath), "..");
   const iconSvg = readExtensionIconSvg();
   const extensionVersion = readExtensionVersion();
-  const cliProtocolVersion = readCliProtocolVersion();
   const cliVersion = readCliVersion();
   const cliAvailable = cliReleaseAvailable();
   const cliTag = `cli-v${cliVersion}`;
@@ -825,6 +836,17 @@ function writeSitePages({ metadata, outputPath, releaseBaseUrl }) {
     releaseBaseUrl,
     version: cliVersion,
   });
+  const cliChecksumUrl = cliReleaseChecksumUrl({
+    releaseBaseUrl,
+    version: cliVersion,
+  });
+  const cliInstallIntro = cliAvailable
+    ? `Download the package for your operating system and architecture,
+                extract it, and run the included installer. It installs for
+                your user account without requiring Go or elevated access.`
+    : `Signed packages are still being prepared. Contributors can build the
+                CLI from a local checkout with Go 1.24 until downloads are
+                available.`;
   const cliInstallContent = cliAvailable
     ? `<div class="card-grid" id="downloads">
               <article class="card">
@@ -848,16 +870,38 @@ function writeSitePages({ metadata, outputPath, releaseBaseUrl }) {
                 <a class="card-link" href="${escapeHtml(cliPackages.linuxX64.packageUrl)}">Download x64</a>
               </article>
             </div>
-            <figure class="terminal-frame" aria-label="CLI install commands">
-              <code>unzip YTM-Enhancer-CLI-${escapeHtml(cliVersion)}-macos-arm64.zip
-cd YTM-Enhancer-CLI-${escapeHtml(cliVersion)}-macos-arm64
+            <p>
+              <a class="card-link" href="${escapeHtml(cliChecksumUrl)}">Download SHA256SUMS</a>
+              and verify the archive before installing.
+            </p>
+            <p><strong>macOS</strong></p>
+            <figure class="terminal-frame" aria-label="macOS CLI install commands">
+              <code>archive=YTM-Enhancer-CLI-${escapeHtml(cliVersion)}-macos-arm64.zip # use macos-x64 on Intel
+grep -F "  $archive" SHA256SUMS | shasum -a 256 -c -
+unzip "$archive"
+cd "\${archive%.zip}"
 ./install.sh
-ytme doctor</code>
+~/.local/bin/ytme doctor</code>
+            </figure>
+            <p><strong>Linux</strong></p>
+            <figure class="terminal-frame" aria-label="Linux CLI install commands">
+              <code>archive=YTM-Enhancer-CLI-${escapeHtml(cliVersion)}-linux-x64.tar.gz # use linux-arm64 on Arm
+grep -F "  $archive" SHA256SUMS | sha256sum -c -
+tar -xzf "$archive"
+cd "\${archive%.tar.gz}"
+./install.sh
+~/.local/bin/ytme doctor</code>
             </figure>`
     : `<p class="beta-note">
               The first signed public packages are being prepared. Downloads
-              will appear here as soon as the CLI release finishes.
-            </p>`;
+              will appear here as soon as the CLI release finishes. Until then,
+              use the source-install commands below.
+            </p>
+            <figure class="terminal-frame" aria-label="CLI source install commands">
+              <code>git clone https://github.com/gormanity/ytm-enhancer.git
+cd ytm-enhancer
+apps/cli/scripts/install-native-hosts.sh</code>
+            </figure>`;
   const windowsTrayMetadata = readWindowsTrayMetadata();
   const stores = extensionStoreUrls();
   const windowsInstallerUrl = windowsTrayInstallerUrl({
@@ -874,6 +918,9 @@ ytme doctor</code>
   const windowsArchitectureCopy = windowsInstallerAvailable
     ? "Architectures: x64 and ARM64 (selected automatically)"
     : "Architectures: x64 and ARM64";
+  const cliCardLinkLabel = cliAvailable
+    ? "Download for macOS or Linux"
+    : "View CLI setup";
   const windowsTrayScreenshotSourcePath = resolve(
     repoRoot,
     "apps/windows-tray/release/windows-tray-screenshot.png",
@@ -921,18 +968,18 @@ ytme doctor</code>
     siteDocument({
       title: "YTM Enhancer",
       description:
-        "YTM Enhancer upgrades YouTube Music with browser controls, automation, and native companion apps.",
+        "Upgrade YouTube Music with smarter controls, automation, a mini player, and optional menu bar, system tray, and terminal controls.",
       iconSvg,
       current: "home",
       body: `<main>
         <section class="hero" aria-labelledby="title">
           <div>
-            <p class="eyebrow">Browser extension and companion apps</p>
+            <p class="eyebrow">Extension plus optional desktop controls</p>
             <h1 id="title">YTM Enhancer</h1>
             <p class="lede">
-              Make YouTube Music feel like a full desktop music player with
-              smarter browser controls, automation, notifications, and native
-              Connected Apps.
+              Make YouTube Music work the way you listen with smarter playback
+              controls, automation, notifications, a compact mini player, and
+              optional controls outside the browser.
             </p>
             <div class="actions" aria-label="Install YTM Enhancer">
               <a class="button button-primary" href="${escapeHtml(stores.chrome)}">Chrome Web Store</a>
@@ -953,8 +1000,8 @@ ytme doctor</code>
           <div class="section-header">
             <h2 id="products-title">Install What You Need</h2>
             <p>
-              Start with the browser extension, then add the native companion
-              that matches your desktop workflow.
+              Start with the browser extension, then add the optional app that
+              matches how you listen.
             </p>
           </div>
           <div class="card-grid">
@@ -969,19 +1016,20 @@ ytme doctor</code>
             <article class="card">
               <h3>Connected Apps Beta</h3>
               <p>
-                A beta native app bridge for desktop controls outside the
-                browser. Enable it from the extension popup when you install a
-                companion app.
+                See what is playing and control YouTube Music from the macOS
+                menu bar, Windows system tray, or terminal. Turn it on only
+                when you install one of these optional apps.
               </p>
               <a class="card-link" href="connected-apps/">View companion apps</a>
             </article>
             <article class="card">
-              <h3>Current Release</h3>
+              <h3>Stay Current</h3>
               <p>
-                Extension version ${escapeHtml(extensionVersion)} is the
-                repository-wide release. Companion apps ship independently.
+                Browser stores update extension version
+                ${escapeHtml(extensionVersion)} automatically. Each optional
+                app also provides updates through its own install channel.
               </p>
-              <a class="card-link" href="releases.json">Read release index</a>
+              <a class="card-link" href="connected-apps/">Choose an optional app</a>
             </article>
           </div>
         </section>
@@ -992,9 +1040,9 @@ ytme doctor</code>
               <h2 id="desktop-title">Built Around YouTube Music</h2>
               <p>
                 YTM Enhancer keeps YouTube Music in your browser and layers
-                native controls around it. The extension owns the page access;
-                companion apps talk to the extension through an explicit,
-                permissioned connector.
+                optional controls around it. The extension owns page access,
+                and companion apps communicate locally only after you approve
+                them.
               </p>
             </div>
             <div class="beta-note">
@@ -1019,18 +1067,17 @@ ytme doctor</code>
     siteDocument({
       title: "Connected Apps Beta for YTM Enhancer",
       description:
-        "Connected Apps let first-party native companions control YouTube Music through YTM Enhancer.",
+        "See what is playing and control YouTube Music from the macOS menu bar, Windows system tray, or terminal.",
       iconSvg,
       current: "connected-apps",
       body: `<main>
         <section class="hero hero-narrow" aria-labelledby="title">
           <div>
-            <p class="eyebrow">Beta desktop companions</p>
+            <p class="eyebrow">Optional controls outside the browser</p>
             <h1 id="title">Connected Apps Beta</h1>
             <p class="lede">
-              Connect first-party native apps to YTM Enhancer for desktop
-              playback controls, now-playing status, and focus actions outside
-              the browser popup.
+              Keep playback close with now-playing details and controls in the
+              macOS menu bar, Windows system tray, or your terminal.
             </p>
             <div class="actions" aria-label="Connected Apps downloads">
               <a class="button button-primary" href="../menu-bar/install.html">Install for macOS</a>
@@ -1039,8 +1086,7 @@ ytme doctor</code>
             </div>
             <p class="beta-note">
               Connected Apps are in beta. Use the browser extension popup to
-              enable the feature and to control which first-party apps may
-              connect.
+              enable the feature and choose which apps may connect.
             </p>
           </div>
           <div class="visual-stack">
@@ -1061,7 +1107,7 @@ ytme doctor</code>
 
         <section class="section" aria-labelledby="apps-title">
           <div class="section-header">
-            <h2 id="apps-title">First-Party Apps</h2>
+            <h2 id="apps-title">Choose Your App</h2>
             <p>
               Each app requests the same limited playback permissions and only
               connects after Connected Apps is enabled in the extension.
@@ -1071,16 +1117,16 @@ ytme doctor</code>
             <article class="card">
               <h3>YTM Menu Bar</h3>
               <p>
-                Native macOS menu bar playback details, controls, and YouTube
-                Music focus support.
+                See what is playing, control playback, and open or focus
+                YouTube Music from the macOS menu bar.
               </p>
               <a class="card-link" href="../menu-bar/install.html">Download for macOS</a>
             </article>
             <article class="card">
               <h3>YTM Tray</h3>
               <p>
-                Native Windows tray playback details and controls for Windows
-                ${escapeHtml(windowsTrayMetadata.minimumWindowsVersion)}.
+                See what is playing and control YouTube Music from the Windows
+                system tray on ${escapeHtml(windowsTrayMetadata.minimumWindowsVersion)}.
               </p>
               <a class="card-link" href="../windows-tray/install.html">Install for Windows</a>
             </article>
@@ -1090,7 +1136,7 @@ ytme doctor</code>
                 Command-line playback controls for users who want scriptable
                 YouTube Music actions.
               </p>
-              <a class="card-link" href="../cli/">Download for macOS or Linux</a>
+              <a class="card-link" href="../cli/">${cliCardLinkLabel}</a>
             </article>
           </div>
         </section>
@@ -1100,7 +1146,7 @@ ytme doctor</code>
             <h2 id="browser-support-title">Browser Support</h2>
             <p>
               Connected Apps support depends on both the extension browser and
-              the native companion app installer.
+              the app you install.
             </p>
           </div>
           <div class="card-grid">
@@ -1126,10 +1172,8 @@ ytme doctor</code>
             </article>
           </div>
           <p class="beta-note">
-            Automated connector smoke covers Chromium-family and Firefox native
-            messaging paths for the macOS menu bar app and CLI. Menu bar button
-            automation runs on Chromium, Edge, and Firefox. Windows tray button
-            automation runs on Edge and Firefox.
+            All three apps communicate locally with the extension. You decide
+            which apps may connect and can turn off access at any time.
           </p>
         </section>
       </main>`,
@@ -1141,7 +1185,7 @@ ytme doctor</code>
     siteDocument({
       title: "YTM Tray for Windows",
       description:
-        "YTM Tray adds native Windows tray playback controls for YouTube Music through YTM Enhancer.",
+        "See what is playing and control YouTube Music from the Windows system tray.",
       iconSvg,
       current: "windows-tray",
       body: `<main>
@@ -1151,8 +1195,8 @@ ytme doctor</code>
             <h1 id="title">YTM Tray</h1>
             <p class="lede">
               Add YouTube Music playback status and controls to the Windows
-              tray while the browser extension keeps page access scoped to
-              YouTube Music.
+              system tray while the browser extension keeps page access scoped
+              to YouTube Music.
             </p>
             <div class="actions" aria-label="Install YTM Tray">
               <a class="button button-primary" href="${escapeHtml(windowsInstallerUrl)}">${escapeHtml(windowsDownloadLabel)}</a>
@@ -1169,7 +1213,7 @@ ytme doctor</code>
           <figure class="visual-frame">
             <img
               src="${windowsTrayScreenshotUrl}"
-              alt="YTM Tray app showing playback controls in a Windows tray popup"
+              alt="YTM Tray app showing playback controls in a Windows system tray popup"
             >
           </figure>
         </section>
@@ -1187,7 +1231,7 @@ ytme doctor</code>
               <li>Minimum Windows version: ${escapeHtml(windowsTrayMetadata.minimumWindowsVersion)}</li>
               <li>Browser support: Chrome, Microsoft Edge, and Firefox</li>
               <li>${windowsArchitectureCopy}</li>
-              <li>Update channel: component-scoped GitHub Releases</li>
+              <li>Updates: available from the About window</li>
             </ul>
           </div>
           <article class="card">
@@ -1233,17 +1277,17 @@ ytme doctor</code>
     siteDocument({
       title: "YTM Enhancer CLI",
       description:
-        "YTM Enhancer CLI provides command-line YouTube Music controls through Connected Apps.",
+        "See what is playing and control YouTube Music from a macOS or Linux terminal.",
       iconSvg,
       current: "cli",
       body: `<main>
         <section class="hero" aria-labelledby="title">
           <div>
-            <p class="eyebrow">Scriptable Connected App</p>
+            <p class="eyebrow">Connected Apps Beta for macOS and Linux</p>
             <h1 id="title">YTM Enhancer CLI</h1>
             <p class="lede">
-              Control YouTube Music from a shell using the same permissioned
-              Connected Apps bridge as the desktop companion apps.
+              Check playback, control YouTube Music, and build shell
+              integrations without switching back to the browser.
             </p>
             <div class="actions" aria-label="CLI resources">
               <a class="button button-primary" href="#install-title">Install for macOS/Linux</a>
@@ -1262,20 +1306,18 @@ ytme doctor</code>
             <div class="section-header">
               <h2 id="install-title">Install</h2>
               <p>
-                Download the package for your operating system and architecture,
-                extract it, and run the included installer. It installs for
-                your user account without requiring Go or elevated access.
+                ${cliInstallIntro}
               </p>
             </div>
             ${cliInstallContent}
           </div>
           <div class="visual-stack">
             <article class="card">
-              <h3>Protocol</h3>
+              <h3>What It Can Access</h3>
               <p>
-                The CLI uses connector protocol ${escapeHtml(cliProtocolVersion)}
-                and can read playback details, control playback, and focus
-                YouTube Music after you enable it from Connected Apps.
+                After you approve it in Connected Apps, the CLI can read
+                playback details, control playback, and open or focus YouTube
+                Music. Communication stays local to your device.
               </p>
               ${
                 cliAvailable
@@ -1290,8 +1332,7 @@ ytme doctor</code>
               <p>
                 The macOS and Linux CLI installer writes native messaging
                 manifests for Chrome, Chromium, Microsoft Edge, Brave, and
-                Firefox. Automated connector smoke covers Chromium and Firefox
-                on supported desktop platforms.
+                Firefox.
               </p>
             </article>
           </div>
@@ -1642,11 +1683,11 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
           <div class="app-mark" aria-hidden="true">
             ${iconSvg}
           </div>
-          <p class="eyebrow">YTM Enhancer companion app</p>
+          <p class="eyebrow">Connected Apps Beta for macOS</p>
           <h1 id="title">${escapeHtml(metadata.appName)}</h1>
           <p class="summary">
-            Native macOS menu bar playback info and controls for YouTube Music,
-            powered by YTM Enhancer's Connected Apps API.
+            See what is playing and control YouTube Music from the macOS menu
+            bar without switching back to the browser.
           </p>
           <div class="actions" aria-label="Install options">
             <a class="button button-primary" href="${escapeHtml(directUrl)}">
@@ -1713,8 +1754,8 @@ function writeInstallPage({ metadata, outputPath, releaseBaseUrl }) {
         <article class="panel">
           <h2>Privacy</h2>
           <p>
-            YTM Menu Bar communicates with YTM Enhancer through the connector
-            API. It does not read YouTube Music pages directly.
+            YTM Menu Bar communicates locally with the YTM Enhancer extension.
+            It does not read YouTube Music pages directly.
           </p>
         </article>
         <article class="panel">

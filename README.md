@@ -18,14 +18,17 @@
   <img alt="Privacy-first: no analytics" src="https://img.shields.io/badge/Privacy-No%20analytics-1F9D55">
 </p>
 
-YTM Enhancer supercharges YouTube Music to make it the best browser-based media
-player.
+Make YouTube Music work the way you listen. YTM Enhancer adds powerful playback
+controls and thoughtful quality-of-life features directly to the web app, so you
+can keep the service and library you already use.
 
-It upgrades YouTube Music in your browser with smarter controls, automation, and
-visual enhancements, without forcing you into a replacement app or wrapper.
+Control playback across tabs, fine-tune volume, speed, and stream quality, open
+a compact mini player, automate routine actions, and add visualizers,
+notifications, hotkeys, and a sleep timer.
 
-If you love the ubiquity of YouTube Music's service but want a more
-fully-featured listening experience, this extension is for you.
+Optional Connected Apps (Beta) bring now-playing details and playback controls
+to the macOS menu bar, Windows system tray, and terminal. They are disabled by
+default and communicate locally with the extension.
 
 ## Why YTM Enhancer
 
@@ -34,9 +37,9 @@ fully-featured listening experience, this extension is for you.
 - Keeps YouTube Music in your browser without replacing the native app
 - Manage multiple YouTube Music tabs, effortlessly switching and controlling
   playback
-- Private by design: no analytics, no tracking, and no external backend
+- Private by design: no analytics, no tracking, and no project-operated backend
   services.
-- Supports all major browsers: Chrome, Edge, and Firefox
+- Supports Chrome, Edge, and Firefox
 
 ## Install
 
@@ -50,19 +53,19 @@ Install YTM Enhancer from your browser's extension store:
 
 ## Feature Highlights
 
-| Feature                                                                                             | Why You Want It                                                                                                         |
-| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| <img src="src/assets/module-icons/playback-controls.svg" width="18" alt="" /> **Playback Controls** | Control playback, switch YTM tabs, seek, adjust volume, change speed/quality, and toggle shuffle/repeat from one panel. |
-| <img src="src/assets/module-icons/auto-play.svg" width="18" alt="" /> **Automation**                | Start playback automatically and skip disliked tracks so listening keeps moving.                                        |
-| <img src="src/assets/module-icons/visualizer.svg" width="18" alt="" /> **Audio Visualizer**         | Add responsive visualizer overlays and tune style, color, surface, and intensity.                                       |
-| <img src="src/assets/module-icons/hotkeys.svg" width="18" alt="" /> **Hotkeys**                     | Control playback, focus YouTube Music, or trigger module actions from any app.                                          |
-| <img src="src/assets/module-icons/mini-player.svg" width="18" alt="" /> **Mini Player**             | Open a compact Picture-in-Picture control window while multitasking.                                                    |
-| <img src="src/assets/module-icons/notifications.svg" width="18" alt="" /> **Notifications**         | Get desktop updates on track changes and playback resumption with custom detail.                                        |
-| <img src="src/assets/module-icons/sleep-timer.svg" width="18" alt="" /> **Sleep Timer**             | Stop playback by duration or clock time so your queue does not run all night.                                           |
-| <img src="src/assets/module-icons/connected-apps.svg" width="18" alt="" /> **Connected Apps**       | Control YouTube Music from the macOS menu bar, Windows taskbar, or your terminal.                                       |
-| <img src="src/assets/module-icons/about.svg" width="18" alt="" /> **About**                         | Find version details, support links, privacy information, and store pages.                                              |
+| Feature                                                                                              | Why You Want It                                                                                                         |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| <img src="src/assets/module-icons/playback-controls.svg" width="18" alt="" /> **Playback Controls**  | Control playback, switch YTM tabs, seek, adjust volume, change speed/quality, and toggle shuffle/repeat from one panel. |
+| <img src="src/assets/module-icons/auto-play.svg" width="18" alt="" /> **Automation**                 | Start playback automatically and skip disliked tracks so listening keeps moving.                                        |
+| <img src="src/assets/module-icons/visualizer.svg" width="18" alt="" /> **Audio Visualizer**          | Add responsive visualizer overlays and tune style, color, surface, and intensity.                                       |
+| <img src="src/assets/module-icons/hotkeys.svg" width="18" alt="" /> **Hotkeys**                      | Control playback, focus YouTube Music, or trigger module actions without opening the popup.                             |
+| <img src="src/assets/module-icons/mini-player.svg" width="18" alt="" /> **Mini Player**              | Open a compact Picture-in-Picture control window while multitasking.                                                    |
+| <img src="src/assets/module-icons/notifications.svg" width="18" alt="" /> **Notifications**          | Get desktop updates on track changes and playback resumption with custom detail.                                        |
+| <img src="src/assets/module-icons/sleep-timer.svg" width="18" alt="" /> **Sleep Timer**              | Stop playback by duration or clock time so your queue does not run all night.                                           |
+| <img src="src/assets/module-icons/connected-apps.svg" width="18" alt="" /> **Connected Apps (Beta)** | Control YouTube Music from the macOS menu bar, Windows system tray, or your terminal.                                   |
+| <img src="src/assets/module-icons/about.svg" width="18" alt="" /> **About**                          | Find version details, support links, privacy information, and store pages.                                              |
 
-## Connected Apps
+## Connected Apps (Beta)
 
 Control YouTube Music without switching windows. Connected Apps are optional,
 disabled by default, and communicate locally between the extension and enabled
@@ -71,7 +74,7 @@ apps on your device.
 - [YTM Menu Bar](https://gormanity.github.io/ytm-enhancer/menu-bar/install.html)
   shows playback details and controls in the macOS menu bar.
 - [YTM Tray](https://gormanity.github.io/ytm-enhancer/windows-tray/install.html)
-  brings playback details and controls to the Windows taskbar.
+  brings playback details and controls to the Windows system tray.
 - [YTM Enhancer CLI](https://gormanity.github.io/ytm-enhancer/cli/) provides
   packaged terminal controls on macOS and Linux.
 
@@ -147,7 +150,7 @@ and VHS 0.11.0. macOS menu bar app work also requires Xcode's Swift toolchain.
 ## Privacy
 
 YTM Enhancer is private by design. It has no analytics, no tracking, and no
-external backend services.
+project-operated backend services.
 
 ### Why Each Permission Is Required
 
@@ -155,9 +158,11 @@ external backend services.
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `activeTab`                           | Lets the popup and hotkeys interact with your currently active YouTube Music tab when you trigger extension actions. |
 | `alarms`                              | Powers time-based automation, including Sleep Timer and background scheduling logic.                                 |
+| `nativeMessaging`                     | Exchanges playback details and user-requested commands locally with companion apps when Connected Apps is enabled.   |
 | `notifications`                       | Shows native desktop notifications for track changes and related playback events.                                    |
 | `scripting`                           | Injects and runs extension scripts on YouTube Music to provide feature behavior in-page.                             |
 | `storage`                             | Saves your module settings locally in the browser so preferences persist.                                            |
+| `tabs` (Firefox only)                 | Finds, selects, opens, or focuses YouTube Music tabs without reading unrelated browsing history.                     |
 | `https://music.youtube.com/*`         | Limits extension functionality to YouTube Music pages where features are intended to run.                            |
 | `https://lh3.googleusercontent.com/*` | Loads album art assets used for now-playing and notification UI.                                                     |
 

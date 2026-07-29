@@ -1,12 +1,12 @@
 # Privacy Policy
 
-Last updated: July 11, 2026
+Last updated: July 29, 2026
 
 YTM Enhancer is built with a privacy-first model:
 
 - No analytics
 - No tracking
-- No external backend services
+- No project-operated backend services
 - No data sale or data sharing for advertising
 
 ## Data Collection
@@ -53,17 +53,22 @@ YouTube Music history for the developer.
 
 ## Network Access
 
-YTM Enhancer is scoped to YouTube Music and related artwork resources:
+During normal extension use, network access is scoped to YouTube Music and
+related artwork resources:
 
 - `https://music.youtube.com/*`
 - `https://lh3.googleusercontent.com/*`
 
-No project-operated servers are contacted.
+The direct-install versions of YTM Menu Bar and YTM Tray contact GitHub-hosted
+release endpoints to check for companion app updates. These update checks do not
+include playback state, track metadata, account data, or credentials.
 
-## Connected Apps and Native Messaging
+No project-operated backend services are contacted.
 
-Connected Apps are optional and disabled by default. If you enable this feature
-and install a supported first-party companion app, the extension uses your
+## Connected Apps (Beta) and Native Messaging
+
+Connected Apps are optional, in beta, and disabled by default. If you enable
+this feature and install a supported companion app, the extension uses your
 browser's `nativeMessaging` API to communicate with that app on your device.
 
 Depending on the permissions shown in Connected Apps, the extension can send
@@ -96,13 +101,15 @@ no project infrastructure for data collection exists:
 - `alarms` used for scheduled/background tasks, including Sleep Timer behavior.
 - `notifications` used to show native desktop notifications for track and
   playback events.
-- `nativeMessaging` used only when Connected Apps is enabled to exchange
+- `nativeMessaging` used only when Connected Apps (Beta) is enabled to exchange
   playback state, track metadata, and user-requested commands with enabled
-  first-party companion apps on your device.
+  companion apps on your device.
 - `scripting` used to inject extension scripts on YouTube Music pages so
   features can work in-page.
 - `storage` used to save module settings and preferences in browser extension
   storage.
+- `tabs` (Firefox only) used to find, select, open, or focus YouTube Music tabs.
+  It is not used to read unrelated browsing history.
 - `https://music.youtube.com/*` Host access required for YouTube Music feature
   integration.
 - `https://lh3.googleusercontent.com/*` Host access required for artwork/cover

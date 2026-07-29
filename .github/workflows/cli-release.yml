@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "cli-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: CLI version to build as a non-publishing candidate
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -35,15 +41,34 @@ jobs:
           fi
           sudo xcode-select -s "$selected_xcode/Contents/Developer"
           xcodebuild -version
+          if ! xcrun notarytool submit --help | grep -q "Individual API Keys"; then
+            echo "::error::Selected notarytool does not support individual App Store Connect API keys."
+            exit 1
+          fi
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Resolve CLI release version
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REQUESTED_CLI_VERSION: ${{ inputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#cli-v}"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+              echo "::error::CLI release candidates must run from the default branch."
+              exit 1
+            fi
+            version="$REQUESTED_CLI_VERSION"
+          else
+            version="${GITHUB_REF_NAME#cli-v}"
+          fi
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::CLI releases must use cli-vX.Y.Z tags."
+            if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+              echo "::error::CLI release candidates must use X.Y.Z versions."
+            else
+              echo "::error::CLI releases must use cli-vX.Y.Z tags."
+            fi
             exit 1
           fi
           source_version="$(sed -n 's/.*ConnectorVersion = "\([^"]*\)".*/\1/p' apps/cli/internal/protocol/protocol.go)"
@@ -51,11 +76,17 @@ jobs:
             echo "::error::CLI tag version $version does not match source version $source_version."
             exit 1
           fi
+          notes_path="apps/cli/release/notes/${version}.md"
+          if [ ! -s "$notes_path" ]; then
+            echo "::error::Release notes are missing or empty: ${notes_path}"
+            exit 1
+          fi
           echo "YTM_CLI_VERSION=$version" >> "$GITHUB_ENV"
 
       - name: Run CLI tests
         run: |
           pnpm exec vitest run tests/apps/cli-scaffold.test.ts
+          pnpm exec vitest run tests/apps/companion-initial-releases.test.ts
           pnpm run cli:test
 
       - name: Build CLI payloads
@@ -138,11 +169,29 @@ jobs:
               --archive="apps/cli/.build/packages/YTM-Enhancer-CLI-${YTM_CLI_VERSION}-$runtime.zip"
           done
 
+      - name: Validate CLI release artifacts
+        run: scripts/ci/validate-cli-release-artifacts.sh "$YTM_CLI_VERSION"
+
+      - name: Upload CLI release candidate
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: YTM-Enhancer-CLI-${{ env.YTM_CLI_VERSION }}-candidate
+          path: |
+            apps/cli/.build/packages/*.zip
+            apps/cli/.build/packages/*.tar.gz
+            apps/cli/.build/packages/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
       - name: Publish GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/cli-v')
         uses: softprops/action-gh-release@v3
         with:
           name: YTM Enhancer CLI ${{ env.YTM_CLI_VERSION }}
           body_path: apps/cli/release/notes/${{ env.YTM_CLI_VERSION }}.md
+          fail_on_unmatched_files: true
           make_latest: false
           files: |
             apps/cli/.build/packages/*.zip

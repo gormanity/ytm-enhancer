@@ -8,6 +8,11 @@ the shared sections unless a browser-specific requirement forces different copy.
 
 ## Shared Listing Copy
 
+### Short Description
+
+Upgrade YouTube Music with smarter controls, automation, a mini player, and
+optional Connected Apps (Beta).
+
 ### Detailed Description
 
 Make YouTube Music work the way you listen. YTM Enhancer adds powerful playback

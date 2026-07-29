@@ -10,9 +10,9 @@ describe("Connected Apps release disclosures", () => {
   it("introduces Connected Apps from the user's point of view", () => {
     const readme = read("README.md");
 
-    expect(readme).toContain("## Connected Apps");
+    expect(readme).toContain("## Connected Apps (Beta)");
     expect(readme).toContain(
-      "Control YouTube Music from the macOS menu bar, Windows taskbar, or your terminal.",
+      "Control YouTube Music from the macOS menu bar, Windows system tray, or your terminal.",
     );
     expect(readme).toContain("disabled by default");
     expect(readme).toContain("communicate locally");
@@ -23,10 +23,13 @@ describe("Connected Apps release disclosures", () => {
 
     expect(privacyPolicy).toContain("Connected Apps");
     expect(privacyPolicy).toContain("`nativeMessaging`");
+    expect(privacyPolicy).toContain("`tabs` (Firefox only)");
     expect(privacyPolicy).toContain("playback state and track metadata");
     expect(privacyPolicy).toContain(
-      "No project-operated servers are contacted",
+      "No project-operated backend services are contacted",
     );
+    expect(read("README.md")).toContain("| `nativeMessaging`");
+    expect(read("README.md")).toContain("| `tabs` (Firefox only)");
   });
 
   it("describes Connected Apps and native messaging in store copy", () => {
@@ -61,5 +64,114 @@ describe("Connected Apps release disclosures", () => {
       "Automated connector smoke covers Chromium and Firefox.",
     );
     expect(connectorDocs).toContain("connector smoke covers Edge and Firefox.");
+  });
+
+  it("keeps public marketing copy benefit-led and terminology consistent", () => {
+    const readme = read("README.md");
+    const storeListing = read("store/STORE.md");
+    const storeScreenshot = read("store/screenshots/05-connected-apps.html");
+    const siteGenerator = read("apps/menu-bar/scripts/generate-appcast.mjs");
+    const trayNotes = read("apps/windows-tray/release/notes/0.2.0.md");
+
+    expect(readme).toContain("Make YouTube Music work the way you listen.");
+    expect(readme).not.toMatch(/supercharges|best browser-based|ubiquity/i);
+    expect(readme).toContain("**Connected Apps (Beta)**");
+    expect(readme).toContain("Windows system tray");
+    expect(readme).not.toContain("Windows taskbar");
+    expect(readme).toContain("Supports Chrome, Edge, and Firefox");
+    expect(readme).not.toContain("Supports all major browsers");
+    expect(readme).toContain(
+      "Control playback, focus YouTube Music, or trigger module actions without opening the popup.",
+    );
+    expect(readme).not.toContain("trigger module actions from any app");
+    expect(storeListing).toContain("Windows system tray");
+    expect(storeScreenshot).toContain("Windows system tray");
+    expect(storeScreenshot).not.toContain("Windows taskbar");
+    expect(trayNotes.replace(/\s+/g, " ")).toContain("Windows system tray");
+    expect(trayNotes).not.toContain("Windows taskbar");
+
+    expect(siteGenerator).toContain(
+      '<p class="eyebrow">Connected Apps Beta for macOS</p>',
+    );
+    expect(siteGenerator).toContain(
+      '<p class="eyebrow">Connected Apps Beta for macOS and Linux</p>',
+    );
+    expect(siteGenerator).not.toContain("native Connected Apps");
+    expect(siteGenerator).not.toContain("beta native app bridge");
+    expect(siteGenerator).not.toContain("first-party native companions");
+    expect(siteGenerator).not.toContain("First-Party Apps");
+    expect(siteGenerator).not.toContain("Connected Apps API");
+    expect(siteGenerator).not.toContain("connector API");
+  });
+
+  it("records one shared short description for store submissions", () => {
+    const description =
+      "Upgrade YouTube Music with smarter controls, automation, a mini player, and optional Connected Apps (Beta).";
+    const storeListing = read("store/STORE.md");
+    const manifests = [
+      "src/manifests/chrome.json",
+      "src/manifests/edge.json",
+      "src/manifests/firefox.json",
+    ].map((path) => JSON.parse(read(path)) as { description: string });
+
+    expect(storeListing).toContain("### Short Description");
+    expect(storeListing.replace(/\s+/g, " ")).toContain(description);
+    for (const manifest of manifests) {
+      expect(manifest.description).toBe(description);
+    }
+  });
+
+  it("keeps public permission explanations aligned with browser manifests", () => {
+    const readme = read("README.md");
+    const privacyPolicy = read("PRIVACY.md");
+
+    for (const document of [readme, privacyPolicy]) {
+      expect(document).toContain("`nativeMessaging`");
+      expect(document).toContain("`tabs`");
+      expect(document).toContain("Firefox");
+      expect(document).toMatch(/unrelated\s+browsing history/);
+      expect(document).toContain("project-operated backend services");
+      expect(document).not.toContain("no external backend services");
+    }
+  });
+
+  it("discloses companion app update checks without overstating data use", () => {
+    const privacyPolicy = read("PRIVACY.md");
+    const normalizedPolicy = privacyPolicy.replace(/\s+/g, " ");
+
+    expect(normalizedPolicy).toContain(
+      "YTM Menu Bar and YTM Tray contact GitHub-hosted release endpoints",
+    );
+    expect(normalizedPolicy).toMatch(
+      /do not include playback state, track metadata, account data, or credentials/,
+    );
+    expect(privacyPolicy).toContain(
+      "No project-operated backend services are contacted.",
+    );
+  });
+
+  it("states beta status and directs initial app notes to product pages", () => {
+    const releaseNotes = [
+      {
+        notes: read("apps/menu-bar/release/notes/0.2.0.md"),
+        landingPage:
+          "https://gormanity.github.io/ytm-enhancer/menu-bar/install.html",
+      },
+      {
+        notes: read("apps/windows-tray/release/notes/0.2.0.md"),
+        landingPage:
+          "https://gormanity.github.io/ytm-enhancer/windows-tray/install.html",
+      },
+      {
+        notes: read("apps/cli/release/notes/0.1.0.md"),
+        landingPage: "https://gormanity.github.io/ytm-enhancer/cli/",
+      },
+    ];
+
+    for (const { notes, landingPage } of releaseNotes) {
+      expect(notes).toContain("Connected Apps (Beta)");
+      expect(notes).toContain(landingPage);
+      expect(notes).not.toContain("### Get started");
+    }
   });
 });

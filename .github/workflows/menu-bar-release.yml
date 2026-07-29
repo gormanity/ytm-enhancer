@@ -61,6 +61,22 @@ jobs:
           fi
           IFS=. read -r major minor patch <<< "$version"
           build_number=$((major * 1000000 + minor * 1000 + patch))
+          metadata_path="apps/menu-bar/release/metadata.json"
+          metadata_version="$(node -p "require('./${metadata_path}').version")"
+          metadata_build_number="$(node -p "require('./${metadata_path}').buildNumber")"
+          notes_path="apps/menu-bar/release/notes/${version}.md"
+          if [ "$metadata_version" != "$version" ]; then
+            echo "::error::Tag version ${version} does not match ${metadata_path} version ${metadata_version}."
+            exit 1
+          fi
+          if [ "$metadata_build_number" != "$build_number" ]; then
+            echo "::error::Build number ${build_number} does not match ${metadata_path} build number ${metadata_build_number}."
+            exit 1
+          fi
+          if [ ! -s "$notes_path" ]; then
+            echo "::error::Release notes are missing or empty: ${notes_path}"
+            exit 1
+          fi
           {
             echo "YTM_MENU_BAR_VERSION=$version"
             echo "YTM_MENU_BAR_BUILD_NUMBER=$build_number"

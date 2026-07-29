@@ -1072,7 +1072,7 @@ describe("Windows tray connector scaffold", () => {
 
     expect(metadata.appName).toBe("YTM Tray");
     expect(metadata.nativeHostName).toBe("com.gormanity.ytm_enhancer.tray");
-    expect(metadata.version).toBe("0.2.0");
+    expect(metadata.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(metadata.githubReleaseTagPrefix).toBe("windows-tray-v");
     expect(metadata.githubReleaseListUrl).toBe(
       "https://api.github.com/repos/gormanity/ytm-enhancer/releases",
@@ -1082,6 +1082,16 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(metadata.assetPrefix).toBe("YTM-Tray");
     expect(metadata.runtimes).toEqual(["win-x64", "win-arm64"]);
+  });
+
+  it("does not report a stale release version when build metadata is absent", () => {
+    const protocol = read("src/YTMTray.Core/ConnectorProtocol.cs");
+    const installScript = read("scripts/install-native-hosts.ps1");
+
+    expect(protocol).toContain('?.InformationalVersion ?? "0.0.0"');
+    expect(installScript).toContain('return "0.0.0"');
+    expect(protocol).not.toContain('"0.1.9"');
+    expect(installScript).not.toContain('"0.1.9"');
   });
 
   it("packages prebuilt release zips without requiring the .NET SDK at install time", () => {
@@ -1158,7 +1168,7 @@ describe("Windows tray connector scaffold", () => {
 
     expect(installScript).toContain("Test-PackagedBinaries");
     expect(installScript).toContain("Install-PackagedBinaries");
-    expect(installScript).toContain('return "0.1.9"');
+    expect(installScript).toContain('return "0.0.0"');
     expect(installScript).toContain("[switch] $InstallerWorker");
     expect(installScript).toContain("Start-DetachedInstallerWorker");
     expect(installScript).toContain(

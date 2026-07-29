@@ -1742,8 +1742,9 @@ describe("menu bar connector app scaffold", () => {
       "https://github.com/gormanity/ytm-enhancer/blob/main/docs/code-signing-policy.md",
     );
     expect(appcastScript).toContain(
-      "Automated connector smoke covers Chromium-family and Firefox",
+      "All three apps communicate locally with the extension.",
     );
+    expect(appcastScript).not.toContain("button automation");
     expect(appcastScript).toContain("copyFileSync");
     expect(appcastScript).toContain("screenshot-frame");
     expect(appcastScript).toContain("Download for macOS");
@@ -1994,6 +1995,8 @@ describe("menu bar connector app scaffold", () => {
     expect(connectedAppsPage).toContain("../assets/menu-bar-screenshot.png");
     expect(connectedAppsPage).toContain(windowsTrayScreenshotUrl);
     expect(connectedAppsPage).toContain("Browser Support");
+    expect(connectedAppsPage).toContain(">View CLI setup</a>");
+    expect(connectedAppsPage).not.toContain(">Download for macOS or Linux</a>");
     expect(connectedAppsPage).toContain(
       "YTM Tray currently supports Chrome, Microsoft Edge, and Firefox.",
     );
@@ -2029,7 +2032,7 @@ describe("menu bar connector app scaffold", () => {
     expect(cliPage).toContain("../assets/cli-demo-poster.png");
     expect(cliPage).not.toContain("Read CLI README");
     expect(cliPage).toContain("Chrome, Chromium, Microsoft Edge, Brave, and");
-    expect(cliPage).toMatch(/Chromium and Firefox\s+on supported/);
+    expect(cliPage).not.toContain("Automated connector smoke");
     expect(cliPage).toContain(
       "The first signed public packages are being prepared.",
     );

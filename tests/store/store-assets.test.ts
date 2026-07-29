@@ -37,6 +37,8 @@ describe("store assets", () => {
     });
 
     expect(storeCopy).toContain("Make YouTube Music work the way you listen.");
+    expect(storeCopy).toContain("### Short Description");
+    expect(storeCopy.replace(/\s+/g, " ")).toContain(expectedDescription);
     expect(storeCopy).toContain("Optional Connected Apps (Beta)");
     expect(storeCopy).toContain("- Connected Apps (Beta):");
     expect(storeCopy).toContain("no project-operated backend services");
@@ -70,7 +72,7 @@ describe("store assets", () => {
       "Control YouTube Music without switching windows",
     );
     expect(connectedApps).toContain(
-      "Use the macOS menu bar, Windows taskbar, or your terminal.",
+      "Use the macOS menu bar, Windows system tray, or your terminal.",
     );
     expect(connectedApps).toContain("Connected Apps Beta");
     expect(connectedApps).toContain("YTM Menu Bar");
