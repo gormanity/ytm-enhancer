@@ -32,15 +32,54 @@ function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function safeMarkdownLinkHref(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function renderInlineMarkdown(value) {
-  const escaped = escapeHtml(value);
-  return escaped.replaceAll(/`([^`]+)`/g, "<code>$1</code>");
+  const source = String(value);
+  let output = "";
+  let index = 0;
+
+  while (index < source.length) {
+    const remainder = source.slice(index);
+    const code = /^`([^`\n]+)`/.exec(remainder);
+    if (code) {
+      output += `<code>${escapeHtml(code[1])}</code>`;
+      index += code[0].length;
+      continue;
+    }
+
+    const link = /^\[([^\]\n]+)\]\(([^)\s]+)\)/.exec(remainder);
+    if (link) {
+      const href = safeMarkdownLinkHref(link[2]);
+      if (href) {
+        output += `<a href="${escapeHtml(href)}">${escapeHtml(link[1])}</a>`;
+        index += link[0].length;
+        continue;
+      }
+    }
+
+    output += escapeHtml(source[index]);
+    index += 1;
+  }
+
+  return output;
 }
 
-function renderReleaseNotesMarkdown(markdown) {
+export function renderReleaseNotesMarkdown(markdown) {
   const output = [];
   const paragraph = [];
   const listItem = [];

@@ -550,10 +550,14 @@ describe("initial public companion releases", () => {
       expect(notes).toContain(
         "<li>Control play, pause, previous, next, seeking, shuffle, and repeat without returning to the browser.</li>",
       );
+      expect(notes).toContain(
+        '<a href="https://gormanity.github.io/ytm-enhancer/menu-bar/install.html">YTM Menu Bar landing page</a>',
+      );
       expect(notes).not.toContain(
         "keeps the menu bar companion app up to date",
       );
       expect(notes).not.toContain("## Initial public beta");
+      expect(notes).not.toContain("[YTM Menu Bar landing page](");
     } finally {
       if (previousVersion === undefined) {
         delete process.env.YTM_MENU_BAR_VERSION;
@@ -567,6 +571,28 @@ describe("initial public companion releases", () => {
       }
       rmSync(outputRoot, { force: true, recursive: true });
     }
+  });
+
+  it("renders release-note links without allowing unsafe HTML or URLs", async () => {
+    const moduleUrl = pathToFileURL(
+      resolve(process.cwd(), "apps/menu-bar/scripts/generate-appcast.mjs"),
+    );
+    moduleUrl.searchParams.set("menu-notes-safety-test", String(Date.now()));
+    const { renderReleaseNotesMarkdown } = (await import(moduleUrl.href)) as {
+      renderReleaseNotesMarkdown: (markdown: string) => string;
+    };
+
+    const rendered = renderReleaseNotesMarkdown(
+      "Read [the <guide>](https://example.test/help?source=release&view=notes), keep `<script>` literal, and do not link [unsafe](javascript:alert(1)).",
+    );
+
+    expect(rendered).toContain(
+      '<a href="https://example.test/help?source=release&amp;view=notes">the &lt;guide&gt;</a>',
+    );
+    expect(rendered).toContain("<code>&lt;script&gt;</code>");
+    expect(rendered).toContain("[unsafe](javascript:alert(1))");
+    expect(rendered).not.toContain('<a href="javascript:');
+    expect(rendered).not.toContain("<script>");
   });
 
   it("requires an explicit published Tray update pair for destructive QA", () => {
