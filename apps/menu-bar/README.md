@@ -105,7 +105,9 @@ public release package still installs production manifests under `/Library`.
 
 ## Release Channels
 
-The public macOS connector has two supported install channels.
+The public macOS connector has two supported install channels. Both channels
+ship one universal app for Intel and Apple silicon Macs running macOS 13 or
+later.
 
 Direct install:
 

@@ -12,6 +12,9 @@ appcast, Homebrew cask, or a direct component release link.
 
 ## Channels
 
+Both channels ship one universal app for Intel and Apple silicon Macs running
+macOS 13 or later.
+
 Direct install:
 
 - Asset: `YTM-Menu-Bar-<version>.pkg`.

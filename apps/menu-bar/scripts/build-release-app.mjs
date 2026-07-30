@@ -20,6 +20,7 @@ const APP_ICON_FILE_NAME = "YTMMenuBarIcon.icns";
 const APP_ICON_SAFE_AREA_TRANSFORM = "translate(6 6) scale(0.90625)";
 const APP_ICON_ACCENT_RING =
   /[ \t]*<circle cx="64" cy="64" r="41" fill="none" stroke="#FFFFFF" stroke-opacity="0\.12" stroke-width="1" \/>\n?/;
+const RELEASE_ARCHITECTURES = ["arm64", "x86_64"];
 
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
@@ -78,12 +79,23 @@ function resolveSparkleConfiguration({
   };
 }
 
-function swiftBuild(channel) {
-  const args = ["build", "--package-path", appRoot, "-c", "release"];
+function swiftBuild(channel, architecture, minimumMacOSVersion) {
+  const args = [
+    "build",
+    "--package-path",
+    appRoot,
+    "-c",
+    "release",
+    "--triple",
+    `${architecture}-apple-macosx${minimumMacOSVersion}`,
+  ];
   if (channel === "homebrew") {
     args.push("-Xswiftc", "-DYTM_MENU_BAR_HOMEBREW");
   }
   execFileSync("swift", args, { stdio: "inherit" });
+  return execFileSync("swift", [...args, "--show-bin-path"], {
+    encoding: "utf-8",
+  }).trim();
 }
 
 function run(command, args) {
@@ -215,6 +227,53 @@ function verifyFrameworkRpath(executablePath) {
   }
 }
 
+function createUniversalExecutable(sourcePaths, destinationPath) {
+  run("lipo", ["-create", ...sourcePaths, "-output", destinationPath]);
+}
+
+function verifyReleaseArchitectures(executablePath) {
+  const actual = execFileSync("lipo", ["-archs", executablePath], {
+    encoding: "utf-8",
+  })
+    .trim()
+    .split(/\s+/)
+    .sort();
+  const expected = [...RELEASE_ARCHITECTURES].sort();
+
+  if (
+    actual.length !== expected.length ||
+    actual.some((architecture, index) => architecture !== expected[index])
+  ) {
+    throw new Error(
+      `Unexpected release architectures for ${executablePath}: expected ${expected.join(
+        ", ",
+      )}; found ${actual.join(", ") || "none"}.`,
+    );
+  }
+}
+
+function verifyAppArchitectures(appDirectory) {
+  const sparkleVersion = join(
+    appDirectory,
+    "Contents/Frameworks/Sparkle.framework/Versions/B",
+  );
+  const executablePaths = [
+    join(appDirectory, "Contents/MacOS/YTMMenuBarConnector"),
+    join(sparkleVersion, "Sparkle"),
+    join(sparkleVersion, "Updater.app/Contents/MacOS/Updater"),
+    join(
+      sparkleVersion,
+      "XPCServices/Downloader.xpc/Contents/MacOS/Downloader",
+    ),
+    join(sparkleVersion, "XPCServices/Installer.xpc/Contents/MacOS/Installer"),
+    join(sparkleVersion, "Autoupdate"),
+  ];
+
+  for (const executablePath of executablePaths) {
+    verifyReleaseArchitectures(executablePath);
+  }
+}
+
 function signAppBundle(appDirectory) {
   const identity = process.env.DEVELOPER_ID_APPLICATION ?? "-";
   const developerIdArgs =
@@ -264,9 +323,10 @@ export async function buildReleaseApp({
     sparkleEnabled: metadata.channels[channel].sparkleEnabled,
   });
 
-  swiftBuild(channel);
-
-  const releaseDirectory = resolve(appRoot, ".build/release");
+  const releaseDirectories = RELEASE_ARCHITECTURES.map((architecture) =>
+    swiftBuild(channel, architecture, metadata.minimumMacOSVersion),
+  );
+  const releaseDirectory = releaseDirectories[0];
   const appDirectory = resolve(outputRoot, channel, `${metadata.appName}.app`);
   const contentsDirectory = join(appDirectory, "Contents");
   const macOSDirectory = join(contentsDirectory, "MacOS");
@@ -275,11 +335,13 @@ export async function buildReleaseApp({
   mkdirSync(macOSDirectory, { recursive: true });
   mkdirSync(resourcesDirectory, { recursive: true });
 
-  cpSync(
-    join(releaseDirectory, "YTMMenuBarConnector"),
-    join(macOSDirectory, "YTMMenuBarConnector"),
-  );
   const executablePath = join(macOSDirectory, "YTMMenuBarConnector");
+  createUniversalExecutable(
+    releaseDirectories.map((directory) =>
+      join(directory, "YTMMenuBarConnector"),
+    ),
+    executablePath,
+  );
   addFrameworkRpath(executablePath);
   verifyFrameworkRpath(executablePath);
   copySparkleFramework(releaseDirectory, contentsDirectory);
@@ -305,6 +367,7 @@ export async function buildReleaseApp({
   );
   writeFileSync(join(contentsDirectory, "Info.plist"), plist);
   writeFileSync(join(contentsDirectory, "PkgInfo"), "APPL????");
+  verifyAppArchitectures(appDirectory);
   signAppBundle(appDirectory);
 
   return appDirectory;

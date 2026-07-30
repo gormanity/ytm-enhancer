@@ -2357,6 +2357,29 @@ describe("menu bar connector app scaffold", () => {
     );
   });
 
+  it("builds universal release apps for Intel and Apple silicon Macs", () => {
+    const appScript = read("scripts/build-release-app.mjs");
+    const readme = read("README.md");
+    const releaseDocs = readFileSync(
+      resolve(process.cwd(), "docs/menu-bar-release.md"),
+      "utf-8",
+    );
+
+    expect(appScript).toContain(
+      'const RELEASE_ARCHITECTURES = ["arm64", "x86_64"]',
+    );
+    expect(appScript).toContain(
+      "`${architecture}-apple-macosx${minimumMacOSVersion}`",
+    );
+    expect(appScript).toContain('"--triple"');
+    expect(appScript).toContain('"lipo", ["-create"');
+    expect(appScript).toContain('"lipo", ["-archs"');
+    expect(appScript).toContain("verifyAppArchitectures(appDirectory)");
+    expect(appScript).toContain("Unexpected release architectures");
+    expect(readme).toContain("Intel and Apple silicon Macs");
+    expect(releaseDocs).toContain("Intel and Apple silicon Macs");
+  });
+
   it("supports local update testing with release metadata overrides", () => {
     const metadataScript = read("scripts/release-metadata.mjs");
     const appScript = read("scripts/build-release-app.mjs");
