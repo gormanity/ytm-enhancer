@@ -1710,4 +1710,26 @@ describe("Windows tray connector scaffold", () => {
     expect(connectorsDocs).toContain("com.gormanity.ytm_enhancer.tray");
     expect(connectorsDocs).toContain("verify the runtime package checksum");
   });
+
+  it("runs every Authenticode verifier in a child PowerShell process", () => {
+    for (const workflowPath of [
+      ".github/workflows/windows-tray-release.yml",
+      ".github/workflows/windows-tray-signing-check.yml",
+    ]) {
+      const workflow = readRepo(workflowPath);
+
+      expect(
+        workflow.match(/verify-windows-tray-codesign\.ps1/g)?.length ?? 0,
+      ).toBe(3);
+      expect(
+        workflow.match(/& pwsh -NoLogo -NoProfile -File/g)?.length ?? 0,
+      ).toBe(3);
+      expect(workflow).toMatch(
+        /verify-windows-tray-codesign\.ps1 `\s+-PayloadRoot "apps\/windows-tray\/\.build\/package-work\/win-x64\/payload"/,
+      );
+      expect(workflow).toMatch(
+        /verify-windows-tray-codesign\.ps1 `\s+-PayloadRoot "apps\/windows-tray\/\.build\/package-work\/win-arm64\/payload"/,
+      );
+    }
+  });
 });

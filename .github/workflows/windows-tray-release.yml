@@ -116,10 +116,12 @@ jobs:
       - name: Verify signed payloads
         shell: pwsh
         run: |
-          & ./scripts/ci/verify-windows-tray-codesign.ps1 `
+          & pwsh -NoLogo -NoProfile -File `
+            ./scripts/ci/verify-windows-tray-codesign.ps1 `
             -PayloadRoot "apps/windows-tray/.build/package-work/win-x64/payload"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & ./scripts/ci/verify-windows-tray-codesign.ps1 `
+          & pwsh -NoLogo -NoProfile -File `
+            ./scripts/ci/verify-windows-tray-codesign.ps1 `
             -PayloadRoot "apps/windows-tray/.build/package-work/win-arm64/payload"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -168,7 +170,8 @@ jobs:
       - name: Verify signed combined installer
         shell: pwsh
         run: |
-          & ./scripts/ci/verify-windows-tray-codesign.ps1 `
+          & pwsh -NoLogo -NoProfile -File `
+            ./scripts/ci/verify-windows-tray-codesign.ps1 `
             -PayloadRoot "apps/windows-tray/.build/installer"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
