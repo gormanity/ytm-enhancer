@@ -23,10 +23,12 @@ install directories, and records the paths it owns. The installed uninstaller
 reads that managed state and removes only files that still belong to the same
 installation.
 
-Notarization tickets for ZIP archives cannot be stapled to the archive. The
-release workflow extracts the signed command-line binaries after Apple accepts
-the archive and uses Gatekeeper to resolve their notarization tickets online
-before publishing.
+Notarization tickets cannot be stapled to ZIP archives or standalone binaries.
+The release workflow requires Apple to accept both macOS archives, then verifies
+the extracted binaries' Developer ID signatures, secure timestamps, and hardened
+runtime metadata. An online Mac retrieves each standalone binary's notarization
+ticket when a user runs it, so a clean-machine browser-download smoke remains
+part of manual candidate acceptance.
 
 The stable install page is:
 
@@ -79,8 +81,10 @@ pnpm run cli:package -- --runtime=linux-arm64
 After signing and notarization, the workflow runs
 `scripts/ci/validate-cli-release-artifacts.sh`. This CI-only validator checks
 the exact archive set, SHA-256 checksums, archive paths, runtime markers,
-executable architectures, macOS Developer ID signatures, Apple notarization, and
-a packaged install, rollback, and uninstall on the host Mac.
+executable architectures, macOS Developer ID signatures, secure timestamps,
+hardened runtime, and a packaged install, rollback, and uninstall on the host
+Mac. The preceding `notarytool` step must return Apple's accepted status for
+both macOS archives before validation runs.
 
 Manual runs never publish a GitHub release. They retain the signed and notarized
 candidate packages as a workflow artifact for 14 days. Tag-triggered runs

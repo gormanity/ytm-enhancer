@@ -116,22 +116,20 @@ validate_binary_architecture() {
 
 validate_macos_security() {
   local executable="$1"
-  local assessment
+  local signature
 
   codesign --verify --strict --verbose=2 "$executable"
-  codesign -d --verbose=4 "$executable" 2>&1 |
+  signature="$(codesign -d --verbose=4 "$executable" 2>&1)"
+  printf "%s\n" "$signature"
+  printf "%s\n" "$signature" |
     grep -F "Authority=Developer ID Application:" >/dev/null ||
     fail "$executable does not have a Developer ID Application signature"
-  if ! assessment="$(
-    spctl --assess --type execute --verbose=4 "$executable" 2>&1
-  )"; then
-    printf "%s\n" "$assessment" >&2
-    fail "Gatekeeper rejected $executable"
-  fi
-  printf "%s\n" "$assessment"
-  printf "%s\n" "$assessment" |
-    grep -F "source=Notarized Developer ID" >/dev/null ||
-    fail "$executable did not resolve to an Apple notarization ticket"
+  printf "%s\n" "$signature" |
+    grep -F "Timestamp=" >/dev/null ||
+    fail "$executable does not have a secure signing timestamp"
+  printf "%s\n" "$signature" |
+    grep -F "Runtime Version=" >/dev/null ||
+    fail "$executable does not have the hardened runtime enabled"
 }
 
 validate_payload() {

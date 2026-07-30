@@ -391,7 +391,9 @@ describe("initial public companion releases", () => {
     expect(workflow).toContain("Individual API Keys");
     expect(validator).toContain("shasum -a 256 -c SHA256SUMS");
     expect(validator).toContain("codesign --verify");
-    expect(validator).toContain("spctl --assess");
+    expect(validator).toContain("Timestamp=");
+    expect(validator).toContain("Runtime Version=");
+    expect(validator).not.toContain("spctl --assess");
     expect(validator).toContain("install.sh");
     expect(validator).toContain("--version");
     expect(validator).toContain("archive contains an unsafe path");
