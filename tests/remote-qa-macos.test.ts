@@ -73,6 +73,8 @@ describe("macOS remote QA scaffold", () => {
     const windowsUser = "private-windows-fixture-user";
     const windowsWorkRoot = "C:\\Private\\Fixture\\WorkRoot";
     const windowsKeyPath = join(fixtureRoot, "private-windows-qa-key");
+    const hostSlug = host.replaceAll(".", "-");
+    const windowsHostSlug = windowsHost.replaceAll(".", "-");
     const keyPathMixedCase = keyPath.toUpperCase();
     try {
       mkdirSync(fakeBin);
@@ -98,6 +100,9 @@ describe("macOS remote QA scaffold", () => {
           '  "$REMOTE_QA_WINDOWS_HOST" "$REMOTE_QA_WINDOWS_USER" \\',
           '  "$REMOTE_QA_WINDOWS_WORK_ROOT"',
           'printf "windows-key=%s\\n" "$REMOTE_QA_WINDOWS_SSH_KEY" >&2',
+          'printf "lease=static_%s slug=%s windows-slug=%s\\n" \\',
+          '  "$YTME_PRIVATE_HOST_SLUG" "$YTME_PRIVATE_HOST_SLUG" \\',
+          '  "$YTME_PRIVATE_WINDOWS_HOST_SLUG"',
           "exit 23",
           "",
         ].join("\n"),
@@ -123,6 +128,8 @@ describe("macOS remote QA scaffold", () => {
             YTME_PRIVATE_USER_MIXED_CASE: userMixedCase,
             YTME_PRIVATE_WORK_ROOT_MIXED_CASE: workRootMixedCase,
             YTME_PRIVATE_KEY_MIXED_CASE: keyPathMixedCase,
+            YTME_PRIVATE_HOST_SLUG: hostSlug,
+            YTME_PRIVATE_WINDOWS_HOST_SLUG: windowsHostSlug,
             REMOTE_QA_WINDOWS_HOST: windowsHost,
             REMOTE_QA_WINDOWS_USER: windowsUser,
             REMOTE_QA_WINDOWS_WORK_ROOT: windowsWorkRoot,
@@ -146,6 +153,8 @@ describe("macOS remote QA scaffold", () => {
         userMixedCase,
         workRootMixedCase,
         keyPathMixedCase,
+        hostSlug,
+        windowsHostSlug,
       ]) {
         expect(output).not.toContain(privateValue);
       }

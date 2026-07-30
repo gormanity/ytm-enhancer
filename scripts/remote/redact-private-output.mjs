@@ -28,6 +28,14 @@ function replaceLiteral(input, search, replacement, caseInsensitive) {
   return input.replace(new RegExp(escapeRegExp(search), "giu"), replacement);
 }
 
+function createHostSlug(value) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 try {
   if (!inputPath) {
     throw new Error("missing input");
@@ -39,6 +47,9 @@ try {
       const caseInsensitive = true;
       const isWindowsValue = environmentName.includes("WINDOWS_");
       const variants = new Set([value]);
+      if (environmentName.endsWith("_HOST")) {
+        variants.add(createHostSlug(value));
+      }
       if (isWindowsValue) {
         variants.add(value.replaceAll("\\", "/"));
         variants.add(value.replaceAll("/", "\\"));
