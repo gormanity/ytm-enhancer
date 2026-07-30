@@ -2481,7 +2481,7 @@ describe("menu bar connector app scaffold", () => {
     );
     expect(workflow).toContain("Generate appcast");
     expect(workflow).toContain(
-      "apps/menu-bar/.build/packages/YTM-Menu-Bar-${GITHUB_REF_NAME#menu-bar-v}.pkg",
+      "apps/menu-bar/.build/packages/YTM-Menu-Bar-${YTM_MENU_BAR_VERSION}.pkg",
     );
     expect(workflow).not.toContain("Create Sparkle archive");
     expect(workflow).not.toContain("apps/menu-bar/.build/sparkle/*.zip");
@@ -2514,6 +2514,49 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseDocs).toContain("repository-wide latest release");
     expect(releaseDocs).toContain("APP_STORE_CONNECT_PRIVATE_KEY_BASE64");
     expect(releaseDocs).not.toContain("ad-hoc signed");
+  });
+
+  it("builds signed menu bar candidates without publishing them", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/menu-bar-release.yml"),
+      "utf-8",
+    );
+
+    expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).toContain(
+      "description: Menu bar version to build as a non-publishing candidate",
+    );
+    expect(workflow).toContain(
+      "Menu bar release candidates must run from the default branch.",
+    );
+    expect(workflow).toContain("REQUESTED_MENU_BAR_VERSION");
+    expect(workflow).toMatch(
+      /- name: Upload menu bar release candidate\n\s+if: github\.event_name == 'workflow_dispatch'\n\s+uses: actions\/upload-artifact@v7/,
+    );
+    expect(workflow).toContain(
+      "name: YTM-Menu-Bar-${{ env.YTM_MENU_BAR_VERSION }}-candidate",
+    );
+    expect(workflow).toContain("apps/menu-bar/.build/packages/*.pkg");
+    expect(workflow).toContain("apps/menu-bar/.build/appcast/**");
+    expect(workflow).toContain("apps/menu-bar/.build/homebrew/Casks/*.rb");
+    expect(workflow).toContain("if-no-files-found: error");
+    expect(workflow).toContain("compression-level: 0");
+    expect(workflow).toContain("retention-days: 14");
+    expect(workflow).toMatch(
+      /- name: Publish GitHub Release\n\s+if: github\.event_name == 'push'/,
+    );
+    expect(workflow).toMatch(
+      /- name: Upload GitHub Pages artifact\n\s+if: github\.event_name == 'push'/,
+    );
+    expect(workflow).toMatch(
+      /- name: Deploy appcast to GitHub Pages\n\s+if: github\.event_name == 'push'/,
+    );
+    expect(workflow).toMatch(
+      /- name: Check out Homebrew tap\n\s+if: github\.event_name == 'push'/,
+    );
+    expect(workflow).toMatch(
+      /- name: Update Homebrew cask\n\s+if: github\.event_name == 'push'/,
+    );
   });
 
   it("documents component-scoped release discovery", () => {

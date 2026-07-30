@@ -288,9 +288,15 @@ swift build --package-path apps/menu-bar -c release
    headings, paragraphs, unordered lists with indented continuation lines, and
    inline code. Keep the curated Markdown within that subset so GitHub and
    Sparkle show the same content.
-5. Create a `menu-bar-vX.Y.Z` tag from the verified commit.
-6. Push the tag.
-7. Confirm the `Menu Bar Release` workflow publishes:
+5. From the default branch, run `Menu Bar Release` manually with version
+   `X.Y.Z`. Confirm it passes signing and notarization, then download the
+   `YTM-Menu-Bar-X.Y.Z-candidate` workflow artifact.
+6. Complete the required direct-install and Homebrew acceptance checks with the
+   candidate packages. Manual candidate runs do not create a GitHub Release,
+   deploy GitHub Pages, or update the Homebrew tap.
+7. Create a `menu-bar-vX.Y.Z` tag from the verified commit.
+8. Push the tag.
+9. Confirm the `Menu Bar Release` workflow publishes:
    - a GitHub Release named `YTM Menu Bar X.Y.Z`
    - a component release that does not replace GitHub's repo-wide latest release
    - signed, notarized, and stapled direct `.pkg`
@@ -305,18 +311,18 @@ swift build --package-path apps/menu-bar -c release
    - Windows tray install page at `windows-tray/install.html`
    - CLI install page at `cli/index.html`
    - machine-readable release index at `releases.json`
-8. Confirm GitHub Pages serves the updated install page, appcast, and release
-   notes. The appcast must link to the standalone release notes, not a full
-   GitHub release page. The release index must list the browser extension,
-   Connected Apps beta, menu bar app, Windows tray app, and CLI as separate
-   products.
-9. Confirm the Homebrew tap cask was updated.
+10. Confirm GitHub Pages serves the updated install page, appcast, and release
+    notes. The appcast must link to the standalone release notes, not a full
+    GitHub release page. The release index must list the browser extension,
+    Connected Apps beta, menu bar app, Windows tray app, and CLI as separate
+    products.
+11. Confirm the Homebrew tap cask was updated.
 
-The release workflow derives package, appcast, and cask versions from the
-`menu-bar-vX.Y.Z` tag. GitHub and Sparkle use the approved versioned notes file
-instead of generating a commit comparison. Use a lower numeric tag, such as
-`menu-bar-v0.0.1`, for a throwaway release dry run rather than a suffix tag such
-as `menu-bar-v0.1.0-test`.
+The release workflow derives package, appcast, and cask versions from either the
+manual candidate version or the `menu-bar-vX.Y.Z` tag. GitHub and Sparkle use
+the approved versioned notes file instead of generating a commit comparison. Use
+the manual candidate path for release dry runs instead of creating a throwaway
+tag.
 
 The workflow also publishes a stable install landing page at:
 
