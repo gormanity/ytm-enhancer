@@ -2338,13 +2338,13 @@ describe("menu bar connector app scaffold", () => {
     expect(appcastScript).toContain("writeReleaseIndex");
     expect(appcastScript).toContain("release-notes/${metadata.version}.html");
     expect(packageJson.scripts["menu-bar:build:app"]).toBe(
-      "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/build-release-app.mjs",
+      "YTM_MENU_BAR_LOCAL_BUILD=${YTM_MENU_BAR_LOCAL_BUILD:-1} node apps/menu-bar/scripts/build-release-app.mjs",
     );
     expect(packageJson.scripts["menu-bar:package:direct"]).toBe(
-      "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/package-release.mjs --channel=direct",
+      "YTM_MENU_BAR_LOCAL_BUILD=${YTM_MENU_BAR_LOCAL_BUILD:-1} node apps/menu-bar/scripts/package-release.mjs --channel=direct",
     );
     expect(packageJson.scripts["menu-bar:package:homebrew"]).toBe(
-      "YTM_MENU_BAR_LOCAL_BUILD=1 node apps/menu-bar/scripts/package-release.mjs --channel=homebrew",
+      "YTM_MENU_BAR_LOCAL_BUILD=${YTM_MENU_BAR_LOCAL_BUILD:-1} node apps/menu-bar/scripts/package-release.mjs --channel=homebrew",
     );
     expect(packageJson.scripts["menu-bar:update-test:homebrew"]).toBe(
       "node apps/menu-bar/scripts/prepare-homebrew-update-test.mjs",
@@ -2465,6 +2465,7 @@ describe("menu bar connector app scaffold", () => {
     expect(workflow).toContain("Developer ID Application identity");
     expect(workflow).toContain("Developer ID Installer identity");
     expect(workflow).toContain("Build direct app");
+    expect(workflow).toContain('YTM_MENU_BAR_LOCAL_BUILD: "0"');
     expect(workflow).toContain("--require-sparkle-public-key");
     expect(workflow).toContain("Notarize direct app");
     expect(workflow).toContain("Notarize direct package");

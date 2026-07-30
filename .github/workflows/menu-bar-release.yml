@@ -24,6 +24,8 @@ permissions:
 jobs:
   release:
     runs-on: macos-latest
+    env:
+      YTM_MENU_BAR_LOCAL_BUILD: "0"
     environment:
       name: github-pages
       url: ${{ steps.deploy-pages.outputs.page_url }}
