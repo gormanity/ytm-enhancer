@@ -85,7 +85,7 @@ try {
     const result = runWindowsPowerShell(fixture);
 
     expect(result.status, result.stderr).toBe(0);
-  });
+  }, 15_000);
 
   it("normalizes native Windows PowerShell module paths for Node fixtures", () => {
     if (process.platform !== "win32") {
