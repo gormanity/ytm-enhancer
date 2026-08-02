@@ -30,23 +30,27 @@ function stripInlineMarkdown(value) {
     .trim();
 }
 
-function renderPlainText(markdown) {
+function parseMarkdownBlocks(markdown) {
   const blocks = [];
   let paragraph = [];
   let list = [];
 
   const flushParagraph = () => {
     if (paragraph.length > 0) {
-      blocks.push(stripInlineMarkdown(paragraph.join(" ")));
+      blocks.push({
+        type: "paragraph",
+        text: stripInlineMarkdown(paragraph.join(" ")),
+      });
       paragraph = [];
     }
   };
 
   const flushList = () => {
     if (list.length > 0) {
-      blocks.push(
-        list.map((item) => `• ${stripInlineMarkdown(item)}`).join("\n"),
-      );
+      blocks.push({
+        type: "list",
+        items: list.map(stripInlineMarkdown),
+      });
       list = [];
     }
   };
@@ -63,7 +67,10 @@ function renderPlainText(markdown) {
     if (/^#{1,6}\s/.test(line)) {
       flushParagraph();
       flushList();
-      blocks.push(stripInlineMarkdown(line.replace(/^#{1,6}\s+/, "")));
+      blocks.push({
+        type: "heading",
+        text: stripInlineMarkdown(line.replace(/^#{1,6}\s+/, "")),
+      });
       continue;
     }
 
@@ -83,7 +90,46 @@ function renderPlainText(markdown) {
 
   flushParagraph();
   flushList();
-  return `${blocks.join("\n\n")}\n`;
+  return blocks;
+}
+
+function renderPlainText(markdown) {
+  const rendered = parseMarkdownBlocks(markdown).map((block) => {
+    if (block.type === "list") {
+      return block.items.map((item) => `• ${item}`).join("\n");
+    }
+
+    return block.text;
+  });
+
+  return `${rendered.join("\n\n")}\n`;
+}
+
+function emphasizeListLabel(item) {
+  const match = item.match(/^([^:]+):\s*(.+)$/);
+  if (!match) {
+    return item;
+  }
+
+  return `**${match[1]}:** ${match[2]}`;
+}
+
+function renderFirefoxMarkdown(markdown) {
+  const rendered = parseMarkdownBlocks(markdown).map((block) => {
+    if (block.type === "heading") {
+      return `**${block.text}**`;
+    }
+
+    if (block.type === "list") {
+      return block.items
+        .map((item) => `- ${emphasizeListLabel(item)}`)
+        .join("\n");
+    }
+
+    return block.text;
+  });
+
+  return `${rendered.join("\n\n")}\n`;
 }
 
 export function renderStoreCopy(
@@ -103,6 +149,7 @@ export function renderStoreCopy(
   return {
     short: `${stripInlineMarkdown(shortSource)}\n`,
     detailed: renderPlainText(detailedSource),
+    firefox: renderFirefoxMarkdown(detailedSource),
   };
 }
 
@@ -110,8 +157,10 @@ function main() {
   const section = process.argv[2];
   const copy = renderStoreCopy();
 
-  if (section !== "short" && section !== "detailed") {
-    throw new Error("Usage: node scripts/store-copy.mjs <short|detailed>");
+  if (!new Set(["short", "detailed", "firefox"]).has(section)) {
+    throw new Error(
+      "Usage: node scripts/store-copy.mjs <short|detailed|firefox>",
+    );
   }
 
   process.stdout.write(copy[section]);

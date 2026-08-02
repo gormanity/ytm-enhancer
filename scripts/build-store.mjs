@@ -61,6 +61,7 @@ async function buildStoreAssets() {
     copyFile(canonicalCopy, resolve(outputDir, "STORE.md")),
     writeFile(resolve(outputDir, "short-description.txt"), copy.short),
     writeFile(resolve(outputDir, "description.txt"), copy.detailed),
+    writeFile(resolve(outputDir, "firefox-description.md"), copy.firefox),
   ]);
   console.log("Generated canonical and paste-ready store copy");
 

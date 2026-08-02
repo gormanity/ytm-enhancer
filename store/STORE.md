@@ -5,7 +5,8 @@ Add-ons.
 
 This document is the source for store copy and submission metadata. Use the
 shared sections unless a browser-specific requirement forces different copy. Run
-`pnpm run build:store` to generate paste-ready plain-text descriptions.
+`pnpm run build:store` to generate paste-ready plain-text and AMO-formatted
+descriptions.
 
 ## Shared Listing Copy
 
@@ -179,6 +180,12 @@ those resources are not executed as code.
 
 ## Firefox Add-ons
 
+### Description Formatting
+
+Use `dist/store-assets/firefox-description.md` for the AMO detailed description.
+It uses bold section labels and unordered lists from AMO's supported Markdown
+subset while preserving the shared wording.
+
 ### Categories
 
 - Photos, Music & Videos
@@ -267,7 +274,8 @@ Known limitations:
 Use this checklist when publishing a new version.
 
 - update any changed listing copy
-- generate and review the paste-ready short and detailed descriptions
+- generate and review the paste-ready short, shared detailed, and AMO
+  descriptions
 - confirm public descriptions contain no URLs or cross-store links
 - verify homepage, support, and privacy links
 - verify the Homepage URL is the neutral YTM Enhancer landing page
