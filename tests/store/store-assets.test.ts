@@ -162,6 +162,7 @@ describe("store assets", () => {
     expect(marquee).not.toContain("menu-bar-screenshot.png");
     expect(marquee).not.toContain("windows-tray-screenshot.png");
     expect(marquee).not.toContain("cli-demo-poster.png");
+    expect(marquee).not.toContain("rotate(");
     expect(marquee).not.toMatch(/>\s*Auto Play\s*</);
     expect(marquee).not.toMatch(/>\s*Auto Skip\s*</);
   });
