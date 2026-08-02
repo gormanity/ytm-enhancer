@@ -36,7 +36,15 @@ describe("store assets", () => {
       return manifest.description;
     });
 
-    expect(storeCopy).toContain("Make YouTube Music work the way you listen.");
+    expect(storeCopy).toContain(
+      "The YouTube Music controls you’ve been missing.",
+    );
+    expect(storeCopy.replace(/\s+/g, " ")).toContain(
+      "Add precise playback controls, useful automation, a compact mini player, and more—without replacing the YouTube Music experience you already use.",
+    );
+    expect(storeCopy).not.toContain(
+      "Make YouTube Music work the way you listen.",
+    );
     expect(storeCopy).toContain("### Short Description");
     expect(storeCopy.replace(/\s+/g, " ")).toContain(expectedDescription);
     expect(storeCopy).toContain("### Connected Apps (Beta)");
@@ -102,7 +110,9 @@ describe("store assets", () => {
     const marquee = read("store/screenshots/promo-marquee-1400x560.html");
 
     expect(marquee).toContain("Connected Apps (Beta)");
-    expect(marquee).toContain("Make YouTube Music work the way you listen.");
+    expect(marquee).toContain(
+      "The YouTube Music controls you’ve been missing.",
+    );
     expect(marquee).toContain("macOS");
     expect(marquee).toContain("Windows");
     expect(marquee).toContain("Terminal");
@@ -115,7 +125,10 @@ describe("store assets", () => {
     const automation = read("store/screenshots/04-sleep-timer.html");
     const miniPlayer = read("store/screenshots/02-mini-player.html");
 
-    expect(smallPromo).toContain("YouTube Music, your way.");
+    expect(smallPromo).toContain(
+      "The YouTube Music controls you’ve been missing.",
+    );
+    expect(smallPromo).not.toContain("YouTube Music, your way.");
     expect(smallPromo).not.toMatch(/supercharge/i);
     expect(automation).toContain("Make playback follow your routine");
     expect(automation.replace(/\s+/g, " ")).toContain(

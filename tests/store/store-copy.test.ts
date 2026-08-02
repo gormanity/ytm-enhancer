@@ -27,6 +27,12 @@ describe("paste-ready store copy", () => {
     expect(description.length).toBeGreaterThanOrEqual(250);
     expect(description.length).toBeLessThanOrEqual(10_000);
     expect(description).toContain(
+      "The YouTube Music controls you’ve been missing.",
+    );
+    expect(description).toContain(
+      "Add precise playback controls, useful automation, a compact mini player, and more—without replacing the YouTube Music experience you already use.",
+    );
+    expect(description).not.toContain(
       "Make YouTube Music work the way you listen.",
     );
     expect(description).toContain("Connected Apps (Beta)");

@@ -74,7 +74,15 @@ describe("Connected Apps release disclosures", () => {
     const siteGenerator = read("apps/menu-bar/scripts/generate-appcast.mjs");
     const trayNotes = read("apps/windows-tray/release/notes/0.2.0.md");
 
-    expect(readme).toContain("Make YouTube Music work the way you listen.");
+    expect(readme).toContain(
+      "The YouTube Music controls you’ve been missing.",
+    );
+    expect(readme.replace(/\s+/g, " ")).toContain(
+      "Add precise playback controls, useful automation, a compact mini player, and more—without replacing the YouTube Music experience you already use.",
+    );
+    expect(readme).not.toContain(
+      "Make YouTube Music work the way you listen.",
+    );
     expect(readme).not.toMatch(/supercharges|best browser-based|ubiquity/i);
     expect(readme).toContain("**Connected Apps (Beta)**");
     expect(readme).toContain("Windows system tray");
@@ -93,6 +101,15 @@ describe("Connected Apps release disclosures", () => {
 
     expect(siteGenerator).toContain(
       '<p class="eyebrow">Connected Apps Beta for macOS</p>',
+    );
+    expect(siteGenerator).toContain(
+      "The YouTube Music controls you’ve been missing.",
+    );
+    expect(siteGenerator).toContain(
+      "Add precise playback controls, useful automation, a compact mini player,",
+    );
+    expect(siteGenerator).not.toContain(
+      "Make YouTube Music work the way you listen",
     );
     expect(siteGenerator).toContain(
       '<p class="eyebrow">Connected Apps Beta for macOS and Linux</p>',
