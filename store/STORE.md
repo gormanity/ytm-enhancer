@@ -3,8 +3,9 @@
 Canonical store listing content for Chrome Web Store, Edge Add-ons, and Firefox
 Add-ons.
 
-This document is the default source for store copy and submission metadata. Use
-the shared sections unless a browser-specific requirement forces different copy.
+This document is the source for store copy and submission metadata. Use the
+shared sections unless a browser-specific requirement forces different copy. Run
+`pnpm run build:store` to generate paste-ready plain-text descriptions.
 
 ## Shared Listing Copy
 
@@ -15,44 +16,42 @@ optional Connected Apps (Beta).
 
 ### Detailed Description
 
-Make YouTube Music work the way you listen. YTM Enhancer adds powerful playback
-controls and thoughtful quality-of-life features directly to the web app, so you
-can keep the service and library you already use.
+Make YouTube Music work the way you listen.
 
-Control playback across tabs, fine-tune volume, speed, and stream quality, open
-a compact mini player, automate routine actions, and add visualizers,
-notifications, hotkeys, and a sleep timer.
+YTM Enhancer adds precise playback controls and practical features directly to
+the YouTube Music web app. Keep the service and library you already use, with no
+separate YTM Enhancer account or replacement player required.
 
-Optional Connected Apps (Beta) bring now-playing details and playback controls
-to the macOS menu bar, Windows system tray, and terminal. They are disabled by
-default and communicate locally with the extension.
+Control playback across YouTube Music tabs, seek within a track, fine-tune
+volume and playback speed, choose stream quality, and manage shuffle and repeat.
 
 ### Key Features
 
-- Playback Controls: control playback across YouTube Music tabs, seek, fine-tune
-  volume, speed, and quality, and manage shuffle/repeat
-- Automation: start playback automatically and skip disliked tracks when enabled
-- Audio Visualizer: add configurable visualizer overlays to the YouTube Music
-  player
-- Connected Apps (Beta): see what's playing and control YouTube Music from the
-  macOS menu bar, Windows system tray, or terminal
-- Hotkeys: control playback and trigger extension actions without opening the
-  popup
-- Mini Player: keep playback controls in a compact Picture-in-Picture window
-  while multitasking
-- Notifications: get optional desktop updates for track changes and
-  playback-resumed reminders
-- Sleep Timer: stop playback after a duration or at a chosen time
+- Playback Controls: Play, pause, skip, seek, adjust volume, speed, and quality,
+  and manage shuffle and repeat across tabs.
+- Automation: Start playback automatically and skip disliked tracks when you
+  choose.
+- Hotkeys: Control playback and trigger extension actions without opening the
+  popup.
+- Mini Player: Keep playback controls visible in a compact Picture-in-Picture
+  window where supported.
+- Sleep Timer: Stop playback after a duration or at a chosen time.
+- Notifications: Get optional updates for track changes and playback-resumed
+  reminders.
+- Audio Visualizer: Add a configurable visualizer to the YouTube Music player.
 
-### Open Source and Privacy Positioning
+### Connected Apps (Beta)
 
-YTM Enhancer is open source and private by design:
+Want controls outside the browser? Optional, separately installed Connected Apps
+bring now-playing details and playback controls to the macOS menu bar, Windows
+system tray, and terminal. They are disabled by default and exchange now-playing
+details and user-requested controls locally with the extension on your device.
 
-- no analytics
-- no tracking
-- no project-operated backend services
+### Private by Design
 
-Repository: `https://github.com/gormanity/ytm-enhancer`
+YTM Enhancer is open source and includes no analytics or tracking. It stores
+settings in your browser profile and does not send your listening data to
+project-operated servers.
 
 ---
 
@@ -60,7 +59,7 @@ Repository: `https://github.com/gormanity/ytm-enhancer`
 
 ### Homepage URL
 
-`https://github.com/gormanity/ytm-enhancer`
+`https://gormanity.github.io/ytm-enhancer/`
 
 ### Support URL
 
@@ -72,6 +71,12 @@ Source of truth: `../PRIVACY.md`
 
 Public URL: `https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md`
 
+### Description Link Policy
+
+Do not put URLs or links to other browser stores in public descriptions. Use the
+neutral landing page as the Homepage URL; it provides browser choices plus
+Privacy, Support, and Source links.
+
 ---
 
 ## Chrome Web Store
@@ -82,10 +87,10 @@ Public URL: `https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md`
 
 ### Single Purpose Statement
 
-YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` with
-optional playback controls, automation, notifications, keyboard shortcuts,
-Picture-in-Picture controls, interface improvements, and local playback
-integration through the opt-in Connected Apps (Beta) feature.
+YTM Enhancer improves the YouTube Music web app at music.youtube.com with
+user-controlled playback tools, automation, hotkeys, notifications,
+Picture-in-Picture controls, visual customization, and optional local Connected
+Apps (Beta).
 
 ---
 
@@ -109,10 +114,10 @@ integration through the opt-in Connected Apps (Beta) feature.
 
 #### Single Purpose Description
 
-YTM Enhancer enhances the YouTube Music web app on `music.youtube.com` with
-optional playback controls, automation, notifications, keyboard shortcuts,
-Picture-in-Picture controls, interface improvements, and local playback
-integration through the opt-in Connected Apps (Beta) feature.
+YTM Enhancer improves the YouTube Music web app at music.youtube.com with
+user-controlled playback tools, automation, hotkeys, notifications,
+Picture-in-Picture controls, visual customization, and optional local Connected
+Apps (Beta).
 
 #### Permission Justification
 
@@ -262,7 +267,10 @@ Known limitations:
 Use this checklist when publishing a new version.
 
 - update any changed listing copy
+- generate and review the paste-ready short and detailed descriptions
+- confirm public descriptions contain no URLs or cross-store links
 - verify homepage, support, and privacy links
+- verify the Homepage URL is the neutral YTM Enhancer landing page
 - verify Chrome single purpose statement still matches functionality
 - verify Chrome Privacy practices permission justifications match the manifest,
   including `nativeMessaging`, before entering them in the dashboard

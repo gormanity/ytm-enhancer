@@ -3,6 +3,7 @@
 import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 import { chromium } from "playwright";
+import { renderStoreCopy } from "./store-copy.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const storeDir = resolve(root, "store");
@@ -55,8 +56,13 @@ async function renderAsset(page, fileName) {
 async function buildStoreAssets() {
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
-  await copyFile(canonicalCopy, resolve(outputDir, "STORE.md"));
-  console.log("Copied STORE.md");
+  const copy = renderStoreCopy();
+  await Promise.all([
+    copyFile(canonicalCopy, resolve(outputDir, "STORE.md")),
+    writeFile(resolve(outputDir, "short-description.txt"), copy.short),
+    writeFile(resolve(outputDir, "description.txt"), copy.detailed),
+  ]);
+  console.log("Generated canonical and paste-ready store copy");
 
   const browser = await chromium.launch();
   try {

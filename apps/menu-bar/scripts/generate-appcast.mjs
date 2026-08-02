@@ -747,9 +747,28 @@ function siteCss() {
       }
 
       .site-footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 16px 28px;
         padding: 36px 0 50px;
         color: #9fa0aa;
         font-size: 14px;
+      }
+
+      .site-footer p {
+        max-width: 690px;
+      }
+
+      .site-footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      .site-footer-links a {
+        color: #d7d7de;
+        font-weight: 700;
       }
 
       @media (max-width: 850px) {
@@ -840,8 +859,15 @@ function siteDocument({ title, description, iconSvg, current, body }) {
       ${siteHeader({ iconSvg, current })}
       ${body}
       <footer class="site-footer">
-        YTM Enhancer is private by design: no analytics, no tracking, and no
-        project-operated backend services.
+        <p>
+          YTM Enhancer is private by design: no analytics, no tracking, and no
+          project-operated backend services.
+        </p>
+        <nav class="site-footer-links" aria-label="Project links">
+          <a href="https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md">Privacy</a>
+          <a href="https://github.com/gormanity/ytm-enhancer/issues">Support</a>
+          <a href="https://github.com/gormanity/ytm-enhancer">Source</a>
+        </nav>
       </footer>
     </div>
   </body>
@@ -1007,7 +1033,7 @@ apps/cli/scripts/install-native-hosts.sh</code>
     siteDocument({
       title: "YTM Enhancer",
       description:
-        "Upgrade YouTube Music with smarter controls, automation, a mini player, and optional menu bar, system tray, and terminal controls.",
+        "Upgrade YouTube Music with smarter controls, automation, a mini player, and optional Connected Apps (Beta).",
       iconSvg,
       current: "home",
       body: `<main>
@@ -1020,11 +1046,11 @@ apps/cli/scripts/install-native-hosts.sh</code>
               controls, automation, notifications, a compact mini player, and
               optional controls outside the browser.
             </p>
-            <div class="actions" aria-label="Install YTM Enhancer">
+            <div id="install" class="actions" aria-label="Install YTM Enhancer">
               <a class="button button-primary" href="${escapeHtml(stores.chrome)}">Chrome Web Store</a>
               <a class="button" href="${escapeHtml(stores.edge)}">Microsoft Edge Add-ons</a>
               <a class="button" href="${escapeHtml(stores.firefox)}">Firefox Add-ons</a>
-              <a class="button button-secondary" href="connected-apps/">Connected Apps Beta</a>
+              <a class="button button-secondary" href="connected-apps/">Connected Apps (Beta)</a>
             </div>
           </div>
           <figure class="visual-frame">
@@ -1050,16 +1076,16 @@ apps/cli/scripts/install-native-hosts.sh</code>
                 Playback controls, hotkeys, Mini Player, notifications, sleep
                 timer, and YouTube Music automation in Chrome, Edge, and Firefox.
               </p>
-              <a class="card-link" href="${escapeHtml(stores.chrome)}">Install extension</a>
+              <a class="card-link" href="#install">Choose your browser</a>
             </article>
             <article class="card">
-              <h3>Connected Apps Beta</h3>
+              <h3>Connected Apps (Beta)</h3>
               <p>
                 See what is playing and control YouTube Music from the macOS
-                menu bar, Windows system tray, or terminal. Turn it on only
-                when you install one of these optional apps.
+                menu bar, Windows system tray, or terminal. Install only the
+                app that fits how you listen.
               </p>
-              <a class="card-link" href="connected-apps/">View companion apps</a>
+              <a class="card-link" href="connected-apps/">View Connected Apps</a>
             </article>
             <article class="card">
               <h3>Stay Current</h3>
@@ -1078,9 +1104,9 @@ apps/cli/scripts/install-native-hosts.sh</code>
             <div class="section-header">
               <h2 id="desktop-title">Built Around YouTube Music</h2>
               <p>
-                YTM Enhancer keeps YouTube Music in your browser and layers
-                optional controls around it. The extension owns page access,
-                and companion apps communicate locally only after you approve
+                YTM Enhancer keeps YouTube Music in your browser while optional
+                Connected Apps add controls around it. Connected Apps
+                communicate locally with the extension only after you enable
                 them.
               </p>
             </div>
