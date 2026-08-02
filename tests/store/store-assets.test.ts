@@ -72,15 +72,48 @@ describe("store assets", () => {
   });
 
   it("shows the current popup navigation in the playback screenshot", () => {
-    const document = new DOMParser().parseFromString(
-      read("store/screenshots/01-playback-controls.html"),
-      "text/html",
-    );
+    const playback = read("store/screenshots/01-playback-controls.html");
+    const document = new DOMParser().parseFromString(playback, "text/html");
     const navigation = Array.from(document.querySelectorAll(".nav-item")).map(
       normalizedText,
     );
 
     expect(navigation).toEqual(CURRENT_NAVIGATION);
+    expect(playback).toContain("height: 480px;");
+    expect(playback).not.toContain("height: 540px;");
+    expect(playback).toContain("Control YouTube Music from one place");
+    expect(playback).toContain("Settings");
+    expect(playback).toContain("Show selected tab favicon indicator");
+    expect(playback).not.toContain("<h3>Volume</h3>");
+    expect(playback).not.toContain("<h3>Audio &amp; Playback</h3>");
+  });
+
+  it("shows a coherent current visualizer state", () => {
+    const visualizer = read("store/screenshots/03-visualizer.html");
+
+    expect(visualizer).toContain("See your music move");
+    expect(visualizer).toContain("<option selected>All Surfaces</option>");
+    expect(visualizer).toContain("<option selected>Artwork Adaptive</option>");
+    expect(visualizer).not.toContain("<option selected>Auto</option>");
+    expect(visualizer).not.toContain("<option selected>White</option>");
+    expect(visualizer).toContain('const barColor = "#ff776d";');
+    expect(visualizer).not.toContain("colors.push(`hsl(");
+    expect(visualizer).not.toContain("const hue =");
+  });
+
+  it("shows the current three-state Auto-Play control", () => {
+    const automation = read("store/screenshots/04-sleep-timer.html");
+
+    expect(automation).toContain('<h2>Automation</h2>');
+    expect(automation).toContain('class="auto-play-select"');
+    expect(automation).toContain("<option>Default</option>");
+    expect(automation).toContain("<option>Off</option>");
+    expect(automation).toContain("<option selected>On</option>");
+    expect(automation).toContain(
+      "Start playback automatically when YouTube Music loads with music ready to play.",
+    );
+    expect(automation).toContain("Preview Notification");
+    expect(automation).not.toContain("<h2>Smart Playback</h2>");
   });
 
   it("presents all three Connected Apps with benefit-led copy", () => {
@@ -93,6 +126,18 @@ describe("store assets", () => {
       "Use the macOS menu bar, Windows system tray, or terminal.",
     );
     expect(connectedApps).toContain("Optional Connected Apps (Beta)");
+    expect(connectedApps).toContain(
+      "Install only the controls you want for macOS, Windows, or your terminal.",
+    );
+    expect(connectedApps).toContain(
+      "grid-template-columns: repeat(3, minmax(0, 1fr));",
+    );
+    expect(connectedApps).toContain(
+      "Control playback from the macOS menu bar.",
+    );
+    expect(connectedApps).toContain(
+      "Control playback from the Windows system tray.",
+    );
     expect(connectedApps).toContain("YTM Menu Bar");
     expect(connectedApps).toContain("YTM Tray");
     expect(connectedApps).toContain("YTM Enhancer CLI");
@@ -106,16 +151,20 @@ describe("store assets", () => {
     ).toBe(false);
   });
 
-  it("features Connected Apps in the marquee without obsolete navigation", () => {
+  it("features the extension itself in the marquee", () => {
     const marquee = read("store/screenshots/promo-marquee-1400x560.html");
 
-    expect(marquee).toContain("Connected Apps (Beta)");
     expect(marquee).toContain(
       "The YouTube Music controls you’ve been missing.",
     );
-    expect(marquee).toContain("macOS");
-    expect(marquee).toContain("Windows");
-    expect(marquee).toContain("Terminal");
+    expect(marquee).toContain("01-playback-controls.png");
+    expect(marquee).toContain("02-mini-player.png");
+    expect(marquee).toContain("Playback Controls");
+    expect(marquee).toContain("Mini Player");
+    expect(marquee).toContain("Automation");
+    expect(marquee).not.toContain("menu-bar-screenshot.png");
+    expect(marquee).not.toContain("windows-tray-screenshot.png");
+    expect(marquee).not.toContain("cli-demo-poster.png");
     expect(marquee).not.toMatch(/>\s*Auto Play\s*</);
     expect(marquee).not.toMatch(/>\s*Auto Skip\s*</);
   });
@@ -137,6 +186,23 @@ describe("store assets", () => {
     expect(automation).not.toContain("Set It and Forget It");
     expect(miniPlayer).toContain(
       "Keep playback controls visible while you work.",
+    );
+    expect(miniPlayer).toContain("On supported browsers");
+    expect(miniPlayer).toContain("width: 620px;");
+    expect(miniPlayer).toContain("height: 245px;");
+    expect(smallPromo).not.toContain('class="feature-strip"');
+  });
+
+  it("documents browser-appropriate screenshot order", () => {
+    const storeReadme = read("store/README.md");
+
+    expect(storeReadme).toContain("### Chrome and Edge screenshot order");
+    expect(storeReadme).toMatch(
+      /01-playback-controls\.png[\s\S]*02-mini-player\.png[\s\S]*04-sleep-timer\.png[\s\S]*03-visualizer\.png[\s\S]*05-connected-apps\.png/,
+    );
+    expect(storeReadme).toContain("### Firefox screenshot order");
+    expect(storeReadme).toContain(
+      "Omit `02-mini-player.png` from Firefox Add-ons",
     );
   });
 
