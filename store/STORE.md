@@ -17,11 +17,10 @@ optional Connected Apps (Beta).
 
 ### Detailed Description
 
-Make YouTube Music work the way you listen.
+The YouTube Music controls you’ve been missing.
 
-YTM Enhancer adds precise playback controls and practical features directly to
-the YouTube Music web app. Keep the service and library you already use, with no
-separate YTM Enhancer account or replacement player required.
+Add precise playback controls, useful automation, a compact mini player, and
+more—without replacing the YouTube Music experience you already use.
 
 Control playback across YouTube Music tabs, seek within a track, fine-tune
 volume and playback speed, choose stream quality, and manage shuffle and repeat.

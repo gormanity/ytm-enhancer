@@ -1042,9 +1042,9 @@ apps/cli/scripts/install-native-hosts.sh</code>
             <p class="eyebrow">Extension plus optional desktop controls</p>
             <h1 id="title">YTM Enhancer</h1>
             <p class="lede">
-              Make YouTube Music work the way you listen with smarter playback
-              controls, automation, notifications, a compact mini player, and
-              optional controls outside the browser.
+              The YouTube Music controls you’ve been missing. Add precise
+              playback controls, useful automation, a compact mini player, and
+              more—without replacing the YouTube Music experience you already use.
             </p>
             <div id="install" class="actions" aria-label="Install YTM Enhancer">
               <a class="button button-primary" href="${escapeHtml(stores.chrome)}">Chrome Web Store</a>
