@@ -136,6 +136,7 @@ describe("store assets", () => {
     expect(buildScript).toContain("resolve(sourceDir, `${assetName}.png`)");
     expect(buildScript).toContain('"short-description.txt"');
     expect(buildScript).toContain('"description.txt"');
+    expect(buildScript).toContain('"firefox-description.md"');
     expect(buildScript).toContain('animations: "disabled"');
     expect(buildScript).toContain("Math.random =");
   });
