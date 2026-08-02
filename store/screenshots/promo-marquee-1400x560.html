@@ -32,70 +32,70 @@
         inset: 0;
         background:
           radial-gradient(
-            circle at 18% 52%,
-            rgba(255, 0, 51, 0.11),
+            circle at 14% 48%,
+            rgba(255, 0, 51, 0.15),
             transparent 35%
           ),
           radial-gradient(
-            circle at 82% 45%,
-            rgba(48, 139, 255, 0.11),
+            circle at 82% 48%,
+            rgba(48, 139, 255, 0.13),
             transparent 38%
           ),
-          linear-gradient(110deg, #08080a 0%, #020202 58%, #07070a 100%);
+          linear-gradient(110deg, #0b080a 0%, #020202 54%, #07070b 100%);
       }
 
       .brand {
         position: absolute;
         top: 50%;
-        left: 78px;
+        left: 72px;
         z-index: 5;
-        width: 520px;
+        width: 510px;
         transform: translateY(-50%);
       }
 
       .brand-icon {
-        width: 92px;
-        height: 92px;
+        width: 90px;
+        height: 90px;
         margin-bottom: 22px;
-        filter: drop-shadow(0 12px 28px rgba(255, 0, 51, 0.18));
+        filter: drop-shadow(0 12px 28px rgba(255, 0, 51, 0.2));
       }
 
       h1 {
-        font-size: 45px;
+        font-size: 46px;
         font-weight: 720;
         letter-spacing: -1px;
       }
 
       .tagline {
-        max-width: 470px;
+        max-width: 490px;
         margin-top: 12px;
-        color: #a9a9af;
-        font-size: 19px;
-        line-height: 1.5;
+        color: #c1c1c7;
+        font-size: 21px;
+        line-height: 1.45;
       }
 
       .features {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 29px;
+        gap: 9px;
+        margin-top: 28px;
       }
 
       .feature {
         display: flex;
         align-items: center;
-        gap: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.09);
+        gap: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.045);
-        color: #d0d0d4;
-        font-size: 13px;
-        padding: 8px 13px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #dedee2;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 8px 11px;
       }
 
       .feature svg {
-        width: 16px;
-        height: 16px;
+        width: 15px;
+        height: 15px;
         fill: none;
         stroke: #ff3158;
         stroke-linecap: round;
@@ -105,106 +105,92 @@
 
       .surfaces {
         position: absolute;
-        top: 38px;
-        right: 35px;
-        width: 735px;
-        height: 484px;
+        top: 28px;
+        right: 34px;
+        width: 770px;
+        height: 504px;
       }
 
       .surface {
         position: absolute;
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 17px;
         background: #070708;
         box-shadow:
-          0 28px 65px rgba(0, 0, 0, 0.65),
+          0 28px 70px rgba(0, 0, 0, 0.65),
           inset 0 1px rgba(255, 255, 255, 0.04);
       }
 
       .surface img {
+        position: absolute;
         display: block;
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
+        max-width: none;
       }
 
       .surface-label {
         position: absolute;
         top: 12px;
         left: 13px;
-        z-index: 2;
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        z-index: 4;
+        border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 999px;
-        background: rgba(10, 10, 12, 0.84);
-        color: #d8d8dc;
+        background: rgba(8, 8, 10, 0.9);
+        color: #e0e0e4;
         font-size: 10px;
-        font-weight: 700;
+        font-weight: 750;
         letter-spacing: 0.8px;
         padding: 6px 9px;
         text-transform: uppercase;
       }
 
-      .mac {
-        top: 54px;
+      .playback {
+        top: 22px;
         left: 0;
         z-index: 1;
-        width: 300px;
-        height: 314px;
-        opacity: 0.78;
-        transform: rotate(-2deg);
+        width: 560px;
+        height: 390px;
+        transform: rotate(-1.4deg);
       }
 
-      .windows {
-        top: 10px;
-        left: 250px;
-        z-index: 3;
-        width: 270px;
-        height: 338px;
-        transform: rotate(1.2deg);
+      .playback img {
+        top: -62px;
+        right: 70px;
+        width: 820px;
+        height: auto;
       }
 
-      .terminal {
+      .mini {
         right: 0;
-        bottom: 8px;
-        z-index: 4;
-        width: 430px;
-        height: 242px;
-        transform: rotate(-0.8deg);
+        bottom: 10px;
+        z-index: 3;
+        width: 480px;
+        height: 286px;
+        transform: rotate(1deg);
       }
 
-      .terminal img {
-        padding: 10px;
+      .mini img {
+        right: -212px;
+        bottom: -4px;
+        width: 904px;
+        height: auto;
       }
 
-      .connection {
+      .orbit {
         position: absolute;
-        z-index: 0;
+        right: 8px;
+        bottom: 18px;
+        width: 330px;
+        height: 330px;
+        border: 1px solid rgba(57, 124, 255, 0.22);
         border-radius: 50%;
-        opacity: 0.45;
-      }
-
-      .connection.one {
-        top: 122px;
-        left: 166px;
-        width: 245px;
-        height: 245px;
-        border: 1px solid rgba(255, 49, 88, 0.28);
-      }
-
-      .connection.two {
-        right: 52px;
-        bottom: 32px;
-        width: 280px;
-        height: 280px;
-        border: 1px solid rgba(57, 124, 255, 0.25);
       }
 
       .accent {
         position: absolute;
+        right: 0;
         bottom: 0;
         left: 0;
-        right: 0;
         height: 3px;
         background: linear-gradient(
           90deg,
@@ -231,68 +217,43 @@
       <div class="features">
         <div class="feature">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <path d="m10 8 6 4-6 4V8z" />
+            <path d="M4 6h16M4 12h16M4 18h16" />
+            <circle cx="8" cy="6" r="2" />
+            <circle cx="16" cy="12" r="2" />
+            <circle cx="10" cy="18" r="2" />
           </svg>
-          Automation
+          Playback Controls
         </div>
         <div class="feature">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect width="18" height="18" x="3" y="3" rx="2" />
             <path d="M21 15V5a2 2 0 0 0-2-2H9" />
-            <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
+            <path d="M21 9H12a2 2 0 0 0-2 2v8" />
           </svg>
           Mini Player
         </div>
         <div class="feature">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect width="7" height="7" x="3" y="3" rx="1.5" />
-            <rect width="7" height="7" x="14" y="3" rx="1.5" />
-            <rect width="7" height="7" x="8.5" y="14" rx="1.5" />
-            <path d="M10 6.5h4" />
-            <path d="M7.5 10v2.5l2.5 2.5" />
-            <path d="M16.5 10v2.5L14 15" />
-          </svg>
-          Connected Apps (Beta)
-        </div>
-        <div class="feature">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="13" r="8" />
-            <path d="M12 9v4l2 2" />
-            <path d="M5 3 2 6" />
-            <path d="m22 6-3-3" />
+            <path d="M12 9v4l2 2M5 3 2 6m20 0-3-3" />
           </svg>
-          Sleep Timer
+          Automation
         </div>
       </div>
     </section>
 
-    <section class="surfaces" aria-label="Connected Apps (Beta)">
-      <div class="connection one"></div>
-      <div class="connection two"></div>
-
-      <div class="surface mac">
-        <span class="surface-label">macOS</span>
+    <section class="surfaces" aria-label="YTM Enhancer extension features">
+      <div class="orbit"></div>
+      <div class="surface playback">
+        <span class="surface-label">Playback Controls</span>
         <img
-          src="../../apps/menu-bar/release/menu-bar-screenshot.png"
-          alt="YTM Menu Bar"
+          src="./01-playback-controls.png"
+          alt="YTM Enhancer playback controls"
         />
       </div>
-
-      <div class="surface windows">
-        <span class="surface-label">Windows</span>
-        <img
-          src="../../apps/windows-tray/release/windows-tray-screenshot.png"
-          alt="YTM Tray"
-        />
-      </div>
-
-      <div class="surface terminal">
-        <span class="surface-label">Terminal</span>
-        <img
-          src="../../apps/cli/release/cli-demo-poster.png"
-          alt="YTM Enhancer CLI"
-        />
+      <div class="surface mini">
+        <span class="surface-label">Mini Player</span>
+        <img src="./02-mini-player.png" alt="YTM Enhancer Mini Player" />
       </div>
     </section>
 

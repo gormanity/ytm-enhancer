@@ -24,6 +24,22 @@
         color: #fff;
       }
 
+      .hero-text {
+        position: absolute;
+        top: 112px;
+        left: 48px;
+        width: 350px;
+        z-index: 1;
+      }
+      .hero-text h1 {
+        font-size: 42px;
+        line-height: 1.08;
+        background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
       /* Full-page simulated YTM song page */
       .ytm-page {
         position: absolute;
@@ -586,6 +602,10 @@
       </div>
     </div>
 
+    <div class="hero-text">
+      <h1>See your music move</h1>
+    </div>
+
     <!-- Visualizer settings popup -->
     <div class="ext-popup">
       <div class="popup-label">
@@ -620,8 +640,8 @@
         <div class="field-group">
           <span class="field-label">Display surface</span>
           <select class="field-select">
-            <option selected>Auto</option>
-            <option>All Surfaces</option>
+            <option>Auto</option>
+            <option selected>All Surfaces</option>
             <option>PiP Only</option>
             <option>Song Art Only</option>
             <option>Thumbnail Only</option>
@@ -638,8 +658,8 @@
         <div class="field-group" style="padding-bottom: 4px">
           <span class="field-label">Color mode</span>
           <select class="field-select">
-            <option selected>White</option>
-            <option>Artwork Adaptive</option>
+            <option>White</option>
+            <option selected>Artwork Adaptive</option>
             <option>Monochrome Dim</option>
           </select>
         </div>
@@ -680,18 +700,13 @@
       // Generate visualizer bars for artwork overlay
       const vizContainer = document.getElementById("vizBars");
       const barCount = 48;
-      const colors = [];
-      for (let i = 0; i < barCount; i++) {
-        const t = i / barCount;
-        const h = 180 - t * 200; // cyan to violet
-        colors.push(`hsl(${h}, 100%, 65%)`);
-      }
+      const barColor = "#ff776d";
       for (let i = 0; i < barCount; i++) {
         const bar = document.createElement("div");
         bar.className = "viz-bar";
         const h = 20 + Math.random() * 80;
         bar.style.height = h + "px";
-        bar.style.background = colors[i];
+        bar.style.background = barColor;
         bar.style.animationDelay = Math.random() * 0.8 + "s";
         bar.style.animationDuration = 0.4 + Math.random() * 0.6 + "s";
         bar.style.opacity = "0.85";
@@ -705,9 +720,7 @@
         bar.className = "pb-viz-bar";
         const h = 4 + Math.random() * 16;
         bar.style.height = h + "px";
-        const t = i / 12;
-        const hue = 180 - t * 200;
-        bar.style.background = `hsl(${hue}, 100%, 65%)`;
+        bar.style.background = barColor;
         bar.style.animationDelay = Math.random() * 0.6 + "s";
         bar.style.animationDuration = 0.3 + Math.random() * 0.5 + "s";
         bar.style.opacity = "0.9";

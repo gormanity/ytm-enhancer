@@ -44,3 +44,28 @@ pbcopy < dist/store-assets/short-description.txt
 pbcopy < dist/store-assets/description.txt
 pbcopy < dist/store-assets/firefox-description.md
 ```
+
+## Screenshot Submission Order
+
+The gallery should lead with the extension's broadest everyday benefits before
+moving into visual customization and optional Connected Apps.
+
+### Chrome and Edge screenshot order
+
+1. `01-playback-controls.png`
+2. `02-mini-player.png`
+3. `04-sleep-timer.png`
+4. `03-visualizer.png`
+5. `05-connected-apps.png`
+
+### Firefox screenshot order
+
+1. `01-playback-controls.png`
+2. `04-sleep-timer.png`
+3. `03-visualizer.png`
+4. `05-connected-apps.png`
+
+Omit `02-mini-player.png` from Firefox Add-ons because it depicts the full
+Document Picture-in-Picture Mini Player, which may require experimental browser
+support in Firefox. The Firefox listing copy already describes the Mini Player
+as available where supported.

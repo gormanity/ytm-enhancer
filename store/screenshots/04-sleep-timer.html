@@ -271,6 +271,29 @@
         font-size: 13px;
         outline: none;
       }
+      .auto-play-select {
+        width: 92px;
+        flex-shrink: 0;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 13px;
+        outline: none;
+      }
+      .card-row-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-width: 230px;
+      }
+      .status-hint {
+        color: #888;
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 1.35;
+      }
       .field-label {
         font-size: 12px;
         color: #aaa;
@@ -345,6 +368,14 @@
         font-size: 13px;
         text-align: center;
         margin-top: 10px;
+      }
+      .section-divider {
+        height: 1px;
+        margin: 20px 0;
+        background: #2a2a2a;
+      }
+      .notifications-heading {
+        margin-bottom: 14px;
       }
     </style>
   </head>
@@ -431,25 +462,42 @@
           </svg>
           AUTOMATION
         </div>
-        <h2>Smart Playback</h2>
+        <h2>Automation</h2>
 
-        <h3>Auto Play</h3>
         <div class="settings-card">
-          <div class="toggle-row" style="padding: 0">
-            <span>Auto-play on page load</span>
-            <div class="toggle toggle-on"></div>
+          <div class="toggle-row">
+            <span class="card-row-copy">
+              <span>Auto-play on page load</span>
+              <small
+                class="status-hint"
+                data-hint="Start playback automatically when YouTube Music loads with music ready to play."
+                >Start playback automatically when YouTube Music loads with
+                music ready to play.</small
+              >
+            </span>
+            <select class="auto-play-select">
+              <option>Default</option>
+              <option>Off</option>
+              <option selected>On</option>
+            </select>
           </div>
-        </div>
-
-        <h3>Auto Skip</h3>
-        <div class="settings-card">
-          <div class="toggle-row" style="padding: 0">
+          <div class="toggle-row">
             <span>Automatically skip disliked songs</span>
             <div class="toggle toggle-on"></div>
           </div>
         </div>
 
-        <h3>Notifications</h3>
+        <div class="section-divider"></div>
+
+        <div class="panel-label">
+          <svg viewBox="0 0 24 24">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+            <path d="M10 21h4" />
+          </svg>
+          NOTIFICATIONS
+        </div>
+        <h2 class="notifications-heading">Notifications</h2>
+
         <div class="settings-card">
           <div class="toggle-row">
             <span>Show on track change</span>
@@ -461,8 +509,8 @@
           </div>
         </div>
 
-        <h3>Display Fields</h3>
         <div class="settings-card">
+          <h3>Display fields</h3>
           <div class="checkbox-row">
             <div class="checkbox checkbox-on"></div>
             <span>Title</span>
@@ -484,6 +532,8 @@
             <span>Artwork</span>
           </div>
         </div>
+
+        <div class="btn-outline">Preview Notification</div>
       </div>
     </div>
   </body>

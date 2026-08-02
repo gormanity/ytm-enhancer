@@ -32,7 +32,7 @@
       /* Radial glow behind icon */
       .glow {
         position: absolute;
-        top: 30px;
+        top: 18px;
         left: 50%;
         transform: translateX(-50%);
         width: 200px;
@@ -51,9 +51,9 @@
       .icon-wrap {
         position: relative;
         z-index: 1;
-        width: 72px;
-        height: 72px;
-        margin-bottom: 16px;
+        width: 88px;
+        height: 88px;
+        margin-bottom: 15px;
       }
       .icon-wrap svg {
         width: 100%;
@@ -62,46 +62,23 @@
 
       /* Title */
       .title {
-        font-size: 24px;
+        font-size: 27px;
         font-weight: 700;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
         position: relative;
         z-index: 1;
       }
 
       /* Tagline */
       .tagline {
-        font-size: 14px;
-        color: #aaa;
-        margin-top: 6px;
+        width: 360px;
+        font-size: 16px;
+        line-height: 1.35;
+        color: #c4c4c9;
+        margin-top: 9px;
         position: relative;
+        text-align: center;
         z-index: 1;
-      }
-
-      /* Feature icon strip */
-      .feature-strip {
-        display: flex;
-        gap: 24px;
-        margin-top: 24px;
-        position: relative;
-        z-index: 1;
-      }
-      .feature-icon {
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0.5;
-      }
-      .feature-icon svg {
-        width: 22px;
-        height: 22px;
-        stroke: #fff;
-        fill: none;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
       }
 
       /* Subtle bottom accent line */
@@ -205,52 +182,6 @@
 
     <div class="title">YTM Enhancer</div>
     <div class="tagline">The YouTube Music controls you’ve been missing.</div>
-
-    <div class="feature-strip">
-      <!-- Mini Player -->
-      <div class="feature-icon">
-        <svg viewBox="0 0 24 24">
-          <rect width="18" height="18" x="3" y="3" rx="2" />
-          <path d="M21 15V5a2 2 0 0 0-2-2H9" />
-          <path d="M21 9H12a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9" />
-        </svg>
-      </div>
-      <!-- Visualizer -->
-      <div class="feature-icon">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 20v-8" />
-          <path d="M18 20V10" />
-          <path d="M6 20V4" />
-        </svg>
-      </div>
-      <!-- Hotkeys -->
-      <div class="feature-icon">
-        <svg viewBox="0 0 24 24">
-          <rect width="20" height="16" x="2" y="4" rx="2" />
-          <path d="M6 8h.01" />
-          <path d="M10 8h.01" />
-          <path d="M14 8h.01" />
-          <path d="M18 8h.01" />
-          <path d="M8 16h8" />
-        </svg>
-      </div>
-      <!-- Sleep Timer -->
-      <div class="feature-icon">
-        <svg viewBox="0 0 24 24">
-          <circle cx="12" cy="13" r="8" />
-          <path d="M12 9v4l2 2" />
-          <path d="M5 3 2 6" />
-          <path d="m22 6-3-3" />
-        </svg>
-      </div>
-      <!-- Notifications -->
-      <div class="feature-icon">
-        <svg viewBox="0 0 24 24">
-          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-        </svg>
-      </div>
-    </div>
 
     <div class="accent-line"></div>
   </body>

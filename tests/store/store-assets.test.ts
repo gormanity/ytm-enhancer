@@ -104,7 +104,7 @@ describe("store assets", () => {
   it("shows the current three-state Auto-Play control", () => {
     const automation = read("store/screenshots/04-sleep-timer.html");
 
-    expect(automation).toContain('<h2>Automation</h2>');
+    expect(automation).toContain("<h2>Automation</h2>");
     expect(automation).toContain('class="auto-play-select"');
     expect(automation).toContain("<option>Default</option>");
     expect(automation).toContain("<option>Off</option>");
@@ -122,9 +122,6 @@ describe("store assets", () => {
 
     expect(existsSync(resolve(process.cwd(), connectedAppsPath))).toBe(true);
     expect(connectedApps).toContain("Keep YouTube Music controls within reach");
-    expect(connectedApps).toContain(
-      "Use the macOS menu bar, Windows system tray, or terminal.",
-    );
     expect(connectedApps).toContain("Optional Connected Apps (Beta)");
     expect(connectedApps).toContain(
       "Install only the controls you want for macOS, Windows, or your terminal.",

@@ -213,24 +213,80 @@
       .dim-overlay {
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.45);
+        background:
+          radial-gradient(
+            circle at 78% 48%,
+            rgba(125, 18, 18, 0.12),
+            transparent 32%
+          ),
+          linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.5) 0%,
+            rgba(0, 0, 0, 0.68) 48%,
+            rgba(0, 0, 0, 0.58) 100%
+          );
         backdrop-filter: blur(2px);
+      }
+
+      /* Benefit-led screenshot copy */
+      .hero-copy {
+        position: absolute;
+        z-index: 2;
+        top: 50%;
+        left: 76px;
+        width: 480px;
+        transform: translateY(-50%);
+      }
+      .hero-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 18px;
+        color: #ff8a80;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+      }
+      .hero-kicker::before {
+        content: "";
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #ff2c2c;
+        box-shadow: 0 0 18px rgba(255, 44, 44, 0.75);
+      }
+      .hero-copy h1 {
+        max-width: 470px;
+        font-size: 52px;
+        font-weight: 750;
+        line-height: 1.04;
+        letter-spacing: -1.8px;
+      }
+      .hero-copy p {
+        max-width: 430px;
+        margin-top: 20px;
+        color: #c8c8c8;
+        font-size: 18px;
+        line-height: 1.5;
       }
 
       /* Extension popup */
       .ext-popup {
         position: absolute;
         top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        right: 72px;
+        z-index: 3;
+        transform: translateY(-50%);
         width: 480px;
-        height: 540px;
+        height: 480px;
         background: #030303;
         border-radius: 12px;
         overflow: hidden;
         box-shadow:
           0 24px 80px rgba(0, 0, 0, 0.8),
-          0 0 0 1px rgba(255, 255, 255, 0.08);
+          0 0 0 1px rgba(255, 255, 255, 0.12),
+          0 0 64px rgba(255, 0, 0, 0.08);
         display: grid;
         grid-template-columns: 160px 1fr;
       }
@@ -249,18 +305,15 @@
         margin-bottom: 12px;
       }
       .popup-sidebar-header h1 {
-        font-size: 14px;
+        font-size: 12px;
         margin: 0;
         color: #fff;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-      .popup-icon-small {
-        width: 24px;
-        height: 24px;
+        letter-spacing: 0.7px;
+        white-space: nowrap;
       }
       .nav-item {
         display: flex;
@@ -289,45 +342,73 @@
 
       /* Popup main content */
       .popup-main {
-        padding: 24px;
-        overflow-y: auto;
+        padding: 18px;
+        overflow: hidden;
       }
       .popup-main h2 {
         font-size: 20px;
         font-weight: 500;
-        margin-bottom: 20px;
+        margin-bottom: 12px;
       }
       .popup-main h3 {
-        font-size: 12px;
+        font-size: 11px;
         color: #aaa;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin: 20px 0 12px;
-      }
-      .popup-main h3:first-of-type {
-        margin-top: 0;
+        margin: 0 0 8px;
       }
 
       .settings-card {
         background: #0f0f0f;
         border: 1px solid #2a2a2a;
         border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 12px;
+        padding: 10px;
+        margin-bottom: 9px;
       }
 
       /* Now playing card */
       .now-playing-row {
         display: flex;
-        gap: 12px;
-        align-items: flex-start;
+        gap: 10px;
+        align-items: center;
       }
       .np-artwork {
-        width: 64px;
-        height: 64px;
+        position: relative;
+        width: 58px;
+        height: 58px;
         border-radius: 4px;
-        background: linear-gradient(135deg, #c41010, #ff4040);
+        overflow: hidden;
+        background:
+          radial-gradient(
+            circle at 68% 31%,
+            rgba(255, 238, 180, 0.95) 0 7%,
+            transparent 8%
+          ),
+          linear-gradient(145deg, #2a0b36 0%, #b2133d 52%, #ff6a3d 100%);
         flex-shrink: 0;
+      }
+      .np-artwork::before {
+        content: "";
+        position: absolute;
+        left: -8px;
+        right: -8px;
+        bottom: 9px;
+        height: 18px;
+        transform: rotate(-8deg);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.38),
+          rgba(255, 107, 73, 0.08)
+        );
+        clip-path: polygon(
+          0 60%,
+          22% 22%,
+          41% 54%,
+          61% 8%,
+          100% 58%,
+          100% 100%,
+          0 100%
+        );
       }
       .np-meta {
         flex: 1;
@@ -349,12 +430,12 @@
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
         width: 100%;
-        margin-top: 8px;
+        margin-top: 5px;
         align-items: center;
       }
       .np-btn {
-        width: 30px;
-        height: 30px;
+        width: 27px;
+        height: 27px;
         border-radius: 50%;
         background: none;
         border: none;
@@ -366,8 +447,8 @@
         cursor: pointer;
       }
       .np-btn svg {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         stroke: currentColor;
         fill: none;
         stroke-width: 2;
@@ -375,8 +456,8 @@
         stroke-linejoin: round;
       }
       .np-btn-primary {
-        width: 32px;
-        height: 32px;
+        width: 29px;
+        height: 29px;
         background: #fff;
         color: #000;
       }
@@ -384,7 +465,7 @@
         stroke: #000;
       }
       .np-progress {
-        margin-top: 8px;
+        margin-top: 5px;
       }
       .np-progress-track {
         position: relative;
@@ -402,41 +483,33 @@
       .np-progress-times {
         display: flex;
         justify-content: space-between;
-        margin-top: 5px;
+        margin-top: 3px;
         color: #aaa;
         font-size: 11px;
       }
 
-      /* Volume */
-      .volume-row {
+      /* Settings */
+      .range-slider-row {
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        gap: 8px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #2a2a2a;
       }
-      .volume-label {
-        font-size: 12px;
-        color: #aaa;
+      .range-slider-label {
+        width: 28%;
+        flex-shrink: 0;
+        font-size: 13px;
       }
-      .volume-value {
-        font-size: 14px;
-        font-weight: 600;
-      }
-      .volume-slider {
-        width: 100%;
+      .range-slider {
+        width: 58%;
         height: 6px;
-        background: #3f3f3f;
         border-radius: 3px;
-        margin-top: 8px;
+        background: linear-gradient(to right, #ff0000 0 72%, #3f3f3f 72%);
         position: relative;
-        overflow: hidden;
       }
-      .volume-fill {
-        width: 72%;
-        height: 100%;
-        background: #ff0000;
-        border-radius: 3px;
-      }
-      .volume-thumb {
+      .range-slider::after {
+        content: "";
         position: absolute;
         top: -4px;
         left: calc(72% - 7px);
@@ -445,17 +518,53 @@
         border-radius: 50%;
         background: #fff;
       }
-
-      /* Toggle */
-      .toggle-row {
+      .range-slider-value {
+        width: 14%;
+        color: #fff;
+        font-size: 12px;
+        text-align: right;
+      }
+      .playback-controls-inline-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .compact-control {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        color: #aaa;
+        font-size: 11px;
+      }
+      .compact-control select {
+        width: 100%;
+        height: 28px;
+        border: 1px solid #2a2a2a;
+        border-radius: 4px;
+        background: #1a1a1a;
+        color: #fff;
+        padding: 3px 6px;
+        font-size: 12px;
+        outline: none;
+      }
+      .card-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 0;
-        font-size: 14px;
-      }
-      .toggle-row + .toggle-row {
+        gap: 10px;
+        margin-top: 10px;
+        padding-top: 9px;
         border-top: 1px solid #2a2a2a;
+      }
+      .card-row-copy {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 3px;
+        font-size: 11.5px;
       }
       .toggle {
         width: 32px;
@@ -484,35 +593,10 @@
       .toggle-off::after {
         left: 3px;
       }
-
-      /* Tab selector pills */
-      .tab-pills {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
-      .tab-pill {
-        width: 40px;
-        height: 40px;
-        border-radius: 4px;
-        border: 2px solid transparent;
-        overflow: hidden;
-      }
-      .tab-pill.selected {
-        border-color: #ff0000;
-      }
-      .tab-pill-inner {
-        width: 100%;
-        height: 100%;
-        background: #1a1a1a;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .tab-pill-inner svg {
-        width: 20px;
-        height: 20px;
-        fill: #ff0000;
+      .status-hint {
+        color: #888;
+        font-size: 9.5px;
+        line-height: 1.25;
       }
 
       /* Music Source tabs */
@@ -520,19 +604,15 @@
         margin-bottom: 12px;
       }
       .music-source-label {
-        font-size: 12px;
-        color: #aaa;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 8px;
+        display: none;
       }
       .tab-list-horizontal {
         display: flex;
         gap: 8px;
       }
       .tab-item {
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
         border-radius: 4px;
         border: 2px solid transparent;
         overflow: hidden;
@@ -545,30 +625,60 @@
         border-color: #ff0000;
       }
       .tab-item-art {
+        position: relative;
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        overflow: hidden;
       }
       .tab-art-1 {
-        background: linear-gradient(135deg, #c41010, #ff4040);
+        background:
+          radial-gradient(
+            circle at 68% 29%,
+            rgba(255, 238, 180, 0.95) 0 7%,
+            transparent 8%
+          ),
+          linear-gradient(145deg, #2a0b36 0%, #b2133d 52%, #ff6a3d 100%);
       }
       .tab-art-2 {
-        background: linear-gradient(135deg, #2a1a4a, #4a2a6a);
+        background:
+          radial-gradient(
+            circle at 72% 25%,
+            rgba(135, 255, 237, 0.9) 0 6%,
+            transparent 7%
+          ),
+          linear-gradient(135deg, #061b36 0%, #116b82 48%, #6c2f8c 100%);
       }
-
-      /* Annotation callout */
-      .callout {
+      .tab-item-art::after {
+        content: "";
         position: absolute;
-        background: rgba(255, 0, 0, 0.12);
-        border: 1px solid rgba(255, 0, 0, 0.3);
-        border-radius: 8px;
-        padding: 10px 16px;
-        font-size: 13px;
-        color: #ff6666;
-        backdrop-filter: blur(4px);
+        left: -6px;
+        right: -6px;
+        bottom: 6px;
+        height: 13px;
+        transform: rotate(-8deg);
+        background: rgba(255, 255, 255, 0.3);
+        clip-path: polygon(
+          0 64%,
+          22% 18%,
+          42% 56%,
+          62% 4%,
+          100% 62%,
+          100% 100%,
+          0 100%
+        );
       }
-      .callout strong {
-        color: #ff9999;
+      .tab-art-2::after {
+        transform: rotate(7deg);
+        background: rgba(90, 237, 255, 0.28);
+        clip-path: polygon(
+          0 50%,
+          25% 10%,
+          49% 58%,
+          72% 22%,
+          100% 54%,
+          100% 100%,
+          0 100%
+        );
       }
     </style>
   </head>
@@ -692,8 +802,17 @@
     <!-- Dim overlay -->
     <div class="dim-overlay"></div>
 
+    <section class="hero-copy" aria-label="Playback Controls benefits">
+      <div class="hero-kicker">Playback Controls</div>
+      <h1>Control YouTube Music from one place</h1>
+      <p>
+        Switch between open music tabs, manage playback, and fine-tune every
+        listening session without losing your place.
+      </p>
+    </section>
+
     <!-- Extension popup -->
-    <div class="ext-popup" style="position: relative">
+    <div class="ext-popup">
       <!-- Sidebar -->
       <div class="popup-sidebar">
         <div class="popup-sidebar-header">
@@ -812,18 +931,17 @@
         <h2>Playback Controls</h2>
 
         <div class="settings-card music-source-card">
-          <div class="music-source-label">Music Source</div>
+          <h3>Music Source</h3>
           <div class="tab-list-horizontal">
-            <div class="tab-item selected">
+            <div class="tab-item selected" aria-label="Starlight Echoes tab">
               <div class="tab-item-art tab-art-1"></div>
             </div>
-            <div class="tab-item">
+            <div class="tab-item" aria-label="Afterglow Radio tab">
               <div class="tab-item-art tab-art-2"></div>
             </div>
           </div>
         </div>
 
-        <h3>Now Playing</h3>
         <div class="settings-card">
           <div class="now-playing-row">
             <div class="np-artwork"></div>
@@ -903,77 +1021,42 @@
           </div>
         </div>
 
-        <h3>Volume</h3>
         <div class="settings-card">
-          <div class="volume-row">
-            <span class="volume-label">Volume</span>
-            <span class="volume-value">72%</span>
-          </div>
-          <div class="volume-slider" style="position: relative">
-            <div class="volume-fill"></div>
-            <div class="volume-thumb"></div>
-          </div>
-        </div>
+          <h3>Settings</h3>
 
-        <h3>Audio &amp; Playback</h3>
-        <div class="settings-card" style="display: flex; gap: 12px">
-          <div
-            style="
-              flex: 1;
-              display: flex;
-              flex-direction: column;
-              align-items: flex-start;
-              gap: 8px;
-            "
-          >
-            <span style="font-size: 12px; color: #aaa">Playback Speed</span>
-            <select
-              style="
-                width: 100%;
-                background: #1a1a1a;
-                border: 1px solid #2a2a2a;
-                color: #fff;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 13px;
-                outline: none;
-              "
-            >
-              <option>0.5x</option>
-              <option>0.75x</option>
-              <option selected>1x (Normal)</option>
-              <option>1.25x</option>
-              <option>1.5x</option>
-              <option>2x</option>
-            </select>
+          <div class="range-slider-row">
+            <span class="range-slider-label">Volume</span>
+            <span class="range-slider" aria-hidden="true"></span>
+            <span class="range-slider-value">72%</span>
           </div>
-          <div
-            style="
-              flex: 1;
-              display: flex;
-              flex-direction: column;
-              align-items: flex-start;
-              gap: 8px;
-            "
-          >
-            <span style="font-size: 12px; color: #aaa">Stream Quality</span>
-            <select
-              style="
-                width: 100%;
-                background: #1a1a1a;
-                border: 1px solid #2a2a2a;
-                color: #fff;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 13px;
-                outline: none;
-              "
-            >
-              <option>Low (48 kbps)</option>
-              <option>Normal (128 kbps)</option>
-              <option selected>High (256 kbps)</option>
-              <option>Always High</option>
-            </select>
+
+          <div class="playback-controls-inline-row">
+            <label class="compact-control">
+              <span>Speed</span>
+              <select>
+                <option selected>1x</option>
+                <option>1.25x</option>
+                <option>1.5x</option>
+              </select>
+            </label>
+            <label class="compact-control">
+              <span>Quality</span>
+              <select>
+                <option>Low</option>
+                <option>Normal</option>
+                <option selected>High</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="card-row">
+            <span class="card-row-copy">
+              <span>Show selected tab favicon indicator</span>
+              <span class="status-hint">
+                Marks the YouTube Music tab controlled by YTM Enhancer.
+              </span>
+            </span>
+            <span class="toggle toggle-off" aria-label="Off"></span>
           </div>
         </div>
       </div>
