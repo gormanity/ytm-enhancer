@@ -1822,6 +1822,9 @@ describe("menu bar connector app scaffold", () => {
     const windowsTrayVersion =
       process.env.YTM_WINDOWS_TRAY_VERSION ?? windowsTrayMetadata.version;
     const windowsTrayTag = `windows-tray-v${windowsTrayVersion}`;
+    const cliReleaseAvailable = ["1", "true", "yes"].includes(
+      process.env.YTM_CLI_RELEASE_AVAILABLE?.trim().toLowerCase() ?? "",
+    );
     const outputRoot = mkdtempSync(join(tmpdir(), "ytm-release-index-"));
     const archivePath = resolve(
       outputRoot,
@@ -1987,7 +1990,9 @@ describe("menu bar connector app scaffold", () => {
     expect(releaseIndex.products.cli.installPage).toBe(
       "https://gormanity.github.io/ytm-enhancer/cli/",
     );
-    expect(releaseIndex.products.cli.distribution).toBe("source");
+    expect(releaseIndex.products.cli.distribution).toBe(
+      cliReleaseAvailable ? "github-release-assets" : "source",
+    );
     expect(siteHome).toContain("YTM Enhancer");
     expect(siteHome).toContain("Connected Apps Beta");
     expect(siteHome).toContain("assets/playback-controls.png");
@@ -1995,8 +2000,16 @@ describe("menu bar connector app scaffold", () => {
     expect(connectedAppsPage).toContain("../assets/menu-bar-screenshot.png");
     expect(connectedAppsPage).toContain(windowsTrayScreenshotUrl);
     expect(connectedAppsPage).toContain("Browser Support");
-    expect(connectedAppsPage).toContain(">View CLI setup</a>");
-    expect(connectedAppsPage).not.toContain(">Download for macOS or Linux</a>");
+    expect(connectedAppsPage).toContain(
+      cliReleaseAvailable
+        ? ">Download for macOS or Linux</a>"
+        : ">View CLI setup</a>",
+    );
+    expect(connectedAppsPage).not.toContain(
+      cliReleaseAvailable
+        ? ">View CLI setup</a>"
+        : ">Download for macOS or Linux</a>",
+    );
     expect(connectedAppsPage).toContain(
       "YTM Tray currently supports Chrome, Microsoft Edge, and Firefox.",
     );
@@ -2033,9 +2046,17 @@ describe("menu bar connector app scaffold", () => {
     expect(cliPage).not.toContain("Read CLI README");
     expect(cliPage).toContain("Chrome, Chromium, Microsoft Edge, Brave, and");
     expect(cliPage).not.toContain("Automated connector smoke");
-    expect(cliPage).toContain(
-      "The first signed public packages are being prepared.",
-    );
+    if (cliReleaseAvailable) {
+      expect(cliPage).not.toContain(
+        "The first signed public packages are being prepared.",
+      );
+      expect(cliPage).toContain("Download SHA256SUMS");
+    } else {
+      expect(cliPage).toContain(
+        "The first signed public packages are being prepared.",
+      );
+      expect(cliPage).not.toContain("Download SHA256SUMS");
+    }
     expect([...copiedWindowsTrayScreenshot.subarray(0, 8)]).toEqual([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
     ]);
