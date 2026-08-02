@@ -39,16 +39,28 @@ describe("store assets", () => {
     expect(storeCopy).toContain("Make YouTube Music work the way you listen.");
     expect(storeCopy).toContain("### Short Description");
     expect(storeCopy.replace(/\s+/g, " ")).toContain(expectedDescription);
-    expect(storeCopy).toContain("Optional Connected Apps (Beta)");
-    expect(storeCopy).toContain("- Connected Apps (Beta):");
-    expect(storeCopy).toContain("no project-operated backend services");
+    expect(storeCopy).toContain("### Connected Apps (Beta)");
+    expect(storeCopy).toContain("separately installed");
+    expect(storeCopy).toContain("### Private by Design");
+    expect(storeCopy.replace(/\s+/g, " ")).toContain(
+      "does not send your listening data to project-operated servers",
+    );
+    expect(storeCopy).not.toContain("Open Source and Privacy Positioning");
+    expect(storeCopy).not.toContain("Repository:");
     expect(storeCopy).not.toContain("supercharges YouTube Music");
     expect(storeCopy).not.toContain("best browser-based media player");
+    expect(storeCopy).toMatch(
+      /### Homepage URL\s+`https:\/\/gormanity\.github\.io\/ytm-enhancer\/`/,
+    );
     expect(manifestDescriptions).toEqual([
       expectedDescription,
       expectedDescription,
       expectedDescription,
     ]);
+    for (const description of manifestDescriptions) {
+      expect(description.length).toBeLessThanOrEqual(132);
+      expect(description).not.toMatch(/https?:\/\/|[*_`#]/);
+    }
   });
 
   it("shows the current popup navigation in the playback screenshot", () => {
@@ -68,13 +80,11 @@ describe("store assets", () => {
     const connectedApps = read(connectedAppsPath);
 
     expect(existsSync(resolve(process.cwd(), connectedAppsPath))).toBe(true);
+    expect(connectedApps).toContain("Keep YouTube Music controls within reach");
     expect(connectedApps).toContain(
-      "Control YouTube Music without switching windows",
+      "Use the macOS menu bar, Windows system tray, or terminal.",
     );
-    expect(connectedApps).toContain(
-      "Use the macOS menu bar, Windows system tray, or your terminal.",
-    );
-    expect(connectedApps).toContain("Connected Apps Beta");
+    expect(connectedApps).toContain("Optional Connected Apps (Beta)");
     expect(connectedApps).toContain("YTM Menu Bar");
     expect(connectedApps).toContain("YTM Tray");
     expect(connectedApps).toContain("YTM Enhancer CLI");
@@ -91,12 +101,30 @@ describe("store assets", () => {
   it("features Connected Apps in the marquee without obsolete navigation", () => {
     const marquee = read("store/screenshots/promo-marquee-1400x560.html");
 
-    expect(marquee).toContain("Connected Apps Beta");
+    expect(marquee).toContain("Connected Apps (Beta)");
+    expect(marquee).toContain("Make YouTube Music work the way you listen.");
     expect(marquee).toContain("macOS");
     expect(marquee).toContain("Windows");
     expect(marquee).toContain("Terminal");
     expect(marquee).not.toMatch(/>\s*Auto Play\s*</);
     expect(marquee).not.toMatch(/>\s*Auto Skip\s*</);
+  });
+
+  it("uses direct, benefit-led copy in supporting promotional assets", () => {
+    const smallPromo = read("store/screenshots/promo-small-440x280.html");
+    const automation = read("store/screenshots/04-sleep-timer.html");
+    const miniPlayer = read("store/screenshots/02-mini-player.html");
+
+    expect(smallPromo).toContain("YouTube Music, your way.");
+    expect(smallPromo).not.toMatch(/supercharge/i);
+    expect(automation).toContain("Make playback follow your routine");
+    expect(automation.replace(/\s+/g, " ")).toContain(
+      "Automate starts and skips, schedule a stop, and choose your notifications.",
+    );
+    expect(automation).not.toContain("Set It and Forget It");
+    expect(miniPlayer).toContain(
+      "Keep playback controls visible while you work.",
+    );
   });
 
   it("rebuilds both submission and tracked assets from a clean output", () => {
@@ -106,6 +134,8 @@ describe("store assets", () => {
     expect(buildScript).not.toContain('"05-hotkeys-notifications"');
     expect(buildScript).toContain("await rm(outputDir");
     expect(buildScript).toContain("resolve(sourceDir, `${assetName}.png`)");
+    expect(buildScript).toContain('"short-description.txt"');
+    expect(buildScript).toContain('"description.txt"');
     expect(buildScript).toContain('animations: "disabled"');
     expect(buildScript).toContain("Math.random =");
   });

@@ -35,7 +35,8 @@ describe("Connected Apps release disclosures", () => {
   it("describes Connected Apps and native messaging in store copy", () => {
     const storeListing = read("store/STORE.md");
 
-    expect(storeListing).toContain("Connected Apps (Beta):");
+    expect(storeListing).toContain("### Connected Apps (Beta)");
+    expect(storeListing).toContain("separately installed");
     expect(storeListing).toContain(
       "The Connected Apps (Beta) feature is opt-in and disabled by default",
     );
@@ -84,7 +85,7 @@ describe("Connected Apps release disclosures", () => {
       "Control playback, focus YouTube Music, or trigger module actions without opening the popup.",
     );
     expect(readme).not.toContain("trigger module actions from any app");
-    expect(storeListing).toContain("Windows system tray");
+    expect(storeListing.replace(/\s+/g, " ")).toContain("Windows system tray");
     expect(storeScreenshot).toContain("Windows system tray");
     expect(storeScreenshot).not.toContain("Windows taskbar");
     expect(trayNotes.replace(/\s+/g, " ")).toContain("Windows system tray");

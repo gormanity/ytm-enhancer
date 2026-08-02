@@ -1994,8 +1994,29 @@ describe("menu bar connector app scaffold", () => {
       cliReleaseAvailable ? "github-release-assets" : "source",
     );
     expect(siteHome).toContain("YTM Enhancer");
-    expect(siteHome).toContain("Connected Apps Beta");
+    expect(siteHome).toContain("Connected Apps (Beta)");
     expect(siteHome).toContain("assets/playback-controls.png");
+    expect(siteHome).toContain('id="install"');
+    expect(siteHome).toContain('href="#install">Choose your browser</a>');
+    expect(siteHome).not.toMatch(
+      /href="[^"]*chromewebstore[^"]*">Install extension<\/a>/,
+    );
+    expect(siteHome).toContain(
+      'href="https://github.com/gormanity/ytm-enhancer/blob/main/PRIVACY.md">Privacy</a>',
+    );
+    expect(siteHome).toContain(
+      'href="https://github.com/gormanity/ytm-enhancer/issues">Support</a>',
+    );
+    expect(siteHome).toContain(
+      'href="https://github.com/gormanity/ytm-enhancer">Source</a>',
+    );
+    expect(siteHome.replace(/\s+/g, " ")).toContain(
+      "YTM Enhancer keeps YouTube Music in your browser while optional Connected Apps add controls around it.",
+    );
+    expect(siteHome.replace(/\s+/g, " ")).toContain(
+      "Connected Apps communicate locally with the extension only after you enable them.",
+    );
+    expect(siteHome).not.toContain("owns page access");
     expect(connectedAppsPage).toContain("Connected Apps Beta");
     expect(connectedAppsPage).toContain("../assets/menu-bar-screenshot.png");
     expect(connectedAppsPage).toContain(windowsTrayScreenshotUrl);
