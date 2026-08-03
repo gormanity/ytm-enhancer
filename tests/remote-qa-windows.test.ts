@@ -3477,7 +3477,7 @@ try {
     expect(releaseScreenshot).toContain(
       "$env:YTME_WINDOWS_TRAY_SCREENSHOT_PATH",
     );
-    expect(releaseScreenshot).toContain(
+    expect(releaseScreenshot).not.toContain(
       "$env:YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
     );
     expect(releaseScreenshot).toContain(
@@ -3485,7 +3485,7 @@ try {
     );
     expect(releaseScreenshot).toContain("[string] $SignedInstallerPath");
     expect(releaseScreenshot).toContain("Get-AuthenticodeSignature");
-    expect(releaseScreenshot).toContain(
+    expect(releaseScreenshot).not.toContain(
       "approved Creative Commons YouTube Music track",
     );
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_VISUAL_DEMO");
@@ -3499,7 +3499,7 @@ try {
     expect(releaseScreenshotShell).toContain(
       "scripts\\windows-qa\\tray-release-screenshot.ps1",
     );
-    expect(releaseScreenshotShell).toContain("-PlaybackUrl");
+    expect(releaseScreenshotShell).not.toContain("-PlaybackUrl");
     expect(releaseScreenshotShell).toContain(
       "YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH",
     );

@@ -198,20 +198,8 @@
       .pip-artwork {
         width: 100%;
         height: 100%;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(
-          135deg,
-          #c41010 0%,
-          #ff2020 40%,
-          #ff6060 100%
-        );
-      }
-      .pip-artwork svg {
-        width: 78px;
-        height: 78px;
-        color: #fff;
-        filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.22));
+        display: block;
+        object-fit: cover;
       }
 
       .pip-content {
@@ -585,21 +573,19 @@
       <div class="pip-body">
         <div class="pip">
           <div class="pip-artwork-container">
-            <div class="pip-artwork">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  fill="currentColor"
-                  d="M12 3v10.55A4 4 0 1 1 10 9.88V6h10V3h-8z"
-                />
-              </svg>
-            </div>
+            <!-- Artwork provenance: see docs/third-party-notices.md. -->
+            <img
+              class="pip-artwork"
+              src="./assets/mini-player-cover.png"
+              alt="Polygondwanaland album cover"
+            />
           </div>
 
           <div class="pip-content">
             <div class="pip-meta">
-              <div class="pip-title">Lowdown</div>
-              <div class="pip-artist">Boz Scaggs</div>
-              <div class="pip-album">Silk Degrees &middot; 1976</div>
+              <div class="pip-title">The Fourth Colour</div>
+              <div class="pip-artist">King Gizzard &amp; The Lizard Wizard</div>
+              <div class="pip-album">Polygondwanaland &middot; 2017</div>
             </div>
 
             <div class="pip-progress-container">

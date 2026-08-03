@@ -14,7 +14,6 @@ import {
 
 const execFile = promisify(execFileCallback);
 const SCREENSHOT_PATH_ENV = "YTME_WINDOWS_TRAY_SCREENSHOT_PATH";
-const SCREENSHOT_PLAYBACK_URL_ENV = "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL";
 const SIGNED_INSTALLER_PATH_ENV = "YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH";
 const HOLD_RELEASE_PATH_ENV = "YTME_WINDOWS_TRAY_HOLD_RELEASE_PATH";
 const HOLD_TIMEOUT_ENV = "YTME_WINDOWS_TRAY_HOLD_TIMEOUT_SECONDS";
@@ -29,19 +28,6 @@ interface TrayElementSnapshot {
 
 function windowsTraySmokeEnabled(): boolean {
   return process.env.YTME_E2E_WINDOWS_TRAY === "1";
-}
-
-function screenshotPlaybackUrl(): string | null {
-  const value = process.env[SCREENSHOT_PLAYBACK_URL_ENV]?.trim();
-  if (!value) return null;
-
-  const url = new URL(value);
-  if (url.protocol !== "https:" || url.hostname !== "music.youtube.com") {
-    throw new Error(
-      `${SCREENSHOT_PLAYBACK_URL_ENV} must be an https://music.youtube.com URL.`,
-    );
-  }
-  return url.toString();
 }
 
 function signedInstallerPath(): string | null {
@@ -779,6 +765,35 @@ function trayProgressPercent(snapshot: TrayElementSnapshot): number {
   return percent;
 }
 
+async function publishFixturePlaybackState(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const video = document.querySelector<HTMLVideoElement>(
+      "video.html5-main-video",
+    );
+    if (!video) {
+      throw new Error("Playback fixture is missing its media element.");
+    }
+
+    video.dispatchEvent(new Event("timeupdate"));
+  });
+}
+
+function promoResultPath(resultPath: string, label: string): string {
+  return resultPath.replace(/\.json$/i, `-${label}.json`);
+}
+
+async function unregisterYtmServiceWorkers(page: Page): Promise<void> {
+  if (!page.url().startsWith("https://music.youtube.com/")) return;
+
+  await page.evaluate(async () => {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(
+      registrations.map((registration) => registration.unregister()),
+    );
+  });
+  await page.goto("about:blank");
+}
+
 async function holdTrayConnectionIfRequested(): Promise<void> {
   const releasePath = process.env[HOLD_RELEASE_PATH_ENV]?.trim();
   if (!releasePath) return;
@@ -821,54 +836,64 @@ async function captureTrayPromoScreenshot(
   ]);
 }
 
-async function loadLivePlaybackForScreenshot(
-  page: Page,
-  playbackUrl: string,
-): Promise<void> {
-  await page.goto(playbackUrl, {
-    waitUntil: "domcontentloaded",
-    timeout: 120_000,
-  });
-  await page.bringToFront();
-  await page
-    .waitForLoadState("networkidle", { timeout: 30_000 })
-    .catch(() => undefined);
-  await page.waitForFunction(
-    () => {
-      const video = document.querySelector<HTMLVideoElement>(
-        "video.html5-main-video",
-      );
-      const player = document.querySelector<HTMLElement>("#movie_player");
-      return (
-        video !== null &&
-        Number.isFinite(video.duration) &&
-        video.duration >= 60 &&
-        video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
-        !player?.classList.contains("ad-showing")
-      );
-    },
-    undefined,
-    { timeout: 180_000 },
-  );
-  await page.waitForTimeout(3500);
-}
-
-async function captureLiveTrayPromoScreenshot(
+async function captureDeterministicTrayPromoScreenshot(
   playbackPage: Page,
   resultPath: string,
   screenshotPath: string,
   trayLogPath: string,
 ): Promise<void> {
-  const playbackUrl = screenshotPlaybackUrl();
-  if (!playbackUrl) {
-    throw new Error(
-      `Set ${SCREENSHOT_PLAYBACK_URL_ENV} to the approved Creative Commons ` +
-        `YouTube Music track before setting ${SCREENSHOT_PATH_ENV}.`,
-    );
-  }
+  await unregisterYtmServiceWorkers(playbackPage);
+  await loadYtmFixtureThroughExtension(playbackPage, "player-loaded-paused");
+  await expect
+    .poll(
+      async () => {
+        await publishFixturePlaybackState(playbackPage);
+        return readTrayPopupElement(
+          "promo-playback-state",
+          promoResultPath(resultPath, "title"),
+          "A Walk",
+        );
+      },
+      { timeout: 30_000 },
+    )
+    .toMatchObject({ enabled: true, name: "A Walk" });
 
-  await loadLivePlaybackForScreenshot(playbackPage, playbackUrl);
-  await expectTrayLogContains(trayLogPath, "current artwork displayed url=");
+  const album = await readTrayPopupElement(
+    "promo-album",
+    promoResultPath(resultPath, "album"),
+    "Dive",
+  );
+  expect(album).toMatchObject({ enabled: true, name: "Dive" });
+
+  const artistYear = await readTrayPopupElement(
+    "promo-artist-year",
+    promoResultPath(resultPath, "artist-year"),
+    "Tycho - 2011",
+  );
+  expect(artistYear).toMatchObject({ enabled: true, name: "Tycho - 2011" });
+
+  const nextTrack = await readTrayPopupElement(
+    "promo-next-track",
+    promoResultPath(resultPath, "next-track"),
+    "Send And Receive (Chachi Jones Remix)",
+  );
+  expect(nextTrack).toMatchObject({
+    enabled: true,
+    name: "Send And Receive (Chachi Jones Remix)",
+  });
+
+  const promoProgress = await readTrayPopupElement(
+    "promo-progress",
+    promoResultPath(resultPath, "progress"),
+    "Playback progress",
+  );
+  expect(trayProgressPercent(promoProgress)).toBeGreaterThan(52);
+  expect(trayProgressPercent(promoProgress)).toBeLessThan(60);
+
+  await expectTrayLogContains(
+    trayLogPath,
+    "current artwork loaded packaged url=https://ytm-enhancer.local/demo-current-artwork.png",
+  );
   await captureTrayPromoScreenshot(resultPath, screenshotPath);
 }
 
@@ -1200,8 +1225,8 @@ test("routes Windows tray buttons through the browser native messaging host", as
       enabled: true,
       name: "Playback progress",
     });
-    expect(trayProgressPercent(initialProgress)).toBeGreaterThan(25);
-    expect(trayProgressPercent(initialProgress)).toBeLessThan(32);
+    expect(trayProgressPercent(initialProgress)).toBeGreaterThan(52);
+    expect(trayProgressPercent(initialProgress)).toBeLessThan(60);
 
     await clickTrayPopupElement(
       "play",
@@ -1414,7 +1439,7 @@ test("routes Windows tray buttons through the browser native messaging host", as
       .toMatchObject({ enabled: true, name: "Focus YouTube Music" });
 
     if (promoScreenshotPath && testInfo.project.name === "edge") {
-      await captureLiveTrayPromoScreenshot(
+      await captureDeterministicTrayPromoScreenshot(
         ytmPage,
         testInfo.outputPath("tray-screenshot.json"),
         promoScreenshotPath,

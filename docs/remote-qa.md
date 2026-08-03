@@ -1090,16 +1090,14 @@ desktop/overflow/popup screenshots under the Windows user's temp directory,
 verifies long metadata scrolls, and removes the smoke install.
 
 Regenerate the Windows tray release screenshot from the same active Windows
-desktop session. Use the approved Creative Commons YouTube Music track URL so
-the checked-in promo image shows live artwork read through the connector, not
-fixture artwork. On a machine enforcing Smart App Control, first download the
+desktop session. The capture reloads the deterministic connector fixture so the
+checked-in Windows and macOS promo images show the same track metadata and
+artwork. On a machine enforcing Smart App Control, first download the
 Microsoft-signed candidate installer. Store it outside the Windows remote QA
 work root. Then provide that path so the connector smoke does not replace it
 with unsigned source-built binaries:
 
 ```powershell
-$env:YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL = `
-  "https://music.youtube.com/watch?v=<approved-track-id>"
 $env:YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH = `
   "C:\path\to\YTM-Tray-X.Y.Z-Setup.exe"
 pwsh -NoProfile -ExecutionPolicy Bypass -File `
@@ -1109,17 +1107,15 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File `
 Run the same capture through the configured Windows transport:
 
 ```sh
-YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL=\
-"https://music.youtube.com/watch?v=<approved-track-id>" \
 YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH=\
 'C:\path\to\YTM-Tray-X.Y.Z-Setup.exe' \
 scripts/remote/windows-qa/tray-release-screenshot.sh
 ```
 
 This runs the real Windows tray app against the Edge Connected Apps smoke,
-verifies button behavior against the local fixture, switches to the approved
-live YouTube Music track for the screenshot, captures the tray popup after
-artwork has been downloaded by the tray app, and copies the PNG back to
+verifies button behavior, reloads the deterministic playback fixture for the
+screenshot, captures the tray popup after artwork has been downloaded by the
+tray app, and copies the PNG back to
 `apps/windows-tray/release/windows-tray-screenshot.png`. The signed candidate
 mode verifies the installer's Authenticode signature, installs its embedded
 runtime to the smoke's temporary root, and uninstalls it through the installed
@@ -1253,7 +1249,6 @@ The remote QA scripts accept these variables:
 - `REMOTE_QA_WINDOWS_WORK_ROOT`
 - `REMOTE_QA_WINDOWS_SSH_KEY`
 - `YTM_WINDOWS_QA_UI_READY_TIMEOUT_SECONDS`
-- `YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL`
 - `YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH`
 
 Keep real values local. If the remote address changes, update `.remote-qa.env`
