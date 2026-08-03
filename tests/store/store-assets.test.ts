@@ -131,6 +131,9 @@ describe("store assets", () => {
     expect(connectedApps).toContain(
       "grid-template-columns: repeat(3, minmax(0, 1fr));",
     );
+    expect(connectedApps).toMatch(
+      /\.macos \.shot img\s*{\s*width: 380px;\s*max-width: none;/,
+    );
     expect(connectedApps).toContain(
       "Control playback from the macOS menu bar.",
     );
