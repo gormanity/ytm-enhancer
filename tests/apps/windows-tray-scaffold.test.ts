@@ -776,7 +776,7 @@ describe("Windows tray connector scaffold", () => {
     }
   });
 
-  it("captures Windows tray release screenshots from real connector playback", () => {
+  it("captures Windows tray release screenshots from deterministic connector playback", () => {
     const program = read("src/YTMTray/Program.cs");
     const visualSmoke = read("../../scripts/windows-qa/tray-visual-smoke.ps1");
     const buttonSmoke = read("../../tests/e2e/windows-tray-connector.spec.ts");
@@ -836,30 +836,38 @@ describe("Windows tray connector scaffold", () => {
     expect(buttonSmoke).toContain("InvokePattern");
     expect(buttonSmoke).toContain("Send-ElementWindowClick");
     expect(buttonSmoke).toContain("SendMessage");
-    expect(buttonSmoke).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL");
+    expect(buttonSmoke).not.toContain(
+      "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
+    );
     expect(buttonSmoke).not.toContain(
       "const playbackPage = await extension.context.newPage()",
     );
-    expect(buttonSmoke).toContain('classList.contains("ad-showing")');
-    expect(buttonSmoke).toContain("video.duration >= 60");
     expect(buttonSmoke).not.toContain(
       "const restoredPage = await browserContext.newPage()",
     );
-    expect(buttonSmoke).not.toContain(
-      'loadYtmFixtureThroughExtension(restoredPage, "player-loaded-paused")',
+    expect(buttonSmoke).toContain(
+      'loadYtmFixtureThroughExtension(playbackPage, "player-loaded-paused")',
     );
+    expect(buttonSmoke).toContain("unregisterYtmServiceWorkers(playbackPage)");
+    expect(buttonSmoke).toContain("publishFixturePlaybackState(playbackPage)");
+    expect(buttonSmoke).toContain('"Dive"');
+    expect(buttonSmoke).toContain('"Tycho - 2011"');
+    expect(buttonSmoke).toContain('"Send And Receive (Chachi Jones Remix)"');
+    expect(buttonSmoke).toContain("trayProgressPercent(promoProgress)");
     expect(
-      buttonSmoke.indexOf("await captureLiveTrayPromoScreenshot("),
+      buttonSmoke.indexOf("await captureDeterministicTrayPromoScreenshot("),
     ).toBeGreaterThan(
       buttonSmoke.indexOf("await publishPartialPlaybackMetadata"),
     );
     const screenshotCaptureIndex = buttonSmoke.indexOf(
-      "await captureLiveTrayPromoScreenshot(",
+      "await captureDeterministicTrayPromoScreenshot(",
     );
     expect(
       buttonSmoke.indexOf('"quit"', screenshotCaptureIndex),
     ).toBeGreaterThan(screenshotCaptureIndex);
-    expect(buttonSmoke).toContain("current artwork displayed url=");
+    expect(buttonSmoke).toContain(
+      "current artwork loaded packaged url=https://ytm-enhancer.local/demo-current-artwork.png",
+    );
     expect(buttonSmoke).toContain("Save-TrayPopupScreenshot");
     expect(buttonSmoke).toContain("ExpectedAboutText");
     expect(buttonSmoke).toContain(
@@ -889,8 +897,13 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(pausedFixture).toContain("publishMediaUpdate");
     expect(pausedFixture).toContain("setInterval(advanceProgress");
+    expect(pausedFixture).toContain("2:58 / 5:17");
+    expect(pausedFixture).toContain(
+      'max="317" min="0" type="range" value="178"',
+    );
+    expect(pausedFixture).toContain("Send And Receive (Chachi Jones Remix)");
     expect(releaseScreenshot).toContain("YTME_WINDOWS_TRAY_SCREENSHOT_PATH");
-    expect(releaseScreenshot).toContain(
+    expect(releaseScreenshot).not.toContain(
       "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
     );
     expect(releaseScreenshot).toContain(
@@ -898,7 +911,7 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(releaseScreenshot).toContain("[string] $SignedInstallerPath");
     expect(releaseScreenshot).toContain("Get-AuthenticodeSignature");
-    expect(releaseScreenshot).toContain(
+    expect(releaseScreenshot).not.toContain(
       "approved Creative Commons YouTube Music track",
     );
     expect(releaseScreenshot).toContain("Remove-Item Env:YTM_TRAY_VISUAL_DEMO");
@@ -908,14 +921,14 @@ describe("Windows tray connector scaffold", () => {
     );
     expect(releaseScreenshot).toContain("--project=edge");
     expect(remoteReleaseScreenshot).toContain("YTME_SCREENSHOT_BASE64_BEGIN");
-    expect(remoteReleaseScreenshot).toContain(
+    expect(remoteReleaseScreenshot).not.toContain(
       "YTME_WINDOWS_TRAY_SCREENSHOT_PLAYBACK_URL",
     );
     expect(remoteReleaseScreenshot).toContain(
       "YTME_WINDOWS_TRAY_SIGNED_INSTALLER_PATH",
     );
     expect(remoteReleaseScreenshot).toContain("-SignedInstallerPath");
-    expect(remoteReleaseScreenshot).toContain("-PlaybackUrl");
+    expect(remoteReleaseScreenshot).not.toContain("-PlaybackUrl");
     expect(remoteReleaseScreenshot).toContain("YTME_SCREENSHOT_BASE64_CHUNK");
     expect(remoteReleaseScreenshot).toContain("final = block");
     expect(remoteReleaseScreenshot).toContain(

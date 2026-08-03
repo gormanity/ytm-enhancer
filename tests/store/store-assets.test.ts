@@ -191,6 +191,30 @@ describe("store assets", () => {
     expect(smallPromo).not.toContain('class="feature-strip"');
   });
 
+  it("uses locally bundled public-domain album artwork in the Mini Player", () => {
+    const miniPlayer = read("store/screenshots/02-mini-player.html");
+    const notices = read("docs/third-party-notices.md");
+    const coverPath = resolve(
+      process.cwd(),
+      "store/screenshots/assets/mini-player-cover.png",
+    );
+
+    expect(existsSync(coverPath)).toBe(true);
+    expect(miniPlayer).toContain('src="./assets/mini-player-cover.png"');
+    expect(miniPlayer).toContain('class="pip-artwork"');
+    expect(miniPlayer).toContain("object-fit: cover;");
+    expect(miniPlayer).toContain("The Fourth Colour");
+    expect(miniPlayer).toContain("King Gizzard &amp; The Lizard Wizard");
+    expect(miniPlayer).toContain("Polygondwanaland &middot; 2017");
+    expect(miniPlayer).not.toContain("Lowdown");
+    expect(miniPlayer).not.toContain("Boz Scaggs");
+    expect(notices).toContain("Polygondwanaland");
+    expect(notices).toContain("public domain");
+    expect(notices).toContain(
+      "https://commons.wikimedia.org/wiki/File:Polygondwanaland.jpg",
+    );
+  });
+
   it("documents browser-appropriate screenshot order", () => {
     const storeReadme = read("store/README.md");
 
