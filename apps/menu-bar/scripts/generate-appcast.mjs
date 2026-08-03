@@ -11,6 +11,7 @@ import { basename, dirname, resolve } from "node:path";
 import { appRoot, readReleaseMetadata } from "./release-metadata.mjs";
 
 const repoRoot = resolve(appRoot, "../..");
+const GOOGLE_SITE_VERIFICATION_FILE_NAME = "google8052aa7f9d2859e7.html";
 
 function argValue(name, fallback) {
   const prefix = `--${name}=`;
@@ -1026,6 +1027,10 @@ apps/cli/scripts/install-native-hosts.sh</code>
     fileName: "cli-demo-poster.png",
   });
   writeFileSync(resolve(siteRoot, ".nojekyll"), "");
+  writeFileSync(
+    resolve(siteRoot, GOOGLE_SITE_VERIFICATION_FILE_NAME),
+    `google-site-verification: ${GOOGLE_SITE_VERIFICATION_FILE_NAME}`,
+  );
   writeFileSync(resolve(siteRoot, "favicon.svg"), iconSvg);
 
   writeSitePage(

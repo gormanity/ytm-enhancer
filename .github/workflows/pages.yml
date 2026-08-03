@@ -88,6 +88,7 @@ jobs:
       - name: Validate product pages artifact
         run: |
           test -f apps/menu-bar/.build/appcast/.nojekyll
+          test -f apps/menu-bar/.build/appcast/google8052aa7f9d2859e7.html
           test -f apps/menu-bar/.build/appcast/index.html
           test -f apps/menu-bar/.build/appcast/connected-apps/index.html
           test -f apps/menu-bar/.build/appcast/menu-bar/appcast.xml
@@ -95,6 +96,9 @@ jobs:
           test -f apps/menu-bar/.build/appcast/windows-tray/install.html
           test -f apps/menu-bar/.build/appcast/cli/index.html
           test -f apps/menu-bar/.build/appcast/releases.json
+          grep -Fxq \
+            "google-site-verification: google8052aa7f9d2859e7.html" \
+            apps/menu-bar/.build/appcast/google8052aa7f9d2859e7.html
           grep -q "<rss" apps/menu-bar/.build/appcast/menu-bar/appcast.xml
 
       - uses: actions/configure-pages@v6
