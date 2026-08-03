@@ -121,10 +121,12 @@ describe("store assets", () => {
     const connectedApps = read(connectedAppsPath);
 
     expect(existsSync(resolve(process.cwd(), connectedAppsPath))).toBe(true);
-    expect(connectedApps).toContain("Keep YouTube Music controls within reach");
-    expect(connectedApps).toContain("Optional Connected Apps (Beta)");
     expect(connectedApps).toContain(
-      "Install only the controls you want for macOS, Windows, or your terminal.",
+      "Control YouTube Music beyond the browser.",
+    );
+    expect(connectedApps).toContain("Optional Connected Apps (Beta)");
+    expect(connectedApps).toMatch(
+      /Use playback controls from the macOS menu bar,\s+Windows system tray, or\s+your terminal\./,
     );
     expect(connectedApps).toContain(
       "grid-template-columns: repeat(3, minmax(0, 1fr));",
