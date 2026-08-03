@@ -2134,6 +2134,12 @@ describe("menu bar connector app scaffold", () => {
       "",
     );
     expect(
+      readFileSync(
+        resolve(outputRoot, "site/google8052aa7f9d2859e7.html"),
+        "utf-8",
+      ),
+    ).toBe("google-site-verification: google8052aa7f9d2859e7.html");
+    expect(
       readFileSync(resolve(outputRoot, "site/releases.json"), "utf-8"),
     ).toContain('"connectedApps"');
   });

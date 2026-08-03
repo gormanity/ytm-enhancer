@@ -171,6 +171,9 @@ describe("GitHub Actions workflow linting", () => {
     expect(workflow).toContain(
       "apps/menu-bar/.build/appcast/menu-bar/appcast.xml",
     );
+    expect(workflow).toContain(
+      "apps/menu-bar/.build/appcast/google8052aa7f9d2859e7.html",
+    );
     expect(workflow).toContain("actions/configure-pages@v6");
     expect(workflow).toContain("actions/upload-pages-artifact@v5");
     expect(workflow).toContain("include-hidden-files: true");
