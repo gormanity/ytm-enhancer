@@ -378,6 +378,47 @@ if ($modulePaths -notcontains $nativeModulePath) {
     );
   });
 
+  it("executes the OpenSSH audit without remediation commands", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
+
+    const auditPath = resolve(
+      process.cwd(),
+      "scripts/windows-qa/audit-openssh.ps1",
+    ).replaceAll("'", "''");
+    const fixture = `
+$ErrorActionPreference = "Stop"
+$env:ProgramData = Join-Path ([IO.Path]::GetTempPath()) (
+  "ytme-openssh-audit-" + [guid]::NewGuid().ToString("N")
+)
+function Get-NetFirewallRule {
+  [CmdletBinding()]
+  param(
+    [Parameter(ValueFromPipeline = $true)] $InputObject,
+    [string] $PolicyStore
+  )
+  process { return @() }
+}
+function Get-NetFirewallPortFilter {
+  [CmdletBinding()]
+  param([string] $PolicyStore)
+  return @()
+}
+
+. '${auditPath}'
+`;
+    const result = runWindowsPowerShell(fixture);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout.trim())).toEqual({
+      ok: true,
+      mode: "audit",
+      configHardened: false,
+      restrictedFirewall: false,
+      broadFirewallRuleCount: 0,
+      genericFirewallBlockerCount: 0,
+    });
+  });
+
   it("fails closed around existing OpenSSH firewall filter errors", (t) => {
     t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
@@ -584,7 +625,10 @@ if (Test-UnsafeFirewallRemoteAddress "LocalSubnet") {
     );
 
     expect(harden).toContain(
-      '[ValidateSet("Audit", "Prepare", "Apply", "Verify", "Rollback")]',
+      '[ValidateSet("Prepare", "Apply", "Verify", "Rollback")]',
+    );
+    expect(harden).toMatch(
+      /\[Parameter\(Mandatory = \$true\)\]\s*\[ValidateSet/u,
     );
     expect(harden).toContain("AuthenticationMethods publickey");
     expect(harden).toContain("PasswordAuthentication no");
@@ -859,7 +903,9 @@ if (Test-UnsafeFirewallRemoteAddress "LocalSubnet") {
     expect(verify).toContain("Disable-PreviousFirewallRules");
     expect(verify).toContain("FinalizeFirewall cannot be combined with Commit");
     expect(verify).toContain("Get-EnabledBroadSshFirewallRuleCount");
-    expect(harden).toContain("genericFirewallBlockerCount");
+    expect(read("scripts/windows-qa/openssh-audit-core.ps1")).toContain(
+      "genericFirewallBlockerCount",
+    );
     expect(verify).toContain("The firewall has already been finalized");
     expect(verify).toContain("The hardening transaction is already committed");
     expect(verify.indexOf("Enter-StateLock")).toBeLessThan(

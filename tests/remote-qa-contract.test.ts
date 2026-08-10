@@ -40,6 +40,17 @@ function listRemoteShellScripts(directory: string): string[] {
   });
 }
 
+function readPowerShellFunctions(source: string): Map<string, string> {
+  const definitions = [...source.matchAll(/^function ([A-Za-z0-9-]+) \{/gmu)];
+  return new Map(
+    definitions.map((definition, index) => {
+      const start = definition.index;
+      const end = definitions[index + 1]?.index ?? source.length;
+      return [definition[1], source.slice(start, end).trim()];
+    }),
+  );
+}
+
 describe("remote QA verification contracts", () => {
   it("declares unavailable platform checks as skipped", () => {
     for (const path of [
@@ -228,6 +239,15 @@ describe("remote QA verification contracts", () => {
     for (const source of [audit, auditCore]) {
       expect(source).not.toMatch(mutationCommand);
       expect(source).not.toMatch(mutationFileApi);
+    }
+
+    const remediationFunctions = readPowerShellFunctions(remediation);
+    for (const [name, source] of readPowerShellFunctions(auditCore)) {
+      if (name !== "Invoke-OpenSshAudit") {
+        expect(source, `${name} must stay aligned`).toBe(
+          remediationFunctions.get(name),
+        );
+      }
     }
   });
 });

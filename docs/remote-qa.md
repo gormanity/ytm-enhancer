@@ -541,12 +541,18 @@ The helper automatically disables only generic exact TCP/22 rules or rules
 scoped to `sshd`. It refuses generic `Any` or ranged-port rules with no program,
 service, or package scope, and never disables unrelated application rules.
 
-Run `Audit` first from the local elevated recovery console:
+Run the independent read-only audit first. It accepts no remediation mode or
+mutation parameters, so it cannot prepare, apply, verify, or roll back a
+hardening transaction:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
-  scripts/windows-qa/harden-openssh.ps1 -Mode Audit
+  scripts/windows-qa/audit-openssh.ps1
 ```
+
+The separate `harden-openssh.ps1` remediation command requires an explicit
+`Prepare`, `Apply`, `Verify`, or `Rollback` mode. Run remediation only from the
+local elevated recovery console described below.
 
 Keep the private key on the SSH client. Copy only its public `.pub` file to a
 temporary local path on Windows, then prepare a transaction with placeholders

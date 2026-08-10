@@ -1,6 +1,7 @@
 param(
-  [ValidateSet("Audit", "Prepare", "Apply", "Verify", "Rollback")]
-  [string] $Mode = "Audit",
+  [Parameter(Mandatory = $true)]
+  [ValidateSet("Prepare", "Apply", "Verify", "Rollback")]
+  [string] $Mode,
   [string] $QaUser = "",
   [string] $PublicKeyPath = "",
   [string] $SshGroup = "YTMEnhancerQaSsh",
@@ -3266,53 +3267,6 @@ function Write-SafeResult {
   [pscustomobject]$Result | ConvertTo-Json -Depth 4
 }
 
-function Invoke-Audit {
-  $ConfigHardened = $false
-  if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
-    $ConfigText = [IO.File]::ReadAllText($ConfigPath)
-    $ConfigHardened = (
-      $ConfigText.Contains($ManagedBlockStart) -and
-      $ConfigText.Contains("AuthenticationMethods publickey") -and
-      $ConfigText.Contains("PasswordAuthentication no") -and
-      $ConfigText.Contains("DisableForwarding yes")
-    )
-  }
-
-  $RestrictedRules = @(
-    Get-ActiveFirewallRulesByName $RestrictedFirewallRuleName
-  )
-  if ($RestrictedRules.Count -gt 1) {
-    throw "The managed firewall rule identity is ambiguous."
-  }
-  $RestrictedRule = if ($RestrictedRules.Count -eq 1) {
-    $RestrictedRules[0]
-  } else {
-    $null
-  }
-  $RestrictedAddresses = if ($null -ne $RestrictedRule) {
-    Get-RuleRemoteAddresses $RestrictedRule
-  } else {
-    @()
-  }
-  $RestrictedFirewall = (
-    $null -ne $RestrictedRule -and
-    (
-      Test-ManagedFirewallRule `
-        -Rule $RestrictedRule `
-        -ExpectedAddresses $RestrictedAddresses
-    )
-  )
-  $BroadRuleCount = Get-EnabledBroadSshFirewallRuleCount
-  $GenericFirewallBlockerCount = Get-EnabledGenericSshCoveringRuleCount
-
-  Write-SafeResult "Audit" @{
-    configHardened = $ConfigHardened
-    restrictedFirewall = $RestrictedFirewall
-    broadFirewallRuleCount = $BroadRuleCount
-    genericFirewallBlockerCount = $GenericFirewallBlockerCount
-  }
-}
-
 function Invoke-Prepare {
   Assert-IsAdministrator
   Assert-LocalRecoveryConsole
@@ -3895,9 +3849,6 @@ function Invoke-Rollback {
 }
 
 switch ($Mode) {
-  "Audit" {
-    Invoke-Audit
-  }
   "Prepare" {
     Invoke-Prepare
   }
