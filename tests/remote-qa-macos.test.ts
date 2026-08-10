@@ -55,10 +55,8 @@ describe("macOS remote QA scaffold", () => {
     );
   });
 
-  it("redacts configured target values from Crabbox output", () => {
-    if (process.platform === "win32") {
-      return;
-    }
+  it("redacts configured target values from Crabbox output", (t) => {
+    t.skip(process.platform === "win32", "Requires a POSIX shell.");
 
     const fixtureRoot = mkdtempSync(join(tmpdir(), "ytme-crabbox-redaction-"));
     const fakeBin = join(fixtureRoot, "bin");

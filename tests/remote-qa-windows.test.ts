@@ -42,10 +42,8 @@ function runWindowsPowerShell(script: string) {
 }
 
 describe("Windows remote QA scaffold", () => {
-  it("hashes files without Get-FileHash on Windows PowerShell 5.1", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("hashes files without Get-FileHash on Windows PowerShell 5.1", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -87,10 +85,8 @@ try {
     expect(result.status, result.stderr).toBe(0);
   }, 15_000);
 
-  it("normalizes native Windows PowerShell module paths for Node fixtures", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("normalizes native Windows PowerShell module paths for Node fixtures", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const modulePathEntries = Object.entries(process.env).filter(
       ([key]) => key.toLowerCase() === "psmodulepath",
@@ -439,10 +435,8 @@ if ($modulePaths -notcontains $nativeModulePath) {
     );
   });
 
-  it("fails closed around existing OpenSSH firewall filter errors", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("fails closed around existing OpenSSH firewall filter errors", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const repairPath = resolve(
       process.cwd(),
@@ -951,7 +945,7 @@ if (Test-UnsafeFirewallRemoteAddress "LocalSubnet") {
     expect(docs).toContain("never disables unrelated application rules");
   });
 
-  it("rejects blank Windows firewall remote addresses", () => {
+  it("guards against blank Windows firewall remote addresses", () => {
     const harden = read("scripts/windows-qa/harden-openssh.ps1");
     const assertion = harden.slice(
       harden.indexOf("function Assert-RemoteAddress"),
@@ -959,10 +953,10 @@ if (Test-UnsafeFirewallRemoteAddress "LocalSubnet") {
     );
 
     expect(assertion).toContain("[string]::IsNullOrWhiteSpace($Address)");
+  });
 
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("rejects blank Windows firewall remote addresses", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -1002,10 +996,8 @@ Assert-RemoteAddress -Addresses @("LocalSubnet")
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("fails closed when the managed Windows firewall lookup errors", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("fails closed when the managed Windows firewall lookup errors", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -1065,10 +1057,8 @@ if (-not $restoreFailed) {
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("fails closed when Windows firewall inventory filters error", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("fails closed when Windows firewall inventory filters error", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -1275,10 +1265,8 @@ if (-not $duplicateIdentityRejected) {
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("verifies the complete automatic rollback task registration", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("verifies the complete automatic rollback task registration", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -1395,10 +1383,8 @@ Assert-FixtureTaskRejected "A rollback task with a changed start time"
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("fails closed when Windows account state cannot be verified", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("fails closed when Windows account state cannot be verified", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -1571,10 +1557,8 @@ Assert-LoggedOffCheckFails
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("rejects untrusted preexisting OpenSSH hardening state roots", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("rejects untrusted preexisting OpenSSH hardening state roots", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -1657,10 +1641,8 @@ try {
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("detects same-identity Windows firewall constraint drift", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("detects same-identity Windows firewall constraint drift", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -1800,10 +1782,8 @@ if (Test-FirewallRuleMatchesSnapshot $rule $snapshot @("True")) {
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("restores only Windows firewall rules changed by the transaction", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("restores only Windows firewall rules changed by the transaction", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -1931,10 +1911,8 @@ if (
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("keeps the live sshd config intact when rollback staging fails", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("keeps the live sshd config intact when rollback staging fails", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -2002,10 +1980,8 @@ try {
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("restores exact administrator key restrictions during rollback", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("restores exact administrator key restrictions during rollback", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -2116,10 +2092,8 @@ try {
     expect(result.status, result.stderr).toBe(0);
   });
 
-  it("atomically updates state and sshd configuration on PowerShell 5.1", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("atomically updates state and sshd configuration on PowerShell 5.1", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const hardenPath = resolve(
       process.cwd(),
@@ -2505,10 +2479,8 @@ try {
     expect(gitignore).toContain("authorized_keys");
   });
 
-  it("rejects unsafe local SFTP paths before opening SSH", () => {
-    if (process.platform === "win32") {
-      return;
-    }
+  it("rejects unsafe local SFTP paths before opening SSH", (t) => {
+    t.skip(process.platform === "win32", "Requires a POSIX shell.");
 
     const fixtureRoot = mkdtempSync(join(tmpdir(), "ytme-sftp-path-"));
     const unsafeTmp = join(fixtureRoot, 'unsafe"tmp');
@@ -2559,10 +2531,8 @@ try {
     }
   });
 
-  it("cleans private transport files when SFTP fails", () => {
-    if (process.platform === "win32") {
-      return;
-    }
+  it("cleans private transport files when SFTP fails", (t) => {
+    t.skip(process.platform === "win32", "Requires a POSIX shell.");
 
     const fixtureRoot = mkdtempSync(join(tmpdir(), "ytme-sftp-failure-"));
     const qaTmp = join(fixtureRoot, "tmp");
@@ -2623,10 +2593,8 @@ try {
     }
   }, 15_000);
 
-  it("redacts direct Windows command output before replaying it", () => {
-    if (process.platform === "win32") {
-      return;
-    }
+  it("redacts direct Windows command output before replaying it", (t) => {
+    t.skip(process.platform === "win32", "Requires a POSIX shell.");
 
     const fixtureRoot = mkdtempSync(join(tmpdir(), "ytme-direct-output-"));
     const qaTmp = join(fixtureRoot, "tmp");
@@ -2721,10 +2689,8 @@ try {
     }
   }, 15_000);
 
-  it("cleans private transport files when SFTP is interrupted", () => {
-    if (process.platform === "win32") {
-      return;
-    }
+  it("cleans private transport files when SFTP is interrupted", (t) => {
+    t.skip(process.platform === "win32", "Requires a POSIX shell.");
 
     const fixtureRoot = mkdtempSync(join(tmpdir(), "ytme-sftp-signal-"));
     const qaTmp = join(fixtureRoot, "tmp");
@@ -2788,10 +2754,8 @@ try {
     }
   }, 15_000);
 
-  it("syncs safely around unrelated Windows junctions", () => {
-    if (process.platform !== "win32") {
-      return;
-    }
+  it("syncs safely around unrelated Windows junctions", (t) => {
+    t.skip(process.platform !== "win32", "Requires Windows PowerShell.");
 
     const syncSourcePath = resolve(
       process.cwd(),
@@ -3144,10 +3108,8 @@ try {
     }
   });
 
-  it("creates metadata-normalized regular-only remote QA archives", () => {
-    if (process.platform === "win32") {
-      return;
-    }
+  it("creates metadata-normalized regular-only remote QA archives", (t) => {
+    t.skip(process.platform === "win32", "Requires a POSIX shell.");
 
     const creator = resolve(
       process.cwd(),

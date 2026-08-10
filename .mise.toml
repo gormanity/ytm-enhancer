@@ -42,3 +42,23 @@ run = "pnpm run windows-tray:build"
 [tasks.windows-tray-test]
 description = "Run Windows tray unit tests."
 run = "pnpm run windows-tray:test"
+
+[tasks.qa]
+description = "Run a named remote QA suite. Pass -- <platform> <suite>."
+run = "scripts/remote/qa.sh"
+
+[tasks.qa-list]
+description = "List remote QA suites and their verification contracts."
+run = "scripts/remote/qa.sh --list"
+
+[tasks.qa-macos-check]
+description = "Run CI-equivalent checks on the remote macOS host."
+run = "scripts/remote/qa.sh macos check"
+
+[tasks.qa-linux-check]
+description = "Run CI-equivalent checks on the remote Linux target."
+run = "scripts/remote/qa.sh linux check"
+
+[tasks.qa-windows-check]
+description = "Run Windows-native checks on the remote Windows host."
+run = "scripts/remote/qa.sh windows check"

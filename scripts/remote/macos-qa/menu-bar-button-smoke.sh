@@ -3,7 +3,7 @@ set -eu
 
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 project="${REMOTE_QA_MENU_BAR_E2E_PROJECT:-chromium}"
-require_buttons="${REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS:-0}"
+require_buttons="${REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS:-1}"
 
 case "$project" in
   chromium | edge | firefox) ;;

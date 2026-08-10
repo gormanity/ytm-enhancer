@@ -145,7 +145,9 @@ scripts/remote/macos-qa/menu-bar-button-smoke.sh
 ```
 
 The remote wrapper only syncs the checkout to the configured remote macOS host
-and runs the local smoke script there. Keep machine-specific endpoint details in
+and runs the local smoke script there. It requires actual menu bar button
+automation by default, so a lost Accessibility grant fails remote QA instead of
+silently reducing its coverage. Keep machine-specific endpoint details in
 ignored environment configuration.
 
 Require the actual menu bar button clicks to run:
@@ -158,10 +160,12 @@ YTME_MENU_BAR_REQUIRE_BUTTONS=1 \
 Use that strict mode for manual QA after granting Accessibility/Automation to
 the GUI-launched shell or automation app.
 
-The Crabbox wrapper accepts the equivalent remote variable:
+The Crabbox wrapper is strict by default. Set its equivalent remote variable to
+`0` only when intentionally diagnosing the native messaging connection without
+button automation:
 
 ```sh
-REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS=1 \
+REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS=0 \
   scripts/remote/macos-qa/menu-bar-button-smoke.sh
 ```
 
