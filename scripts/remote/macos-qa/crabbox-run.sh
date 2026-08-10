@@ -50,6 +50,8 @@ fi
 temp_dir=""
 stdout_file=""
 stderr_file=""
+redacted_stdout_file=""
+redacted_stderr_file=""
 
 cleanup() {
   if [ -n "$stdout_file" ]; then
@@ -57,6 +59,12 @@ cleanup() {
   fi
   if [ -n "$stderr_file" ]; then
     rm -f -- "$stderr_file" || :
+  fi
+  if [ -n "$redacted_stdout_file" ]; then
+    rm -f -- "$redacted_stdout_file" || :
+  fi
+  if [ -n "$redacted_stderr_file" ]; then
+    rm -f -- "$redacted_stderr_file" || :
   fi
   if [ -n "$temp_dir" ]; then
     rmdir -- "$temp_dir" 2>/dev/null || :
@@ -80,8 +88,12 @@ umask 077
 temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/ytme-crabbox-output.XXXXXX")"
 stdout_file="$temp_dir/stdout"
 stderr_file="$temp_dir/stderr"
+redacted_stdout_file="$temp_dir/stdout.redacted"
+redacted_stderr_file="$temp_dir/stderr.redacted"
 : >"$stdout_file"
 : >"$stderr_file"
+: >"$redacted_stdout_file"
+: >"$redacted_stderr_file"
 umask "$previous_umask"
 
 if CRABBOX_SSH_KEY="$ssh_key" crabbox run \
@@ -97,30 +109,31 @@ else
   crabbox_status=$?
 fi
 
-if ! YTME_REDACT_REMOTE_HOST="$host" \
-  YTME_REDACT_REMOTE_USER="$user" \
-  YTME_REDACT_REMOTE_WORK_ROOT="$work_root" \
-  YTME_REDACT_REMOTE_SSH_KEY="$ssh_key" \
-  YTME_REDACT_WINDOWS_REMOTE_HOST="${REMOTE_QA_WINDOWS_HOST:-}" \
-  YTME_REDACT_WINDOWS_REMOTE_USER="${REMOTE_QA_WINDOWS_USER:-}" \
-  YTME_REDACT_WINDOWS_REMOTE_WORK_ROOT="${REMOTE_QA_WINDOWS_WORK_ROOT:-}" \
-  YTME_REDACT_WINDOWS_REMOTE_SSH_KEY="${REMOTE_QA_WINDOWS_SSH_KEY:-}" \
-  node "$redactor" "$stdout_file"; then
+redact_output() {
+  YTME_REDACT_REMOTE_HOST="$host" \
+    YTME_REDACT_REMOTE_USER="$user" \
+    YTME_REDACT_REMOTE_WORK_ROOT="$work_root" \
+    YTME_REDACT_REMOTE_SSH_KEY="$ssh_key" \
+    YTME_REDACT_WINDOWS_REMOTE_HOST="${REMOTE_QA_WINDOWS_HOST:-}" \
+    YTME_REDACT_WINDOWS_REMOTE_USER="${REMOTE_QA_WINDOWS_USER:-}" \
+    YTME_REDACT_WINDOWS_REMOTE_WORK_ROOT="${REMOTE_QA_WINDOWS_WORK_ROOT:-}" \
+    YTME_REDACT_WINDOWS_REMOTE_SSH_KEY="${REMOTE_QA_WINDOWS_SSH_KEY:-}" \
+    node "$redactor" "$1"
+}
+
+redaction_status=0
+if ! redact_output "$stdout_file" >"$redacted_stdout_file"; then
+  redaction_status=1
+fi
+if ! redact_output "$stderr_file" >"$redacted_stderr_file"; then
+  redaction_status=1
+fi
+if [ "$redaction_status" -ne 0 ]; then
   echo "Remote QA output could not be rendered safely." >&2
   exit 1
 fi
 
-if ! YTME_REDACT_REMOTE_HOST="$host" \
-  YTME_REDACT_REMOTE_USER="$user" \
-  YTME_REDACT_REMOTE_WORK_ROOT="$work_root" \
-  YTME_REDACT_REMOTE_SSH_KEY="$ssh_key" \
-  YTME_REDACT_WINDOWS_REMOTE_HOST="${REMOTE_QA_WINDOWS_HOST:-}" \
-  YTME_REDACT_WINDOWS_REMOTE_USER="${REMOTE_QA_WINDOWS_USER:-}" \
-  YTME_REDACT_WINDOWS_REMOTE_WORK_ROOT="${REMOTE_QA_WINDOWS_WORK_ROOT:-}" \
-  YTME_REDACT_WINDOWS_REMOTE_SSH_KEY="${REMOTE_QA_WINDOWS_SSH_KEY:-}" \
-  node "$redactor" "$stderr_file" >&2; then
-  echo "Remote QA output could not be rendered safely." >&2
-  exit 1
-fi
+cat "$redacted_stdout_file"
+cat "$redacted_stderr_file" >&2
 
 exit "$crabbox_status"

@@ -89,7 +89,11 @@ Crabbox static SSH does not automatically inherit the `IdentityFile` from an
 OpenSSH host alias. Provide the private key through `.remote-qa.env`,
 `REMOTE_QA_SSH_KEY`, or `CRABBOX_SSH_KEY`. The wrapper captures command output
 privately and replaces configured macOS and nested Windows host, user,
-work-root, and key-path values before replaying it.
+work-root, and key-path values before replaying it. Each configured redaction
+value must contain at least four characters; use a longer SSH alias or account
+label when necessary. The renderer accepts UTF-8 and UTF-16 output, redacts a
+DNS host's short name, and fails closed with only byte-count diagnostics when
+output is not valid supported text.
 
 Run a minimal smoke:
 
