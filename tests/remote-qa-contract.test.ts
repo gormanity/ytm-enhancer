@@ -1,9 +1,11 @@
 import {
   chmodSync,
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -24,6 +26,18 @@ function writeExecutable(path: string, contents: string): void {
 
 function platformReturnPattern(): RegExp {
   return /if \(process\.platform (?:===|!==) "win32"\) \{\s+return;\s+\}/u;
+}
+
+function listRemoteShellScripts(directory: string): string[] {
+  return readdirSync(resolve(process.cwd(), directory), {
+    withFileTypes: true,
+  }).flatMap((entry) => {
+    const repositoryPath = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) {
+      return listRemoteShellScripts(repositoryPath);
+    }
+    return repositoryPath.endsWith(".sh") ? [repositoryPath] : [];
+  });
 }
 
 describe("remote QA verification contracts", () => {
@@ -159,5 +173,22 @@ describe("remote QA verification contracts", () => {
     expect(mise).toContain("[tasks.qa-windows-check]");
     expect(dispatcher).toContain('case "$platform/$suite" in');
     expect(dispatcher).toContain("Usage:");
+  });
+
+  it("keeps the documented remote QA script inventory bidirectional", () => {
+    const docs = read("docs/remote-qa.md");
+    const documentedScripts = new Set(
+      docs.match(/scripts\/remote\/[A-Za-z0-9_./-]+\.sh/gu) ?? [],
+    );
+    const actualScripts = listRemoteShellScripts("scripts/remote").sort();
+
+    expect(
+      [...documentedScripts]
+        .filter((path) => !existsSync(resolve(process.cwd(), path)))
+        .sort(),
+    ).toEqual([]);
+    expect(
+      actualScripts.filter((path) => !documentedScripts.has(path)),
+    ).toEqual([]);
   });
 });
