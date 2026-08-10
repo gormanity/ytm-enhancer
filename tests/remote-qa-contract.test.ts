@@ -191,4 +191,43 @@ describe("remote QA verification contracts", () => {
       actualScripts.filter((path) => !documentedScripts.has(path)),
     ).toEqual([]);
   });
+
+  it("separates read-only OpenSSH audit from explicit remediation", () => {
+    const auditPath = "scripts/windows-qa/audit-openssh.ps1";
+    const auditCorePath = "scripts/windows-qa/openssh-audit-core.ps1";
+    const remediationPath = "scripts/windows-qa/harden-openssh.ps1";
+
+    expect(existsSync(resolve(process.cwd(), auditPath))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), auditCorePath))).toBe(true);
+
+    const remediation = read(remediationPath);
+    expect(remediation).toContain(
+      '[ValidateSet("Prepare", "Apply", "Verify", "Rollback")]',
+    );
+    expect(remediation).toMatch(
+      /\[Parameter\(Mandatory = \$true\)\]\s*\[ValidateSet/u,
+    );
+    expect(remediation).not.toContain('"Audit"');
+
+    if (
+      !existsSync(resolve(process.cwd(), auditPath)) ||
+      !existsSync(resolve(process.cwd(), auditCorePath))
+    ) {
+      return;
+    }
+
+    const audit = read(auditPath);
+    const auditCore = read(auditCorePath);
+    const mutationCommand =
+      /\b(?:Add-Content|Add-LocalGroupMember|Copy-Item|Disable-LocalUser|Disable-NetFirewallRule|Enable-LocalUser|Enable-NetFirewallRule|Move-Item|New-Item|New-LocalGroup|New-NetFirewallRule|Register-ScheduledTask|Remove-Item|Remove-LocalGroupMember|Remove-NetFirewallRule|Restart-Service|Set-Acl|Set-Content|Set-NetFirewallRule|Unregister-ScheduledTask)\b/u;
+    const mutationFileApi =
+      /\[IO\.File\]::(?:Move|Replace|WriteAllBytes|WriteAllLines|WriteAllText)/u;
+
+    expect(audit).toContain("openssh-audit-core.ps1");
+    expect(audit).toContain("Invoke-OpenSshAudit");
+    for (const source of [audit, auditCore]) {
+      expect(source).not.toMatch(mutationCommand);
+      expect(source).not.toMatch(mutationFileApi);
+    }
+  });
 });
