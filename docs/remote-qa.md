@@ -33,6 +33,30 @@ Dedicated remote macOS hosts, UTM, macOS Accessibility automation, and Windows
 UI Automation remain local-development QA paths. Keep menu bar button smoke,
 Windows tray visual smoke, and Windows tray button smoke out of hosted PR CI.
 
+## QA Dispatcher
+
+Use `scripts/remote/qa.sh` as the index for remote QA entry points. It prints
+the contract a successful suite verified and preserves the suite's exit status:
+
+```sh
+mise run qa-list
+mise run qa -- macos check
+mise run qa -- linux cli-connector
+mise run qa -- windows tray-buttons
+```
+
+The common platform checks also have short task names:
+
+```sh
+mise run qa-macos-check
+mise run qa-linux-check
+mise run qa-windows-check
+```
+
+The dispatcher prints `QA START`, followed by either `QA VERIFIED` with the
+verified contract or `QA FAILED` with the original nonzero exit status. The
+sections below document configuration and operational details for each suite.
+
 ## Local Configuration
 
 Create `.remote-qa.env` in the repository root:
@@ -293,10 +317,10 @@ REMOTE_QA_LINUX_CLI_CONNECTOR_PROJECTS=firefox \
   scripts/remote/linux-qa/cli-connector-smoke.sh
 ```
 
-The Linux VM image is intentionally minimal. The Linux scripts bootstrap Node,
-pnpm, and Go inside the VM as needed. This keeps the remote macOS account clean,
-but the first run is slower because it downloads toolchains and browser
-dependencies.
+The Linux VM image is intentionally minimal. The Linux runners use
+`scripts/remote/linux-qa/bootstrap-toolchain.sh` to bootstrap Node, pnpm, and Go
+inside the VM as needed. This keeps the remote macOS account clean, but the
+first run is slower because it downloads toolchains and browser dependencies.
 
 The default Linux provider is Crabbox `apple-vz`. Override it only from local
 environment if another provider is more appropriate:

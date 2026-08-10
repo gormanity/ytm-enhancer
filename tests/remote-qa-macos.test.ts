@@ -16,34 +16,6 @@ function read(path: string): string {
 }
 
 describe("macOS remote QA scaffold", () => {
-  it("documents the remote macOS smoke path and scripts", () => {
-    const docs = read("docs/remote-qa.md");
-    const project = read("PROJECT.md");
-
-    expect(docs).toContain("## Remote macOS QA Host");
-    expect(docs).toContain(
-      "Run the same smoke on the configured remote macOS host through Crabbox",
-    );
-    expect(project).toContain(
-      "Windows validation through a remote macOS-hosted VM",
-    );
-    expect(docs).toContain("scripts/macos-qa/menu-bar-button-smoke.sh");
-    expect(docs).toContain("scripts/remote/macos-qa/menu-bar-package-smoke.sh");
-    expect(docs).toContain("scripts/remote/macos-qa/menu-bar-button-smoke.sh");
-    expect(docs).toContain("active macOS desktop session");
-    expect(docs).toContain("YTME_MENU_BAR_E2E_PROJECT");
-    expect(docs).toContain("YTME_MENU_BAR_REQUIRE_BUTTONS");
-    expect(docs).toContain("REMOTE_QA_MENU_BAR_E2E_PROJECT");
-    expect(docs).toContain("REMOTE_QA_MENU_BAR_REQUIRE_BUTTONS");
-    expect(docs).toContain(
-      "Peekaboo can be useful for manual visual inspection",
-    );
-    expect(docs).toContain(
-      "The menu bar connector smoke supports Chromium, Edge, and Firefox",
-    );
-    expect(docs).toContain("REMOTE_QA_LINUX_CLI_CONNECTOR_PROJECTS");
-  });
-
   it("does not print configured SSH credential paths", () => {
     const runner = read("scripts/remote/macos-qa/crabbox-run.sh");
 

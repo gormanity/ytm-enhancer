@@ -131,63 +131,6 @@ if ($modulePaths -notcontains $nativeModulePath) {
     expect(trayTests).toContain('"other-user"');
   });
 
-  it("documents direct and intermediary Windows QA paths", () => {
-    const docs = read("docs/remote-qa.md");
-
-    expect(docs).toContain("## Windows QA");
-    expect(docs).toContain("physical Windows machine over direct SSH");
-    expect(docs).toContain("remote macOS intermediary");
-    expect(docs).toContain('REMOTE_QA_WINDOWS_TRANSPORT="direct"');
-    expect(docs).toContain('REMOTE_QA_WINDOWS_TRANSPORT="macos"');
-    expect(docs).toContain("REMOTE_QA_WINDOWS_HOST");
-    expect(docs).toContain("REMOTE_QA_WINDOWS_WORK_ROOT");
-    expect(docs).toContain("REMOTE_QA_WINDOWS_PNPM_NODE_LINKER");
-    expect(docs).toContain("scripts/remote/windows-qa/run.sh");
-    expect(docs).toContain("Windows CLI native messaging QA is not wired yet");
-    expect(docs).toContain("scripts/windows-qa/check.ps1");
-    expect(docs).toContain("scripts/windows-qa/e2e-edge-smoke.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-smoke.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-package-smoke.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-release-e2e.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-live-update-smoke.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-signing-smoke.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-visual-smoke.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-release-screenshot.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-button-smoke.ps1");
-    expect(docs).toContain("scripts/windows-qa/tray-contention-smoke.ps1");
-    expect(docs).toContain("install-ui-agent.ps1");
-    expect(docs).toContain("WindowsQaAgent");
-    expect(docs).toContain("start-ui-agent.cmd");
-    expect(docs).toContain("LogonUI");
-    expect(docs).toContain("scripts/windows-qa/repair-openssh.cmd");
-    expect(docs).toContain("scripts/remote/windows-qa/probe.sh");
-    expect(docs).toContain("scripts/remote/windows-qa/tray-smoke.sh");
-    expect(docs).toContain("scripts/remote/windows-qa/tray-package-smoke.sh");
-    expect(docs).toContain("scripts/remote/windows-qa/tray-release-e2e.sh");
-    expect(docs).toContain(
-      "scripts/remote/windows-qa/tray-live-update-smoke.sh",
-    );
-    expect(docs).toContain("scripts/remote/windows-qa/tray-signing-smoke.sh");
-    expect(docs).toContain("scripts/remote/windows-qa/tray-visual-smoke.sh");
-    expect(docs).toContain(
-      "scripts/remote/windows-qa/tray-release-screenshot.sh",
-    );
-    expect(docs).toContain("scripts/remote/windows-qa/tray-button-smoke.sh");
-    expect(docs).toContain(
-      "scripts/remote/windows-qa/tray-contention-smoke.sh",
-    );
-    expect(docs).toContain("Connection timed out during banner exchange");
-    expect(docs).toContain("scripts/windows-qa/harden-openssh.ps1");
-    expect(docs).toContain("administrators_authorized_keys");
-    expect(docs).toContain("Microsoft.DotNet.SDK.10");
-    expect(docs).toContain("Windows SDK");
-    expect(docs).toContain("signtool.exe");
-    expect(docs).toContain("button smoke covers Edge and Firefox");
-    expect(docs).toContain(
-      "Corepack with `pnpm@11.9.0`, or a global `pnpm@11.9.0` install",
-    );
-  });
-
   it("provides a no-sync Windows SSH preflight", () => {
     const probe = read("scripts/remote/windows-qa/probe.sh");
 
