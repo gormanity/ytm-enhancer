@@ -16,7 +16,7 @@ cask "ytm-menu-bar" do
 
   pkg "YTM-Menu-Bar-Homebrew-#{version}.pkg"
 
-  uninstall quit: "com.gormanity.ytm-enhancer.menu-bar",
+  uninstall quit:    "com.gormanity.ytm-enhancer.menu-bar",
             pkgutil: [
               "com.gormanity.ytm-enhancer.menu-bar.app",
               "com.gormanity.ytm-enhancer.menu-bar.native-hosts",

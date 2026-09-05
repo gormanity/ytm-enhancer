@@ -17,8 +17,9 @@ function sha256(path) {
 }
 
 function defaultPackageUrl(metadata) {
-  const tag = `${metadata.githubReleaseTagPrefix}${metadata.version}`;
-  const packageName = `${metadata.channels.homebrew.assetPrefix}-${metadata.version}.pkg`;
+  // Homebrew detects versioned URLs from Ruby interpolation in the cask source.
+  const tag = `${metadata.githubReleaseTagPrefix}#{version}`;
+  const packageName = `${metadata.channels.homebrew.assetPrefix}-#{version}.pkg`;
   return `https://github.com/gormanity/ytm-enhancer/releases/download/${tag}/${packageName}`;
 }
 
